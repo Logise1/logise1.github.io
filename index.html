@@ -1,1 +1,1070 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeType - Typing Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getDatabase, ref, push, get, set, remove, update, query, orderByChild, equalTo, limitToLast, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyBX33-5Bb0n3svJ64M0SAwYWX5SQeYKpsk",
+            authDomain: "letstype-c4916.firebaseapp.com",
+            databaseURL: "https://letstype-c4916-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "letstype-c4916",
+            storageBucket: "letstype-c4916.appspot.com",
+            messagingSenderId: "344625945679",
+            appId: "1:344625945679:web:4bea00f81cdeb9e3495e3a"
+        };
 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        window.firebaseServices = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile, ref, push, get, set, remove, update, query, orderByChild, equalTo, limitToLast, serverTimestamp, onValue };
+    </script>
+    <style>
+        :root {
+            --bg-color: #1a1b1e;
+            --main-color: #f59e0b;
+            --sub-color: #6b7280;
+            --text-color: #d1d5db;
+            --error-color: #ef4444;
+            --ui-color: #27282b;
+        }
+        
+        body[data-theme='forest'] { --bg-color: #1a2a24; --main-color: #4ade80; --sub-color: #6a7e78; --text-color: #cdd6d3; --error-color: #f87171; --ui-color: #243b32; }
+        body[data-theme='ocean'] { --bg-color: #1e293b; --main-color: #60a5fa; --sub-color: #64748b; --text-color: #cbd5e1; --error-color: #fb7185; --ui-color: #334155; }
+        body[data-theme='light'] { --bg-color: #e5e7eb; --main-color: #2563eb; --sub-color: #6b7280; --text-color: #1f2937; --error-color: #dc2626; --ui-color: #ffffff; }
+        body[data-theme='retro'] { --bg-color: #f5eadd; --main-color: #9d5a28; --sub-color: #8c7a6b; --text-color: #3f3228; --error-color: #b91c1c; --ui-color: #e2d7c9; }
+
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background-color: var(--bg-color); transition: background-color 0.3s; }
+        #caret { position: absolute; width: 2.5px; height: 1.9rem; background-color: var(--main-color); border-radius: 2px; transition: left 0.08s ease-out, top 0.08s ease-out, background-color 0.3s; animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        #words-container { height: 9rem; line-height: 2.5rem; overflow: hidden; display: flex; flex-wrap: wrap; align-content: flex-start; transition: opacity 0.3s, transform 0.4s ease-in-out; position: relative; }
+        .word { margin: 0.25rem 0.3rem; padding: 0.1rem; display: flex; }
+        .letter { transition: color 0.2s; color: var(--sub-color); }
+        .letter.correct { color: var(--text-color); }
+        .letter.incorrect { color: var(--error-color); }
+        #input-field:focus { outline: none; }
+        .settings-btn-group button.active { color: var(--main-color); }
+        #typing-area { mask-image: linear-gradient(to bottom, black 60%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%); }
+        #leaderboard-categories button.active, .friends-tabs button.active { background-color: var(--main-color) !important; color: var(--bg-color) !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        .fade-out { animation: fadeOut 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        .modal-backdrop, .modal-content, .bg-ui, .border-ui { transition: background-color 0.3s, border-color 0.3s; }
+        .bg-ui { background-color: var(--ui-color); }
+        .border-ui { border-color: var(--ui-color); }
+    </style>
+</head>
+<body class="text-gray-400 flex flex-col min-h-screen p-4">
+
+    <header class="w-full max-w-6xl mx-auto flex justify-between items-center mb-4">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold" style="color: var(--text-color);">WeType</h1>
+            <button id="settings-btn" class="transition-colors" style="color: var(--sub-color);">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </div>
+        <div id="user-section" class="flex items-center gap-4"></div>
+    </header>
+
+    <main id="app-container" class="w-full max-w-4xl mx-auto flex flex-col items-center flex-grow justify-center">
+        <div id="live-stats" class="h-10 mb-8 text-3xl font-semibold opacity-0 transition-opacity duration-300" style="color: var(--main-color);"></div>
+        
+        <div id="settings-bar" class="text-center text-gray-400 mb-8 transition-opacity duration-300">
+             <div class="bg-ui/50 border border-ui p-2 rounded-xl flex flex-col sm:flex-row gap-2 items-center">
+                <div class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-1" data-setting="mode"><button data-value="words" class="px-3 py-1 rounded-md text-sm">palabras</button><button data-value="time" class="px-3 py-1 rounded-md text-sm">tiempo</button><button data-value="quote" class="px-3 py-1 rounded-md text-sm">frases</button></div>
+                <div id="amount-selector" class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-1" data-setting="amount"><button data-value="15" class="px-3 py-1 rounded-md text-sm">15</button><button data-value="30" class="px-3 py-1 rounded-md text-sm">30</button><button data-value="60" class="px-3 py-1 rounded-md text-sm">60</button></div>
+                <div class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-1" data-setting="language"><button data-value="es" class="px-3 py-1 rounded-md text-sm">español</button><button data-value="en" class="px-3 py-1 rounded-md text-sm">english</button></div>
+            </div>
+        </div>
+
+        <div id="typing-area" class="relative w-full opacity-0 transition-opacity duration-300">
+            <div id="words-container" class="text-3xl font-medium"></div>
+            <input type="text" id="input-field" class="absolute top-0 left-0 w-full h-full opacity-0 cursor-text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+
+        <div id="live-chart-container" class="w-full max-w-2xl h-20 mt-4 opacity-0 transition-opacity duration-300">
+            <canvas id="live-chart"></canvas>
+        </div>
+
+        <div id="restart-container" class="mt-8">
+             <button id="restart-btn" class="p-3" style="color: var(--sub-color);"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></button>
+        </div>
+    </main>
+
+    <div id="results-modal" class="hidden absolute inset-0 bg-black/75 backdrop-blur-sm items-center justify-center p-4 z-20">
+        <div class="result-card bg-ui/90 border border-ui p-8 rounded-xl shadow-2xl w-full max-w-2xl fade-in flex flex-col items-center">
+            <div class="grid grid-cols-2 gap-8 w-full">
+                <div class="flex flex-col items-center justify-center"><p class="text-md" style="color: var(--main-color);">WPM</p><p id="final-wpm" class="text-7xl font-bold" style="color: var(--text-color);">0</p></div>
+                <div class="flex flex-col items-center justify-center"><p class="text-md" style="color: var(--main-color);">Precisión</p><p id="final-accuracy" class="text-7xl font-bold" style="color: var(--text-color);">0%</p></div>
+            </div>
+            <div class="mt-6 h-48 w-full"><canvas id="results-chart"></canvas></div>
+            <button id="next-test-btn" class="mt-8 w-full max-w-xs py-3 rounded-md font-bold text-lg hover:opacity-90 transition-all" style="background-color: var(--main-color); color: var(--bg-color);">Siguiente Prueba</button>
+        </div>
+    </div>
+    
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 items-center justify-center p-4 modal-backdrop">
+        <div class="modal-content bg-ui p-8 rounded-lg shadow-xl w-full max-w-lg relative">
+             <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);">Temas</h2>
+             <div class="text-center text-gray-400 space-y-6">
+                 <div class="flex items-center justify-between">
+                    <span style="color: var(--text-color);">Elige tu tema preferido</span>
+                    <div class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-2" data-setting="theme"><button data-value="default" class="px-3 py-1 rounded-md">🌃</button><button data-value="forest" class="px-3 py-1 rounded-md">🌲</button><button data-value="ocean" class="px-3 py-1 rounded-md">🌊</button><button data-value="light" class="px-3 py-1 rounded-md">💡</button><button data-value="retro" class="px-3 py-1 rounded-md">📜</button></div>
+                 </div>
+            </div>
+             <button id="close-settings-modal-btn" class="absolute top-4 right-4 text-3xl" style="color: var(--sub-color);">&times;</button>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 items-center justify-center p-4 modal-backdrop">
+        <div class="modal-content bg-ui p-8 rounded-lg shadow-xl w-full max-w-sm relative">
+            <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);">Bienvenido</h2>
+            <div id="auth-error" class="text-red-400 text-center mb-4 h-5"></div>
+            <div class="flex border-b mb-6" style="border-color: var(--sub-color);"><button id="login-tab-btn" class="flex-1 py-2 font-semibold border-b-2">Iniciar Sesión</button><button id="register-tab-btn" class="flex-1 py-2 font-semibold border-b-2">Registrarse</button></div>
+            <form id="login-form"><input id="login-username" type="text" placeholder="Usuario" class="w-full bg-black/20 p-3 rounded mb-4 focus:outline-none focus:ring-2" style="color: var(--text-color); --tw-ring-color: var(--main-color);" required><input id="login-password" type="password" placeholder="Contraseña" class="w-full bg-black/20 p-3 rounded mb-6 focus:outline-none focus:ring-2" style="color: var(--text-color); --tw-ring-color: var(--main-color);" required><button type="submit" class="w-full py-3 rounded-md font-bold text-lg hover:opacity-90 transition-all" style="background-color: var(--main-color); color: var(--bg-color);">Entrar</button></form>
+            <form id="register-form" class="hidden"><input id="register-username" type="text" placeholder="Usuario" class="w-full bg-black/20 p-3 rounded mb-4 focus:outline-none focus:ring-2" style="color: var(--text-color); --tw-ring-color: var(--main-color);" required><input id="register-password" type="password" placeholder="Contraseña" class="w-full bg-black/20 p-3 rounded mb-6 focus:outline-none focus:ring-2" style="color: var(--text-color); --tw-ring-color: var(--main-color);" required><button type="submit" class="w-full py-3 rounded-md font-bold text-lg hover:opacity-90 transition-all" style="background-color: var(--main-color); color: var(--bg-color);">Crear Cuenta</button></form>
+             <button id="close-auth-modal-btn" class="absolute top-4 right-4 text-3xl" style="color: var(--sub-color);">&times;</button>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 items-center justify-center p-4 modal-backdrop">
+        <div class="modal-content bg-ui p-8 rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col relative">
+            <h2 id="stats-modal-title" class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);"></h2>
+            <button id="close-stats-modal-btn" class="absolute top-6 right-8 text-3xl" style="color: var(--sub-color);">&times;</button>
+            <div id="leaderboard-categories" class="hidden mb-4 flex-wrap justify-center gap-2">
+                <button data-category="words-15" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">words 15</button>
+                <button data-category="words-30" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">words 30</button>
+                <button data-category="words-60" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">words 60</button>
+                <button data-category="time-15" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">time 15</button>
+                <button data-category="time-30" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">time 30</button>
+                <button data-category="time-60" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">time 60</button>
+                <button data-category="quote-es" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">frases español</button>
+                <button data-category="quote-en" class="px-3 py-1 rounded-md bg-black/20 hover:bg-black/40">frases english</button>
+            </div>
+            <div id="friends-tabs" class="hidden friends-tabs mb-4 flex-wrap justify-center gap-2 border-b" style="border-color: var(--sub-color);">
+                <button data-tab="profile" class="px-4 py-2 border-b-2">Perfil</button>
+                <button data-tab="my-friends" class="px-4 py-2 border-b-2">Mis Amigos</button>
+                <button data-tab="requests" class="px-4 py-2 border-b-2">Solicitudes</button>
+                <button data-tab="add-friend" class="px-4 py-2 border-b-2">Añadir Amigo</button>
+            </div>
+            <div id="stats-content" class="flex-grow overflow-y-auto"></div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        class TypingTest {
+            constructor() {
+                this.elements = {
+                    body: document.body,
+                    wordsContainer: document.getElementById('words-container'),
+                    inputField: document.getElementById('input-field'),
+                    liveStats: document.getElementById('live-stats'),
+                    settingsBar: document.getElementById('settings-bar'),
+                    amountSelector: document.getElementById('amount-selector'),
+                    restartBtn: document.getElementById('restart-btn'),
+                    resultsModal: document.getElementById('results-modal'),
+                    nextTestBtn: document.getElementById('next-test-btn'),
+                    typingArea: document.getElementById('typing-area'),
+                    finalWpm: document.getElementById('final-wpm'),
+                    finalAccuracy: document.getElementById('final-accuracy'),
+                    resultsChart: document.getElementById('results-chart'),
+                    liveChartContainer: document.getElementById('live-chart-container'),
+                    liveChart: document.getElementById('live-chart'),
+                    settingsBtn: document.getElementById('settings-btn'),
+                    settingsModal: document.getElementById('settings-modal'),
+                    closeSettingsModalBtn: document.getElementById('close-settings-modal-btn'),
+                };
+                
+                this.quotes = { es: [], en: [] };
+                this.quotesLoaded = false;
+                this.charts = { final: null, live: null };
+                this.sounds = {
+                    keypress: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
+                    error: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination()
+                };
+
+                this.wordLists = {
+                    es: ["el", "la", "de", "que", "y", "a", "en", "un", "ser", "se", "no", "haber", "por", "con", "su", "para", "como", "estar", "tener", "le", "lo", "todo", "pero", "más", "hacer", "o", "poder", "decir", "este", "ir", "otro", "ese", "si", "me", "ya", "ver", "porque", "dar", "cuando", "él", "muy", "sin", "vez", "mucho", "saber", "qué", "sobre", "mi", "alguno", "mismo", "yo", "también", "hasta", "año", "dos", "querer", "entre", "así", "primero", "desde", "grande", "eso", "ni", "nos", "llegar", "pasar", "tiempo", "ella", "uno", "bien", "poco", "deber", "entonces", "donde", "ahora", "parte", "vida", "quedar", "siempre", "creer", "hablar", "llevar", "dejar", "nada", "cada", "seguir", "parecer", "nuevo", "encontrar", "trabajo", "llamar", "venir", "pensar", "solo", "nuestro", "tan", "hombre", "día", "antes", "agua"],
+                    en: ["the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any", "these", "give", "day", "most", "us"]
+                };
+                this.settings = { mode: 'words', amount: 30, language: 'es', theme: 'default' };
+                this.state = {};
+                this.gameInterval = null;
+                this.authManager = null;
+            }
+
+            setAuthManager(manager) { this.authManager = manager; }
+            
+            async init() {
+                this.loadTheme();
+                await this.loadQuotes();
+                this.setupSettingsListeners();
+                this.elements.inputField.addEventListener('keydown', (e) => this.handleKeydown(e));
+                this.elements.restartBtn.addEventListener('click', () => this.reset());
+                this.elements.nextTestBtn.addEventListener('click', () => this.reset());
+                this.elements.typingArea.addEventListener('click', () => {
+                    Tone.start();
+                    this.elements.inputField.focus()
+                });
+                this.reset();
+            }
+
+            async loadQuotes() {
+                const quotesURL = 'https://wetypeapp.netlify.app/frases.json';
+                try {
+                    const response = await fetch(quotesURL);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    this.quotes = data;
+                    this.quotesLoaded = true;
+                } catch (error) {
+                    console.error('Failed to load quotes:', error);
+                    const quoteButton = document.querySelector('button[data-value="quote"]');
+                    if (quoteButton) {
+                        quoteButton.disabled = true;
+                        quoteButton.title = "No se pudieron cargar las frases";
+                    }
+                }
+            }
+            
+            reset() {
+                clearInterval(this.gameInterval);
+                this.state = { wpmHistory: [], words: [], wordSpans: [], currentWordIndex: 0, typedWord: '', startTime: null, status: 'waiting', stats: { correctChars: 0, incorrectChars: 0 }, timeLeft: this.settings.amount };
+                this.elements.wordsContainer.style.transform = 'translateY(0px)';
+                this.elements.resultsModal.classList.add('hidden');
+                this.elements.resultsModal.classList.remove('flex');
+                document.getElementById('app-container').classList.remove('fade-out');
+                this.elements.liveStats.classList.add('opacity-0');
+                this.elements.settingsBar.classList.remove('opacity-0');
+                this.elements.liveChartContainer.classList.add('opacity-0');
+                
+                if (this.settings.mode === 'quote') {
+                    if (this.quotesLoaded && this.quotes[this.settings.language]?.length > 0) {
+                        const quotes = this.quotes[this.settings.language];
+                        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                        this.state.words = randomQuote.split(' ');
+                    } else {
+                        this.state.words = ["Cargando", "frases..."];
+                    }
+                } else {
+                    const wordCount = this.settings.mode === 'words' ? this.settings.amount : 300;
+                    this.state.words = this.getRandomWords(this.wordLists[this.settings.language], wordCount);
+                }
+
+                this.renderWords();
+                this.elements.inputField.value = '';
+                this.elements.inputField.disabled = false;
+                this.elements.inputField.focus();
+            }
+
+            loadTheme() {
+                const savedTheme = localStorage.getItem('theme') || 'default';
+                this.settings.theme = savedTheme;
+                this.elements.body.dataset.theme = savedTheme;
+            }
+
+            setTheme(themeName) {
+                this.settings.theme = themeName;
+                this.elements.body.dataset.theme = themeName;
+                localStorage.setItem('theme', themeName);
+            }
+
+            getRandomWords(list, count) { 
+                let words = [];
+                while (words.length < count) {
+                    words.push(...list);
+                }
+                return words.sort(() => 0.5 - Math.random()).slice(0, count);
+            }
+
+            renderWords() {
+                this.elements.wordsContainer.innerHTML = '';
+                this.state.wordSpans = this.state.words.map(word => {
+                    const wordDiv = document.createElement('div');
+                    wordDiv.className = 'word';
+                    const letterSpans = word.split('').map(char => {
+                        const charSpan = document.createElement('span');
+                        charSpan.className = 'letter';
+                        charSpan.textContent = char;
+                        wordDiv.appendChild(charSpan);
+                        return charSpan;
+                    });
+                    this.elements.wordsContainer.appendChild(wordDiv);
+                    return letterSpans;
+                });
+                this.elements.typingArea.classList.remove('opacity-0');
+                this.createCaret();
+            }
+
+            createCaret() {
+                let caret = document.getElementById('caret');
+                if (!caret) {
+                    caret = document.createElement('div');
+                    caret.id = 'caret';
+                    this.elements.wordsContainer.appendChild(caret);
+                }
+                this.elements.caret = caret;
+                this.updateCaretPosition();
+            }
+            
+            start() {
+                if (this.state.status === 'running') return;
+                this.state.status = 'running';
+                this.state.startTime = new Date();
+                this.state.wpmHistory = [];
+                this.elements.liveStats.classList.remove('opacity-0');
+                this.elements.settingsBar.classList.add('opacity-0');
+                this.elements.liveChartContainer.classList.remove('opacity-0');
+                this.initLiveChart();
+                this.gameInterval = setInterval(() => this.updateGame(), 250);
+            }
+
+            animateValue(obj, start, end, duration) {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    obj.innerHTML = Math.floor(progress * (end - start) + start);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                };
+                window.requestAnimationFrame(step);
+            }
+            
+            updateGame() {
+                if (this.state.status !== 'running') return;
+                const elapsedSeconds = (new Date() - this.state.startTime) / 1000;
+                
+                const wpm = (this.state.stats.correctChars / 5) / (elapsedSeconds / 60);
+                this.state.wpmHistory.push({x: elapsedSeconds, y: wpm || 0});
+                if(this.charts.live) {
+                    this.charts.live.data.datasets[0].data = this.state.wpmHistory;
+                    this.charts.live.update('none');
+                }
+
+                if (this.settings.mode === 'time') {
+                    const newTimeLeft = this.settings.amount - elapsedSeconds;
+                    if (newTimeLeft <= 0) {
+                        this.state.timeLeft = 0;
+                        this.end();
+                    }
+                    const oldTime = parseInt(this.elements.liveStats.textContent) || this.settings.amount;
+                    if(Math.round(newTimeLeft) !== oldTime) this.animateValue(this.elements.liveStats, oldTime, Math.round(newTimeLeft), 250);
+                    this.state.timeLeft = newTimeLeft;
+
+                } else {
+                    const oldWpm = parseInt(this.elements.liveStats.textContent) || 0;
+                     if(Math.round(wpm) !== oldWpm) this.animateValue(this.elements.liveStats, oldWpm, Math.round(wpm), 250);
+                }
+            }
+
+            end() {
+                if (this.state.status !== 'running') return;
+                clearInterval(this.gameInterval);
+                this.state.status = 'finished';
+                this.elements.inputField.disabled = true;
+                if (this.elements.caret) this.elements.caret.style.display = 'none';
+                
+                const elapsedSeconds = (new Date() - this.state.startTime) / 1000;
+                const wpm = Math.round((this.state.stats.correctChars / 5) / (Math.max(1, elapsedSeconds) / 60)) || 0;
+                const totalTyped = this.state.stats.correctChars + this.state.stats.incorrectChars;
+                const accuracy = totalTyped > 0 ? Math.round((this.state.stats.correctChars / totalTyped) * 100) : 100;
+
+                this.elements.finalWpm.textContent = wpm;
+                this.elements.finalAccuracy.textContent = `${accuracy}%`;
+                
+                if (this.authManager && this.authManager.currentUser && wpm > 0) {
+                    const result = { wpm, accuracy, mode: this.settings.mode, amount: this.settings.amount, language: this.settings.language };
+                    this.authManager.saveTestResult(result);
+                }
+                
+                this.renderFinalGraph();
+                document.getElementById('app-container').classList.add('fade-out');
+                this.elements.resultsModal.classList.remove('hidden');
+                this.elements.resultsModal.classList.add('flex');
+            }
+            
+             initLiveChart() {
+                if (this.charts.live) this.charts.live.destroy();
+                const mainColor = getComputedStyle(document.documentElement).getPropertyValue('--main-color');
+                const ctx = this.elements.liveChart.getContext('2d');
+                this.charts.live = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets: [{ data: [], borderColor: mainColor, tension: 0.4, pointRadius: 0 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        animation: { duration: 250 }
+                    }
+                });
+            }
+
+             renderFinalGraph() {
+                if (this.charts.final) this.charts.final.destroy();
+                const mainColor = getComputedStyle(document.documentElement).getPropertyValue('--main-color');
+                const subColor = getComputedStyle(document.documentElement).getPropertyValue('--sub-color');
+
+                const ctx = this.elements.resultsChart.getContext('2d');
+                this.charts.final = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'WPM',
+                            data: this.state.wpmHistory,
+                            borderColor: mainColor,
+                            backgroundColor: mainColor + '33',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { type: 'linear', title: { display: true, text: 'Segundos', color: subColor }, ticks: { color: subColor }, grid: { color: subColor + '33' } },
+                            y: { title: { display: true, text: 'WPM', color: subColor }, beginAtZero: true, ticks: { color: subColor }, grid: { color: subColor + '33' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            handleKeydown(e) {
+                if (e.key === 'Escape') {
+                    this.reset();
+                    return;
+                }
+                if (this.state.status === 'finished') return;
+                if (this.state.status === 'waiting' && e.key.length === 1 && e.key !== ' ') this.start();
+                if (this.state.status !== 'running' && this.state.status !== 'waiting') return;
+                
+                const key = e.key;
+                if (key === ' ') {
+                    if (this.state.typedWord === '') return;
+                    e.preventDefault();
+                    if(this.state.typedWord === this.state.words[this.state.currentWordIndex]){
+                        this.sounds.keypress.triggerAttackRelease('C5', '8n');
+                    } else {
+                        this.sounds.error.triggerAttackRelease('C3', '8n');
+                    }
+                    this.moveToNextWord();
+                } else if (key === 'Backspace') {
+                    e.preventDefault();
+                    this.sounds.keypress.triggerAttackRelease('C4', '8n');
+                    this.handleBackspace();
+                } else if (key.length === 1) {
+                    e.preventDefault();
+                    const currentWord = this.state.words[this.state.currentWordIndex];
+                    const typedChar = key;
+                    const expectedChar = currentWord[this.state.typedWord.length];
+                    if(typedChar === expectedChar){
+                        this.sounds.keypress.triggerAttackRelease('C5', '8n');
+                    } else {
+                        this.sounds.error.triggerAttackRelease('C3', '8n');
+                    }
+                    this.state.typedWord += typedChar;
+                    this.updateCurrentWord();
+                }
+            }
+
+            handleBackspace() {
+                this.state.typedWord = this.state.typedWord.slice(0, -1);
+                this.updateCurrentWord();
+            }
+
+            updateCurrentWord() {
+                const wordSpans = this.state.wordSpans[this.state.currentWordIndex];
+                const currentWord = this.state.words[this.state.currentWordIndex];
+                if (!wordSpans) return;
+                wordSpans.forEach((span, i) => {
+                    span.classList.remove('correct', 'incorrect');
+                    if (i < this.state.typedWord.length) {
+                        span.classList.add(this.state.typedWord[i] === currentWord[i] ? 'correct' : 'incorrect');
+                    }
+                });
+                this.updateCaretPosition();
+            }
+
+            moveToNextWord() {
+                const currentWord = this.state.words[this.state.currentWordIndex];
+                for (let i = 0; i < currentWord.length; i++) {
+                    if (i < this.state.typedWord.length && this.state.typedWord[i] === currentWord[i]) this.state.stats.correctChars++; else this.state.stats.incorrectChars++;
+                }
+                if (this.state.typedWord.length > currentWord.length) this.state.stats.incorrectChars += this.state.typedWord.length - currentWord.length;
+                this.state.stats.correctChars++;
+                this.state.currentWordIndex++;
+                this.state.typedWord = '';
+                
+                const isTestOver = (this.settings.mode === 'words' && this.state.currentWordIndex >= this.settings.amount) ||
+                                  (this.settings.mode === 'quote' && this.state.currentWordIndex >= this.state.words.length);
+                
+                if (isTestOver) {
+                    this.end();
+                } else {
+                    this.updateCaretPosition();
+                    this.scrollWords();
+                }
+            }
+            
+            updateCaretPosition() {
+                if (this.state.status === 'finished' || !this.elements.caret) return;
+                const wordSpans = this.state.wordSpans[this.state.currentWordIndex];
+                if (!wordSpans || wordSpans.length === 0) {
+                    if(this.elements.caret) this.elements.caret.style.display = 'none';
+                    return;
+                }
+                this.elements.caret.style.display = 'block';
+                let targetLetter = (this.state.typedWord.length < wordSpans.length) ? wordSpans[this.state.typedWord.length] : wordSpans[wordSpans.length - 1];
+                const isAtEnd = this.state.typedWord.length >= wordSpans.length;
+                const containerRect = this.elements.wordsContainer.getBoundingClientRect();
+                const letterRect = targetLetter.getBoundingClientRect();
+                this.elements.caret.style.top = `${letterRect.top - containerRect.top}px`;
+                this.elements.caret.style.left = isAtEnd ? `${letterRect.right - containerRect.left}px` : `${letterRect.left - containerRect.left}px`;
+            }
+
+            scrollWords() {
+                const activeWordDiv = this.elements.wordsContainer.children[this.state.currentWordIndex];
+                if (activeWordDiv && activeWordDiv.offsetTop > this.elements.wordsContainer.clientHeight / 2) {
+                     this.elements.wordsContainer.style.transform = `translateY(-${activeWordDiv.offsetTop - (this.elements.wordsContainer.clientHeight / 4)}px)`;
+                }
+            }
+            
+            setupSettingsListeners() {
+                this.elements.settingsBtn.onclick = () => this.elements.settingsModal.classList.replace('hidden', 'flex');
+                this.elements.closeSettingsModalBtn.onclick = () => this.elements.settingsModal.classList.replace('flex', 'hidden');
+                this.elements.settingsModal.onclick = (e) => { if (e.target === this.elements.settingsModal) this.elements.settingsModal.classList.replace('flex', 'hidden'); };
+                
+                document.querySelectorAll('.settings-btn-group').forEach(group => {
+                    const setting = group.dataset.setting;
+                    Array.from(group.children).forEach(button => {
+                        const value = button.dataset.value;
+                        if (value == this.settings[setting]) button.classList.add('active');
+                        
+                        button.addEventListener('click', () => {
+                            Array.from(group.parentElement.querySelectorAll(`[data-setting="${setting}"] > button`)).forEach(b => b.classList.remove('active'));
+                            button.classList.add('active');
+                            
+                            if (setting === 'theme') {
+                                this.setTheme(value);
+                            } else {
+                                this.settings[setting] = value;
+                                if(this.state.status === 'waiting') {
+                                    this.reset();
+                                }
+                            }
+
+                             if (setting === 'mode') {
+                                this.elements.amountSelector.style.display = value === 'quote' ? 'none' : 'flex';
+                            }
+                        });
+                    });
+                });
+            }
+        }
+
+        class AuthManager {
+            constructor() {
+                this.elements = {
+                    userSection: document.getElementById('user-section'),
+                    authModal: document.getElementById('auth-modal'),
+                    loginTabBtn: document.getElementById('login-tab-btn'),
+                    registerTabBtn: document.getElementById('register-tab-btn'),
+                    loginForm: document.getElementById('login-form'),
+                    registerForm: document.getElementById('register-form'),
+                    authError: document.getElementById('auth-error'),
+                    statsModal: document.getElementById('stats-modal'),
+                    statsModalTitle: document.getElementById('stats-modal-title'),
+                    leaderboardCategories: document.getElementById('leaderboard-categories'),
+                    friendsTabs: document.getElementById('friends-tabs'),
+                    statsContent: document.getElementById('stats-content'),
+                    closeStatsModalBtn: document.getElementById('close-stats-modal-btn'),
+                    closeAuthModalBtn: document.getElementById('close-auth-modal-btn'),
+                };
+                this.services = window.firebaseServices;
+                this.currentUser = null;
+                this.init();
+            }
+            
+            init() {
+                this.services.onAuthStateChanged(this.services.auth, user => {
+                    this.currentUser = user;
+                    this.updateUserUI();
+                });
+                this.setupAuthModalListeners();
+                this.setupStatsModalListeners();
+                this.switchAuthTab('login');
+            }
+
+            updateUserUI() {
+                this.elements.userSection.innerHTML = '';
+
+                const leaderboardBtn = document.createElement('button');
+                leaderboardBtn.textContent = 'Leaderboard';
+                leaderboardBtn.className = 'hover:opacity-80 transition-opacity';
+                leaderboardBtn.style.color = 'var(--main-color)';
+                leaderboardBtn.onclick = () => this.openStatsModal('leaderboard');
+
+                if (this.currentUser) {
+                    const username = document.createElement('span');
+                    username.textContent = this.currentUser.displayName;
+                    username.className = 'font-semibold';
+                    username.style.color = 'var(--text-color)';
+
+                    const friendsBtn = document.createElement('button');
+                    friendsBtn.innerHTML = 'Amigos <span id="friend-request-badge" class="hidden text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 ml-1"></span>';
+                    friendsBtn.className = 'hover:opacity-80 transition-opacity';
+                    friendsBtn.style.color = 'var(--main-color)';
+                    friendsBtn.onclick = () => this.openStatsModal('friends');
+
+                    const historyBtn = document.createElement('button');
+                    historyBtn.textContent = 'Historial';
+                    historyBtn.className = 'hover:opacity-80 transition-opacity';
+                    historyBtn.style.color = 'var(--main-color)';
+                    historyBtn.onclick = () => this.openStatsModal('history');
+
+                    const logoutBtn = document.createElement('button');
+                    logoutBtn.textContent = 'Salir';
+                    logoutBtn.className = 'hover:opacity-80 transition-opacity';
+                    logoutBtn.style.color = 'var(--main-color)';
+                    logoutBtn.onclick = () => this.handleLogout();
+                    
+                    this.elements.userSection.append(username, friendsBtn, historyBtn, leaderboardBtn, logoutBtn);
+                    this.listenForFriendRequests();
+                } else {
+                    const loginBtn = document.createElement('button');
+                    loginBtn.textContent = 'Entrar';
+                    loginBtn.className = 'font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-colors';
+                    loginBtn.style.backgroundColor = 'var(--main-color)';
+                    loginBtn.style.color = 'var(--bg-color)';
+                    loginBtn.onclick = () => this.openAuthModal();
+                    this.elements.userSection.append(leaderboardBtn, loginBtn);
+                }
+            }
+
+            listenForFriendRequests() {
+                if (!this.currentUser) return;
+                const requestsRef = this.services.ref(this.services.db, `friend_requests/${this.currentUser.uid}`);
+                this.services.onValue(requestsRef, (snapshot) => {
+                    const badge = document.getElementById('friend-request-badge');
+                    if (badge) {
+                        if (snapshot.exists()) {
+                            badge.textContent = Object.keys(snapshot.val()).length;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    }
+                });
+            }
+            
+            async handleRegister(username, password) {
+                this.elements.authError.textContent = '';
+                try {
+                    if (username.length < 3) throw new Error('El usuario debe tener al menos 3 caracteres.');
+                    if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+                    
+                    const usersRef = this.services.ref(this.services.db, 'users');
+                    const q = this.services.query(usersRef, this.services.orderByChild('username_lowercase'), this.services.equalTo(username.toLowerCase()));
+                    const snapshot = await this.services.get(q);
+                    if (snapshot.exists()) {
+                        throw new Error('Este nombre de usuario ya está en uso.');
+                    }
+
+                    const email = `${username.toLowerCase()}@email.com`;
+                    const userCredential = await this.services.createUserWithEmailAndPassword(this.services.auth, email, password);
+                    await this.services.updateProfile(userCredential.user, { displayName: username });
+                    
+                    const newUserRef = this.services.ref(this.services.db, `users/${userCredential.user.uid}`);
+                    await this.services.set(newUserRef, {
+                        username: username,
+                        username_lowercase: username.toLowerCase()
+                    });
+
+                    this.closeAuthModal();
+                    this.updateUserUI();
+                } catch (error) { this.elements.authError.textContent = error.message.includes('email-already-in-use') ? 'Este usuario ya existe.' : error.message; }
+            }
+
+            async fetchLeaderboard(category) {
+                this.elements.statsContent.innerHTML = '<div class="text-center">Cargando...</div>';
+                const leaderboardRef = this.services.ref(this.services.db, `leaderboard/${category}`);
+                const q = this.services.query(leaderboardRef, this.services.orderByChild('wpm'));
+                const snapshot = await this.services.get(q);
+                
+                if (snapshot.exists()) {
+                    const userBests = new Map();
+                    snapshot.forEach(child => {
+                        const result = child.val();
+                        if (!userBests.has(result.userId) || userBests.get(result.userId).wpm < result.wpm) {
+                            userBests.set(result.userId, result);
+                        }
+                    });
+                    
+                    const uniqueResults = Array.from(userBests.values()).sort((a,b) => b.wpm - a.wpm).slice(0, 50);
+                    this.renderLeaderboard(uniqueResults);
+
+                } else {
+                     this.elements.statsContent.innerHTML = `<div class="text-center" style="color: var(--sub-color);">No hay nadie en la clasificación para <span class="font-semibold" style="color: var(--text-color);">${category}</span>.</div>`;
+                }
+            }
+
+            openStatsModal(type) {
+                this.elements.statsModal.classList.replace('hidden', 'flex');
+                this.elements.leaderboardCategories.classList.add('hidden');
+                this.elements.friendsTabs.classList.add('hidden');
+
+                if (type === 'history') {
+                    this.elements.statsModalTitle.textContent = 'Mi Historial';
+                    this.fetchHistory();
+                } else if (type === 'leaderboard') {
+                    this.elements.statsModalTitle.textContent = 'Leaderboard';
+                    this.elements.leaderboardCategories.classList.remove('hidden');
+                    const defaultButton = this.elements.leaderboardCategories.querySelector('button');
+                    if (defaultButton) {
+                        Array.from(this.elements.leaderboardCategories.children).forEach(btn => btn.classList.remove('active'));
+                        defaultButton.classList.add('active');
+                        this.fetchLeaderboard(defaultButton.dataset.category);
+                    }
+                } else if (type === 'friends') {
+                    this.elements.statsModalTitle.textContent = 'Social';
+                    this.elements.friendsTabs.classList.remove('hidden');
+                    this.switchFriendTab('profile');
+                }
+            }
+            
+            switchFriendTab(tab) {
+                 Array.from(this.elements.friendsTabs.children).forEach(btn => {
+                    const isActive = btn.dataset.tab === tab;
+                    btn.className = `px-4 py-2 border-b-2 transition-colors ${isActive ? '' : 'border-transparent'}`;
+                    btn.style.color = isActive ? 'var(--text-color)' : 'var(--sub-color)';
+                    if(isActive) btn.style.borderColor = 'var(--main-color)';
+                });
+
+                if (tab === 'profile') this.renderProfile();
+                else if (tab === 'my-friends') this.renderMyFriends();
+                else if (tab === 'requests') this.renderRequests();
+                else if (tab === 'add-friend') this.renderAddFriend();
+            }
+            
+             async renderProfile() {
+                this.elements.statsContent.innerHTML = '<div class="text-center">Cargando...</div>';
+                if (!this.currentUser) return;
+
+                const resultsRef = this.services.ref(this.services.db, `user-results/${this.currentUser.uid}`);
+                const snapshot = await this.services.get(resultsRef);
+                
+                let bests = {};
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const result = child.val();
+                        if (!bests[result.category] || bests[result.category].wpm < result.wpm) {
+                            bests[result.category] = result;
+                        }
+                    });
+                }
+                
+                let html = `<div class="grid grid-cols-2 md:grid-cols-3 gap-4">`;
+                const categories = ['words-15', 'words-30', 'words-60', 'time-15', 'time-30', 'time-60', 'quote-es', 'quote-en'];
+                categories.forEach(cat => {
+                    const best = bests[cat];
+                    html += `<div class="bg-black/20 p-4 rounded-lg text-center">
+                        <div class="text-sm" style="color: var(--sub-color);">${cat.replace('-', ' ')}</div>
+                        <div class="text-3xl font-bold" style="color: var(--main-color);">${best ? best.wpm : '-'}</div>
+                        <div class="text-xs" style="color: var(--sub-color);">${best ? best.accuracy + '%' : '-'}</div>
+                    </div>`;
+                });
+                html += `</div>`;
+                this.elements.statsContent.innerHTML = html;
+            }
+
+            async renderMyFriends() { 
+                this.elements.statsContent.innerHTML = '<div class="text-center">Cargando...</div>';
+                const friendsRef = this.services.ref(this.services.db, `friends/${this.currentUser.uid}`);
+                const snapshot = await this.services.get(friendsRef);
+                if (snapshot.exists()) {
+                    const friends = snapshot.val();
+                    let html = '<div class="space-y-2">';
+                    Object.keys(friends).forEach(friendId => {
+                        const friend = friends[friendId];
+                        html += `<div class="bg-black/20 p-3 rounded-md flex justify-between items-center">
+                                    <span>${friend.username}</span>
+                                    <button class="bg-red-500 text-white px-2 py-1 rounded-md text-xs" onclick="window.authManager.removeFriend('${friendId}')">Eliminar</button>
+                                </div>`;
+                    });
+                    html += '</div>';
+                    this.elements.statsContent.innerHTML = html;
+                } else {
+                    this.elements.statsContent.innerHTML = `<div class="text-center" style="color: var(--sub-color);">Aún no tienes amigos.</div>`;
+                }
+            }
+
+            async renderRequests() { 
+                this.elements.statsContent.innerHTML = '<div class="text-center">Cargando...</div>';
+                const requestsRef = this.services.ref(this.services.db, `friend_requests/${this.currentUser.uid}`);
+                const snapshot = await this.services.get(requestsRef);
+                if (snapshot.exists()) {
+                    const requests = snapshot.val();
+                    let html = '<div class="space-y-2">';
+                    Object.keys(requests).forEach(senderId => {
+                        const req = requests[senderId];
+                        html += `<div class="bg-black/20 p-3 rounded-md flex justify-between items-center">
+                                    <span>${req.fromUsername}</span>
+                                    <div>
+                                        <button class="bg-green-500 text-white px-2 py-1 rounded-md text-sm mr-2" onclick="window.authManager.acceptFriendRequest('${req.fromId}', '${req.fromUsername}')">Aceptar</button>
+                                        <button class="bg-red-500 text-white px-2 py-1 rounded-md text-sm" onclick="window.authManager.declineFriendRequest('${req.fromId}')">Rechazar</button>
+                                    </div>
+                                </div>`;
+                    });
+                    html += '</div>';
+                    this.elements.statsContent.innerHTML = html;
+                } else {
+                    this.elements.statsContent.innerHTML = `<div class="text-center" style="color: var(--sub-color);">No tienes solicitudes de amistad.</div>`;
+                }
+            }
+            
+            renderAddFriend() {
+                this.elements.statsContent.innerHTML = `
+                    <div class="flex flex-col items-center gap-4">
+                        <input id="add-friend-input" type="text" placeholder="Buscar usuario..." class="w-full max-w-sm bg-black/20 p-3 rounded focus:outline-none focus:ring-2" style="color: var(--text-color); --tw-ring-color: var(--main-color);">
+                        <button id="search-friend-btn" class="font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-colors" style="background-color: var(--main-color); color: var(--bg-color);">Buscar</button>
+                        <div id="search-results" class="mt-4 w-full max-w-sm"></div>
+                    </div>
+                `;
+                document.getElementById('search-friend-btn').onclick = () => this.searchUser();
+            }
+
+            async searchUser() {
+                const searchInput = document.getElementById('add-friend-input');
+                const resultsDiv = document.getElementById('search-results');
+                const username = searchInput.value.trim();
+                resultsDiv.innerHTML = '';
+                if (username.length < 3) return;
+
+                const usersRef = this.services.ref(this.services.db, 'users');
+                const q = this.services.query(usersRef, this.services.orderByChild('username_lowercase'), this.services.equalTo(username.toLowerCase()));
+                const snapshot = await this.services.get(q);
+
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const user = child.val();
+                        const userId = child.key;
+                        if (userId === this.currentUser.uid) {
+                             resultsDiv.innerHTML = `<div class="text-center" style="color: var(--sub-color);">No te puedes añadir a ti mismo.</div>`;
+                             return;
+                        }
+                        resultsDiv.innerHTML = `<div class="bg-black/20 p-3 rounded-md flex justify-between items-center">
+                                                    <span>${user.username}</span>
+                                                    <button class="bg-blue-500 text-white px-2 py-1 rounded-md text-sm" onclick="window.authManager.sendFriendRequest('${userId}', '${user.username}')">Añadir</button>
+                                                </div>`;
+                    });
+                } else {
+                    resultsDiv.innerHTML = `<div class="text-center" style="color: var(--sub-color);">Usuario no encontrado.</div>`;
+                }
+            }
+
+            async sendFriendRequest(toId, toUsername) {
+                if (toId === this.currentUser.uid) return;
+                const requestRef = this.services.ref(this.services.db, `friend_requests/${toId}/${this.currentUser.uid}`);
+                await this.services.set(requestRef, {
+                    fromId: this.currentUser.uid,
+                    fromUsername: this.currentUser.displayName,
+                    timestamp: this.services.serverTimestamp()
+                });
+                document.getElementById('search-results').innerHTML = `<div class="text-center text-green-500">Solicitud enviada a ${toUsername}.</div>`;
+            }
+
+            async acceptFriendRequest(friendId, friendUsername) {
+                const updates = {};
+                updates[`/friends/${this.currentUser.uid}/${friendId}`] = { username: friendUsername };
+                updates[`/friends/${friendId}/${this.currentUser.uid}`] = { username: this.currentUser.displayName };
+                updates[`/friend_requests/${this.currentUser.uid}/${friendId}`] = null;
+                await this.services.update(this.services.ref(this.services.db), updates);
+                this.renderRequests();
+            }
+
+            async declineFriendRequest(friendId) {
+                const requestRef = this.services.ref(this.services.db, `friend_requests/${this.currentUser.uid}/${friendId}`);
+                await this.services.remove(requestRef);
+                this.renderRequests();
+            }
+
+            async removeFriend(friendId) {
+                const updates = {};
+                updates[`/friends/${this.currentUser.uid}/${friendId}`] = null;
+                updates[`/friends/${friendId}/${this.currentUser.uid}`] = null;
+                await this.services.update(this.services.ref(this.services.db), updates);
+                this.renderMyFriends();
+            }
+            
+            setupAuthModalListeners() {
+                this.elements.loginTabBtn.onclick = () => this.switchAuthTab('login');
+                this.elements.registerTabBtn.onclick = () => this.switchAuthTab('register');
+                this.elements.closeAuthModalBtn.onclick = () => this.closeAuthModal();
+                this.elements.authModal.onclick = (e) => { if (e.target === this.elements.authModal) this.closeAuthModal(); };
+                
+                this.elements.loginForm.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.handleLogin(document.getElementById('login-username').value, document.getElementById('login-password').value);
+                };
+
+                this.elements.registerForm.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.handleRegister(document.getElementById('register-username').value, document.getElementById('register-password').value);
+                };
+            }
+
+            setupStatsModalListeners() {
+                this.elements.closeStatsModalBtn.onclick = () => this.closeStatsModal();
+                this.elements.statsModal.onclick = (e) => { if (e.target === this.elements.statsModal) this.closeStatsModal(); };
+                this.elements.leaderboardCategories.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        Array.from(e.target.parentElement.children).forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.fetchLeaderboard(e.target.dataset.category);
+                    }
+                });
+                this.elements.friendsTabs.addEventListener('click', (e) => {
+                     if (e.target.tagName === 'BUTTON') {
+                        this.switchFriendTab(e.target.dataset.tab);
+                    }
+                });
+            }
+            
+            async handleLogin(username, password) {
+                this.elements.authError.textContent = '';
+                try {
+                    const email = `${username.toLowerCase()}@email.com`;
+                    await this.services.signInWithEmailAndPassword(this.services.auth, email, password);
+                    this.closeAuthModal();
+                } catch (error) { this.elements.authError.textContent = 'Usuario o contraseña incorrectos.'; }
+            }
+            
+            handleLogout() { this.services.signOut(this.services.auth); }
+            
+            async saveTestResult(result) {
+                if (!this.currentUser) return;
+                const category = result.mode === 'quote' ? `${result.mode}-${result.language}` : `${result.mode}-${result.amount}`;
+                const resultWithTimestamp = { ...result, timestamp: this.services.serverTimestamp(), userId: this.currentUser.uid, username: this.currentUser.displayName, category };
+                
+                const updates = {};
+                const newKey = this.services.push(this.services.ref(this.services.db)).key;
+                updates[`/leaderboard/${category}/${newKey}`] = resultWithTimestamp;
+                updates[`/user-results/${this.currentUser.uid}/${newKey}`] = resultWithTimestamp;
+                try {
+                    await this.services.update(this.services.ref(this.services.db), updates);
+                } catch (e) { console.error("Error adding document: ", e); }
+            }
+
+            openAuthModal() { this.elements.authModal.classList.replace('hidden', 'flex'); }
+            closeAuthModal() { this.elements.authModal.classList.replace('flex', 'hidden'); }
+
+            switchAuthTab(tab) {
+                const activeClasses = 'border-b-2';
+                const inactiveClasses = 'border-b-2 border-transparent';
+                const mainColor = getComputedStyle(document.documentElement).getPropertyValue('--main-color');
+                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+                const subColor = getComputedStyle(document.documentElement).getPropertyValue('--sub-color');
+
+                if (tab === 'login') {
+                    this.elements.loginTabBtn.className = `flex-1 py-2 font-semibold ${activeClasses}`;
+                    this.elements.loginTabBtn.style.borderColor = mainColor;
+                    this.elements.loginTabBtn.style.color = textColor;
+                    this.elements.registerTabBtn.className = `flex-1 py-2 font-semibold ${inactiveClasses}`;
+                    this.elements.registerTabBtn.style.color = subColor;
+                    this.elements.loginForm.classList.remove('hidden');
+                    this.elements.registerForm.classList.add('hidden');
+                } else {
+                    this.elements.registerTabBtn.className = `flex-1 py-2 font-semibold ${activeClasses}`;
+                    this.elements.registerTabBtn.style.borderColor = mainColor;
+                    this.elements.registerTabBtn.style.color = textColor;
+                    this.elements.loginTabBtn.className = `flex-1 py-2 font-semibold ${inactiveClasses}`;
+                    this.elements.loginTabBtn.style.color = subColor;
+                    this.elements.registerForm.classList.remove('hidden');
+                    this.elements.loginForm.classList.add('hidden');
+                }
+                this.elements.authError.textContent = '';
+            }
+            
+            closeStatsModal() { this.elements.statsModal.classList.replace('flex', 'hidden'); }
+            
+            async fetchHistory() {
+                this.elements.statsContent.innerHTML = '<div class="text-center">Cargando...</div>';
+                if (!this.currentUser) {
+                    this.elements.statsContent.innerHTML = '<div class="text-center">Debes iniciar sesión para ver tu historial.</div>';
+                    return;
+                }
+                const historyRef = this.services.ref(this.services.db, `user-results/${this.currentUser.uid}`);
+                const q = this.services.query(historyRef, this.services.orderByChild('timestamp'), this.services.limitToLast(50));
+                const snapshot = await this.services.get(q);
+                if (snapshot.exists()) {
+                    const results = [];
+                    snapshot.forEach(child => { results.push(child.val()) });
+                    this.renderHistory(results.reverse());
+                } else {
+                    this.elements.statsContent.innerHTML = '<div class="text-center">No hay resultados todavía. ¡Completa una prueba!</div>';
+                }
+            }
+            
+            renderHistory(docs) {
+                let tableHtml = `<table class="w-full text-left table-auto"><thead><tr class="border-b" style="border-color: var(--sub-color);">
+                    <th class="p-2">WPM</th><th class="p-2">Precisión</th><th class="p-2">Modo</th><th class="p-2">Fecha</th>
+                    </tr></thead><tbody>`;
+                docs.forEach(data => {
+                    const date = new Date(data.timestamp).toLocaleString();
+                    const mode = data.mode === 'quote' ? `frase ${data.language}` : `${data.mode} ${data.amount}`;
+                    tableHtml += `<tr class="border-b" style="border-color: var(--ui-color);">
+                        <td class="p-2 font-bold" style="color: var(--main-color);">${data.wpm}</td>
+                        <td class="p-2">${data.accuracy}%</td>
+                        <td class="p-2">${mode}</td>
+                        <td class="p-2 text-sm">${date}</td>
+                    </tr>`;
+                });
+                tableHtml += '</tbody></table>';
+                this.elements.statsContent.innerHTML = tableHtml;
+            }
+
+            renderLeaderboard(docs) {
+                let tableHtml = `<table class="w-full text-left table-auto"><thead><tr class="border-b" style="border-color: var(--sub-color);">
+                    <th class="p-2">#</th><th class="p-2">Usuario</th><th class="p-2">WPM</th><th class="p-2">Precisión</th><th class="p-2">Fecha</th>
+                    </tr></thead><tbody>`;
+                docs.forEach((data, index) => {
+                    const date = new Date(data.timestamp).toLocaleString();
+                    tableHtml += `<tr class="border-b" style="border-color: var(--ui-color);">
+                        <td class="p-2">${index + 1}</td>
+                        <td class="p-2">${data.username}</td>
+                        <td class="p-2 font-bold" style="color: var(--main-color);">${data.wpm}</td>
+                        <td class="p-2">${data.accuracy}%</td>
+                        <td class="p-2 text-sm">${date}</td>
+                    </tr>`;
+                });
+                tableHtml += '</tbody></table>';
+                this.elements.statsContent.innerHTML = tableHtml;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const typingTest = new TypingTest();
+            window.authManager = new AuthManager();
+            typingTest.setAuthManager(window.authManager);
+            await typingTest.init();
+        });
+    </script>
+</body>
+</html>
