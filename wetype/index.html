@@ -542,7 +542,6 @@
                     Array.from(group.children).forEach(button => {
                         const value = button.dataset.value;
 
-                        // Set initial active state based on settings
                         if (setting === 'sound') {
                             if (String(this.settings.sound) === value) button.classList.add('active');
                         } else {
@@ -622,7 +621,7 @@
                     username.style.color = 'var(--text-color)';
 
                     const friendsBtn = document.createElement('button');
-                    friendsBtn.innerHTML = 'Amigos <span id="friend-request-badge" class="hidden text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 ml-1"></span>';
+                    friendsBtn.innerHTML = 'Social <span id="friend-request-badge" class="hidden text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 ml-1"></span>';
                     friendsBtn.className = 'hover:opacity-80 transition-opacity';
                     friendsBtn.style.color = 'var(--main-color)';
                     friendsBtn.onclick = () => this.openStatsModal('friends');
@@ -958,12 +957,12 @@
                 const resultWithTimestamp = { ...result, timestamp: this.services.serverTimestamp(), userId: this.currentUser.uid, username: this.currentUser.displayName, category };
                 
                 const updates = {};
-                const newKey = this.services.push(this.services.ref(this.services.db)).key;
+                const newKey = this.services.push(this.services.ref(this.services.db, 'user-results')).key;
                 updates[`/leaderboard/${category}/${newKey}`] = resultWithTimestamp;
                 updates[`/user-results/${this.currentUser.uid}/${newKey}`] = resultWithTimestamp;
                 try {
                     await this.services.update(this.services.ref(this.services.db), updates);
-                } catch (e) { console.error("Error adding document: ", e); }
+                } catch (e) { console.error("Error saving test result: ", e); }
             }
 
             openAuthModal() { this.elements.authModal.classList.replace('hidden', 'flex'); }
