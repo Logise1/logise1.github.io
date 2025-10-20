@@ -96,10 +96,6 @@
             <input type="text" id="input-field" class="absolute top-0 left-0 w-full h-full opacity-0 cursor-text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
 
-        <div id="live-chart-container" class="w-full max-w-2xl h-20 mt-4 opacity-0 transition-opacity duration-300">
-            <canvas id="live-chart"></canvas>
-        </div>
-
         <div id="restart-container" class="mt-8">
              <button id="restart-btn" class="p-3" style="color: var(--sub-color);"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></button>
         </div>
@@ -118,11 +114,15 @@
     
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 items-center justify-center p-4 modal-backdrop">
         <div class="modal-content bg-ui p-8 rounded-lg shadow-xl w-full max-w-lg relative">
-             <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);">Temas</h2>
+             <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);">Ajustes</h2>
              <div class="text-center text-gray-400 space-y-6">
                  <div class="flex items-center justify-between">
-                    <span style="color: var(--text-color);">Elige tu tema preferido</span>
+                    <span style="color: var(--text-color);">Tema</span>
                     <div class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-2" data-setting="theme"><button data-value="default" class="px-3 py-1 rounded-md">🌃</button><button data-value="forest" class="px-3 py-1 rounded-md">🌲</button><button data-value="ocean" class="px-3 py-1 rounded-md">🌊</button><button data-value="light" class="px-3 py-1 rounded-md">💡</button><button data-value="retro" class="px-3 py-1 rounded-md">📜</button></div>
+                 </div>
+                 <div class="flex items-center justify-between">
+                    <span style="color: var(--text-color);">Sonidos de Teclas</span>
+                    <div class="settings-btn-group bg-black/10 p-1 rounded-md flex gap-2" data-setting="sound"><button data-value="true" class="px-3 py-1 rounded-md">Sí</button><button data-value="false" class="px-3 py-1 rounded-md">No</button></div>
                  </div>
             </div>
              <button id="close-settings-modal-btn" class="absolute top-4 right-4 text-3xl" style="color: var(--sub-color);">&times;</button>
@@ -182,8 +182,6 @@
                     finalWpm: document.getElementById('final-wpm'),
                     finalAccuracy: document.getElementById('final-accuracy'),
                     resultsChart: document.getElementById('results-chart'),
-                    liveChartContainer: document.getElementById('live-chart-container'),
-                    liveChart: document.getElementById('live-chart'),
                     settingsBtn: document.getElementById('settings-btn'),
                     settingsModal: document.getElementById('settings-modal'),
                     closeSettingsModalBtn: document.getElementById('close-settings-modal-btn'),
@@ -191,7 +189,7 @@
                 
                 this.quotes = { es: [], en: [] };
                 this.quotesLoaded = false;
-                this.charts = { final: null, live: null };
+                this.charts = { final: null };
                 this.sounds = {
                     keypress: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
                     error: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination()
@@ -201,7 +199,7 @@
                     es: ["el", "la", "de", "que", "y", "a", "en", "un", "ser", "se", "no", "haber", "por", "con", "su", "para", "como", "estar", "tener", "le", "lo", "todo", "pero", "más", "hacer", "o", "poder", "decir", "este", "ir", "otro", "ese", "si", "me", "ya", "ver", "porque", "dar", "cuando", "él", "muy", "sin", "vez", "mucho", "saber", "qué", "sobre", "mi", "alguno", "mismo", "yo", "también", "hasta", "año", "dos", "querer", "entre", "así", "primero", "desde", "grande", "eso", "ni", "nos", "llegar", "pasar", "tiempo", "ella", "uno", "bien", "poco", "deber", "entonces", "donde", "ahora", "parte", "vida", "quedar", "siempre", "creer", "hablar", "llevar", "dejar", "nada", "cada", "seguir", "parecer", "nuevo", "encontrar", "trabajo", "llamar", "venir", "pensar", "solo", "nuestro", "tan", "hombre", "día", "antes", "agua"],
                     en: ["the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any", "these", "give", "day", "most", "us"]
                 };
-                this.settings = { mode: 'words', amount: 30, language: 'es', theme: 'default' };
+                this.settings = { mode: 'words', amount: 30, language: 'es', theme: 'default', sound: false };
                 this.state = {};
                 this.gameInterval = null;
                 this.authManager = null;
@@ -210,21 +208,21 @@
             setAuthManager(manager) { this.authManager = manager; }
             
             async init() {
-                this.loadTheme();
+                this.loadSettings();
                 await this.loadQuotes();
                 this.setupSettingsListeners();
                 this.elements.inputField.addEventListener('keydown', (e) => this.handleKeydown(e));
                 this.elements.restartBtn.addEventListener('click', () => this.reset());
                 this.elements.nextTestBtn.addEventListener('click', () => this.reset());
                 this.elements.typingArea.addEventListener('click', () => {
-                    Tone.start();
+                    if (this.settings.sound) Tone.start();
                     this.elements.inputField.focus()
                 });
                 this.reset();
             }
 
             async loadQuotes() {
-                const quotesURL = 'https://wetypeapp.netlify.app/frases.json';
+                const quotesURL = 'https://raw.githubusercontent.com/Logise1/logise1.github.io/refs/heads/main/wetype/frases.json';
                 try {
                     const response = await fetch(quotesURL);
                     if (!response.ok) throw new Error('Network response was not ok');
@@ -250,7 +248,6 @@
                 document.getElementById('app-container').classList.remove('fade-out');
                 this.elements.liveStats.classList.add('opacity-0');
                 this.elements.settingsBar.classList.remove('opacity-0');
-                this.elements.liveChartContainer.classList.add('opacity-0');
                 
                 if (this.settings.mode === 'quote') {
                     if (this.quotesLoaded && this.quotes[this.settings.language]?.length > 0) {
@@ -271,16 +268,23 @@
                 this.elements.inputField.focus();
             }
 
-            loadTheme() {
+            loadSettings() {
                 const savedTheme = localStorage.getItem('theme') || 'default';
-                this.settings.theme = savedTheme;
-                this.elements.body.dataset.theme = savedTheme;
+                this.setTheme(savedTheme);
+
+                const savedSound = localStorage.getItem('sound') === 'true';
+                this.setSound(savedSound);
             }
 
             setTheme(themeName) {
                 this.settings.theme = themeName;
                 this.elements.body.dataset.theme = themeName;
                 localStorage.setItem('theme', themeName);
+            }
+
+            setSound(isSoundOn) {
+                this.settings.sound = isSoundOn;
+                localStorage.setItem('sound', isSoundOn);
             }
 
             getRandomWords(list, count) { 
@@ -328,8 +332,6 @@
                 this.state.wpmHistory = [];
                 this.elements.liveStats.classList.remove('opacity-0');
                 this.elements.settingsBar.classList.add('opacity-0');
-                this.elements.liveChartContainer.classList.remove('opacity-0');
-                this.initLiveChart();
                 this.gameInterval = setInterval(() => this.updateGame(), 250);
             }
 
@@ -352,10 +354,6 @@
                 
                 const wpm = (this.state.stats.correctChars / 5) / (elapsedSeconds / 60);
                 this.state.wpmHistory.push({x: elapsedSeconds, y: wpm || 0});
-                if(this.charts.live) {
-                    this.charts.live.data.datasets[0].data = this.state.wpmHistory;
-                    this.charts.live.update('none');
-                }
 
                 if (this.settings.mode === 'time') {
                     const newTimeLeft = this.settings.amount - elapsedSeconds;
@@ -397,22 +395,6 @@
                 document.getElementById('app-container').classList.add('fade-out');
                 this.elements.resultsModal.classList.remove('hidden');
                 this.elements.resultsModal.classList.add('flex');
-            }
-            
-             initLiveChart() {
-                if (this.charts.live) this.charts.live.destroy();
-                const mainColor = getComputedStyle(document.documentElement).getPropertyValue('--main-color');
-                const ctx = this.elements.liveChart.getContext('2d');
-                this.charts.live = new Chart(ctx, {
-                    type: 'line',
-                    data: { datasets: [{ data: [], borderColor: mainColor, tension: 0.4, pointRadius: 0 }] },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
-                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                        animation: { duration: 250 }
-                    }
-                });
             }
 
              renderFinalGraph() {
@@ -459,27 +441,31 @@
                 if (key === ' ') {
                     if (this.state.typedWord === '') return;
                     e.preventDefault();
-                    if(this.state.typedWord === this.state.words[this.state.currentWordIndex]){
-                        this.sounds.keypress.triggerAttackRelease('C5', '8n');
-                    } else {
-                        this.sounds.error.triggerAttackRelease('C3', '8n');
+                    if(this.settings.sound) {
+                        if(this.state.typedWord === this.state.words[this.state.currentWordIndex]){
+                            this.sounds.keypress.triggerAttackRelease('C5', '8n');
+                        } else {
+                            this.sounds.error.triggerAttackRelease('C3', '8n');
+                        }
                     }
                     this.moveToNextWord();
                 } else if (key === 'Backspace') {
                     e.preventDefault();
-                    this.sounds.keypress.triggerAttackRelease('C4', '8n');
+                    if(this.settings.sound) this.sounds.keypress.triggerAttackRelease('C4', '8n');
                     this.handleBackspace();
                 } else if (key.length === 1) {
                     e.preventDefault();
-                    const currentWord = this.state.words[this.state.currentWordIndex];
-                    const typedChar = key;
-                    const expectedChar = currentWord[this.state.typedWord.length];
-                    if(typedChar === expectedChar){
-                        this.sounds.keypress.triggerAttackRelease('C5', '8n');
-                    } else {
-                        this.sounds.error.triggerAttackRelease('C3', '8n');
+                    if(this.settings.sound){
+                        const currentWord = this.state.words[this.state.currentWordIndex];
+                        const typedChar = key;
+                        const expectedChar = currentWord[this.state.typedWord.length];
+                        if(typedChar === expectedChar){
+                            this.sounds.keypress.triggerAttackRelease('C5', '8n');
+                        } else {
+                            this.sounds.error.triggerAttackRelease('C3', '8n');
+                        }
                     }
-                    this.state.typedWord += typedChar;
+                    this.state.typedWord += key;
                     this.updateCurrentWord();
                 }
             }
@@ -555,7 +541,13 @@
                     const setting = group.dataset.setting;
                     Array.from(group.children).forEach(button => {
                         const value = button.dataset.value;
-                        if (value == this.settings[setting]) button.classList.add('active');
+
+                        // Set initial active state based on settings
+                        if (setting === 'sound') {
+                            if (String(this.settings.sound) === value) button.classList.add('active');
+                        } else {
+                            if (value == this.settings[setting]) button.classList.add('active');
+                        }
                         
                         button.addEventListener('click', () => {
                             Array.from(group.parentElement.querySelectorAll(`[data-setting="${setting}"] > button`)).forEach(b => b.classList.remove('active'));
@@ -563,6 +555,8 @@
                             
                             if (setting === 'theme') {
                                 this.setTheme(value);
+                            } else if (setting === 'sound') {
+                                this.setSound(value === 'true');
                             } else {
                                 this.settings[setting] = value;
                                 if(this.state.status === 'waiting') {
@@ -774,7 +768,7 @@
                 if (snapshot.exists()) {
                     snapshot.forEach(child => {
                         const result = child.val();
-                        if (!bests[result.category] || bests[result.category].wpm < result.wpm) {
+                        if (result.category && (!bests[result.category] || bests[result.category].wpm < result.wpm)) {
                             bests[result.category] = result;
                         }
                     });
