@@ -126,15 +126,18 @@
             transform: translate(-50%, -50%);
             animation: fadeInScaleUp 0.3s ease-out forwards;
         }
-        #close-welcome-btn {
+        #name-submit-btn {
             background: linear-gradient(to right, #3b82f6, #6366f1);
             border: none;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        #close-welcome-btn:hover {
+        #name-submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        #pixel-tooltip {
+            transform: translate(-50%, -120%); /* Position above the cursor */
         }
     </style>
 </head>
@@ -142,16 +145,16 @@
 
     <canvas id="placeCanvas"></canvas>
 
-    <!-- Welcome Modal -->
-    <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div class="modal-content bg-gray-800 text-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-               <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
-            </svg>
-            <h2 class="text-2xl font-bold mb-2 text-white">¡Defiende tu Lienzo!</h2>
-            <p class="mb-6 text-gray-300">Dibuja y protege tu arte. Otros intentarán borrarlo. ¡Colabora para crear algo único!</p>
-            <button id="close-welcome-btn" class="text-white font-bold py-2 px-4 rounded-lg w-full">Empezar a Dibujar</button>
+    <!-- Name Modal -->
+    <div id="name-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-gray-800 text-white p-6 sm:p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-4 text-white">Elige un nombre</h2>
+            <p class="mb-4 text-gray-400 text-sm">Tu nombre se mostrará cuando otros jugadores inspeccionen tus píxeles.</p>
+            <form id="name-form">
+                <input type="text" id="name-input" placeholder="Tu nombre de artista" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mb-2 text-center" required>
+                <p id="name-error" class="text-red-500 text-xs h-4 mb-2"></p>
+                <button id="name-submit-btn" type="submit" class="text-white font-bold py-2.5 px-4 rounded-lg w-full">Entrar al Lienzo</button>
+            </form>
         </div>
     </div>
     
@@ -164,12 +167,17 @@
         <!-- Los colores se generarán aquí -->
     </div>
 
+    <!-- Pixel Tooltip -->
+    <div id="pixel-tooltip" class="hidden absolute bg-gray-900 text-white text-xs px-2 py-1 rounded-md shadow-lg z-50 pointer-events-none">
+        Pintado por: <span id="tooltip-username" class="font-bold"></span>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Configuración ---
             const GRID_SIZE = 50;
             const PIXEL_SIZE = 16;
-            const COOLDOWN_SECONDS = 5; // Tiempo de espera ajustado a 5 segundos
+            const COOLDOWN_SECONDS = 5;
             const COLORS = [
                 '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
                 '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD',
@@ -177,8 +185,9 @@
             ];
             const MIN_ZOOM = 0.2;
             const MAX_ZOOM = 20;
-            const GRID_COLOR = '#4A5568';
+            const GRID_COLOR = '#6b7280'; // Gris claro
             const INITIAL_ZOOM = 5;
+            const LONG_PRESS_DURATION = 500; // 500ms for long press
 
             // --- Elementos del DOM ---
             const canvas = document.getElementById('placeCanvas');
@@ -186,18 +195,23 @@
             const colorPaletteContainer = document.getElementById('colorPalette');
             const cooldownProgressEl = document.getElementById('cooldown-progress');
             const cooldownTextEl = document.getElementById('cooldown-text');
-            const welcomeModal = document.getElementById('welcome-modal');
-            const closeWelcomeBtn = document.getElementById('close-welcome-btn');
+            const nameModal = document.getElementById('name-modal');
+            const nameForm = document.getElementById('name-form');
+            const nameInput = document.getElementById('name-input');
+            const nameError = document.getElementById('name-error');
+            const pixelTooltip = document.getElementById('pixel-tooltip');
+            const tooltipUsername = document.getElementById('tooltip-username');
 
             // --- Creación de la cuadrícula por defecto ---
             const defaultPixels = {};
             for (let x = 0; x < GRID_SIZE; x++) {
                 for (let y = 0; y < GRID_SIZE; y++) {
-                    defaultPixels[`${x}_${y}`] = '#FFFFFF';
+                    defaultPixels[`${x}_${y}`] = { color: '#FFFFFF', user: null };
                 }
             }
 
             // --- Estado de la aplicación ---
+            let username = null;
             let selectedColor = COLORS[0];
             let lastPixelTime = parseInt(localStorage.getItem('lastPixelTime')) || 0;
             let cooldownAnimationRequest;
@@ -210,6 +224,7 @@
             let hasDragged = false;
             let initialPinchDistance = null;
             let isMultiTouch = false;
+            let longPressTimeout = null;
 
             // --- Configuración de Firebase ---
             const firebaseConfig = {
@@ -248,12 +263,10 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.translate(offsetX, offsetY);
                 ctx.scale(scale, scale);
-                ctx.fillStyle = '#1F2937';
-                ctx.fillRect(0, 0, GRID_SIZE * PIXEL_SIZE, GRID_SIZE * PIXEL_SIZE);
-
+                
                 for (const key in pixels) {
                     const [x, y] = key.split('_').map(Number);
-                    ctx.fillStyle = pixels[key];
+                    ctx.fillStyle = pixels[key].color;
                     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 }
                 
@@ -315,23 +328,58 @@
 
                 if (gridPos.x >= 0 && gridPos.x < GRID_SIZE && gridPos.y >= 0 && gridPos.y < GRID_SIZE) {
                     const pixelKey = `${gridPos.x}_${gridPos.y}`;
-                    pixelsRef.child(pixelKey).set(selectedColor).then(startCooldown);
+                    const pixelData = {
+                        color: selectedColor,
+                        user: username
+                    };
+                    pixelsRef.child(pixelKey).set(pixelData).then(startCooldown);
                 }
+            }
+            
+            function showPixelInfo(event) {
+                const pos = getEventPos(event);
+                const gridPos = screenToGrid(pos.x, pos.y);
+
+                if (gridPos.x >= 0 && gridPos.x < GRID_SIZE && gridPos.y >= 0 && gridPos.y < GRID_SIZE) {
+                    const pixelKey = `${gridPos.x}_${gridPos.y}`;
+                    const pixelData = pixels[pixelKey];
+                    
+                    if (pixelData && pixelData.user) {
+                        tooltipUsername.textContent = pixelData.user;
+                        const clientX = event.clientX ?? event.touches[0].clientX;
+                        const clientY = event.clientY ?? event.touches[0].clientY;
+                        pixelTooltip.style.left = `${clientX}px`;
+                        pixelTooltip.style.top = `${clientY}px`;
+                        pixelTooltip.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            function hidePixelInfo() {
+                pixelTooltip.classList.add('hidden');
             }
 
             // --- Event Handlers ---
             function onPointerDown(event) {
                 if (event.pointerType === 'mouse' && event.button !== 0) return;
+                hidePixelInfo();
                 isDragging = true;
                 hasDragged = false;
                 const pos = getEventPos(event);
                 dragStartX = pos.x - offsetX;
                 dragStartY = pos.y - offsetY;
                 canvas.style.cursor = 'grabbing';
+                
+                longPressTimeout = setTimeout(() => {
+                    hasDragged = true;
+                    isDragging = false;
+                    showPixelInfo(event);
+                }, LONG_PRESS_DURATION);
             }
 
             function onPointerMove(event) {
                 if (!isDragging) return;
+                clearTimeout(longPressTimeout);
                 hasDragged = true;
                 const pos = getEventPos(event);
                 offsetX = pos.x - dragStartX;
@@ -340,6 +388,7 @@
             }
 
             function onPointerUp(event) {
+                clearTimeout(longPressTimeout);
                 isDragging = false;
                 const isCoolingDown = Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000;
                 canvas.style.cursor = isCoolingDown ? 'not-allowed' : 'crosshair';
@@ -350,6 +399,7 @@
             
             function onWheel(event) {
                 event.preventDefault();
+                hidePixelInfo();
                 const pos = getEventPos(event);
                 const zoomIntensity = 0.1;
                 const wheel = event.deltaY < 0 ? 1 : -1;
@@ -361,8 +411,30 @@
                 draw();
             }
 
-            function handleTouch(event) {
+            function handleTouchStart(event) {
+                hidePixelInfo();
+                if (event.touches.length > 1) {
+                    isMultiTouch = true;
+                    isDragging = false;
+                    clearTimeout(longPressTimeout);
+                } else if (event.touches.length === 1) {
+                    isDragging = true;
+                    hasDragged = false;
+                    const pos = getEventPos(event);
+                    dragStartX = pos.x - offsetX;
+                    dragStartY = pos.y - offsetY;
+                    
+                    longPressTimeout = setTimeout(() => {
+                        hasDragged = true;
+                        isDragging = false;
+                        showPixelInfo(event);
+                    }, LONG_PRESS_DURATION);
+                }
+            }
+            
+            function handleTouchMove(event) {
                 event.preventDefault();
+                clearTimeout(longPressTimeout);
                 const touches = event.touches;
                 if (touches.length === 2) {
                     isDragging = false;
@@ -374,42 +446,26 @@
                     } else {
                         const zoomFactor = distance / initialPinchDistance;
                         const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * zoomFactor));
-                        
                         const rect = canvas.getBoundingClientRect();
                         const midX = (p1.clientX + p2.clientX) / 2 - rect.left;
                         const midY = (p1.clientY + p2.clientY) / 2 - rect.top;
-
                         offsetX = midX - (midX - offsetX) * (newScale / scale);
                         offsetY = midY - (midY - offsetY) * (newScale / scale);
                         scale = newScale;
                         initialPinchDistance = distance;
                         draw();
                     }
-                } else if (touches.length === 1 && event.type === 'touchmove') {
-                    const pos = getEventPos(event);
-                     if (isDragging) {
-                         hasDragged = true;
-                         offsetX = pos.x - dragStartX;
-                         offsetY = pos.y - dragStartY;
-                         draw();
-                     }
-                }
-            }
-
-            function handleTouchStart(event) {
-                if (event.touches.length > 1) {
-                    isMultiTouch = true;
-                    isDragging = false;
-                } else if (event.touches.length === 1) {
-                    isDragging = true;
-                    hasDragged = false;
-                    const pos = getEventPos(event);
-                    dragStartX = pos.x - offsetX;
-                    dragStartY = pos.y - offsetY;
+                } else if (touches.length === 1 && isDragging) {
+                     hasDragged = true;
+                     const pos = getEventPos(event);
+                     offsetX = pos.x - dragStartX;
+                     offsetY = pos.y - dragStartY;
+                     draw();
                 }
             }
 
             function handleTouchEnd(event) {
+                clearTimeout(longPressTimeout);
                 if (!hasDragged && !isMultiTouch && event.changedTouches.length === 1) {
                     placePixel({ clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY });
                 }
@@ -428,20 +484,14 @@
                 draw();
             }
 
-            // --- Lógica Principal ---
-            function init() {
+            function initializeApp() {
                 resizeCanvas();
-                initColorPalette();
                 updateCooldownVisual();
-                
                 const gridCenterX = (GRID_SIZE * PIXEL_SIZE) / 2;
                 const gridCenterY = (GRID_SIZE * PIXEL_SIZE) / 2;
                 offsetX = canvas.width / 2 - gridCenterX * scale;
                 offsetY = canvas.height / 2 - gridCenterY * scale;
-                draw();
-
-                closeWelcomeBtn.addEventListener('click', () => welcomeModal.style.display = 'none');
-
+                
                 pixelsRef.on('value', (snapshot) => {
                     const firebasePixels = snapshot.val() || {};
                     pixels = { ...defaultPixels, ...firebasePixels };
@@ -451,14 +501,44 @@
                 canvas.addEventListener('mousedown', onPointerDown);
                 canvas.addEventListener('mousemove', onPointerMove);
                 canvas.addEventListener('mouseup', onPointerUp);
-                canvas.addEventListener('mouseleave', () => isDragging = false);
+                canvas.addEventListener('mouseleave', () => {
+                    isDragging = false;
+                    clearTimeout(longPressTimeout);
+                });
                 canvas.addEventListener('wheel', onWheel);
-
                 canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-                canvas.addEventListener('touchmove', handleTouch, { passive: false });
+                canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
                 canvas.addEventListener('touchend', handleTouchEnd);
-                
                 window.addEventListener('resize', resizeCanvas);
+            }
+            
+            function setupNameModal() {
+                const savedName = localStorage.getItem('placeUsername');
+                if (savedName) {
+                    username = savedName;
+                    nameModal.style.display = 'none';
+                    initializeApp();
+                } else {
+                    nameModal.style.display = 'flex';
+                }
+                
+                nameForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const nameValue = nameInput.value.trim();
+                    if (nameValue.length >= 3 && nameValue.length <= 20) {
+                        username = nameValue;
+                        localStorage.setItem('placeUsername', username);
+                        nameModal.style.display = 'none';
+                        initializeApp();
+                    } else {
+                        nameError.textContent = 'Debe tener entre 3 y 20 caracteres.';
+                    }
+                });
+            }
+
+            function init() {
+                initColorPalette();
+                setupNameModal();
             }
 
             init();
