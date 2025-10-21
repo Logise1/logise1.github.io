@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>r/place Clone</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase 8.10.1 SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Evita las barras de scroll */
+            height: 100%;
+            width: 100%;
+            background-color: #111827; /* Fondo oscuro */
+            font-family: 'Inter', sans-serif;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .color-palette {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 con transparencia */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid #374151; /* border-gray-700 */
+        }
+        .color-box {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.375rem; /* rounded-md */
+            cursor: pointer;
+            transition: transform 0.1s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .color-box.selected {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 3px white;
+        }
+        #cooldown-timer {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(17, 24, 39, 0.8);
+            color: white;
+            border-radius: 9999px;
+            font-family: monospace;
+            z-index: 10;
+            width: 180px;
+            text-align: center;
+            overflow: hidden; /* Clave para el efecto de llenado */
+            border: 1px solid #374151;
+        }
+        #cooldown-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background-color: #ef4444; /* bg-red-500 */
+        }
+        #cooldown-text {
+            position: relative;
+            z-index: 1;
+            display: block;
+            padding: 0.5rem 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="placeCanvas"></canvas>
+
+    <!-- Welcome Modal -->
+    <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div class="bg-gray-800 text-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-400">¡Defiende tu Arte!</h2>
+            <p class="mb-6">¡Dibuja y protege tus obras, porque los demás quieren romperlas!</p>
+            <button id="close-welcome-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full transition-colors duration-200">¡Entendido!</button>
+        </div>
+    </div>
+    
+    <div id="cooldown-timer">
+        <div id="cooldown-progress"></div>
+        <span id="cooldown-text">Listo para colocar</span>
+    </div>
+
+    <div id="colorPalette" class="color-palette">
+        <!-- Los colores se generarán aquí -->
+    </div>
+
+    <!-- Message Modal -->
+    <div id="message-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-gray-700 p-6 rounded-lg shadow-xl text-center text-white">
+            <p id="message-text"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Configuración ---
+            const GRID_SIZE = 50; // Reducido para un lienzo más pequeño
+            const PIXEL_SIZE = 16; // Tamaño visual base de cada píxel
+            const COOLDOWN_SECONDS = 5; // Enfriamiento reducido
+            const COLORS = [
+                '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
+                '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD',
+                '#0083C7', '#0000EA', '#CF6EE4', '#820080', '#000000', '#FFD700'
+            ];
+            const MIN_ZOOM = 0.2;
+            const MAX_ZOOM = 20;
+            const GRID_COLOR = '#4A5568';
+
+            // --- Elementos del DOM ---
+            const canvas = document.getElementById('placeCanvas');
+            const ctx = canvas.getContext('2d');
+            const colorPaletteContainer = document.getElementById('colorPalette');
+            const cooldownTimerEl = document.getElementById('cooldown-timer');
+            const cooldownProgressEl = document.getElementById('cooldown-progress');
+            const cooldownTextEl = document.getElementById('cooldown-text');
+            const messageModal = document.getElementById('message-modal');
+            const messageText = document.getElementById('message-text');
+            const welcomeModal = document.getElementById('welcome-modal');
+            const closeWelcomeBtn = document.getElementById('close-welcome-btn');
+
+            // --- Estado de la aplicación ---
+            let selectedColor = COLORS[0];
+            let lastPixelTime = 0;
+            let cooldownAnimationRequest;
+            let pixels = {};
+            
+            // Estado de transformación de la vista
+            let scale = 1.0;
+            let offsetX = 0;
+            let offsetY = 0;
+            let isDragging = false;
+            let dragStartX, dragStartY;
+            let hasDragged = false;
+
+            // --- Configuración de Firebase ---
+            const firebaseConfig = {
+                databaseURL: "https://chartica-282eb-default-rtdb.firebaseio.com/",
+            };
+            const app = firebase.initializeApp(firebaseConfig);
+            const database = firebase.database();
+            const pixelsRef = database.ref('place/pixels');
+
+            // --- Funciones ---
+            function showMessage(message, duration = 2000) {
+                messageText.textContent = message;
+                messageModal.classList.remove('hidden');
+                setTimeout(() => messageModal.classList.add('hidden'), duration);
+            }
+            
+            function initColorPalette() {
+                colorPaletteContainer.innerHTML = '';
+                COLORS.forEach(color => {
+                    const colorBox = document.createElement('div');
+                    colorBox.className = 'color-box';
+                    colorBox.style.backgroundColor = color;
+                    if (color === selectedColor) colorBox.classList.add('selected');
+                    colorBox.addEventListener('click', () => {
+                        selectedColor = color;
+                        document.querySelectorAll('.color-box').forEach(box => box.classList.remove('selected'));
+                        colorBox.classList.add('selected');
+                    });
+                    colorPaletteContainer.appendChild(colorBox);
+                });
+            }
+
+            function draw() {
+                // Limpiar y preparar el canvas
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Aplicar zoom y paneo
+                ctx.translate(offsetX, offsetY);
+                ctx.scale(scale, scale);
+
+                // Dibujar fondo del lienzo
+                ctx.fillStyle = '#1F2937';
+                ctx.fillRect(0, 0, GRID_SIZE * PIXEL_SIZE, GRID_SIZE * PIXEL_SIZE);
+
+                // Dibujar los píxeles de Firebase
+                for (const key in pixels) {
+                    const [x, y] = key.split('_').map(Number);
+                    ctx.fillStyle = pixels[key];
+                    ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                }
+                
+                // Dibujar la cuadrícula (ahora siempre visible)
+                ctx.strokeStyle = GRID_COLOR;
+                ctx.lineWidth = 1 / scale; // Mantener un grosor de línea constante
+                ctx.beginPath();
+                for (let x = 0; x <= GRID_SIZE; x++) {
+                    ctx.moveTo(x * PIXEL_SIZE, 0);
+                    ctx.lineTo(x * PIXEL_SIZE, GRID_SIZE * PIXEL_SIZE);
+                }
+                for (let y = 0; y <= GRID_SIZE; y++) {
+                    ctx.moveTo(0, y * PIXEL_SIZE);
+                    ctx.lineTo(GRID_SIZE * PIXEL_SIZE, y * PIXEL_SIZE);
+                }
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            function updateCooldownVisual() {
+                const elapsed = Date.now() - lastPixelTime;
+                const remainingSeconds = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
+                
+                if (elapsed >= COOLDOWN_SECONDS * 1000) {
+                    cooldownProgressEl.style.width = '0%';
+                    cooldownTextEl.textContent = 'Listo para colocar';
+                    if (!isDragging) {
+                        canvas.style.cursor = 'crosshair';
+                    }
+                } else {
+                    const progress = (elapsed / (COOLDOWN_SECONDS * 1000)) * 100;
+                    cooldownProgressEl.style.width = `${progress}%`;
+                    cooldownTextEl.textContent = `Espera ${remainingSeconds}s`;
+                    cooldownAnimationRequest = requestAnimationFrame(updateCooldownVisual);
+                }
+            }
+            
+            function startCooldown() {
+                lastPixelTime = Date.now();
+                canvas.style.cursor = 'not-allowed';
+
+                if (cooldownAnimationRequest) {
+                    cancelAnimationFrame(cooldownAnimationRequest);
+                }
+                updateCooldownVisual();
+            }
+
+            function getMousePos(event) {
+                const rect = canvas.getBoundingClientRect();
+                return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            }
+
+            function screenToGrid(mouseX, mouseY) {
+                const worldX = (mouseX - offsetX) / scale;
+                const worldY = (mouseY - offsetY) / scale;
+                const gridX = Math.floor(worldX / PIXEL_SIZE);
+                const gridY = Math.floor(worldY / PIXEL_SIZE);
+                return { x: gridX, y: gridY };
+            }
+            
+            // --- Event Handlers ---
+            function onMouseDown(event) {
+                isDragging = true;
+                hasDragged = false;
+                const pos = getMousePos(event);
+                dragStartX = pos.x - offsetX;
+                dragStartY = pos.y - offsetY;
+                canvas.style.cursor = 'grabbing';
+            }
+
+            function onMouseMove(event) {
+                if (isDragging) {
+                    hasDragged = true;
+                    const pos = getMousePos(event);
+                    offsetX = pos.x - dragStartX;
+                    offsetY = pos.y - dragStartY;
+                    draw();
+                }
+            }
+            
+            function onMouseUp(event) {
+                isDragging = false;
+                const isCoolingDown = Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000;
+                canvas.style.cursor = isCoolingDown ? 'not-allowed' : 'crosshair';
+                // Solo si no fue un arrastre, se considera un clic para colocar un píxel
+                if (!hasDragged) {
+                    placePixel(event);
+                }
+            }
+
+            function onWheel(event) {
+                event.preventDefault();
+                const pos = getMousePos(event);
+                const zoomIntensity = 0.1;
+                const wheel = event.deltaY < 0 ? 1 : -1;
+                const zoom = Math.exp(wheel * zoomIntensity);
+                const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * zoom));
+                
+                offsetX = pos.x - (pos.x - offsetX) * (newScale / scale);
+                offsetY = pos.y - (pos.y - offsetY) * (newScale / scale);
+                
+                scale = newScale;
+                draw();
+            }
+
+            function placePixel(event) {
+                if (Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000) {
+                    return; // Ignora el clic si está en enfriamiento, sin mostrar mensaje.
+                }
+                const mousePos = getMousePos(event);
+                const gridPos = screenToGrid(mousePos.x, mousePos.y);
+
+                if (gridPos.x >= 0 && gridPos.x < GRID_SIZE && gridPos.y >= 0 && gridPos.y < GRID_SIZE) {
+                    const pixelKey = `${gridPos.x}_${gridPos.y}`;
+                    pixelsRef.child(pixelKey).set(selectedColor)
+                        .then(startCooldown)
+                        .catch(error => {
+                            console.error("Error al colocar el píxel:", error);
+                            showMessage("Error al guardar el píxel.");
+                        });
+                }
+            }
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                draw();
+            }
+
+            // --- Lógica Principal ---
+            function init() {
+                resizeCanvas();
+                initColorPalette();
+                
+                // Centrar el canvas al inicio
+                offsetX = (canvas.width - GRID_SIZE * PIXEL_SIZE) / 2;
+                offsetY = (canvas.height - GRID_SIZE * PIXEL_SIZE) / 2;
+
+                // Listener para el popup de bienvenida
+                closeWelcomeBtn.addEventListener('click', () => {
+                    welcomeModal.classList.add('hidden');
+                });
+
+                // Escuchar cambios en Firebase
+                pixelsRef.on('value', (snapshot) => {
+                    pixels = snapshot.val() || {};
+                    draw();
+                }, (errorObject) => {
+                    console.error("La lectura falló: " + errorObject.name);
+                    showMessage("No se pudo conectar a la base de datos.");
+                });
+                
+                // Añadir listeners
+                canvas.addEventListener('mousedown', onMouseDown);
+                canvas.addEventListener('mousemove', onMouseMove);
+                canvas.addEventListener('mouseup', onMouseUp);
+                canvas.addEventListener('mouseleave', () => { 
+                    isDragging = false; 
+                    const isCoolingDown = Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000;
+                    canvas.style.cursor = isCoolingDown ? 'not-allowed' : 'crosshair';
+                });
+                canvas.addEventListener('wheel', onWheel);
+                window.addEventListener('resize', resizeCanvas);
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
