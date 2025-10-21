@@ -3,5 +3,10 @@
     "image": "/assets/wetype.png",
     "alt": "WeType",
     "link": "/wetype"
+  },
+  {
+    "image": "/assets/place.png",
+    "alt": "Place",
+    "link": "/place"
   }
 ]
