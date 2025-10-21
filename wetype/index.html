@@ -58,7 +58,7 @@
         #input-field:focus { outline: none; }
         .settings-btn-group button.active { color: var(--main-color); }
         #typing-area { mask-image: linear-gradient(to bottom, black 60%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%); }
-        #leaderboard-categories button.active, .friends-tabs button.active { background-color: var(--main-color) !important; color: var(--bg-color) !important; }
+        #leaderboard-categories button.active, .friends-tabs button.active { background-color: var(--main-color) !important; color: var(--bg-color) !important; font-weight: 600; }
         .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
         .fade-out { animation: fadeOut 0.3s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -670,6 +670,8 @@
             async handleRegister(username, password) {
                 this.elements.authError.textContent = '';
                 try {
+                    const usernameRegex = /^[a-zA-Z0-9]+$/;
+                    if (!usernameRegex.test(username)) throw new Error('Usuario solo puede tener letras y números.');
                     if (username.length < 3) throw new Error('El usuario debe tener al menos 3 caracteres.');
                     if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
                     
@@ -689,6 +691,9 @@
                         username: username,
                         username_lowercase: username.toLowerCase()
                     });
+
+                    this.currentUser = userCredential.user;
+                    this.currentUser.displayName = username;
 
                     this.closeAuthModal();
                     this.updateUserUI();
@@ -1061,3 +1066,4 @@
     </script>
 </body>
 </html>
+
