@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>r/place Clone</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,6 +23,7 @@
             width: 100%;
             background-color: #111827; /* Fondo oscuro */
             font-family: 'Inter', sans-serif;
+            position: fixed; /* Evita el rebote de la vista en móviles */
         }
         canvas {
             display: block;
@@ -40,24 +41,36 @@
             background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 con transparencia */
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 1rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
             gap: 0.5rem;
             border-top: 1px solid #374151; /* border-gray-700 */
+            max-width: 500px;
+            margin: 0 auto;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
         }
         .color-box {
-            width: 2.5rem;
-            height: 2.5rem;
+            width: 100%;
+            padding-bottom: 100%; /* Truco para mantener la relación de aspecto 1:1 */
+            position: relative;
             border-radius: 0.375rem; /* rounded-md */
             cursor: pointer;
             transition: transform 0.1s ease-in-out;
             border: 2px solid transparent;
         }
+        .color-box-inner {
+             position: absolute;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+        }
         .color-box.selected {
             transform: scale(1.2);
             box-shadow: 0 0 0 3px white;
+            z-index: 5;
         }
         #cooldown-timer {
             position: fixed;
@@ -122,9 +135,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Configuración ---
-            const GRID_SIZE = 50; // Reducido para un lienzo más pequeño
-            const PIXEL_SIZE = 16; // Tamaño visual base de cada píxel
-            const COOLDOWN_SECONDS = 5; // Enfriamiento reducido
+            const GRID_SIZE = 50;
+            const PIXEL_SIZE = 16;
+            const COOLDOWN_SECONDS = 5;
             const COLORS = [
                 '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
                 '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD',
@@ -133,16 +146,14 @@
             const MIN_ZOOM = 0.2;
             const MAX_ZOOM = 20;
             const GRID_COLOR = '#4A5568';
+            const INITIAL_ZOOM = 5;
 
             // --- Elementos del DOM ---
             const canvas = document.getElementById('placeCanvas');
             const ctx = canvas.getContext('2d');
             const colorPaletteContainer = document.getElementById('colorPalette');
-            const cooldownTimerEl = document.getElementById('cooldown-timer');
             const cooldownProgressEl = document.getElementById('cooldown-progress');
             const cooldownTextEl = document.getElementById('cooldown-text');
-            const messageModal = document.getElementById('message-modal');
-            const messageText = document.getElementById('message-text');
             const welcomeModal = document.getElementById('welcome-modal');
             const closeWelcomeBtn = document.getElementById('close-welcome-btn');
 
@@ -151,14 +162,13 @@
             let lastPixelTime = 0;
             let cooldownAnimationRequest;
             let pixels = {};
-            
-            // Estado de transformación de la vista
-            let scale = 1.0;
+            let scale = INITIAL_ZOOM;
             let offsetX = 0;
             let offsetY = 0;
             let isDragging = false;
             let dragStartX, dragStartY;
             let hasDragged = false;
+            let initialPinchDistance = null;
 
             // --- Configuración de Firebase ---
             const firebaseConfig = {
@@ -169,19 +179,19 @@
             const pixelsRef = database.ref('place/pixels');
 
             // --- Funciones ---
-            function showMessage(message, duration = 2000) {
-                messageText.textContent = message;
-                messageModal.classList.remove('hidden');
-                setTimeout(() => messageModal.classList.add('hidden'), duration);
-            }
             
             function initColorPalette() {
                 colorPaletteContainer.innerHTML = '';
                 COLORS.forEach(color => {
                     const colorBox = document.createElement('div');
                     colorBox.className = 'color-box';
-                    colorBox.style.backgroundColor = color;
                     if (color === selectedColor) colorBox.classList.add('selected');
+                    
+                    const innerBox = document.createElement('div');
+                    innerBox.className = 'color-box-inner';
+                    innerBox.style.backgroundColor = color;
+                    colorBox.appendChild(innerBox);
+
                     colorBox.addEventListener('click', () => {
                         selectedColor = color;
                         document.querySelectorAll('.color-box').forEach(box => box.classList.remove('selected'));
@@ -192,29 +202,22 @@
             }
 
             function draw() {
-                // Limpiar y preparar el canvas
                 ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Aplicar zoom y paneo
                 ctx.translate(offsetX, offsetY);
                 ctx.scale(scale, scale);
-
-                // Dibujar fondo del lienzo
                 ctx.fillStyle = '#1F2937';
                 ctx.fillRect(0, 0, GRID_SIZE * PIXEL_SIZE, GRID_SIZE * PIXEL_SIZE);
 
-                // Dibujar los píxeles de Firebase
                 for (const key in pixels) {
                     const [x, y] = key.split('_').map(Number);
                     ctx.fillStyle = pixels[key];
                     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 }
                 
-                // Dibujar la cuadrícula (ahora siempre visible)
                 ctx.strokeStyle = GRID_COLOR;
-                ctx.lineWidth = 1 / scale; // Mantener un grosor de línea constante
+                ctx.lineWidth = 1 / scale;
                 ctx.beginPath();
                 for (let x = 0; x <= GRID_SIZE; x++) {
                     ctx.moveTo(x * PIXEL_SIZE, 0);
@@ -225,22 +228,18 @@
                     ctx.lineTo(GRID_SIZE * PIXEL_SIZE, y * PIXEL_SIZE);
                 }
                 ctx.stroke();
-
                 ctx.restore();
             }
 
             function updateCooldownVisual() {
                 const elapsed = Date.now() - lastPixelTime;
-                const remainingSeconds = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
-                
                 if (elapsed >= COOLDOWN_SECONDS * 1000) {
                     cooldownProgressEl.style.width = '0%';
                     cooldownTextEl.textContent = 'Listo para colocar';
-                    if (!isDragging) {
-                        canvas.style.cursor = 'crosshair';
-                    }
+                    if (!isDragging) canvas.style.cursor = 'crosshair';
                 } else {
                     const progress = (elapsed / (COOLDOWN_SECONDS * 1000)) * 100;
+                    const remainingSeconds = Math.ceil((COOLDOWN_SECONDS * 1000 - elapsed) / 1000);
                     cooldownProgressEl.style.width = `${progress}%`;
                     cooldownTextEl.textContent = `Espera ${remainingSeconds}s`;
                     cooldownAnimationRequest = requestAnimationFrame(updateCooldownVisual);
@@ -250,87 +249,128 @@
             function startCooldown() {
                 lastPixelTime = Date.now();
                 canvas.style.cursor = 'not-allowed';
-
-                if (cooldownAnimationRequest) {
-                    cancelAnimationFrame(cooldownAnimationRequest);
-                }
+                if (cooldownAnimationRequest) cancelAnimationFrame(cooldownAnimationRequest);
                 updateCooldownVisual();
             }
 
-            function getMousePos(event) {
+            function getEventPos(event) {
                 const rect = canvas.getBoundingClientRect();
-                return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+                const clientX = event.clientX ?? event.touches[0].clientX;
+                const clientY = event.clientY ?? event.touches[0].clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
             }
 
             function screenToGrid(mouseX, mouseY) {
                 const worldX = (mouseX - offsetX) / scale;
                 const worldY = (mouseY - offsetY) / scale;
-                const gridX = Math.floor(worldX / PIXEL_SIZE);
-                const gridY = Math.floor(worldY / PIXEL_SIZE);
-                return { x: gridX, y: gridY };
+                return { x: Math.floor(worldX / PIXEL_SIZE), y: Math.floor(worldY / PIXEL_SIZE) };
             }
-            
+
+            function placePixel(event) {
+                if (Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000) return;
+                const pos = getEventPos(event);
+                const gridPos = screenToGrid(pos.x, pos.y);
+
+                if (gridPos.x >= 0 && gridPos.x < GRID_SIZE && gridPos.y >= 0 && gridPos.y < GRID_SIZE) {
+                    const pixelKey = `${gridPos.x}_${gridPos.y}`;
+                    pixelsRef.child(pixelKey).set(selectedColor).then(startCooldown);
+                }
+            }
+
             // --- Event Handlers ---
-            function onMouseDown(event) {
+            function onPointerDown(event) {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
                 isDragging = true;
                 hasDragged = false;
-                const pos = getMousePos(event);
+                const pos = getEventPos(event);
                 dragStartX = pos.x - offsetX;
                 dragStartY = pos.y - offsetY;
                 canvas.style.cursor = 'grabbing';
             }
 
-            function onMouseMove(event) {
-                if (isDragging) {
-                    hasDragged = true;
-                    const pos = getMousePos(event);
-                    offsetX = pos.x - dragStartX;
-                    offsetY = pos.y - dragStartY;
-                    draw();
-                }
+            function onPointerMove(event) {
+                if (!isDragging) return;
+                hasDragged = true;
+                const pos = getEventPos(event);
+                offsetX = pos.x - dragStartX;
+                offsetY = pos.y - dragStartY;
+                draw();
             }
-            
-            function onMouseUp(event) {
+
+            function onPointerUp(event) {
                 isDragging = false;
                 const isCoolingDown = Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000;
                 canvas.style.cursor = isCoolingDown ? 'not-allowed' : 'crosshair';
-                // Solo si no fue un arrastre, se considera un clic para colocar un píxel
                 if (!hasDragged) {
                     placePixel(event);
                 }
             }
-
+            
             function onWheel(event) {
                 event.preventDefault();
-                const pos = getMousePos(event);
+                const pos = getEventPos(event);
                 const zoomIntensity = 0.1;
                 const wheel = event.deltaY < 0 ? 1 : -1;
                 const zoom = Math.exp(wheel * zoomIntensity);
                 const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * zoom));
-                
                 offsetX = pos.x - (pos.x - offsetX) * (newScale / scale);
                 offsetY = pos.y - (pos.y - offsetY) * (newScale / scale);
-                
                 scale = newScale;
                 draw();
             }
 
-            function placePixel(event) {
-                if (Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000) {
-                    return; // Ignora el clic si está en enfriamiento, sin mostrar mensaje.
-                }
-                const mousePos = getMousePos(event);
-                const gridPos = screenToGrid(mousePos.x, mousePos.y);
+            function handleTouch(event) {
+                event.preventDefault();
+                const touches = event.touches;
+                if (touches.length === 2) { // Pinch zoom
+                    isDragging = false;
+                    const p1 = touches[0];
+                    const p2 = touches[1];
+                    const distance = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+                    if (initialPinchDistance === null) {
+                        initialPinchDistance = distance;
+                    } else {
+                        const zoomFactor = distance / initialPinchDistance;
+                        const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * zoomFactor));
+                        
+                        const rect = canvas.getBoundingClientRect();
+                        const midX = (p1.clientX + p2.clientX) / 2 - rect.left;
+                        const midY = (p1.clientY + p2.clientY) / 2 - rect.top;
 
-                if (gridPos.x >= 0 && gridPos.x < GRID_SIZE && gridPos.y >= 0 && gridPos.y < GRID_SIZE) {
-                    const pixelKey = `${gridPos.x}_${gridPos.y}`;
-                    pixelsRef.child(pixelKey).set(selectedColor)
-                        .then(startCooldown)
-                        .catch(error => {
-                            console.error("Error al colocar el píxel:", error);
-                            showMessage("Error al guardar el píxel.");
-                        });
+                        offsetX = midX - (midX - offsetX) * (newScale / scale);
+                        offsetY = midY - (midY - offsetY) * (newScale / scale);
+                        scale = newScale;
+                        initialPinchDistance = distance;
+                        draw();
+                    }
+                } else if (touches.length === 1 && event.type === 'touchmove') { // Pan
+                    const pos = getEventPos(event);
+                     if (isDragging) {
+                         hasDragged = true;
+                         offsetX = pos.x - dragStartX;
+                         offsetY = pos.y - dragStartY;
+                         draw();
+                     }
                 }
+            }
+
+            function handleTouchStart(event) {
+                if (event.touches.length === 1) {
+                    isDragging = true;
+                    hasDragged = false;
+                    const pos = getEventPos(event);
+                    dragStartX = pos.x - offsetX;
+                    dragStartY = pos.y - offsetY;
+                }
+            }
+
+            function handleTouchEnd(event) {
+                if (!hasDragged && event.changedTouches.length === 1) {
+                    // This creates a synthetic event object for placePixel
+                    placePixel({ clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY });
+                }
+                initialPinchDistance = null;
+                isDragging = false;
             }
 
             function resizeCanvas() {
@@ -344,34 +384,31 @@
                 resizeCanvas();
                 initColorPalette();
                 
-                // Centrar el canvas al inicio
-                offsetX = (canvas.width - GRID_SIZE * PIXEL_SIZE) / 2;
-                offsetY = (canvas.height - GRID_SIZE * PIXEL_SIZE) / 2;
+                const gridCenterX = (GRID_SIZE * PIXEL_SIZE) / 2;
+                const gridCenterY = (GRID_SIZE * PIXEL_SIZE) / 2;
+                offsetX = canvas.width / 2 - gridCenterX * scale;
+                offsetY = canvas.height / 2 - gridCenterY * scale;
+                draw();
 
-                // Listener para el popup de bienvenida
-                closeWelcomeBtn.addEventListener('click', () => {
-                    welcomeModal.classList.add('hidden');
-                });
+                closeWelcomeBtn.addEventListener('click', () => welcomeModal.classList.add('hidden'));
 
-                // Escuchar cambios en Firebase
                 pixelsRef.on('value', (snapshot) => {
                     pixels = snapshot.val() || {};
                     draw();
-                }, (errorObject) => {
-                    console.error("La lectura falló: " + errorObject.name);
-                    showMessage("No se pudo conectar a la base de datos.");
                 });
                 
-                // Añadir listeners
-                canvas.addEventListener('mousedown', onMouseDown);
-                canvas.addEventListener('mousemove', onMouseMove);
-                canvas.addEventListener('mouseup', onMouseUp);
-                canvas.addEventListener('mouseleave', () => { 
-                    isDragging = false; 
-                    const isCoolingDown = Date.now() - lastPixelTime < COOLDOWN_SECONDS * 1000;
-                    canvas.style.cursor = isCoolingDown ? 'not-allowed' : 'crosshair';
-                });
+                // Event Listeners for mouse
+                canvas.addEventListener('mousedown', onPointerDown);
+                canvas.addEventListener('mousemove', onPointerMove);
+                canvas.addEventListener('mouseup', onPointerUp);
+                canvas.addEventListener('mouseleave', () => isDragging = false);
                 canvas.addEventListener('wheel', onWheel);
+
+                // Event Listeners for touch
+                canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+                canvas.addEventListener('touchmove', handleTouch, { passive: false });
+                canvas.addEventListener('touchend', handleTouchEnd);
+                
                 window.addEventListener('resize', resizeCanvas);
             }
 
