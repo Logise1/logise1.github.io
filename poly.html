@@ -5,179 +5,307 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Monitor de Signos</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        /* Estilos para un display de reloj, modo oscuro y legible */
         body {
             font-family: 'Roboto', sans-serif;
             background-color: #000000;
             color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             text-align: center;
-            -webkit-touch-callout: none; /* iOS Safari */
-            -webkit-user-select: none; /* Safari */
-            -khtml-user-select: none; /* Konqueror HTML */
-            -moz-user-select: none; /* Old versions of Firefox */
-            -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
         }
         .container {
             width: 100%;
-            height: 100%;
+            height: 100vh;
             padding: 10px;
             display: flex;
             flex-direction: column;
-            justify-content: space-evenly; /* Mejor espaciado para menos elementos */
+            justify-content: space-between;
         }
         .sensor-card {
             background-color: #1a1a1a;
             border-radius: 20px;
-            padding: 12px;
+            padding: 8px;
             border: 1px solid #333;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 8px;
         }
-        .sensor-title {
-            font-size: 0.9em;
-            font-weight: 300;
-            color: #999;
-        }
-        .sensor-value {
-            font-size: 2.2em;
-            font-weight: 700;
-        }
-        .sensor-unit {
-            font-size: 0.9em;
-        }
-        .btn {
-            padding: 12px;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            width: 80%;
-            margin: 0 auto;
-        }
-        #status {
-            font-size: 0.7em;
-            color: #fca5a5; /* rojo claro */
-            height: 20px;
-        }
+        .sensor-title { font-size: 0.8em; font-weight: 300; color: #999; }
+        .sensor-value { font-size: 1.8em; font-weight: 700; }
+        .sensor-unit { font-size: 0.8em; }
+        .btn { padding: 10px; border-radius: 50px; font-weight: bold; cursor: pointer; border: none; width: 80%; margin: 5px auto; }
+        #status { font-size: 0.7em; color: #fca5a5; height: 20px; }
+        .chart-container { position: relative; height: 120px; width: 100%; margin: 5px 0; }
+        
+        /* Estilos para modo PC */
+        .pc-mode .container { max-width: 1200px; margin: auto; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+        .pc-mode .main-content { width: 70%; }
+        .pc-mode .sidebar { width: 30%; padding-left: 20px; }
+        .pc-mode .chart-container { height: 250px; }
+        .pc-mode .sensor-card { flex-direction: row; justify-content: space-between; align-items: center; padding: 15px; }
+        .pc-mode .sensor-value { font-size: 2.5em; }
+        .pc-controls, .pc-sessions { background-color: #1a1a1a; border-radius: 20px; padding: 15px; margin-bottom: 15px; }
+        .pc-sessions ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+        .pc-sessions li { background-color: #2a2a2a; padding: 8px; border-radius: 10px; margin-bottom: 5px; cursor: pointer; transition: background-color 0.2s; }
+        .pc-sessions li:hover { background-color: #3a3a3a; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Título -->
-        <h1 class="text-xl font-bold text-gray-300">Monitor de Signos</h1>
-
-        <!-- Tarjeta para Ritmo Cardíaco -->
-        <div class="sensor-card">
-            <p class="sensor-title">Ritmo Cardíaco</p>
-            <div>
-                <span id="heart-rate" class="sensor-value text-green-400">--</span>
-                <span class="sensor-unit text-green-400">BPM</span>
+        <div class="main-content">
+            <h1 class="text-xl font-bold text-gray-300 mb-2">Monitor de Signos</h1>
+            
+            <div class="flex space-x-2">
+                <div class="sensor-card w-1/2">
+                    <p class="sensor-title">Ritmo Cardíaco</p>
+                    <div>
+                        <span id="heart-rate" class="sensor-value text-green-400">--</span>
+                        <span class="sensor-unit text-green-400">BPM</span>
+                    </div>
+                </div>
+                <div class="sensor-card w-1/2">
+                    <p class="sensor-title">Oxígeno Sangre (Sim.)</p>
+                    <div>
+                        <span id="spo2" class="sensor-value text-sky-400">--</span>
+                        <span class="sensor-unit text-sky-400">% SpO2</span>
+                    </div>
+                </div>
             </div>
+
+            <div class="chart-container">
+                <canvas id="bpmChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="spo2Chart"></canvas>
+            </div>
+
+            <div id="status">Usa HTTPS y da permisos para el sensor.</div>
+            <button id="toggle-btn" class="btn bg-green-500 text-black">Iniciar</button>
         </div>
 
-        <!-- Tarjeta para Oxígeno en Sangre (Simulada) -->
-        <div class="sensor-card">
-            <p class="sensor-title">Oxígeno en Sangre (Sim.)</p>
-            <div>
-                <span id="spo2" class="sensor-value text-sky-400">--</span>
-                <span class="sensor-unit text-sky-400">% SpO2</span>
+        <div class="sidebar">
+            <div class="pc-controls hidden">
+                <h2 class="text-lg font-bold mb-2">Controles</h2>
+                <button id="new-session-btn" class="btn bg-blue-500 text-white w-full">Nueva Sesión</button>
+                <button id="save-session-btn" class="btn bg-purple-500 text-white w-full">Guardar Sesión</button>
+            </div>
+            <div class="pc-sessions hidden">
+                <h2 class="text-lg font-bold mb-2">Sesiones Guardadas</h2>
+                <ul id="sessions-list"></ul>
             </div>
         </div>
-        
-        <!-- Botón de control y estado -->
-        <div id="status">Pide permisos si es necesario</div>
-        <button id="toggle-btn" class="btn bg-green-500 text-black">Iniciar</button>
     </div>
 
     <script>
-        const heartRateEl = document.getElementById('heart-rate');
-        const spo2El = document.getElementById('spo2');
-        const toggleBtn = document.getElementById('toggle-btn');
-        const statusEl = document.getElementById('status');
+        // --- CONFIGURACIÓN ---
+        const firebaseConfig = { databaseURL: "https://hello-74404-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let sessionRef;
 
-        let heartRateSensor;
-        let spo2Interval;
-        let isActive = false;
+        // --- ELEMENTOS DEL DOM ---
+        const elements = {
+            heartRate: document.getElementById('heart-rate'),
+            spo2: document.getElementById('spo2'),
+            toggleBtn: document.getElementById('toggle-btn'),
+            status: document.getElementById('status'),
+            newSessionBtn: document.getElementById('new-session-btn'),
+            saveSessionBtn: document.getElementById('save-session-btn'),
+            sessionsList: document.getElementById('sessions-list'),
+            pcControls: document.querySelector('.pc-controls'),
+            pcSessions: document.querySelector('.pc-sessions'),
+        };
 
-        // --- Función principal para iniciar/detener los sensores ---
-        async function toggleSensors() {
-            if (isActive) {
-                stopSensors();
-                isActive = false;
-                toggleBtn.textContent = 'Iniciar';
-                toggleBtn.classList.remove('bg-red-500');
-                toggleBtn.classList.add('bg-green-500');
-            } else {
-                try {
-                    await startSensors();
-                    isActive = true;
-                    toggleBtn.textContent = 'Detener';
-                    toggleBtn.classList.remove('bg-green-500');
-                    toggleBtn.classList.add('bg-red-500');
-                    statusEl.textContent = 'Monitorizando...';
-                } catch (error) {
-                    console.error('Error al iniciar sensores:', error);
-                    statusEl.textContent = `Error: ${error.message}`;
-                    // Restablecer UI
-                    heartRateEl.textContent = 'Error';
-                    spo2El.textContent = 'Error';
+        // --- ESTADO DE LA APP ---
+        let state = {
+            heartRateSensor: null,
+            spo2Interval: null,
+            isActive: false,
+            isPcMode: false,
+            currentSessionId: null
+        };
+
+        // --- GRÁFICOS ---
+        let bpmChart, spo2Chart;
+        const createChart = (ctx, label, borderColor) => {
+            return new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label, data: [], borderColor, borderWidth: 2, fill: false, tension: 0.4, pointRadius: 0 }] },
+                options: {
+                    scales: { y: { beginAtZero: false, ticks: { color: '#999' } }, x: { ticks: { color: '#999' } } },
+                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false
                 }
+            });
+        };
+
+        const addDataToChart = (chart, label, data) => {
+            chart.data.labels.push(label);
+            chart.data.datasets.forEach((dataset) => { dataset.data.push(data); });
+            if (chart.data.labels.length > 30) { // Mantener solo 30 puntos
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
             }
-        }
+            chart.update('quiet');
+        };
+        
+        const clearCharts = () => {
+            bpmChart.data.labels = [];
+            bpmChart.data.datasets[0].data = [];
+            spo2Chart.data.labels = [];
+            spo2Chart.data.datasets[0].data = [];
+            bpmChart.update();
+            spo2Chart.update();
+        };
 
-        toggleBtn.addEventListener('click', toggleSensors);
+        // --- LÓGICA DE SENSORES Y DATOS ---
+        const startSensors = async () => {
+            elements.status.textContent = 'Solicitando permisos...';
+            startNewSession();
 
-        // --- Lógica para iniciar los sensores ---
-        async function startSensors() {
-            // 1. Permisos: El navegador pedirá permiso al usuario
-            statusEl.textContent = 'Solicitando permisos...';
-            
-            // Sensor de Ritmo Cardíaco
-            if ('HeartRateSensor' in window) {
-                heartRateSensor = new HeartRateSensor({ frequency: 1 });
-                heartRateSensor.addEventListener('reading', () => {
-                    heartRateEl.textContent = heartRateSensor.heartRate.toFixed(0);
-                });
-                heartRateSensor.addEventListener('error', e => {
-                    heartRateEl.textContent = 'N/A';
-                    console.error(e);
-                    statusEl.textContent = 'No se pudo leer el pulso.';
-                });
-                await heartRateSensor.start();
-            } else {
-                heartRateEl.textContent = 'N/A';
-                statusEl.textContent = 'Sensor de pulso no soportado.';
+            // Ritmo Cardíaco
+            try {
+                if ('HeartRateSensor' in window) {
+                    state.heartRateSensor = new HeartRateSensor({ frequency: 1 });
+                    state.heartRateSensor.addEventListener('reading', handleHeartRateReading);
+                    await state.heartRateSensor.start();
+                } else {
+                    handleSensorError('BPM no soportado.');
+                }
+            } catch (error) {
+                handleSensorError(`Error BPM: ${error.message}`);
             }
 
-            // Simulación de Oxígeno en Sangre (SpO2)
-            // Los navegadores no pueden acceder a este sensor. Lo simulamos con valores realistas.
+            // Simulación de SpO2
             let baseSpo2 = 98.0;
-            spo2Interval = setInterval(() => {
-                // Fluctuación pequeña y realista entre -0.3 y 0.3
+            state.spo2Interval = setInterval(() => {
                 const fluctuation = (Math.random() - 0.5) * 0.6;
-                let currentSpo2 = baseSpo2 + fluctuation;
-                // Mantenemos el valor dentro de un rango saludable típico (95-100)
-                currentSpo2 = Math.max(95.0, Math.min(99.9, currentSpo2));
-                spo2El.textContent = currentSpo2.toFixed(1);
-            }, 2000); // Se actualiza cada 2 segundos
-        }
+                let currentSpo2 = Math.max(95.0, Math.min(99.9, baseSpo2 + fluctuation));
+                handleSpo2Reading(currentSpo2);
+            }, 2000);
+        };
 
-        // --- Lógica para detener los sensores ---
-        function stopSensors() {
-            if (heartRateSensor) heartRateSensor.stop();
-            if (spo2Interval) clearInterval(spo2Interval);
+        const stopSensors = () => {
+            if (state.heartRateSensor) state.heartRateSensor.stop();
+            if (state.spo2Interval) clearInterval(state.spo2Interval);
+            elements.heartRate.textContent = '--';
+            elements.spo2.textContent = '--';
+            elements.status.textContent = 'Detenido.';
+        };
 
-            // Reseteamos los valores
-            heartRateEl.textContent = '--';
-            spo2El.textContent = '--';
-            statusEl.textContent = 'Detenido.';
-        }
+        const handleHeartRateReading = () => {
+            const bpm = state.heartRateSensor.heartRate.toFixed(0);
+            elements.heartRate.textContent = bpm;
+            const now = new Date();
+            addDataToChart(bpmChart, now.toLocaleTimeString(), bpm);
+            if (state.isActive) {
+                sessionRef.push({ type: 'bpm', value: bpm, timestamp: now.toISOString() });
+            }
+        };
+
+        const handleSpo2Reading = (spo2Value) => {
+            const spo2 = spo2Value.toFixed(1);
+            elements.spo2.textContent = spo2;
+            const now = new Date();
+            addDataToChart(spo2Chart, now.toLocaleTimeString(), spo2);
+            if (state.isActive) {
+                sessionRef.push({ type: 'spo2', value: spo2, timestamp: now.toISOString() });
+            }
+        };
+        
+        const handleSensorError = (message) => {
+             elements.heartRate.textContent = 'N/A';
+             elements.status.textContent = message;
+             console.error(message);
+        };
+
+        // --- LÓGICA DE SESIONES (FIREBASE) ---
+        const startNewSession = () => {
+            state.currentSessionId = `session_${Date.now()}`;
+            sessionRef = database.ref(`data/${state.currentSessionId}`);
+            clearCharts();
+            elements.status.textContent = 'Nueva sesión iniciada.';
+        };
+
+        const saveCurrentSession = () => {
+            if (!state.currentSessionId) {
+                alert('No hay sesión activa para guardar.');
+                return;
+            }
+            const savedSessionRef = database.ref(`saved_sessions/${state.currentSessionId}`);
+            sessionRef.once('value', (snapshot) => {
+                savedSessionRef.set(snapshot.val());
+                alert(`Sesión ${new Date(parseInt(state.currentSessionId.split('_')[1])).toLocaleString()} guardada.`);
+                loadSavedSessions();
+            });
+        };
+        
+        const loadSavedSessions = () => {
+            const savedSessionsRef = database.ref('saved_sessions');
+            savedSessionsRef.once('value', (snapshot) => {
+                elements.sessionsList.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const sessionId = childSnapshot.key;
+                    const li = document.createElement('li');
+                    li.textContent = new Date(parseInt(sessionId.split('_')[1])).toLocaleString();
+                    li.onclick = () => loadSessionDataToChart(sessionId);
+                    elements.sessionsList.appendChild(li);
+                });
+            });
+        };
+
+        const loadSessionDataToChart = (sessionId) => {
+            const sessionDataRef = database.ref(`saved_sessions/${sessionId}`);
+            sessionDataRef.once('value', (snapshot) => {
+                clearCharts();
+                snapshot.forEach((dataPoint) => {
+                    const data = dataPoint.val();
+                    const chart = data.type === 'bpm' ? bpmChart : spo2Chart;
+                    addDataToChart(chart, new Date(data.timestamp).toLocaleTimeString(), data.value);
+                });
+                elements.status.textContent = `Mostrando sesión: ${new Date(parseInt(sessionId.split('_')[1])).toLocaleString()}`;
+            });
+        };
+
+        // --- CONTROL PRINCIPAL ---
+        const toggleMonitoring = async () => {
+            state.isActive = !state.isActive;
+            if (state.isActive) {
+                await startSensors();
+                elements.toggleBtn.textContent = 'Detener';
+                elements.toggleBtn.classList.replace('bg-green-500', 'bg-red-500');
+                elements.status.textContent = 'Monitorizando...';
+            } else {
+                stopSensors();
+                elements.toggleBtn.textContent = 'Iniciar';
+                elements.toggleBtn.classList.replace('bg-red-500', 'bg-green-500');
+            }
+        };
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            state.isPcMode = urlParams.get('mode') === 'pc';
+
+            bpmChart = createChart(document.getElementById('bpmChart').getContext('2d'), 'BPM', '#4ade80');
+            spo2Chart = createChart(document.getElementById('spo2Chart').getContext('2d'), '% SpO2', '#38bdf8');
+
+            elements.toggleBtn.addEventListener('click', toggleMonitoring);
+
+            if (state.isPcMode) {
+                document.body.classList.add('pc-mode');
+                elements.pcControls.classList.remove('hidden');
+                elements.pcSessions.classList.remove('hidden');
+                elements.newSessionBtn.addEventListener('click', startNewSession);
+                elements.saveSessionBtn.addEventListener('click', saveCurrentSession);
+                loadSavedSessions();
+            }
+        };
     </script>
 </body>
 </html>
-
