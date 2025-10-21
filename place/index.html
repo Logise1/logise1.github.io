@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>r/place Clone</title>
+    <title>Place</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Firebase 8.10.1 SDKs -->
@@ -18,12 +18,14 @@
         html, body {
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Evita las barras de scroll */
+            overflow: hidden;
             height: 100%;
             width: 100%;
-            background-color: #111827; /* Fondo oscuro */
+            background-color: #0d1117;
             font-family: 'Inter', sans-serif;
-            position: fixed; /* Evita el rebote de la vista en móviles */
+            position: fixed;
+            background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
         }
         canvas {
             display: block;
@@ -38,26 +40,26 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 con transparencia */
+            background-color: rgba(13, 17, 23, 0.85);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 0.75rem;
+            padding: 1rem;
             display: grid;
             grid-template-columns: repeat(9, 1fr);
-            gap: 0.5rem;
-            border-top: 1px solid #374151; /* border-gray-700 */
+            gap: 0.75rem;
+            border-top: 1px solid #374151;
             max-width: 500px;
             margin: 0 auto;
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
         }
         .color-box {
             width: 100%;
-            padding-bottom: 100%; /* Truco para mantener la relación de aspecto 1:1 */
+            padding-bottom: 100%;
             position: relative;
-            border-radius: 0.375rem; /* rounded-md */
+            border-radius: 0.5rem;
             cursor: pointer;
-            transition: transform 0.1s ease-in-out;
+            transition: transform 0.2s ease-in-out;
             border: 2px solid transparent;
         }
         .color-box-inner {
@@ -68,8 +70,8 @@
              bottom: 0;
         }
         .color-box.selected {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 3px white;
+            transform: scale(1.15) translateY(-4px);
+            box-shadow: 0 0 0 2px #0d1117, 0 0 0 4px #60a5fa;
             z-index: 5;
         }
         #cooldown-timer {
@@ -77,15 +79,18 @@
             top: 1rem;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(17, 24, 39, 0.8);
+            background-color: rgba(13, 17, 23, 0.85);
             color: white;
             border-radius: 9999px;
-            font-family: monospace;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
             z-index: 10;
             width: 180px;
             text-align: center;
-            overflow: hidden; /* Clave para el efecto de llenado */
+            overflow: hidden;
             border: 1px solid #374151;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
         }
         #cooldown-progress {
             position: absolute;
@@ -93,13 +98,43 @@
             left: 0;
             height: 100%;
             width: 0%;
-            background-color: #ef4444; /* bg-red-500 */
+            background-color: #6366f1; /* Indigo */
+            transition: width 0.1s linear;
         }
         #cooldown-text {
             position: relative;
             z-index: 1;
             display: block;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 1.25rem;
+        }
+        
+        /* Modal Animation */
+        @keyframes fadeInScaleUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: fadeInScaleUp 0.3s ease-out forwards;
+        }
+        #close-welcome-btn {
+            background: linear-gradient(to right, #3b82f6, #6366f1);
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        #close-welcome-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
@@ -109,10 +144,14 @@
 
     <!-- Welcome Modal -->
     <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div class="bg-gray-800 text-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
-            <h2 class="text-2xl font-bold mb-4 text-yellow-400">¡Defiende tu Arte!</h2>
-            <p class="mb-6">¡Dibuja y protege tus obras, porque los demás quieren romperlas!</p>
-            <button id="close-welcome-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full transition-colors duration-200">¡Entendido!</button>
+        <div class="modal-content bg-gray-800 text-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+               <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+            </svg>
+            <h2 class="text-2xl font-bold mb-2 text-white">¡Defiende tu Lienzo!</h2>
+            <p class="mb-6 text-gray-300">Dibuja y protege tu arte. Otros intentarán borrarlo. ¡Colabora para crear algo único!</p>
+            <button id="close-welcome-btn" class="text-white font-bold py-2 px-4 rounded-lg w-full">Empezar a Dibujar</button>
         </div>
     </div>
     
@@ -125,19 +164,12 @@
         <!-- Los colores se generarán aquí -->
     </div>
 
-    <!-- Message Modal -->
-    <div id="message-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-gray-700 p-6 rounded-lg shadow-xl text-center text-white">
-            <p id="message-text"></p>
-        </div>
-    </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Configuración ---
             const GRID_SIZE = 50;
             const PIXEL_SIZE = 16;
-            const COOLDOWN_SECONDS = 12; // Aumentado a 12 segundos
+            const COOLDOWN_SECONDS = 5; // Tiempo de espera ajustado a 5 segundos
             const COLORS = [
                 '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
                 '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD',
@@ -159,14 +191,12 @@
 
             // --- Estado de la aplicación ---
             let selectedColor = COLORS[0];
-            // Cargar el último tiempo desde localStorage
             let lastPixelTime = parseInt(localStorage.getItem('lastPixelTime')) || 0;
             let cooldownAnimationRequest;
             let pixels = {};
             let scale = INITIAL_ZOOM;
             let offsetX = 0;
             let offsetY = 0;
-            // Estado de gestos
             let isDragging = false;
             let dragStartX, dragStartY;
             let hasDragged = false;
@@ -238,7 +268,7 @@
                 const elapsed = Date.now() - lastPixelTime;
                 if (elapsed >= COOLDOWN_SECONDS * 1000) {
                     cooldownProgressEl.style.width = '0%';
-                    cooldownTextEl.textContent = 'Listo para colocar';
+                    cooldownTextEl.textContent = 'Listo';
                     if (!isDragging) canvas.style.cursor = 'crosshair';
                 } else {
                     const progress = (elapsed / (COOLDOWN_SECONDS * 1000)) * 100;
@@ -251,7 +281,7 @@
             
             function startCooldown() {
                 lastPixelTime = Date.now();
-                localStorage.setItem('lastPixelTime', lastPixelTime); // Guardar en localStorage
+                localStorage.setItem('lastPixelTime', lastPixelTime);
                 canvas.style.cursor = 'not-allowed';
                 if (cooldownAnimationRequest) cancelAnimationFrame(cooldownAnimationRequest);
                 updateCooldownVisual();
@@ -326,8 +356,8 @@
             function handleTouch(event) {
                 event.preventDefault();
                 const touches = event.touches;
-                if (touches.length === 2) { // Pinch zoom
-                    isDragging = false; // Detener el paneo si se detectan dos dedos
+                if (touches.length === 2) {
+                    isDragging = false;
                     const p1 = touches[0];
                     const p2 = touches[1];
                     const distance = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
@@ -347,7 +377,7 @@
                         initialPinchDistance = distance;
                         draw();
                     }
-                } else if (touches.length === 1 && event.type === 'touchmove') { // Pan
+                } else if (touches.length === 1 && event.type === 'touchmove') {
                     const pos = getEventPos(event);
                      if (isDragging) {
                          hasDragged = true;
@@ -361,7 +391,7 @@
             function handleTouchStart(event) {
                 if (event.touches.length > 1) {
                     isMultiTouch = true;
-                    isDragging = false; // Asegurarse de que no se esté arrastrando
+                    isDragging = false;
                 } else if (event.touches.length === 1) {
                     isDragging = true;
                     hasDragged = false;
@@ -376,13 +406,12 @@
                     placePixel({ clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY });
                 }
                 
-                // Resetear estados del gesto cuando se levanta el último dedo
                 if (event.touches.length === 0) {
                     isDragging = false;
                     isMultiTouch = false;
                     hasDragged = false;
                 }
-                initialPinchDistance = null; // Siempre resetear la distancia del pellizco
+                initialPinchDistance = null;
             }
 
             function resizeCanvas() {
@@ -395,7 +424,7 @@
             function init() {
                 resizeCanvas();
                 initColorPalette();
-                updateCooldownVisual(); // Actualizar la barra al cargar la página
+                updateCooldownVisual();
                 
                 const gridCenterX = (GRID_SIZE * PIXEL_SIZE) / 2;
                 const gridCenterY = (GRID_SIZE * PIXEL_SIZE) / 2;
@@ -403,21 +432,19 @@
                 offsetY = canvas.height / 2 - gridCenterY * scale;
                 draw();
 
-                closeWelcomeBtn.addEventListener('click', () => welcomeModal.classList.add('hidden'));
+                closeWelcomeBtn.addEventListener('click', () => welcomeModal.style.display = 'none');
 
                 pixelsRef.on('value', (snapshot) => {
                     pixels = snapshot.val() || {};
                     draw();
                 });
                 
-                // Event Listeners for mouse
                 canvas.addEventListener('mousedown', onPointerDown);
                 canvas.addEventListener('mousemove', onPointerMove);
                 canvas.addEventListener('mouseup', onPointerUp);
                 canvas.addEventListener('mouseleave', () => isDragging = false);
                 canvas.addEventListener('wheel', onWheel);
 
-                // Event Listeners for touch
                 canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
                 canvas.addEventListener('touchmove', handleTouch, { passive: false });
                 canvas.addEventListener('touchend', handleTouchEnd);
