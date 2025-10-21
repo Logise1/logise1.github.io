@@ -189,11 +189,19 @@
             const welcomeModal = document.getElementById('welcome-modal');
             const closeWelcomeBtn = document.getElementById('close-welcome-btn');
 
+            // --- Creación de la cuadrícula por defecto ---
+            const defaultPixels = {};
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    defaultPixels[`${x}_${y}`] = '#FFFFFF';
+                }
+            }
+
             // --- Estado de la aplicación ---
             let selectedColor = COLORS[0];
             let lastPixelTime = parseInt(localStorage.getItem('lastPixelTime')) || 0;
             let cooldownAnimationRequest;
-            let pixels = {};
+            let pixels = { ...defaultPixels };
             let scale = INITIAL_ZOOM;
             let offsetX = 0;
             let offsetY = 0;
@@ -435,7 +443,8 @@
                 closeWelcomeBtn.addEventListener('click', () => welcomeModal.style.display = 'none');
 
                 pixelsRef.on('value', (snapshot) => {
-                    pixels = snapshot.val() || {};
+                    const firebasePixels = snapshot.val() || {};
+                    pixels = { ...defaultPixels, ...firebasePixels };
                     draw();
                 });
                 
