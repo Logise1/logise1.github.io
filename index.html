@@ -22,7 +22,7 @@
 <body class="antialiased">
 
     <!-- Contenedor principal -->
-    <div class="container mx-auto max-w-4xl px-6 py-12 md:py-20">
+    <div class="container mx-auto max-w-6xl px-6 py-12 md:py-20">
 
         <!-- Encabezado -->
         <header class="text-center mb-16">
@@ -36,7 +36,8 @@
                 <h3 class="text-3xl font-bold mb-12 text-center text-gray-900">Mis Proyectos</h3>
                 
                 <!-- Grid de Proyectos -->
-                <div id="project-grid" class="flex justify-center flex-wrap gap-8">
+                <!-- Cambiado de flex a grid para un diseño de columnas -->
+                <div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
                     <!-- Los proyectos se cargarán aquí desde projects.json -->
                 </div>
             </section>
@@ -47,6 +48,20 @@
         document.addEventListener('DOMContentLoaded', () => {
             const projectGrid = document.getElementById('project-grid');
 
+            // Función para renderizar los proyectos
+            const renderProjects = (projects) => {
+                projectGrid.innerHTML = ''; // Limpiar cualquier contenido de marcador de posición
+                projects.forEach(project => {
+                    const projectCard = `
+                        <a href="${project.link}" class="block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
+                            <img src="${project.image}" alt="${project.alt}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
+                        </a>
+                    `;
+                    projectGrid.innerHTML += projectCard;
+                });
+            };
+
+            // Intentar cargar desde projects.json
             fetch('projects.json')
                 .then(response => {
                     if (!response.ok) {
@@ -54,29 +69,12 @@
                     }
                     return response.json();
                 })
-                .then(projects => {
-                    projectGrid.innerHTML = ''; // Limpiar cualquier contenido de marcador de posición
-                    projects.forEach(project => {
-                        const projectLink = document.createElement('a');
-                        projectLink.href = project.link;
-                        projectLink.className = "block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 max-w-sm border border-black";
-                        
-                        const projectImage = document.createElement('img');
-                        projectImage.src = project.image;
-                        projectImage.alt = project.alt;
-                        projectImage.className = "w-full h-auto object-cover";
-                        projectImage.onerror = function() {
-                            this.onerror = null;
-                            this.src = 'https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';
-                        };
-
-                        projectLink.appendChild(projectImage);
-                        projectGrid.appendChild(projectLink);
-                    });
+                .then(data => {
+                    renderProjects(data);
                 })
                 .catch(error => {
                     console.error('Hubo un problema al cargar los proyectos:', error);
-                    projectGrid.innerHTML = '<p class="text-center text-red-500">No se pudieron cargar los proyectos. Por favor, revisa el archivo projects.json.</p>';
+                    projectGrid.innerHTML = '<p class="text-center text-red-500 col-span-full">No se pudieron cargar los proyectos. Por favor, asegúrate de que el archivo projects.json existe y es correcto.</p>';
                 });
         });
     </script>
