@@ -137,7 +137,7 @@
             // --- Configuración ---
             const GRID_SIZE = 50;
             const PIXEL_SIZE = 16;
-            const COOLDOWN_SECONDS = 5;
+            const COOLDOWN_SECONDS = 12; // Aumentado a 12 segundos
             const COLORS = [
                 '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
                 '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD',
@@ -159,20 +159,23 @@
 
             // --- Estado de la aplicación ---
             let selectedColor = COLORS[0];
-            let lastPixelTime = 0;
+            // Cargar el último tiempo desde localStorage
+            let lastPixelTime = parseInt(localStorage.getItem('lastPixelTime')) || 0;
             let cooldownAnimationRequest;
             let pixels = {};
             let scale = INITIAL_ZOOM;
             let offsetX = 0;
             let offsetY = 0;
+            // Estado de gestos
             let isDragging = false;
             let dragStartX, dragStartY;
             let hasDragged = false;
             let initialPinchDistance = null;
+            let isMultiTouch = false;
 
             // --- Configuración de Firebase ---
             const firebaseConfig = {
-                databaseURL: "https://chartica-282eb-default-rtdb.firebaseio.com/",
+                databaseURL: "https://chartica-282eb-default-rdb.firebaseio.com/",
             };
             const app = firebase.initializeApp(firebaseConfig);
             const database = firebase.database();
@@ -248,6 +251,7 @@
             
             function startCooldown() {
                 lastPixelTime = Date.now();
+                localStorage.setItem('lastPixelTime', lastPixelTime); // Guardar en localStorage
                 canvas.style.cursor = 'not-allowed';
                 if (cooldownAnimationRequest) cancelAnimationFrame(cooldownAnimationRequest);
                 updateCooldownVisual();
@@ -323,7 +327,7 @@
                 event.preventDefault();
                 const touches = event.touches;
                 if (touches.length === 2) { // Pinch zoom
-                    isDragging = false;
+                    isDragging = false; // Detener el paneo si se detectan dos dedos
                     const p1 = touches[0];
                     const p2 = touches[1];
                     const distance = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
@@ -355,7 +359,10 @@
             }
 
             function handleTouchStart(event) {
-                if (event.touches.length === 1) {
+                if (event.touches.length > 1) {
+                    isMultiTouch = true;
+                    isDragging = false; // Asegurarse de que no se esté arrastrando
+                } else if (event.touches.length === 1) {
                     isDragging = true;
                     hasDragged = false;
                     const pos = getEventPos(event);
@@ -365,12 +372,17 @@
             }
 
             function handleTouchEnd(event) {
-                if (!hasDragged && event.changedTouches.length === 1) {
-                    // This creates a synthetic event object for placePixel
+                if (!hasDragged && !isMultiTouch && event.changedTouches.length === 1) {
                     placePixel({ clientX: event.changedTouches[0].clientX, clientY: event.changedTouches[0].clientY });
                 }
-                initialPinchDistance = null;
-                isDragging = false;
+                
+                // Resetear estados del gesto cuando se levanta el último dedo
+                if (event.touches.length === 0) {
+                    isDragging = false;
+                    isMultiTouch = false;
+                    hasDragged = false;
+                }
+                initialPinchDistance = null; // Siempre resetear la distancia del pellizco
             }
 
             function resizeCanvas() {
@@ -383,6 +395,7 @@
             function init() {
                 resizeCanvas();
                 initColorPalette();
+                updateCooldownVisual(); // Actualizar la barra al cargar la página
                 
                 const gridCenterX = (GRID_SIZE * PIXEL_SIZE) / 2;
                 const gridCenterY = (GRID_SIZE * PIXEL_SIZE) / 2;
