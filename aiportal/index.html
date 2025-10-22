@@ -358,6 +358,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
             const decoder = new TextDecoder();
             let fullResponse = "";
             let buffer = "";
+            let toolExecuted = false; // Flag to prevent processing after tool execution
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -371,14 +372,20 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 while ((boundary = buffer.indexOf('\n')) !== -1) {
                     const line = buffer.substring(0, boundary).trim();
                     buffer = buffer.substring(boundary + 1);
-                    if(await processLine(line)) return;
+                    if(await processLine(line)) {
+                        toolExecuted = true;
+                        break; // Exit inner loop if tool was executed
+                    };
                 }
+                 if (toolExecuted) break; // Exit outer loop if tool was executed
             }
 
             async function processLine(line) {
+                 if (toolExecuted) return true; // Don't process if a tool was already called
+
                 if (line.startsWith('data: ')) {
                     const jsonStr = line.replace('data: ', '');
-                    if (jsonStr === '[DONE]') return;
+                    if (jsonStr === '[DONE]') return false;
                     
                     try {
                         const parsed = JSON.parse(jsonStr);
@@ -388,21 +395,20 @@ Answer directly in Markdown if you don't need to use a tool.`;
                             fullResponse += content;
                             
                             const trimmedResponse = fullResponse.trim();
-                            if (trimmedResponse.startsWith('{')) {
+                            // Check for tool commands specifically at the beginning or if the whole response is just the command
+                             if (trimmedResponse.startsWith('{') && trimmedResponse.endsWith('}')) {
                                 try {
                                     const command = JSON.parse(trimmedResponse);
                                     if (command.search || command.getweb) {
-                                        reader.cancel();
+                                        reader.cancel(); // Stop reading the stream
                                         if (command.search) await handleInternetSearch(command.search, originalUserQuery, aiBubble);
                                         else if (command.getweb) await handleGetWebContent(command.getweb, originalUserQuery, aiBubble);
-                                        fullResponse = "[TOOL_EXECUTED]"; 
-                                        return true; 
+                                        return true; // Signal that a tool was executed
                                     }
-                                } catch (e) { /* Incomplete JSON */ }
+                                } catch (e) { /* Might be incomplete JSON, continue */ }
                             }
                             
-                            if (fullResponse === "[TOOL_EXECUTED]") return;
-
+                            // Stream Text / SVG
                             let textPart = fullResponse;
                             let svgPart = "";
                             const svgStartIndex = textPart.indexOf('[SVG_START]');
@@ -417,18 +423,18 @@ Answer directly in Markdown if you don't need to use a tool.`;
                             }
                             
                             const renderedText = DOMPurify.sanitize(marked.parse(textPart.replace(/\[IMAGE:.*?\]/g, '')));
-                            // Update content: Markdown for text, raw SVG for drawing
+                            // Update content: Markdown for text, sanitized SVG for drawing
                             aiBubble.innerHTML = renderedText + DOMPurify.sanitize(svgPart, { USE_PROFILES: { svg: true } }); 
                             
                             if (!userHasScrolledUp) scrollToBottom();
                         }
                     } catch (e) { console.error("Error parsing stream chunk:", e, "Line:", line); /* Ignore parsing errors */ }
                 }
-                 return false;
+                 return false; // Signal that no tool was executed
             }
 
             // --- Final processing after stream ends ---
-            if (fullResponse.trim() && fullResponse !== "[TOOL_EXECUTED]") {
+            if (!toolExecuted && fullResponse.trim()) {
                 const svgMatch = fullResponse.match(/\[SVG_START\](.*?)\[SVG_END\]/s);
                 const textContent = fullResponse.replace(/\[IMAGE:.*?\]|\[SVG_START\].*?\[SVG_END\]/gs, '').trim();
 
@@ -457,7 +463,8 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 
                 addCopyButtons(aiBubble); // Add copy buttons if there's code
                 hljs.highlightAllUnder(aiBubble); // Ensure syntax highlighting is applied
-            } else if (!fullResponse.trim()) {
+            } else if (!toolExecuted && !fullResponse.trim()) {
+                 // Remove the thinking bubble if no response and no tool was called
                 aiBubble.remove();
             }
             
@@ -558,8 +565,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 };
                 reader.readAsDataURL(file);
             }
-            // Reset input value to allow selecting the same file again if needed
-            event.target.value = '';
+            event.target.value = ''; // Reset input value
         };
 
         const setDesktopSidebarState = (c) => { isDesktopSidebarCollapsed = c; const w = c ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED; sidebar.style.width = w; sidebarTexts.forEach(t => t.classList.toggle('hidden', c)); toggleIcon.classList.toggle('rotate-180', !c); };
@@ -587,17 +593,21 @@ Answer directly in Markdown if you don't need to use a tool.`;
         signupBtn.addEventListener('click', handleSignup);
         loginBtn.addEventListener('click', handleLogin);
         attachFileBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleImageInput); // Use unified handler
+        fileInput.addEventListener('change', handleImageInput); 
         cameraBtn.addEventListener('click', () => cameraInput.click());
-        cameraInput.addEventListener('change', handleImageInput); // Use unified handler
+        cameraInput.addEventListener('change', handleImageInput); 
         window.addEventListener('resize', applyInitialState);
         chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = `${chatInput.scrollHeight}px`; sendButton.disabled = chatInput.value.trim() === ''; });
+        
+        // Use click for reliable sending on all devices
         sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-         // Ensure send button works on mobile touch
-        sendButton.addEventListener('touchend', (e) => {
-             e.preventDefault(); // Prevent double triggering click
-             sendMessage();
+        
+        // Use keydown for Enter key detection
+        chatInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); // Prevent new line in textarea
+                sendMessage(); 
+            } 
         });
 
 
