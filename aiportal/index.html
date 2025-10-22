@@ -6,7 +6,7 @@
     <title>AiPortal+</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Libraries for Markdown and Code Highlighting -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.8/dist/purify.min.js"></script>
@@ -169,16 +169,16 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 const li = document.createElement('li');
                 li.dataset.chatId = chatId;
                 li.className = `group p-3 flex items-center justify-between rounded-lg cursor-pointer transition-colors ${chatId === activeChatId ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-200'}`;
-                
+
                 const titleContainer = document.createElement('div');
                 titleContainer.className = 'flex items-center overflow-hidden';
                 titleContainer.innerHTML = `<svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg><span class="sidebar-text ml-3 whitespace-nowrap truncate">${chatTitle}${firstUserMessage && firstUserMessage.content.length > 25 ? '...' : ''}</span>`;
-                
+
                 const deleteBtn = document.createElement('button');
                 deleteBtn.dataset.deleteId = chatId;
                 deleteBtn.className = 'delete-chat-btn p-1 rounded-md text-gray-500 hover:bg-gray-300 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity';
                 deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
-                
+
                 li.appendChild(titleContainer);
                 li.appendChild(deleteBtn);
                 chatList.appendChild(li);
@@ -188,7 +188,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
         const renderChatHistory = () => { chatHistory.innerHTML = ''; if (activeChatId && allChats[activeChatId]) { allChats[activeChatId].messages.forEach(msg => createChatBubble(msg)); scrollToBottom(); } };
         const scrollToBottom = () => chatHistory.scrollTop = chatHistory.scrollHeight;
         const addCopyButtons = (container) => { container.querySelectorAll('pre').forEach(block => { if (block.querySelector('.copy-code-btn')) return; const button = document.createElement('button'); button.className = 'copy-code-btn'; button.textContent = 'Copiar'; button.onclick = () => { navigator.clipboard.writeText(block.querySelector('code').innerText).then(() => { button.textContent = '¡Copiado!'; setTimeout(() => { button.textContent = 'Copiar'; }, 2000); }); }; block.appendChild(button); }); };
-        
+
         const createChatBubble = (message) => {
             if (message.type === 'assistant-image') {
                 generateAndDisplayImage(message.content);
@@ -197,6 +197,8 @@ Answer directly in Markdown if you don't need to use a tool.`;
             const bubble = document.createElement('div');
             const isUser = message.role === 'user';
             bubble.className = `chat-bubble w-fit ${isUser ? 'user-message' : 'ai-message'}`;
+             // Add a unique ID for streaming updates
+            bubble.dataset.messageId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
             if (message.type === 'image') {
                 bubble.innerHTML = `<img src="${message.content}" class="rounded-lg max-w-xs" />`;
@@ -214,10 +216,10 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     }
                 }
             }
-            
+
             chatHistory.appendChild(bubble);
             if (!userHasScrolledUp) scrollToBottom();
-            return bubble;
+            return bubble; // Return the created bubble
         };
 
         const updateAuthUI = () => { if (currentUser) { const username = currentUser.email.split('@')[0]; authContainer.innerHTML = `<button id="accountBtn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm">${username}</button><div id="logoutDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20"><a href="#" id="logoutBtn" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div>`; document.getElementById('accountBtn').addEventListener('click', () => document.getElementById('logoutDropdown').classList.toggle('hidden')); document.getElementById('logoutBtn').addEventListener('click', handleLogout); } else { authContainer.innerHTML = `<button id="openLoginBtn" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">Cuenta</button>`; document.getElementById('openLoginBtn').addEventListener('click', () => authModal.classList.remove('hidden')); } };
@@ -249,7 +251,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
             renderChatList();
             saveData();
         };
-        
+
         const generateAndDisplayImage = (prompt) => {
             const placeholderBubble = document.createElement('div');
             placeholderBubble.className = 'chat-bubble w-fit ai-message';
@@ -269,18 +271,22 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 placeholderBubble.textContent = "Error al generar la imagen.";
                 placeholderBubble.style.backgroundColor = '#fecaca';
             };
+             // Add to history after loading or error
+             allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
+             saveData();
         };
 
         // --- Response Handling ---
         async function handleInternetSearch(query, originalUserQuery, aiBubble) {
-            aiBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Buscando en internet: "${query}"...</span></div>`;
+             const loadingBubble = aiBubble; // Keep reference to the bubble showing "Searching..."
+             loadingBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Buscando en internet: "${query}"...</span></div>`;
             if (!userHasScrolledUp) scrollToBottom();
 
             try {
                 const searchResponse = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1`);
                 if (!searchResponse.ok) throw new Error(`Search API Error: ${searchResponse.statusText}`);
                 const searchData = await searchResponse.json();
-                
+
                 let searchResultsText = "No se encontraron resultados relevantes.";
                 if (searchData.AbstractText) {
                     searchResultsText = searchData.AbstractText;
@@ -289,7 +295,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 }
 
                 const enrichedPrompt = `Contexto de búsqueda en Internet:\n"""\n${searchResultsText}\n"""\n\nBasándote en este contexto, responde a la pregunta original del usuario de forma exhaustiva: "${originalUserQuery}"`;
-                
+
                 const messagesForFinalAnswer = [
                     { role: "system", content: AI_SYSTEM_PROMPT },
                     { role: "user", content: enrichedPrompt }
@@ -303,19 +309,23 @@ Answer directly in Markdown if you don't need to use a tool.`;
 
                 if (!finalApiResponse.ok) throw new Error(`Mistral API Error after search: ${finalApiResponse.statusText}`);
 
-                await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
+                 // Use the same bubble to display the final answer after search
+                await handleStreamedResponse(finalApiResponse, loadingBubble, originalUserQuery);
 
             } catch (error) {
                 console.error("Error during internet search or follow-up:", error);
-                aiBubble.innerHTML = `Lo siento, ocurrió un error al procesar la búsqueda en internet. Detalles: ${error.message}`;
-                aiBubble.style.backgroundColor = '#fecaca';
-                aiBubble.style.color = '#991b1b';
-                 saveData(); // Save error state
+                loadingBubble.innerHTML = `Lo siento, ocurrió un error al procesar la búsqueda en internet. Detalles: ${error.message}`;
+                loadingBubble.style.backgroundColor = '#fecaca';
+                loadingBubble.style.color = '#991b1b';
+                 // Save error message to history
+                 allChats[activeChatId].messages.push({ role: "assistant", content: loadingBubble.innerHTML, type: 'text' });
+                 saveData();
             }
         }
 
         async function handleGetWebContent(url, originalUserQuery, aiBubble) {
-            aiBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Obteniendo contenido de: "${url}"...</span></div>`;
+             const loadingBubble = aiBubble; // Keep reference
+             loadingBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Obteniendo contenido de: "${url}"...</span></div>`;
             if (!userHasScrolledUp) scrollToBottom();
 
             try {
@@ -324,15 +334,15 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 if (!webResponse.ok) throw new Error(`Proxy Error: ${webResponse.statusText}`);
 
                 const htmlContent = await webResponse.text();
-                
+
                 let rawContent = htmlContent;
-                const maxChars = 8000; 
+                const maxChars = 8000;
                 if (rawContent.length > maxChars) {
                     rawContent = rawContent.substring(0, maxChars) + "... (contenido HTML truncado)";
                 }
 
                 const enrichedPrompt = `Contexto obtenido de la web ${url} (HTML crudo):\n"""\n${rawContent}\n"""\n\nBasándote en este contexto, responde a la pregunta original del usuario de forma exhaustiva: "${originalUserQuery}"`;
-                
+
                 const messagesForFinalAnswer = [
                     { role: "system", content: AI_SYSTEM_PROMPT },
                     { role: "user", content: enrichedPrompt }
@@ -345,14 +355,16 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 });
 
                 if (!finalApiResponse.ok) throw new Error(`Mistral API Error after getWeb: ${finalApiResponse.statusText}`);
-                await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
+                await handleStreamedResponse(finalApiResponse, loadingBubble, originalUserQuery); // Update same bubble
 
             } catch (error) {
                 console.error("Error fetching web content or follow-up:", error);
-                aiBubble.innerHTML = `Lo siento, ocurrió un error al obtener el contenido de la web. Detalles: ${error.message}`;
-                aiBubble.style.backgroundColor = '#fecaca';
-                aiBubble.style.color = '#991b1b';
-                 saveData(); // Save error state
+                loadingBubble.innerHTML = `Lo siento, ocurrió un error al obtener el contenido de la web. Detalles: ${error.message}`;
+                loadingBubble.style.backgroundColor = '#fecaca';
+                loadingBubble.style.color = '#991b1b';
+                 // Save error message to history
+                 allChats[activeChatId].messages.push({ role: "assistant", content: loadingBubble.innerHTML, type: 'text' });
+                 saveData();
             }
         }
 
@@ -367,7 +379,9 @@ Answer directly in Markdown if you don't need to use a tool.`;
                  while (true) {
                     const { value, done } = await reader.read();
                      if (done) {
+                        // Ensure any remaining buffer content is processed
                         if (buffer.startsWith('data: ')) await processLine(buffer);
+                        buffer = ""; // Clear buffer after processing
                         break;
                     }
 
@@ -385,15 +399,19 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 }
             } catch (streamError) {
                  console.error("Error reading stream:", streamError);
-                 aiBubble.innerHTML = `Error al procesar la respuesta. Intenta de nuevo.`;
+                 aiBubble.innerHTML = `Error al procesar la respuesta. Intenta de nuevo. Detalles: ${streamError.message}`;
                  aiBubble.style.backgroundColor = '#fecaca';
                  aiBubble.style.color = '#991b1b';
                  toolExecuted = true; // Prevent further processing after stream error
+                  // Save error message to history
+                 allChats[activeChatId].messages.push({ role: "assistant", content: aiBubble.innerHTML, type: 'text' });
+                 saveData();
+                 return; // Exit function on stream error
             }
 
 
             async function processLine(line) {
-                 if (toolExecuted) return true; 
+                 if (toolExecuted) return true; // Don't process if a tool was already called
 
                 if (line.startsWith('data: ')) {
                     const jsonStr = line.replace('data: ', '');
@@ -401,15 +419,14 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     
                     try {
                         const parsed = JSON.parse(jsonStr);
-                        // Check for potential API errors within the stream
                         if (parsed.error) {
                              console.error("API Error in stream:", parsed.error);
                              throw new Error(parsed.error.message || "Unknown API error in stream");
                         }
                         const choice = parsed.choices[0];
-                         if (!choice) return false; // Skip if no choice data
+                         if (!choice || choice.finish_reason) return false; // Skip if no choice or finished
                          
-                        const content = choice.delta?.content; // Use optional chaining
+                        const content = choice.delta?.content; 
 
                         if (content) {
                             fullResponse += content;
@@ -422,6 +439,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
                                     if (command.search || command.getweb) {
                                          console.log("Tool command detected:", command);
                                         reader.cancel(); // Stop reading the stream
+                                        // Execute tool in the *same* bubble
                                         if (command.search) await handleInternetSearch(command.search, originalUserQuery, aiBubble);
                                         else if (command.getweb) await handleGetWebContent(command.getweb, originalUserQuery, aiBubble);
                                         return true; // Signal that a tool was executed
@@ -429,81 +447,94 @@ Answer directly in Markdown if you don't need to use a tool.`;
                                 } catch (e) { /* Might be incomplete JSON, continue accumulating */ }
                             }
                             
-                            // Stream Text / SVG
-                            let textPart = fullResponse;
-                            let svgPart = "";
-                            const svgStartIndex = textPart.indexOf('[SVG_START]');
-                            
-                            if (svgStartIndex !== -1) {
-                                textPart = fullResponse.substring(0, svgStartIndex);
-                                svgPart = fullResponse.substring(svgStartIndex + '[SVG_START]'.length);
-                                const svgEndIndex = svgPart.indexOf('[SVG_END]');
-                                if (svgEndIndex !== -1) {
-                                    svgPart = svgPart.substring(0, svgEndIndex);
+                            // Stream Text / SVG - Only update if no tool command detected yet
+                            if (!toolExecuted) {
+                                let textPart = fullResponse;
+                                let svgPart = "";
+                                const svgStartIndex = textPart.indexOf('[SVG_START]');
+
+                                if (svgStartIndex !== -1) {
+                                    textPart = fullResponse.substring(0, svgStartIndex);
+                                    svgPart = fullResponse.substring(svgStartIndex + '[SVG_START]'.length);
+                                    const svgEndIndex = svgPart.indexOf('[SVG_END]');
+                                    if (svgEndIndex !== -1) {
+                                        svgPart = svgPart.substring(0, svgEndIndex);
+                                    }
                                 }
+
+                                const renderedText = DOMPurify.sanitize(marked.parse(textPart.replace(/\[IMAGE:.*?\]/g, '')));
+                                aiBubble.innerHTML = renderedText + DOMPurify.sanitize(svgPart, { USE_PROFILES: { svg: true } });
+
+                                if (!userHasScrolledUp) scrollToBottom();
                             }
-                            
-                            const renderedText = DOMPurify.sanitize(marked.parse(textPart.replace(/\[IMAGE:.*?\]/g, '')));
-                            // Update content: Markdown for text, sanitized SVG for drawing
-                            aiBubble.innerHTML = renderedText + DOMPurify.sanitize(svgPart, { USE_PROFILES: { svg: true } }); 
-                            
-                            if (!userHasScrolledUp) scrollToBottom();
                         }
-                    } catch (e) { console.warn("Minor error parsing stream chunk:", e, "Line:", line); /* Ignore minor parsing errors, maybe log them */ }
+                    } catch (e) { 
+                        console.warn("Minor error parsing stream chunk:", e, "Line:", line); 
+                         // Check if it's a critical error (like the one thrown above)
+                         if (e.message.includes("API error in stream")) {
+                             throw e; // Re-throw critical errors
+                         }
+                         // Otherwise, ignore minor parsing errors of potentially incomplete JSON chunks
+                    }
                 }
-                 return false; // Signal that no tool was executed
+                 return false; // Signal that no tool was executed in this line
             }
 
             // --- Final processing after stream ends ---
-             // Only process if no tool was executed AND there was some response
             if (!toolExecuted && fullResponse.trim()) {
                 const svgMatch = fullResponse.match(/\[SVG_START\](.*?)\[SVG_END\]/s);
                 const textContent = fullResponse.replace(/\[IMAGE:.*?\]|\[SVG_START\].*?\[SVG_END\]/gs, '').trim();
 
                 let finalMessageContent = "";
-                let finalMessageType = 'text'; // Default type
+                let finalMessageType = 'text';
 
-                if (textContent) {
-                    finalMessageContent = textContent;
-                }
+                 // Prioritize SVG content if present
                 if (svgMatch && svgMatch[1]) {
-                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { svg: true } }); 
-                    // If there's SVG, store the raw SVG as the main content
+                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { svg: true } });
                     finalMessageContent = sanitizedSvg; 
-                    // Update final bubble content with sanitized SVG potentially preceded by text
+                     // Update final bubble content with sanitized SVG potentially preceded by text
                     const finalRenderedText = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
                     aiBubble.innerHTML = finalRenderedText + sanitizedSvg;
-                } else if(textContent) {
+                } else if (textContent) {
+                     finalMessageContent = textContent;
                      // Ensure final bubble content is correct if only text
                      aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
                 }
                 
-                // Save the final consolidated message
+                // Save the final consolidated message ONLY IF IT'S NOT EMPTY
                  if (finalMessageContent) {
-                     allChats[activeChatId].messages.push({ role: "assistant", content: finalMessageContent, type: finalMessageType });
+                      // Check if the last message is already this content to avoid duplicates from retries/errors
+                     const lastMessage = allChats[activeChatId]?.messages[allChats[activeChatId].messages.length - 1];
+                      if (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.content !== finalMessageContent) {
+                          allChats[activeChatId].messages.push({ role: "assistant", content: finalMessageContent, type: finalMessageType });
+                      }
+                 } else if (!svgMatch && !textContent && !fullResponse.match(/\[IMAGE:.*?\]/g)) {
+                     // If everything was stripped and nothing remains, remove the bubble
+                     console.log("Stream finished empty after stripping tags. Removing bubble.");
+                     aiBubble.remove();
                  }
 
 
-                // Process image tags separately
+                // Process image tags separately - always add these to history
                 const imageRegex = /\[IMAGE:.*?\]/g;
                 let match;
                 while ((match = imageRegex.exec(fullResponse)) !== null) {
                     const prompt = match[0].substring(7, match[0].length - 1);
-                    allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
-                    generateAndDisplayImage(prompt);
+                    // Add image generation instruction to history
+                     allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
+                    generateAndDisplayImage(prompt); // This function will add its own history entry later
                 }
                 
                 addCopyButtons(aiBubble); // Add copy buttons if there's code
                 hljs.highlightAllUnder(aiBubble); // Ensure syntax highlighting is applied
             } else if (!toolExecuted && !fullResponse.trim()) {
-                 // Remove the thinking bubble if no response and no tool was called
                 console.log("Stream finished with no content and no tool execution. Removing bubble.");
                 aiBubble.remove();
             } else if (toolExecuted) {
                  console.log("Tool execution finished. Bubble content handled by tool function.");
             }
             
-            saveData();
+            saveData(); // Save data at the very end
         }
         
         const sendMessage = async () => {
@@ -528,6 +559,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
             chatInput.value = ''; chatInput.style.height = '40px'; sendButton.disabled = true;
 
             const aiBubble = createChatBubble({ role: 'assistant', content: '', type: 'text' });
+             // Give the bubble an initial "thinking" state
             aiBubble.innerHTML = `<div class="p-4"><div class="flex items-center space-x-1 justify-center"><div class="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div></div></div>`;
 
             const messagesForAPI = [{ role: "system", content: AI_SYSTEM_PROMPT }];
@@ -545,16 +577,15 @@ Answer directly in Markdown if you don't need to use a tool.`;
                         currentMessageParts = [];
                     }
                      if (msg.type === 'text') {
+                        // Pass raw SVG history to AI if it exists, otherwise pass rendered HTML
                         const contentToPass = msg.content.trim().startsWith('<svg') ? msg.content : DOMPurify.sanitize(marked.parse(msg.content));
                         messagesForAPI.push({ role: 'assistant', content: contentToPass });
                     }
                     // Assistant images are handled by [IMAGE:] tag, no need to add separately here.
                 } else if (msg.role === 'user') {
                      if (msg.type === 'image') {
-                        // Add image part to the current message parts
                         currentMessageParts.push({ type: 'image_url', image_url: { url: msg.content } });
                     } else if (msg.type === 'text') {
-                         // Always add text, even if it follows an image immediately
                         currentMessageParts.push({ type: 'text', text: msg.content });
                     }
                 }
@@ -581,7 +612,10 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     if (!response.ok) {
                          const errorBody = await response.text();
                          console.error(`API Error Response (Attempt ${attempt}): ${response.status} ${response.statusText}`, errorBody);
-                         throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                         // Try to parse error details from Mistral
+                         let detail = errorBody;
+                         try { detail = JSON.parse(errorBody).message || errorBody; } catch(e){}
+                         throw new Error(`API Error ${response.status}: ${detail}`);
                     }
                     
                     await handleStreamedResponse(response, aiBubble, userMessageContent);
@@ -590,13 +624,17 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 } catch (error) {
                     lastError = error;
                     console.error(`Attempt ${attempt} failed:`, error.message);
-                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
-                     else { // Last attempt failed
+                    if (attempt < 5) {
+                         const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000; // Exponential backoff + jitter
+                         await new Promise(resolve => setTimeout(resolve, delay)); 
+                    } else { // Last attempt failed
                          console.error("API Error after all retries:", lastError);
                          aiBubble.innerHTML = `Lo siento, ha ocurrido un error persistente al contactar con la IA. Por favor, inténtalo de nuevo más tarde. Detalles: ${lastError.message}`;
                          aiBubble.style.backgroundColor = '#fecaca';
                          aiBubble.style.color = '#991b1b';
-                         saveData(); // Save error state
+                          // Save error message to history
+                         allChats[activeChatId].messages.push({ role: "assistant", content: aiBubble.innerHTML, type: 'text' });
+                         saveData();
                      }
                 }
             }
@@ -619,7 +657,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     saveData();
                     renderChatList();
                     // Optionally trigger AI response after image upload if needed
-                    // sendMessage(); // Uncomment if you want the AI to respond immediately to the image
+                     // sendMessage(); // Let user add text prompt after image if desired
                 };
                 reader.readAsDataURL(file);
             }
