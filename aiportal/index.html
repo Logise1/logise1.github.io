@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AiPortal+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Libraries for Markdown and Code Highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.8/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .chat-textarea { resize: none; overflow-y: hidden; }
+        .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 1.25rem; word-wrap: break-word; white-space: pre-wrap; }
+        .user-message { background-color: #3b82f6; color: #ffffff; border-bottom-right-radius: 0.5rem; align-self: flex-end; margin-left: auto; }
+        .ai-message { background-color: #e5e7eb; color: #1f2937; border-bottom-left-radius: 0.5rem; align-self: flex-start; }
+        #sidebar, #mainContent { transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); }
+        .chat-bubble > *:first-child { margin-top: 0; }
+        .chat-bubble > *:last-child { margin-bottom: 0; }
+        .chat-bubble h1, .chat-bubble h2, .chat-bubble h3 { margin-top: 0.75em; margin-bottom: 0.5em; font-weight: 600; }
+        .chat-bubble h1 { font-size: 1.5em; } .chat-bubble h2 { font-size: 1.25em; } .chat-bubble h3 { font-size: 1.1em; }
+        .chat-bubble ul, .chat-bubble ol { margin-left: 1.5em; margin-bottom: 0.5em; margin-top: 0.5em; }
+        .chat-bubble li { margin-bottom: 0.25em; }
+        .chat-bubble blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: #4b5563;
+        }
+        .chat-bubble pre { position: relative; background-color: #282c34; border-radius: 0.5rem; padding: 1rem; color: #abb2bf; margin: 1em 0; white-space: pre-wrap; word-wrap: break-word; }
+        .chat-bubble pre code.hljs { padding: 0; background: none; }
+        .copy-code-btn { position: absolute; top: 0.5rem; right: 0.5rem; background-color: #4a5568; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        .chat-bubble pre:hover .copy-code-btn { opacity: 1; }
+        .shimmer-bg {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+
+<div class="flex w-screen h-dvh"> <!-- Use h-dvh for dynamic viewport height -->
+    <!-- Sidebar -->
+    <div id="sidebar" class="bg-gray-100 flex flex-col z-20 h-full shadow-lg flex-shrink-0 absolute md:relative">
+        <div class="flex justify-end p-2 md:hidden"><button id="mobileCloseSidebarButton" class="text-gray-600 hover:text-gray-900 p-2 rounded-full"><svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+        <div class="flex-1 flex flex-col p-2 space-y-4 overflow-hidden">
+            <button id="newChatButton" class="flex items-center justify-center md:justify-start p-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 shadow transition-colors w-full overflow-hidden"><svg class="h-6 w-6 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg><span class="sidebar-text ml-3 whitespace-nowrap">Nuevo Chat</span></button>
+            <ul id="chatList" class="flex-1 space-y-2 overflow-y-auto scrollbar-hide"></ul>
+        </div>
+        <div class="p-2 hidden md:block"><button id="desktopToggleButton" class="w-full flex items-center justify-center p-3 rounded-lg hover:bg-gray-200 transition-colors"><svg id="toggleIcon" class="h-6 w-6 text-gray-600 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg></button></div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="mainContent" class="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
+        <div class="flex items-center p-4 border-b border-gray-200 flex-shrink-0">
+            <button id="mobileOpenSidebarButton" class="md:hidden text-gray-800 p-2 rounded-full hover:bg-gray-200"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg></button>
+            <h1 class="text-lg font-semibold ml-2 flex-1">AiPortal+</h1>
+            <div id="authContainer" class="relative"></div>
+        </div>
+        <div id="chatHistory" class="flex-1 p-6 overflow-y-auto scrollbar-hide flex flex-col space-y-2"></div>
+        <button id="scrollToBottomBtn" class="hidden absolute bottom-28 right-10 bg-blue-500 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-opacity duration-300"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg></button>
+        <div class="px-4 pt-2 pb-6 bg-white border-t border-gray-200 flex-shrink-0">
+             <div class="flex items-center w-full max-w-3xl mx-auto rounded-xl shadow-md border border-gray-300 bg-white px-2">
+                <button id="attachFileBtn" class="p-2 text-gray-500 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept="image/*" />
+                <textarea id="chatInput" class="chat-textarea flex-1 p-2 bg-transparent text-sm md:text-base focus:outline-none placeholder-gray-500" placeholder="Escribe un mensaje..." rows="1" style="min-height: 40px; max-height: 200px;"></textarea>
+                <button id="sendButton" class="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-300" disabled><svg class="h-6 w-6 transform rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <button id="closeModalBtn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800">&times;</button>
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Cuenta</h3>
+                <div class="mt-2 px-7 py-3">
+                    <form id="loginForm">
+                        <input id="emailInput" type="text" placeholder="Nombre de usuario" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none mb-3" required />
+                        <input id="passwordInput" type="password" placeholder="Contraseña" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none" required />
+                        <p id="authError" class="text-red-500 text-sm mt-2"></p>
+                    </form>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="loginBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300">Iniciar Sesión</button>
+                    <button id="signupBtn" class="mt-2 px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300">Crear Cuenta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase SDK Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDmA6LcLEN_fsh4cJEEIB51sqwQwGN5XaM",
+            authDomain: "aiportalgen-d40cb.firebaseapp.com",
+            databaseURL: "https://aiportalgen-d40cb-default-rtdb.firebaseio.com/",
+            projectId: "aiportalgen-d40cb",
+            storageBucket: "aiportalgen-d40cb.appspot.com",
+            messagingSenderId: "595656779266",
+            appId: "1:595656779266:web:2140d4281cc4964f3da91b",
+            measurementId: "G-X85KDS10XB"
+        };
+
+        // --- Initialize Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // --- DOM Elements ---
+        const sidebar = document.getElementById('sidebar'), mainContent = document.getElementById('mainContent'), mobileOpenSidebarButton = document.getElementById('mobileOpenSidebarButton'), mobileCloseSidebarButton = document.getElementById('mobileCloseSidebarButton'), desktopToggleButton = document.getElementById('desktopToggleButton'), newChatButton = document.getElementById('newChatButton'), toggleIcon = document.getElementById('toggleIcon'), sidebarTexts = document.querySelectorAll('.sidebar-text'), chatInput = document.getElementById('chatInput'), sendButton = document.getElementById('sendButton'), chatHistory = document.getElementById('chatHistory'), chatList = document.getElementById('chatList'), scrollToBottomBtn = document.getElementById('scrollToBottomBtn'), authContainer = document.getElementById('authContainer'), authModal = document.getElementById('authModal'), closeModalBtn = document.getElementById('closeModalBtn'), loginForm = document.getElementById('loginForm'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginBtn = document.getElementById('loginBtn'), signupBtn = document.getElementById('signupBtn'), authError = document.getElementById('authError'), attachFileBtn = document.getElementById('attachFileBtn'), fileInput = document.getElementById('fileInput');
+
+        // --- Constants ---
+        const DESKTOP_BREAKPOINT = 768, SIDEBAR_WIDTH_EXPANDED = '16rem', SIDEBAR_WIDTH_COLLAPSED = '5rem', MISTRAL_API_KEY = 'o0kW3QDl3KG9HXPbxqSsuYJqJiXVfOsU', MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+        const AI_SYSTEM_PROMPT = `As an AI assistant, you are collaborative and proactive. You must speak in Spanish unless the user specifies another language.
+CONTEXT: You will be given the full conversation history. Your previous responses will be provided to you as the rendered HTML that the user sees.
+YOUR RESPONSE: Despite seeing HTML in the context, you MUST ALWAYS respond in plain text or Markdown. NEVER generate HTML tags in your response.
+
+You have three tools available. If you decide to use a tool, your response MUST be ONLY the single JSON object for that tool.
+1.  To search the internet: {"search": "your concise search query in English"}.
+2.  To get a webpage's content: {"getweb": "URL"}.
+3.  To generate an image: [IMAGE:A brief, descriptive prompt in English for the image].
+4.  To generate a simple drawing: [SVG_START]<svg>...</svg>[SVG_END].
+
+Answer directly in Markdown if you don't need to use a tool.`;
+
+
+        // --- State Management ---
+        let isDesktopSidebarCollapsed = false, activeChatId = null, allChats = {}, userHasScrolledUp = false, currentUser = null;
+
+        // --- Data Persistence ---
+        const saveData = () => { if (currentUser) saveChatsToFirebase(); else saveChatsToLocalStorage(); };
+        const saveChatsToLocalStorage = () => localStorage.setItem('mistralChatApp', JSON.stringify({ activeChatId, allChats }));
+        const loadChatsFromLocalStorage = () => { const data = localStorage.getItem('mistralChatApp'); if (data) { const parsed = JSON.parse(data); activeChatId = parsed.activeChatId; allChats = parsed.allChats || {}; } else { allChats = {}; activeChatId = null; } };
+        const saveChatsToFirebase = async () => { if (!currentUser || !activeChatId) return; await set(ref(db, `chats/${currentUser.uid}`), { activeChatId, allChats }); };
+        const loadChatsFromFirebase = async () => { if (!currentUser) return; const snapshot = await get(ref(db, `chats/${currentUser.uid}`)); if (snapshot.exists()) { const data = snapshot.val(); allChats = data.allChats || {}; activeChatId = data.activeChatId; } else { allChats = {}; activeChatId = null; } if (!activeChatId || !allChats[activeChatId]) startNewChat(); else { renderChatList(); renderChatHistory(); } };
+
+        // --- UI Rendering ---
+        const renderChatList = () => {
+            chatList.innerHTML = '';
+            Object.keys(allChats).sort((a, b) => b.localeCompare(a)).forEach(chatId => {
+                const firstUserMessage = allChats[chatId]?.messages.find(m => m.role === 'user');
+                const chatTitle = firstUserMessage ? (firstUserMessage.type === 'image' ? 'Imagen' : firstUserMessage.content.substring(0, 25)) : 'Nuevo Chat';
+                const li = document.createElement('li');
+                li.dataset.chatId = chatId;
+                li.className = `group p-3 flex items-center justify-between rounded-lg cursor-pointer transition-colors ${chatId === activeChatId ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-200'}`;
+                
+                const titleContainer = document.createElement('div');
+                titleContainer.className = 'flex items-center overflow-hidden';
+                titleContainer.innerHTML = `<svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg><span class="sidebar-text ml-3 whitespace-nowrap truncate">${chatTitle}${firstUserMessage && firstUserMessage.content.length > 25 ? '...' : ''}</span>`;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.dataset.deleteId = chatId;
+                deleteBtn.className = 'delete-chat-btn p-1 rounded-md text-gray-500 hover:bg-gray-300 hover:text-gray-800 opacity-0 group-hover:opacity-100 transition-opacity';
+                deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+                
+                li.appendChild(titleContainer);
+                li.appendChild(deleteBtn);
+                chatList.appendChild(li);
+            });
+        };
+
+        const renderChatHistory = () => { chatHistory.innerHTML = ''; if (activeChatId && allChats[activeChatId]) { allChats[activeChatId].messages.forEach(msg => createChatBubble(msg)); scrollToBottom(); } };
+        const scrollToBottom = () => chatHistory.scrollTop = chatHistory.scrollHeight;
+        const addCopyButtons = (container) => { container.querySelectorAll('pre').forEach(block => { if (block.querySelector('.copy-code-btn')) return; const button = document.createElement('button'); button.className = 'copy-code-btn'; button.textContent = 'Copiar'; button.onclick = () => { navigator.clipboard.writeText(block.querySelector('code').innerText).then(() => { button.textContent = '¡Copiado!'; setTimeout(() => { button.textContent = 'Copiar'; }, 2000); }); }; block.appendChild(button); }); };
+        
+        const createChatBubble = (message) => {
+            if (message.type === 'assistant-image') {
+                generateAndDisplayImage(message.content);
+                return;
+            }
+            const bubble = document.createElement('div');
+            const isUser = message.role === 'user';
+            bubble.className = `chat-bubble w-fit ${isUser ? 'user-message' : 'ai-message'}`;
+
+            if (message.type === 'image') {
+                bubble.innerHTML = `<img src="${message.content}" class="rounded-lg max-w-xs" />`;
+            } else {
+                 if(isUser) {
+                    bubble.textContent = message.content;
+                } else {
+                    const content = message.content || '';
+                    if (content.trim().startsWith('<svg')) {
+                        bubble.innerHTML = DOMPurify.sanitize(content, { USE_PROFILES: { html: true } });
+                    } else {
+                        bubble.innerHTML = DOMPurify.sanitize(marked.parse(content));
+                        bubble.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+                        addCopyButtons(bubble);
+                    }
+                }
+            }
+            
+            chatHistory.appendChild(bubble);
+            if (!userHasScrolledUp) scrollToBottom();
+            return bubble;
+        };
+
+        const updateAuthUI = () => { if (currentUser) { const username = currentUser.email.split('@')[0]; authContainer.innerHTML = `<button id="accountBtn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm">${username}</button><div id="logoutDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20"><a href="#" id="logoutBtn" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div>`; document.getElementById('accountBtn').addEventListener('click', () => document.getElementById('logoutDropdown').classList.toggle('hidden')); document.getElementById('logoutBtn').addEventListener('click', handleLogout); } else { authContainer.innerHTML = `<button id="openLoginBtn" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">Cuenta</button>`; document.getElementById('openLoginBtn').addEventListener('click', () => authModal.classList.remove('hidden')); } };
+
+        // --- Chat Actions ---
+        const startNewChat = () => {
+            const newChatId = `chat-${Date.now()}`;
+            const username = currentUser ? currentUser.email.split('@')[0] : '';
+            const welcomeMessage = username ? `¡Hola, ${username}!` : '¡Hola! ¿En qué puedo ayudarte hoy?';
+            allChats[newChatId] = { messages: [{ role: 'assistant', type: 'text', content: welcomeMessage }] };
+            activeChatId = newChatId;
+            renderChatList();
+            renderChatHistory();
+            saveData();
+            if (window.innerWidth < DESKTOP_BREAKPOINT) setMobileSidebarState(false);
+        };
+        const switchChat = (chatId) => { if (chatId === activeChatId) return; activeChatId = chatId; renderChatList(); renderChatHistory(); saveData(); };
+        const deleteChat = (chatIdToDelete) => {
+            delete allChats[chatIdToDelete];
+            if (activeChatId === chatIdToDelete) {
+                const remainingChatIds = Object.keys(allChats).sort((a,b) => b.localeCompare(a));
+                if (remainingChatIds.length > 0) {
+                    activeChatId = remainingChatIds[0];
+                    renderChatHistory();
+                } else {
+                    startNewChat();
+                }
+            }
+            renderChatList();
+            saveData();
+        };
+        
+        const generateAndDisplayImage = (prompt) => {
+            const placeholderBubble = document.createElement('div');
+            placeholderBubble.className = 'chat-bubble w-fit ai-message';
+            placeholderBubble.innerHTML = `<div class="w-64 h-64 rounded-lg shimmer-bg"></div>`;
+            chatHistory.appendChild(placeholderBubble);
+            if (!userHasScrolledUp) scrollToBottom();
+
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1000&height=1000&nologo=true&seed=42`;
+            const img = new Image();
+            img.src = imageUrl;
+            img.className = 'rounded-lg max-w-xs';
+            img.onload = () => {
+                placeholderBubble.innerHTML = '';
+                placeholderBubble.appendChild(img);
+            };
+            img.onerror = () => {
+                placeholderBubble.textContent = "Error al generar la imagen.";
+                placeholderBubble.style.backgroundColor = '#fecaca';
+            };
+        };
+
+        // --- Response Handling ---
+        async function handleInternetSearch(query, originalUserQuery, aiBubble) {
+            aiBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Buscando en internet: "${query}"...</span></div>`;
+            if (!userHasScrolledUp) scrollToBottom();
+
+            try {
+                const searchResponse = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1`);
+                const searchData = await searchResponse.json();
+                
+                let searchResultsText = "No se encontraron resultados relevantes.";
+                if (searchData.AbstractText) {
+                    searchResultsText = searchData.AbstractText;
+                } else if (searchData.RelatedTopics && searchData.RelatedTopics.length > 0) {
+                    searchResultsText = searchData.RelatedTopics.filter(i => i.Text).map(item => item.Text).slice(0, 5).join("\n\n");
+                }
+
+                const enrichedPrompt = `Contexto de búsqueda en Internet:\n"""\n${searchResultsText}\n"""\n\nBasándote en este contexto, responde a la pregunta original del usuario de forma exhaustiva: "${originalUserQuery}"`;
+                
+                const messagesForFinalAnswer = [
+                    { role: "system", content: AI_SYSTEM_PROMPT },
+                    { role: "user", content: enrichedPrompt }
+                ];
+
+                const finalApiResponse = await fetch(MISTRAL_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MISTRAL_API_KEY}` },
+                    body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForFinalAnswer, stream: true }),
+                });
+
+                if (!finalApiResponse.ok) throw new Error(`API Error: ${finalApiResponse.statusText}`);
+
+                await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
+
+            } catch (error) {
+                console.error("Error during internet search:", error);
+                aiBubble.innerHTML = `Lo siento, ocurrió un error al buscar en internet.`;
+                aiBubble.style.backgroundColor = '#fecaca';
+                aiBubble.style.color = '#991b1b';
+            }
+        }
+
+        async function handleGetWebContent(url, originalUserQuery, aiBubble) {
+            aiBubble.innerHTML = `<div class="flex items-center space-x-2 text-sm text-gray-500"><svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Obteniendo contenido de: "${url}"...</span></div>`;
+            if (!userHasScrolledUp) scrollToBottom();
+
+            try {
+                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+                const webResponse = await fetch(proxyUrl);
+                if (!webResponse.ok) throw new Error(`Error al acceder a la URL: ${webResponse.statusText}`);
+
+                const htmlContent = await webResponse.text();
+                
+                let rawContent = htmlContent;
+                const maxChars = 8000; 
+                if (rawContent.length > maxChars) {
+                    rawContent = rawContent.substring(0, maxChars) + "... (contenido HTML truncado)";
+                }
+
+                const enrichedPrompt = `Contexto obtenido de la web ${url} (HTML crudo):\n"""\n${rawContent}\n"""\n\nBasándote en este contexto, responde a la pregunta original del usuario de forma exhaustiva: "${originalUserQuery}"`;
+                
+                const messagesForFinalAnswer = [
+                    { role: "system", content: AI_SYSTEM_PROMPT },
+                    { role: "user", content: enrichedPrompt }
+                ];
+
+                const finalApiResponse = await fetch(MISTRAL_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MISTRAL_API_KEY}` },
+                    body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForFinalAnswer, stream: true }),
+                });
+
+                if (!finalApiResponse.ok) throw new Error(`API Error: ${finalApiResponse.statusText}`);
+                await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
+
+            } catch (error) {
+                console.error("Error fetching web content:", error);
+                aiBubble.innerHTML = `Lo siento, ocurrió un error al obtener el contenido de la web.`;
+                aiBubble.style.backgroundColor = '#fecaca';
+                aiBubble.style.color = '#991b1b';
+            }
+        }
+
+       async function handleStreamedResponse(response, aiBubble, originalUserQuery) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = "";
+            let buffer = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                 if (done) {
+                    if (buffer.startsWith('data: ')) await processLine(buffer);
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                let boundary;
+                while ((boundary = buffer.indexOf('\n')) !== -1) {
+                    const line = buffer.substring(0, boundary).trim();
+                    buffer = buffer.substring(boundary + 1);
+                    if(await processLine(line)) return;
+                }
+            }
+
+            async function processLine(line) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.replace('data: ', '');
+                    if (jsonStr === '[DONE]') return;
+                    
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        const content = parsed.choices[0].delta.content;
+
+                        if (content) {
+                            fullResponse += content;
+                            
+                            const trimmedResponse = fullResponse.trim();
+                            if (trimmedResponse.startsWith('{')) {
+                                try {
+                                    const command = JSON.parse(trimmedResponse);
+                                    if (command.search || command.getweb) {
+                                        reader.cancel();
+                                        if (command.search) await handleInternetSearch(command.search, originalUserQuery, aiBubble);
+                                        else if (command.getweb) await handleGetWebContent(command.getweb, originalUserQuery, aiBubble);
+                                        fullResponse = "[TOOL_EXECUTED]"; 
+                                        return true; 
+                                    }
+                                } catch (e) { /* Incomplete JSON */ }
+                            }
+                            
+                            if (fullResponse === "[TOOL_EXECUTED]") return;
+
+                            let textPart = fullResponse;
+                            let svgPart = "";
+                            const svgStartIndex = textPart.indexOf('[SVG_START]');
+                            
+                            if (svgStartIndex !== -1) {
+                                textPart = fullResponse.substring(0, svgStartIndex);
+                                svgPart = fullResponse.substring(svgStartIndex + '[SVG_START]'.length);
+                                const svgEndIndex = svgPart.indexOf('[SVG_END]');
+                                if (svgEndIndex !== -1) {
+                                    svgPart = svgPart.substring(0, svgEndIndex);
+                                }
+                            }
+                            
+                            const renderedText = DOMPurify.sanitize(marked.parse(textPart.replace(/\[IMAGE:.*?\]/g, '')));
+                            aiBubble.innerHTML = renderedText + svgPart; // Render raw SVG during stream for live effect
+                            
+                            if (!userHasScrolledUp) scrollToBottom();
+                        }
+                    } catch (e) { /* Ignore parsing errors */ }
+                }
+                 return false;
+            }
+
+            // --- Final processing after stream ends ---
+            if (fullResponse.trim() && fullResponse !== "[TOOL_EXECUTED]") {
+                const svgMatch = fullResponse.match(/\[SVG_START\](.*?)\[SVG_END\]/s);
+                const textContent = fullResponse.replace(/\[IMAGE:.*?\]|\[SVG_START\].*?\[SVG_END\]/gs, '').trim();
+
+                if (textContent) {
+                    allChats[activeChatId].messages.push({ role: "assistant", content: textContent, type: 'text' });
+                }
+                if (svgMatch && svgMatch[1]) {
+                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { html: true } });
+                    allChats[activeChatId].messages.push({ role: "assistant", content: sanitizedSvg, type: 'text' });
+                }
+
+                const imageRegex = /\[IMAGE:.*?\]/g;
+                let match;
+                while ((match = imageRegex.exec(fullResponse)) !== null) {
+                    const prompt = match[0].substring(7, match[0].length - 1);
+                    allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
+                    generateAndDisplayImage(prompt);
+                }
+                
+                addCopyButtons(aiBubble);
+            } else if (!fullResponse.trim()) {
+                aiBubble.remove();
+            }
+            
+            saveData();
+        }
+        
+        const sendMessage = async () => {
+            let userMessageContent = chatInput.value;
+            if (userMessageContent.endsWith('\n')) {
+                userMessageContent = userMessageContent.slice(0, -1);
+            }
+            if (userMessageContent.trim() === '') {
+                 chatInput.value = '';
+                 chatInput.style.height = '40px';
+                 sendButton.disabled = true;
+                 return;
+            }
+
+            if (!activeChatId || !allChats[activeChatId]) { startNewChat(); }
+
+            const userMessage = { role: "user", content: userMessageContent, type: 'text' };
+            createChatBubble(userMessage);
+            allChats[activeChatId].messages.push(userMessage);
+            saveData();
+            renderChatList();
+            chatInput.value = ''; chatInput.style.height = '40px'; sendButton.disabled = true;
+
+            const aiBubble = createChatBubble({ role: 'assistant', content: '', type: 'text' });
+            aiBubble.innerHTML = `<div class="p-4"><div class="flex items-center space-x-1 justify-center"><div class="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div></div></div>`;
+
+            const messagesForAPI = [{ role: "system", content: AI_SYSTEM_PROMPT }];
+            const conversationHistory = allChats[activeChatId].messages;
+
+            for (let i = 0; i < conversationHistory.length; i++) {
+                const msg = conversationHistory[i];
+                if (msg.role === 'assistant') {
+                    if (msg.type === 'text') {
+                        const renderedHtml = DOMPurify.sanitize(marked.parse(msg.content));
+                        messagesForAPI.push({ role: 'assistant', content: renderedHtml });
+                    }
+                } else if (msg.role === 'user') {
+                    if (msg.type === 'text') {
+                        const contentParts = [{ type: 'text', text: msg.content }];
+                        let j = i - 1;
+                        while (j >= 0 && conversationHistory[j].role === 'user' && conversationHistory[j].type === 'image') {
+                            contentParts.unshift({ type: 'image_url', image_url: { url: conversationHistory[j].content } });
+                            j--;
+                        }
+                        messagesForAPI.push({ role: 'user', content: contentParts });
+                    }
+                }
+            }
+
+            let lastError = null;
+            for (let attempt = 1; attempt <= 5; attempt++) {
+                try {
+                    const response = await fetch(MISTRAL_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MISTRAL_API_KEY}` },
+                        body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForAPI, stream: true }),
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.statusText} - ${await response.text()}`);
+                    
+                    await handleStreamedResponse(response, aiBubble, userMessageContent);
+                    return;
+
+                } catch (error) {
+                    lastError = error;
+                    console.error(`Attempt ${attempt} failed:`, error.message);
+                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+
+            console.error("API Error after all retries:", lastError);
+            aiBubble.innerHTML = `Lo siento, ha ocurrido un error.`;
+            aiBubble.style.backgroundColor = '#fecaca';
+            aiBubble.style.color = '#991b1b';
+        };
+        
+        // --- Auth & UI Listeners ---
+        const handleSignup = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await createUserWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
+        const handleLogin = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await signInWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
+        const handleLogout = async () => { await signOut(auth); };
+        const handleFileUpload = (event) => {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const message = { role: 'user', type: 'image', content: e.target.result };
+                    if (!activeChatId || !allChats[activeChatId]) { startNewChat(); }
+                    allChats[activeChatId].messages.push(message);
+                    createChatBubble(message);
+                    saveData();
+                    renderChatList();
+                };
+                reader.readAsDataURL(file);
+            }
+            fileInput.value = '';
+        };
+
+        const setDesktopSidebarState = (c) => { isDesktopSidebarCollapsed = c; const w = c ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED; sidebar.style.width = w; sidebarTexts.forEach(t => t.classList.toggle('hidden', c)); toggleIcon.classList.toggle('rotate-180', !c); };
+        const setMobileSidebarState = (o) => { sidebar.style.width = SIDEBAR_WIDTH_EXPANDED; sidebar.classList.toggle('-translate-x-full', !o); };
+        const applyInitialState = () => { if (window.innerWidth < DESKTOP_BREAKPOINT) { mainContent.style.marginLeft = '0'; sidebarTexts.forEach(t => t.classList.remove('hidden')); setMobileSidebarState(false); } else { mainContent.style.marginLeft = '0'; sidebar.classList.remove('-translate-x-full'); setDesktopSidebarState(false); } };
+        
+        chatHistory.addEventListener('scroll', () => { const atBottom = chatHistory.scrollHeight - chatHistory.scrollTop <= chatHistory.clientHeight + 100; userHasScrolledUp = !atBottom; scrollToBottomBtn.classList.toggle('hidden', atBottom); });
+        scrollToBottomBtn.addEventListener('click', () => chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' }));
+        desktopToggleButton.addEventListener('click', () => setDesktopSidebarState(!isDesktopSidebarCollapsed));
+        mobileOpenSidebarButton.addEventListener('click', () => setMobileSidebarState(true));
+        mobileCloseSidebarButton.addEventListener('click', () => setMobileSidebarState(false));
+        newChatButton.addEventListener('click', startNewChat);
+        chatList.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            const deleteBtn = e.target.closest('.delete-chat-btn');
+            
+            if (deleteBtn) {
+                e.stopPropagation();
+                deleteChat(deleteBtn.dataset.deleteId);
+            } else if (li?.dataset.chatId) {
+                switchChat(li.dataset.chatId);
+            }
+        });
+        closeModalBtn.addEventListener('click', () => authModal.classList.add('hidden'));
+        signupBtn.addEventListener('click', handleSignup);
+        loginBtn.addEventListener('click', handleLogin);
+        attachFileBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        window.addEventListener('resize', applyInitialState);
+        chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = `${chatInput.scrollHeight}px`; sendButton.disabled = chatInput.value.trim() === ''; });
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+        // --- App Initialization ---
+        onAuthStateChanged(auth, user => {
+            currentUser = user;
+            updateAuthUI();
+            
+            chatHistory.innerHTML = `<div id="loadingSpinner" class="flex justify-center items-center h-full"><svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>`;
+            chatList.innerHTML = '';
+
+            if (user) {
+                loadChatsFromFirebase();
+            } else {
+                loadChatsFromLocalStorage();
+                if (!activeChatId || !allChats[activeChatId]) {
+                    startNewChat();
+                } else {
+                    renderChatList();
+                    renderChatHistory();
+                }
+            }
+        });
+        document.addEventListener('DOMContentLoaded', applyInitialState);
+    </script>
+</div>
+</body>
+</html>
