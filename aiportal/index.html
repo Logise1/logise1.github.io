@@ -278,6 +278,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
 
             try {
                 const searchResponse = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1`);
+                if (!searchResponse.ok) throw new Error(`Search API Error: ${searchResponse.statusText}`);
                 const searchData = await searchResponse.json();
                 
                 let searchResultsText = "No se encontraron resultados relevantes.";
@@ -300,15 +301,16 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForFinalAnswer, stream: true }),
                 });
 
-                if (!finalApiResponse.ok) throw new Error(`API Error: ${finalApiResponse.statusText}`);
+                if (!finalApiResponse.ok) throw new Error(`Mistral API Error after search: ${finalApiResponse.statusText}`);
 
                 await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
 
             } catch (error) {
-                console.error("Error during internet search:", error);
-                aiBubble.innerHTML = `Lo siento, ocurrió un error al buscar en internet.`;
+                console.error("Error during internet search or follow-up:", error);
+                aiBubble.innerHTML = `Lo siento, ocurrió un error al procesar la búsqueda en internet. Detalles: ${error.message}`;
                 aiBubble.style.backgroundColor = '#fecaca';
                 aiBubble.style.color = '#991b1b';
+                 saveData(); // Save error state
             }
         }
 
@@ -319,7 +321,7 @@ Answer directly in Markdown if you don't need to use a tool.`;
             try {
                 const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
                 const webResponse = await fetch(proxyUrl);
-                if (!webResponse.ok) throw new Error(`Error al acceder a la URL: ${webResponse.statusText}`);
+                if (!webResponse.ok) throw new Error(`Proxy Error: ${webResponse.statusText}`);
 
                 const htmlContent = await webResponse.text();
                 
@@ -342,14 +344,15 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForFinalAnswer, stream: true }),
                 });
 
-                if (!finalApiResponse.ok) throw new Error(`API Error: ${finalApiResponse.statusText}`);
+                if (!finalApiResponse.ok) throw new Error(`Mistral API Error after getWeb: ${finalApiResponse.statusText}`);
                 await handleStreamedResponse(finalApiResponse, aiBubble, originalUserQuery);
 
             } catch (error) {
-                console.error("Error fetching web content:", error);
-                aiBubble.innerHTML = `Lo siento, ocurrió un error al obtener el contenido de la web.`;
+                console.error("Error fetching web content or follow-up:", error);
+                aiBubble.innerHTML = `Lo siento, ocurrió un error al obtener el contenido de la web. Detalles: ${error.message}`;
                 aiBubble.style.backgroundColor = '#fecaca';
                 aiBubble.style.color = '#991b1b';
+                 saveData(); // Save error state
             }
         }
 
@@ -358,30 +361,39 @@ Answer directly in Markdown if you don't need to use a tool.`;
             const decoder = new TextDecoder();
             let fullResponse = "";
             let buffer = "";
-            let toolExecuted = false; // Flag to prevent processing after tool execution
+            let toolExecuted = false; 
 
-            while (true) {
-                const { value, done } = await reader.read();
-                 if (done) {
-                    if (buffer.startsWith('data: ')) await processLine(buffer);
-                    break;
-                }
+            try {
+                 while (true) {
+                    const { value, done } = await reader.read();
+                     if (done) {
+                        if (buffer.startsWith('data: ')) await processLine(buffer);
+                        break;
+                    }
 
-                buffer += decoder.decode(value, { stream: true });
-                let boundary;
-                while ((boundary = buffer.indexOf('\n')) !== -1) {
-                    const line = buffer.substring(0, boundary).trim();
-                    buffer = buffer.substring(boundary + 1);
-                    if(await processLine(line)) {
-                        toolExecuted = true;
-                        break; // Exit inner loop if tool was executed
-                    };
+                    buffer += decoder.decode(value, { stream: true });
+                    let boundary;
+                    while ((boundary = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.substring(0, boundary).trim();
+                        buffer = buffer.substring(boundary + 1);
+                        if(await processLine(line)) {
+                            toolExecuted = true;
+                            break; 
+                        };
+                    }
+                     if (toolExecuted) break; 
                 }
-                 if (toolExecuted) break; // Exit outer loop if tool was executed
+            } catch (streamError) {
+                 console.error("Error reading stream:", streamError);
+                 aiBubble.innerHTML = `Error al procesar la respuesta. Intenta de nuevo.`;
+                 aiBubble.style.backgroundColor = '#fecaca';
+                 aiBubble.style.color = '#991b1b';
+                 toolExecuted = true; // Prevent further processing after stream error
             }
 
+
             async function processLine(line) {
-                 if (toolExecuted) return true; // Don't process if a tool was already called
+                 if (toolExecuted) return true; 
 
                 if (line.startsWith('data: ')) {
                     const jsonStr = line.replace('data: ', '');
@@ -389,23 +401,32 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     
                     try {
                         const parsed = JSON.parse(jsonStr);
-                        const content = parsed.choices[0].delta.content;
+                        // Check for potential API errors within the stream
+                        if (parsed.error) {
+                             console.error("API Error in stream:", parsed.error);
+                             throw new Error(parsed.error.message || "Unknown API error in stream");
+                        }
+                        const choice = parsed.choices[0];
+                         if (!choice) return false; // Skip if no choice data
+                         
+                        const content = choice.delta?.content; // Use optional chaining
 
                         if (content) {
                             fullResponse += content;
                             
                             const trimmedResponse = fullResponse.trim();
-                            // Check for tool commands specifically at the beginning or if the whole response is just the command
+                            // Stricter check for tool commands (must be the *entire* trimmed response)
                              if (trimmedResponse.startsWith('{') && trimmedResponse.endsWith('}')) {
                                 try {
                                     const command = JSON.parse(trimmedResponse);
                                     if (command.search || command.getweb) {
+                                         console.log("Tool command detected:", command);
                                         reader.cancel(); // Stop reading the stream
                                         if (command.search) await handleInternetSearch(command.search, originalUserQuery, aiBubble);
                                         else if (command.getweb) await handleGetWebContent(command.getweb, originalUserQuery, aiBubble);
                                         return true; // Signal that a tool was executed
                                     }
-                                } catch (e) { /* Might be incomplete JSON, continue */ }
+                                } catch (e) { /* Might be incomplete JSON, continue accumulating */ }
                             }
                             
                             // Stream Text / SVG
@@ -428,31 +449,42 @@ Answer directly in Markdown if you don't need to use a tool.`;
                             
                             if (!userHasScrolledUp) scrollToBottom();
                         }
-                    } catch (e) { console.error("Error parsing stream chunk:", e, "Line:", line); /* Ignore parsing errors */ }
+                    } catch (e) { console.warn("Minor error parsing stream chunk:", e, "Line:", line); /* Ignore minor parsing errors, maybe log them */ }
                 }
                  return false; // Signal that no tool was executed
             }
 
             // --- Final processing after stream ends ---
+             // Only process if no tool was executed AND there was some response
             if (!toolExecuted && fullResponse.trim()) {
                 const svgMatch = fullResponse.match(/\[SVG_START\](.*?)\[SVG_END\]/s);
                 const textContent = fullResponse.replace(/\[IMAGE:.*?\]|\[SVG_START\].*?\[SVG_END\]/gs, '').trim();
 
+                let finalMessageContent = "";
+                let finalMessageType = 'text'; // Default type
+
                 if (textContent) {
-                    allChats[activeChatId].messages.push({ role: "assistant", content: textContent, type: 'text' });
+                    finalMessageContent = textContent;
                 }
                 if (svgMatch && svgMatch[1]) {
-                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { svg: true } }); // Sanitize final SVG
-                    allChats[activeChatId].messages.push({ role: "assistant", content: sanitizedSvg, type: 'text' }); 
-                    // Update final bubble content with sanitized SVG
+                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { svg: true } }); 
+                    // If there's SVG, store the raw SVG as the main content
+                    finalMessageContent = sanitizedSvg; 
+                    // Update final bubble content with sanitized SVG potentially preceded by text
                     const finalRenderedText = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
                     aiBubble.innerHTML = finalRenderedText + sanitizedSvg;
                 } else if(textContent) {
                      // Ensure final bubble content is correct if only text
                      aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
                 }
+                
+                // Save the final consolidated message
+                 if (finalMessageContent) {
+                     allChats[activeChatId].messages.push({ role: "assistant", content: finalMessageContent, type: finalMessageType });
+                 }
 
 
+                // Process image tags separately
                 const imageRegex = /\[IMAGE:.*?\]/g;
                 let match;
                 while ((match = imageRegex.exec(fullResponse)) !== null) {
@@ -465,7 +497,10 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 hljs.highlightAllUnder(aiBubble); // Ensure syntax highlighting is applied
             } else if (!toolExecuted && !fullResponse.trim()) {
                  // Remove the thinking bubble if no response and no tool was called
+                console.log("Stream finished with no content and no tool execution. Removing bubble.");
                 aiBubble.remove();
+            } else if (toolExecuted) {
+                 console.log("Tool execution finished. Bubble content handled by tool function.");
             }
             
             saveData();
@@ -515,11 +550,12 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     }
                     // Assistant images are handled by [IMAGE:] tag, no need to add separately here.
                 } else if (msg.role === 'user') {
-                    if (msg.type === 'text') {
-                        currentMessageParts.push({ type: 'text', text: msg.content });
-                    } else if (msg.type === 'image') {
+                     if (msg.type === 'image') {
                         // Add image part to the current message parts
                         currentMessageParts.push({ type: 'image_url', image_url: { url: msg.content } });
+                    } else if (msg.type === 'text') {
+                         // Always add text, even if it follows an image immediately
+                        currentMessageParts.push({ type: 'text', text: msg.content });
                     }
                 }
             }
@@ -527,6 +563,10 @@ Answer directly in Markdown if you don't need to use a tool.`;
             if (currentMessageParts.length > 0) {
                 messagesForAPI.push({ role: 'user', content: currentMessageParts });
             }
+
+            // --- Debugging: Log the messages being sent ---
+            // console.log("Sending messages to API:", JSON.stringify(messagesForAPI, null, 2));
+             // --- End Debugging ---
 
 
             let lastError = null;
@@ -538,22 +578,28 @@ Answer directly in Markdown if you don't need to use a tool.`;
                         body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForAPI, stream: true }),
                     });
 
-                    if (!response.ok) throw new Error(`API Error: ${response.statusText} - ${await response.text()}`);
+                    if (!response.ok) {
+                         const errorBody = await response.text();
+                         console.error(`API Error Response (Attempt ${attempt}): ${response.status} ${response.statusText}`, errorBody);
+                         throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                    }
                     
                     await handleStreamedResponse(response, aiBubble, userMessageContent);
-                    return;
+                    return; // Success
 
                 } catch (error) {
                     lastError = error;
                     console.error(`Attempt ${attempt} failed:`, error.message);
-                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
+                    if (attempt < 5) await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
+                     else { // Last attempt failed
+                         console.error("API Error after all retries:", lastError);
+                         aiBubble.innerHTML = `Lo siento, ha ocurrido un error persistente al contactar con la IA. Por favor, inténtalo de nuevo más tarde. Detalles: ${lastError.message}`;
+                         aiBubble.style.backgroundColor = '#fecaca';
+                         aiBubble.style.color = '#991b1b';
+                         saveData(); // Save error state
+                     }
                 }
             }
-
-            console.error("API Error after all retries:", lastError);
-            aiBubble.innerHTML = `Lo siento, ha ocurrido un error.`;
-            aiBubble.style.backgroundColor = '#fecaca';
-            aiBubble.style.color = '#991b1b';
         };
         
         // --- Auth & UI Listeners ---
@@ -572,6 +618,8 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     createChatBubble(message);
                     saveData();
                     renderChatList();
+                    // Optionally trigger AI response after image upload if needed
+                    // sendMessage(); // Uncomment if you want the AI to respond immediately to the image
                 };
                 reader.readAsDataURL(file);
             }
