@@ -498,26 +498,36 @@ Answer directly in Markdown if you don't need to use a tool.`;
             const messagesForAPI = [{ role: "system", content: AI_SYSTEM_PROMPT }];
             const conversationHistory = allChats[activeChatId].messages;
 
+            // Construct messages for API, handling text and images correctly
+            let currentMessageParts = [];
             for (let i = 0; i < conversationHistory.length; i++) {
                 const msg = conversationHistory[i];
+
                 if (msg.role === 'assistant') {
-                    if (msg.type === 'text') {
-                         // Pass raw SVG history to AI if it exists
+                    // Finalize any pending user message parts before adding assistant message
+                    if (currentMessageParts.length > 0) {
+                        messagesForAPI.push({ role: 'user', content: currentMessageParts });
+                        currentMessageParts = [];
+                    }
+                     if (msg.type === 'text') {
                         const contentToPass = msg.content.trim().startsWith('<svg') ? msg.content : DOMPurify.sanitize(marked.parse(msg.content));
                         messagesForAPI.push({ role: 'assistant', content: contentToPass });
                     }
+                    // Assistant images are handled by [IMAGE:] tag, no need to add separately here.
                 } else if (msg.role === 'user') {
                     if (msg.type === 'text') {
-                        const contentParts = [{ type: 'text', text: msg.content }];
-                        let j = i - 1;
-                        while (j >= 0 && conversationHistory[j].role === 'user' && conversationHistory[j].type === 'image') {
-                            contentParts.unshift({ type: 'image_url', image_url: { url: conversationHistory[j].content } });
-                            j--;
-                        }
-                        messagesForAPI.push({ role: 'user', content: contentParts });
+                        currentMessageParts.push({ type: 'text', text: msg.content });
+                    } else if (msg.type === 'image') {
+                        // Add image part to the current message parts
+                        currentMessageParts.push({ type: 'image_url', image_url: { url: msg.content } });
                     }
                 }
             }
+             // Add any remaining user message parts after the loop
+            if (currentMessageParts.length > 0) {
+                messagesForAPI.push({ role: 'user', content: currentMessageParts });
+            }
+
 
             let lastError = null;
             for (let attempt = 1; attempt <= 5; attempt++) {
