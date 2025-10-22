@@ -8,5 +8,10 @@
     "image": "/assets/place.png",
     "alt": "Place",
     "link": "/place"
+  },
+  {
+    "image": "/assets/aiportal.png",
+    "alt": "AiPortal",
+    "link": "/aiportal"
   }
 ]
