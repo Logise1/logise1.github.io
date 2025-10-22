@@ -78,6 +78,10 @@
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept="image/*" />
+                <button id="cameraBtn" class="p-2 text-gray-500 hover:text-gray-700">
+                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+                <input type="file" id="cameraInput" class="hidden" accept="image/*" capture="environment" />
                 <textarea id="chatInput" class="chat-textarea flex-1 p-2 bg-transparent text-sm md:text-base focus:outline-none placeholder-gray-500" placeholder="Escribe un mensaje..." rows="1" style="min-height: 40px; max-height: 200px;"></textarea>
                 <button id="sendButton" class="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-300" disabled><svg class="h-6 w-6 transform rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
             </div>
@@ -129,7 +133,7 @@
         const db = getDatabase(app);
 
         // --- DOM Elements ---
-        const sidebar = document.getElementById('sidebar'), mainContent = document.getElementById('mainContent'), mobileOpenSidebarButton = document.getElementById('mobileOpenSidebarButton'), mobileCloseSidebarButton = document.getElementById('mobileCloseSidebarButton'), desktopToggleButton = document.getElementById('desktopToggleButton'), newChatButton = document.getElementById('newChatButton'), toggleIcon = document.getElementById('toggleIcon'), sidebarTexts = document.querySelectorAll('.sidebar-text'), chatInput = document.getElementById('chatInput'), sendButton = document.getElementById('sendButton'), chatHistory = document.getElementById('chatHistory'), chatList = document.getElementById('chatList'), scrollToBottomBtn = document.getElementById('scrollToBottomBtn'), authContainer = document.getElementById('authContainer'), authModal = document.getElementById('authModal'), closeModalBtn = document.getElementById('closeModalBtn'), loginForm = document.getElementById('loginForm'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginBtn = document.getElementById('loginBtn'), signupBtn = document.getElementById('signupBtn'), authError = document.getElementById('authError'), attachFileBtn = document.getElementById('attachFileBtn'), fileInput = document.getElementById('fileInput');
+        const sidebar = document.getElementById('sidebar'), mainContent = document.getElementById('mainContent'), mobileOpenSidebarButton = document.getElementById('mobileOpenSidebarButton'), mobileCloseSidebarButton = document.getElementById('mobileCloseSidebarButton'), desktopToggleButton = document.getElementById('desktopToggleButton'), newChatButton = document.getElementById('newChatButton'), toggleIcon = document.getElementById('toggleIcon'), sidebarTexts = document.querySelectorAll('.sidebar-text'), chatInput = document.getElementById('chatInput'), sendButton = document.getElementById('sendButton'), chatHistory = document.getElementById('chatHistory'), chatList = document.getElementById('chatList'), scrollToBottomBtn = document.getElementById('scrollToBottomBtn'), authContainer = document.getElementById('authContainer'), authModal = document.getElementById('authModal'), closeModalBtn = document.getElementById('closeModalBtn'), loginForm = document.getElementById('loginForm'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginBtn = document.getElementById('loginBtn'), signupBtn = document.getElementById('signupBtn'), authError = document.getElementById('authError'), attachFileBtn = document.getElementById('attachFileBtn'), fileInput = document.getElementById('fileInput'), cameraBtn = document.getElementById('cameraBtn'), cameraInput = document.getElementById('cameraInput');
 
         // --- Constants ---
         const DESKTOP_BREAKPOINT = 768, SIDEBAR_WIDTH_EXPANDED = '16rem', SIDEBAR_WIDTH_COLLAPSED = '5rem', MISTRAL_API_KEY = 'o0kW3QDl3KG9HXPbxqSsuYJqJiXVfOsU', MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
@@ -413,11 +417,12 @@ Answer directly in Markdown if you don't need to use a tool.`;
                             }
                             
                             const renderedText = DOMPurify.sanitize(marked.parse(textPart.replace(/\[IMAGE:.*?\]/g, '')));
-                            aiBubble.innerHTML = renderedText + svgPart; // Render raw SVG during stream for live effect
+                            // Update content: Markdown for text, raw SVG for drawing
+                            aiBubble.innerHTML = renderedText + DOMPurify.sanitize(svgPart, { USE_PROFILES: { svg: true } }); 
                             
                             if (!userHasScrolledUp) scrollToBottom();
                         }
-                    } catch (e) { /* Ignore parsing errors */ }
+                    } catch (e) { console.error("Error parsing stream chunk:", e, "Line:", line); /* Ignore parsing errors */ }
                 }
                  return false;
             }
@@ -431,9 +436,16 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     allChats[activeChatId].messages.push({ role: "assistant", content: textContent, type: 'text' });
                 }
                 if (svgMatch && svgMatch[1]) {
-                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { html: true } });
-                    allChats[activeChatId].messages.push({ role: "assistant", content: sanitizedSvg, type: 'text' });
+                    const sanitizedSvg = DOMPurify.sanitize(svgMatch[1].trim(), { USE_PROFILES: { svg: true } }); // Sanitize final SVG
+                    allChats[activeChatId].messages.push({ role: "assistant", content: sanitizedSvg, type: 'text' }); 
+                    // Update final bubble content with sanitized SVG
+                    const finalRenderedText = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
+                    aiBubble.innerHTML = finalRenderedText + sanitizedSvg;
+                } else if(textContent) {
+                     // Ensure final bubble content is correct if only text
+                     aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(textContent.replace(/\[IMAGE:.*?\]/g, '')));
                 }
+
 
                 const imageRegex = /\[IMAGE:.*?\]/g;
                 let match;
@@ -443,7 +455,8 @@ Answer directly in Markdown if you don't need to use a tool.`;
                     generateAndDisplayImage(prompt);
                 }
                 
-                addCopyButtons(aiBubble);
+                addCopyButtons(aiBubble); // Add copy buttons if there's code
+                hljs.highlightAllUnder(aiBubble); // Ensure syntax highlighting is applied
             } else if (!fullResponse.trim()) {
                 aiBubble.remove();
             }
@@ -482,8 +495,9 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 const msg = conversationHistory[i];
                 if (msg.role === 'assistant') {
                     if (msg.type === 'text') {
-                        const renderedHtml = DOMPurify.sanitize(marked.parse(msg.content));
-                        messagesForAPI.push({ role: 'assistant', content: renderedHtml });
+                         // Pass raw SVG history to AI if it exists
+                        const contentToPass = msg.content.trim().startsWith('<svg') ? msg.content : DOMPurify.sanitize(marked.parse(msg.content));
+                        messagesForAPI.push({ role: 'assistant', content: contentToPass });
                     }
                 } else if (msg.role === 'user') {
                     if (msg.type === 'text') {
@@ -529,8 +543,9 @@ Answer directly in Markdown if you don't need to use a tool.`;
         const handleSignup = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await createUserWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
         const handleLogin = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await signInWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
         const handleLogout = async () => { await signOut(auth); };
-        const handleFileUpload = (event) => {
-            const file = event.target.files[0];
+        
+        const handleImageInput = (event) => {
+             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -543,7 +558,8 @@ Answer directly in Markdown if you don't need to use a tool.`;
                 };
                 reader.readAsDataURL(file);
             }
-            fileInput.value = '';
+            // Reset input value to allow selecting the same file again if needed
+            event.target.value = '';
         };
 
         const setDesktopSidebarState = (c) => { isDesktopSidebarCollapsed = c; const w = c ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED; sidebar.style.width = w; sidebarTexts.forEach(t => t.classList.toggle('hidden', c)); toggleIcon.classList.toggle('rotate-180', !c); };
@@ -571,11 +587,19 @@ Answer directly in Markdown if you don't need to use a tool.`;
         signupBtn.addEventListener('click', handleSignup);
         loginBtn.addEventListener('click', handleLogin);
         attachFileBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileUpload);
+        fileInput.addEventListener('change', handleImageInput); // Use unified handler
+        cameraBtn.addEventListener('click', () => cameraInput.click());
+        cameraInput.addEventListener('change', handleImageInput); // Use unified handler
         window.addEventListener('resize', applyInitialState);
         chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = `${chatInput.scrollHeight}px`; sendButton.disabled = chatInput.value.trim() === ''; });
         sendButton.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+         // Ensure send button works on mobile touch
+        sendButton.addEventListener('touchend', (e) => {
+             e.preventDefault(); // Prevent double triggering click
+             sendMessage();
+        });
+
 
         // --- App Initialization ---
         onAuthStateChanged(auth, user => {
