@@ -3,6 +3,7 @@
     "image": "/assets/maincraft.png",
     "alt": "MainCraft",
     "link": "/maincraft"
+    "tags": ["glow"]
   },
   {
     "image": "/assets/wetype.png",
