@@ -74,6 +74,8 @@
         /* --- Contenedores de Pantalla --- */
         .screen {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(26, 26, 26, 0.95); /* Fondo oscuro semitransparente */
@@ -256,6 +258,30 @@
 
         /* --- Estilos del Juego --- */
         
+        /* NUEVO: Contenedor para las etiquetas de nombres (CSS2D) */
+        #label-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* No intercepta clics */
+            z-index: 5; /* Detrás de la UI pero delante del juego */
+        }
+        
+        /* NUEVO: Estilo para la etiqueta del nombre del jugador */
+        .player-label {
+            color: white;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px black;
+            user-select: none;
+            white-space: nowrap; /* Evita que el nombre se parta */
+        }
+
         /* Mirilla (crosshair) en el centro */
         #crosshair {
             position: absolute;
@@ -314,6 +340,7 @@
             border-radius: 6px;
             background-color: rgba(255, 255, 255, 0.1);
             overflow: hidden; 
+            position: relative; /* NUEVO: Para posicionar la cantidad */
         }
         
         .hotbar-canvas {
@@ -326,6 +353,19 @@
             border: 3px solid #ffffff;
             transform: scale(1.05); /* Resaltar */
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+        
+        /* NUEVO: Estilo para la cantidad en la hotbar */
+        .hotbar-quantity {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+            display: none; /* Oculto por defecto */
         }
     </style>
 </head>
@@ -373,6 +413,10 @@
     </div>
 
     <!-- PANTALLA 3: JUEGO -->
+    
+    <!-- NUEVO: Contenedor para las etiquetas de nombres -->
+    <div id="label-container"></div>
+    
     <!-- La mirilla -->
     <div id="crosshair"></div>
 
@@ -411,6 +455,8 @@
         // --- Imports de Three.js ---
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        // NUEVO: Importar CSS2DRenderer para nombres de jugadores
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         // --- Imports de Firebase (desde el objeto window) ---
         // CAMBIO: Usar funciones de RTDB
@@ -426,6 +472,9 @@
         let scene, camera, renderer, controls, raycaster;
         let noise; // Generador de ruido
         
+        // NUEVO: Renderer para las etiquetas 2D
+        let labelRenderer;
+        
         // --- Constantes del Jugador ---
         const playerHeight = 1.9; // Altura del jugador
         const playerWidth = 0.4; 
@@ -437,15 +486,18 @@
         let db, auth;
         let worldName; // El "servidor"
         let userId;    // Nuestro ID de Firebase
+        let userName;  // NUEVO: Nuestro nombre de usuario
         let lastFirebaseUpdate = 0;
-        let players = new Map(); // Mapa para [userId, mesh] de otros jugadores
+        let players = new Map(); // Mapa para [userId, { mesh, label }] de otros jugadores
         const playerMeshGeometry = new THREE.BoxGeometry(playerWidth * 2, playerHeight, playerWidth * 2);
         const playerMeshMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, opacity: 0.6, transparent: true });
         
         // Listeners de Firebase (para poder desconectarlos)
         let playersListener = null;
-        let blocksListener = { added: null, removed: null }; // CAMBIO: Objeto para múltiples listeners
+        let blocksListener = { added: null, removed: null }; 
         let worldsListener = null;
+        // NUEVO: Listener para nuestro inventario
+        let inventoryListener = null; 
 
 
         // --- Sistema de Chunks ---
@@ -453,7 +505,8 @@
         const blockData = new Map(); // Guarda la Mesh
         
         const chunkSize = 16; 
-        const renderDistance = 1; 
+        // CAMBIO: Render Distance 3x3 (1 de cada lado)
+        const renderDistance = 1;
         
         let currentChunk = new THREE.Vector2(Infinity, Infinity); 
 
@@ -488,11 +541,11 @@
         let breakingBlockOverlay = null; 
         let breakingMaterial; 
 
-        // --- Variables de Inventario y Hotbar 3D ---
+        // --- CAMBIO: Variables de Inventario y Hotbar 3D ---
         let hotbarElement;
         let hotbarSlots = []; 
         let selectedSlot = 0; 
-        let inventory = []; 
+        let inventory = []; // Ahora será un array de { type, quantity }
         let materials = {}; 
         
         let hotbarScenes = [];      
@@ -507,10 +560,11 @@
         // --- URL de Texturas de Rotura ---
         const breakTextureBaseUrl = 'https://raw.githubusercontent.com/Techno-Hwiz/voxel-assets/main/textures/break/';
         
-        // --- Constantes del Mundo ---
-        const terrainHeight = 6;  
+        // --- CAMBIO: Constantes del Mundo (revertidas) ---
+        const terrainHeight = 6;
         const terrainScale = 0.05; 
-
+        const worldDepth = 0; // Revertido
+        
         // Geometría y material de los bloques (reutilizables)
         const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
 
@@ -547,10 +601,11 @@
 
         // --- Inicialización ---
         function init() {
-            inventory = [
-                'dirt', 'grass', 'stone',
-                null, null, null, null, null, null
-            ];
+            // CAMBIO: Inicializar inventario vacío
+            inventory = [];
+            for (let i = 0; i < 9; i++) {
+                inventory.push({ type: null, quantity: 0 });
+            }
             
             materials = {
                 'dirt': dirtMaterial,
@@ -567,11 +622,19 @@
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.y = terrainHeight + 5; 
 
-            // 3. Renderer
+            // 3. Renderer (WebGL)
             renderer = new THREE.WebGLRenderer({ antialias: true }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true; 
             document.body.appendChild(renderer.domElement);
+            
+            // NUEVO: 3b. Renderer (CSS2D para etiquetas)
+            const labelContainer = document.getElementById('label-container');
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelContainer.appendChild(labelRenderer.domElement);
 
             // 4. Luces
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
@@ -588,26 +651,28 @@
             controls = new PointerLockControls(camera, document.body);
             scene.add(controls.getObject()); 
             
-            // --- ARREGLO: Mover el listener 'unlock' aquí ---
             // --- Lógica de desbloqueo de cursor ---
             controls.addEventListener('unlock', () => {
-                // Si el juego está activo (worldName está seteado), volver al homescreen
                 if (worldName) {
                     // 1. Desconectar listeners del mundo
-                    if (playersListener) playersListener();
+                    if (playersListener) off(ref(db, `worlds/${worldName}/players`), 'value', playersListener);
+                    if (blocksListener.added) off(ref(db, `worlds/${worldName}/blocks`), 'child_added', blocksListener.added);
+                    if (blocksListener.removed) off(ref(db, `worlds/${worldName}/blocks`), 'child_removed', blocksListener.removed);
+                    // NUEVO: Desconectar listener de inventario
+                    if (inventoryListener) off(ref(db, `worlds/${worldName}/inventories/${userId}`), 'value', inventoryListener);
                     
-                    // CAMBIO: Desconectar listeners de RTDB
-                    const playersRef = ref(db, `worlds/${worldName}/players`);
-                    off(playersRef);
-                    
-                    const blocksRef = ref(db, `worlds/${worldName}/blocks`);
-                    off(blocksRef);
                     
                     // 2. Limpiar variables del mundo
                     playersListener = null;
                     blocksListener = { added: null, removed: null };
+                    inventoryListener = null;
                     worldName = null;
-                    players.forEach(mesh => scene.remove(mesh));
+                    
+                    // Limpiar jugadores
+                    players.forEach(player => {
+                        scene.remove(player.mesh);
+                        player.mesh.remove(player.label); // Quitar etiqueta del mesh
+                    });
                     players.clear();
                     
                     // 3. Mostrar homescreen
@@ -645,7 +710,7 @@
             
             // --- Configurar UI (Vida y Hotbar) ---
             setupHealthBar();
-            setupHotbar();
+            setupHotbar(); // Prepara la ESTRUCTURA de la hotbar
             
             // --- Eventos de Teclado y Ratón ---
             document.addEventListener('keydown', onKeyDown);
@@ -682,6 +747,9 @@
                 
                 loginStatus.textContent = "Conectando...";
                 loginButton.disabled = true;
+                
+                // NUEVO: Guardar nombre de usuario
+                userName = username;
 
                 try {
                     // 1. Inicializar Firebase
@@ -749,7 +817,7 @@
                     await set(worldListRef, { 
                         createdAt: serverTimestamp(),
                         creatorId: userId,
-                        creatorName: auth.currentUser.email.split('@')[0] // Guardamos el nombre de usuario
+                        creatorName: userName // Usar el nombre de usuario guardado
                     });
                     
                     // 2. Unirse al mundo
@@ -773,6 +841,9 @@
             // Empezar a escuchar la lista de mundos (RTDB)
             const worldListRef = ref(db, "worldList");
             const q = query(worldListRef, orderByChild("createdAt"));
+            
+            // Desconectar listener anterior si existe
+            if (worldsListener) off(ref(db, "worldList"), 'value', worldsListener);
             
             worldsListener = onValue(q, (snapshot) => {
                 const serverList = document.getElementById('server-list');
@@ -840,7 +911,8 @@
             // El listener 'onValue' de la lista de mundos se actualizará solo
         }
         
-        function joinWorld(selectedWorldName) {
+        // CAMBIO: joinWorld ahora carga el inventario
+        async function joinWorld(selectedWorldName) {
             worldName = selectedWorldName;
             
             // Desconectar el listener de la lista de mundos
@@ -854,11 +926,56 @@
             document.getElementById('ui-container').style.display = 'flex';
             document.getElementById('crosshair').style.display = 'block';
             
+            // NUEVO: Cargar inventario ANTES de entrar
+            await loadInventory();
+            
             controls.lock(); // Bloquear el cursor
             
             // Iniciar listeners de Firebase para ESE mundo
             initFirebaseWorldListeners();
         }
+        
+        // NUEVO: Cargar/crear inventario
+        async function loadInventory() {
+            const invRef = ref(db, `worlds/${worldName}/inventories/${userId}`);
+            
+            // Escuchar cambios en el inventario
+            inventoryListener = onValue(invRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    // Asegurarse de que el inventario tenga 9 slots
+                    if (Array.isArray(data) && data.length === 9) {
+                        inventory = data;
+                    } else {
+                        // Datos corruptos, crear uno nuevo
+                        createEmptyInventory(invRef);
+                    }
+                } else {
+                    // No existe inventario, crear uno vacío
+                    createEmptyInventory(invRef);
+                }
+                // Actualizar la UI de la hotbar con los datos cargados/nuevos
+                updateHotbarInventoryUI();
+            });
+        }
+        
+        // NUEVO: Función helper para crear y guardar un inventario vacío
+        function createEmptyInventory(invRef) {
+             inventory = [];
+             for (let i = 0; i < 9; i++) {
+                 inventory.push({ type: null, quantity: 0 });
+             }
+             set(invRef, inventory); // Guardar el inventario vacío
+        }
+        
+        // NUEVO: Guardar inventario en Firebase
+        async function saveInventory() {
+            if (!db || !worldName || !userId) return;
+            const invRef = ref(db, `worlds/${worldName}/inventories/${userId}`);
+            // No usamos await para no bloquear el juego
+            set(invRef, inventory);
+        }
+
         
         // --- CAMBIO: Función para escuchar cambios de Firebase (RTDB) ---
         function initFirebaseWorldListeners() {
@@ -883,20 +1000,33 @@
                         return; // Ignorar jugador desconectado
                     }
 
-                    let playerMesh = players.get(playerId);
-                    if (!playerMesh) {
-                        playerMesh = new THREE.Mesh(playerMeshGeometry, playerMeshMaterial);
+                    let player = players.get(playerId);
+                    if (!player) {
+                        // NUEVO: Crear Mesh
+                        const playerMesh = new THREE.Mesh(playerMeshGeometry, playerMeshMaterial);
+                        
+                        // NUEVO: Crear Label (Etiqueta de nombre)
+                        const labelDiv = document.createElement('div');
+                        labelDiv.className = 'player-label';
+                        labelDiv.textContent = data.username || 'Jugador'; // Usar el nombre de Firebase
+                        
+                        const playerLabel = new CSS2DObject(labelDiv);
+                        playerLabel.position.set(0, playerHeight / 2 + 0.5, 0); // Posicionar encima de la cabeza
+                        playerMesh.add(playerLabel); // Añadir etiqueta al mesh
+                        
                         scene.add(playerMesh);
-                        players.set(playerId, playerMesh);
+                        player = { mesh: playerMesh, label: playerLabel };
+                        players.set(playerId, player);
                     }
                     
-                    playerMesh.position.set(data.x, data.y - (playerHeight / 2), data.z);
+                    player.mesh.position.set(data.x, data.y - (playerHeight / 2), data.z);
                 });
                 
                 // Limpiar jugadores que ya no están
-                for (const [playerId, mesh] of players.entries()) {
+                for (const [playerId, player] of players.entries()) {
                     if (!activePlayers.has(playerId)) {
-                        scene.remove(mesh);
+                        scene.remove(player.mesh);
+                        player.mesh.remove(player.label); // Quitar etiqueta
                         players.delete(playerId);
                     }
                 }
@@ -914,7 +1044,7 @@
                 if (!existingBlock) {
                     const material = materials[data.type];
                     if (material) {
-                        addBlock(data.x, data.y, data.z, material, null, false); // false = no notificar
+                        addBlock(data.x, data.y, data.z, material, data.type, null, false); // false = no notificar
                     }
                 }
             });
@@ -931,9 +1061,6 @@
             });
         }
         
-        // --- Lógica de desbloqueo de cursor (MOVIDA A INIT) ---
-
-
         // --- FUNCIONES DE CHUNKS ---
 
         function getChunkKey(chunkX, chunkZ) {
@@ -944,6 +1071,7 @@
             return blockData.get(`${x}_${y}_${z}`); // CAMBIO: Usar _
         }
 
+        // CAMBIO: Mundo revertido
         function loadChunk(chunkX, chunkZ) {
             const chunkKey = getChunkKey(chunkX, chunkZ);
             if (worldBlocks.has(chunkKey)) {
@@ -965,18 +1093,19 @@
 
                     // Solo añade si Firebase no ha puesto "aire"
                     if (!getBlock(worldX, y, worldZ)) { 
-                         addBlock(worldX, y, worldZ, materials.grass, chunkBlocks, false);
+                         addBlock(worldX, y, worldZ, materials.grass, 'grass', chunkBlocks, false);
                     }
 
                     for (let y_fill = y - 1; y_fill > y - 4 && y_fill >= 0; y_fill--) {
                          if (!getBlock(worldX, y_fill, worldZ)) {
-                            addBlock(worldX, y_fill, worldZ, materials.dirt, chunkBlocks, false);
+                            addBlock(worldX, y_fill, worldZ, materials.dirt, 'dirt', chunkBlocks, false);
                          }
                     }
                     
-                    for (let y_fill = y - 4; y_fill >= 0; y_fill--) {
+                    // CAMBIO: Bucle de piedra revertido
+                    for (let y_fill = y - 4; y_fill >= worldDepth; y_fill--) {
                          if (!getBlock(worldX, y_fill, worldZ)) {
-                            addBlock(worldX, y_fill, worldZ, materials.stone, chunkBlocks, false);
+                            addBlock(worldX, y_fill, worldZ, materials.stone, 'stone', chunkBlocks, false);
                          }
                     }
                 }
@@ -996,11 +1125,16 @@
             }
         }
 
-        function addBlock(x, y, z, material, chunkArray = null, notifyFirebase = true) {
+        // CAMBIO: addBlock ahora guarda el 'type' en userData
+        function addBlock(x, y, z, material, blockType, chunkArray = null, notifyFirebase = true) {
             const block = new THREE.Mesh(blockGeometry, material);
             block.position.set(x, y, z);
             block.castShadow = true;
             block.receiveShadow = true;
+            
+            // NUEVO: Guardar el tipo de bloque para saber qué 'dropear'
+            block.userData = { type: blockType };
+            
             scene.add(block);
             
             blockData.set(`${x}_${y}_${z}`, block); // CAMBIO: Usar _
@@ -1023,7 +1157,7 @@
             // CAMBIO: Escribir en RTDB
             if (notifyFirebase && db && worldName) {
                 const blockKey = `${x}_${y}_${z}`; // CAMBIO: Usar _
-                const blockType = (material === materials.grass) ? 'grass' : (material === materials.dirt) ? 'dirt' : 'stone';
+                // const blockType = (material === materials.grass) ? 'grass' : (material === materials.dirt) ? 'dirt' : 'stone';
                 const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
                 set(blockRef, { x, y, z, type: blockType });
             }
@@ -1186,26 +1320,63 @@
                     canJump = false;
                 }
                 
-                // Lógica de Minería
+                // --- OPTIMIZACIÓN: Generar lista de bloques una vez por frame ---
+                const allBlocks = Array.from(worldBlocks.values()).flat();
+                
+                // Lógica de Minería (REFACTORIZADA)
+                raycaster.setFromCamera(new THREE.Vector2(), camera);
+                const intersects = raycaster.intersectObjects(allBlocks);
+
                 if (isMining) {
-                    raycaster.setFromCamera(new THREE.Vector2(), camera);
-                    const allBlocks = Array.from(worldBlocks.values()).flat();
-                    const intersects = raycaster.intersectObjects(allBlocks);
+                    if (intersects.length > 0 && intersects[0].object.userData.type) {
+                        const intersectedBlock = intersects[0].object;
 
-                    if (intersects.length > 0 && intersects[0].object === currentMiningBlock) {
-                        miningTimer += delta;
-                        const breakStage = Math.min(9, Math.floor((miningTimer / blockBreakTime) * 10));
-                        
-                        if (breakingBlockOverlay) {
-                            breakingBlockOverlay.material.map = destroyTextures[breakStage];
-                            breakingBlockOverlay.material.needsUpdate = true;
+                        // Si es la primera vez que se detecta el minado o se cambia de bloque
+                        if (currentMiningBlock === null) {
+                            // Empezar a minar este bloque
+                            currentMiningBlock = intersectedBlock;
+                            miningTimer = 0;
+                            
+                            // Crear superposición de rotura
+                            if (breakingBlockOverlay) scene.remove(breakingBlockOverlay);
+                            breakingBlockOverlay = new THREE.Mesh(blockGeometry, breakingMaterial.clone());
+                            breakingBlockOverlay.position.copy(currentMiningBlock.position);
+                            breakingBlockOverlay.renderOrder = 1; 
+                            breakingBlockOverlay.material.map = destroyTextures[0];
+                            scene.add(breakingBlockOverlay);
+
+                        } 
+                        // Si seguimos minando el MISMO bloque (comprobando por posición)
+                        else if (currentMiningBlock && intersectedBlock.position.equals(currentMiningBlock.position)) {
+                            miningTimer += delta;
+                            const breakStage = Math.min(9, Math.floor((miningTimer / blockBreakTime) * 10));
+                            
+                            if (breakingBlockOverlay) {
+                                breakingBlockOverlay.material.map = destroyTextures[breakStage];
+                                breakingBlockOverlay.material.needsUpdate = true;
+                            }
+
+                            // Si se completó el tiempo
+                            if (miningTimer >= blockBreakTime) {
+                                // 1. Añadir al inventario
+                                const blockType = currentMiningBlock.userData.type;
+                                const dropType = getBlockDrop(blockType);
+                                if (dropType) {
+                                    addToInventory(dropType);
+                                }
+                                
+                                // 2. Romper el bloque
+                                removeBlock(currentMiningBlock, true);
+                                stopMining(); // Resetear
+                            }
                         }
-
-                        if (miningTimer >= blockBreakTime) {
-                            removeBlock(currentMiningBlock, true);
+                        // Si se movió el ratón a OTRO bloque
+                        else {
                             stopMining();
                         }
-                    } else {
+                    } 
+                    // Si se deja de apuntar a un bloque
+                    else {
                         stopMining();
                     }
                 }
@@ -1219,7 +1390,8 @@
                         x: pos.x, 
                         y: pos.y, 
                         z: pos.z, 
-                        timestamp: serverTimestamp() 
+                        timestamp: serverTimestamp(),
+                        username: userName // NUEVO: Enviar nuestro nombre
                     });
                 }
                 
@@ -1231,10 +1403,52 @@
             prevTime = time;
 
             renderer.render(scene, camera);
+            // NUEVO: Renderizar etiquetas 2D
+            if (labelRenderer) {
+                labelRenderer.render(scene, camera);
+            }
         }
         
+        // NUEVO: Determina qué item 'dropear'
+        function getBlockDrop(blockType) {
+            if (blockType === 'grass' || blockType === 'dirt') {
+                return 'dirt';
+            }
+            if (blockType === 'stone') {
+                return 'stone';
+            }
+            return null;
+        }
+        
+        // NUEVO: Añadir item al inventario
+        function addToInventory(itemType) {
+            // 1. Intentar apilar en un slot existente
+            let targetSlot = inventory.find(slot => slot.type === itemType);
+            
+            // 2. Si no existe, buscar un slot vacío
+            if (!targetSlot) {
+                // CORRECCIÓN: Buscar un slot vacío (type null) O un slot con cantidad 0
+                targetSlot = inventory.find(slot => slot.type === null || slot.quantity === 0);
+            }
+            
+            // 3. Si encontramos un slot
+            if (targetSlot) {
+                targetSlot.type = itemType;
+                targetSlot.quantity++;
+                
+                // 4. Actualizar UI y guardar
+                updateHotbarInventoryUI();
+                saveInventory();
+            } else {
+                // Inventario lleno (no se hace nada por ahora)
+                console.log("Inventario lleno!");
+            }
+        }
+
+        
         function stopMining() {
-            isMining = false;
+            // CORRECCIÓN: NO cambiar isMining aquí. Solo en onMouseUp.
+            // isMining = false; 
             miningTimer = 0;
             currentMiningBlock = null;
             if (breakingBlockOverlay) {
@@ -1257,15 +1471,15 @@
                     break;
                 
                 // Controles de Hotbar (1-9)
-                case 'Digit1': selectedSlot = 0; updateHotbarUI(); break;
-                case 'Digit2': selectedSlot = 1; updateHotbarUI(); break;
-                case 'Digit3': selectedSlot = 2; updateHotbarUI(); break;
-                case 'Digit4': selectedSlot = 3; updateHotbarUI(); break;
-                case 'Digit5': selectedSlot = 4; updateHotbarUI(); break;
-                case 'Digit6': selectedSlot = 5; updateHotbarUI(); break;
-                case 'Digit7': selectedSlot = 6; updateHotbarUI(); break;
-                case 'Digit8': selectedSlot = 7; updateHotbarUI(); break;
-                case 'Digit9': selectedSlot = 8; updateHotbarUI(); break;
+                case 'Digit1': selectedSlot = 0; updateHotbarActiveSlotUI(); break;
+                case 'Digit2': selectedSlot = 1; updateHotbarActiveSlotUI(); break;
+                case 'Digit3': selectedSlot = 2; updateHotbarActiveSlotUI(); break;
+                case 'Digit4': selectedSlot = 3; updateHotbarActiveSlotUI(); break;
+                case 'Digit5': selectedSlot = 4; updateHotbarActiveSlotUI(); break;
+                case 'Digit6': selectedSlot = 5; updateHotbarActiveSlotUI(); break;
+                case 'Digit7': selectedSlot = 6; updateHotbarActiveSlotUI(); break;
+                case 'Digit8': selectedSlot = 7; updateHotbarActiveSlotUI(); break;
+                case 'Digit9': selectedSlot = 8; updateHotbarActiveSlotUI(); break;
             }
         }
 
@@ -1281,40 +1495,30 @@
         function onMouseDown(event) {
             if (!controls.isLocked) return; 
 
-            raycaster.setFromCamera(new THREE.Vector2(), camera); 
-            const allBlocks = Array.from(worldBlocks.values()).flat();
-            const intersects = raycaster.intersectObjects(allBlocks);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
+            // Botón Izquierdo (0): Iniciar minería
+            if (event.button === 0) {
+                isMining = true;
+                // La lógica de raycast ahora se maneja en animate()
+            } 
+            
+            // Botón Derecho (2): Poner bloque
+            else if (event.button === 2) {
+                stopMining(); // Detener minería si se estaba haciendo
                 
-                // Botón Izquierdo (0): Iniciar minería
-                if (event.button === 0) {
-                    if (intersect.object && intersect.object.isMesh) {
-                        isMining = true;
-                        miningTimer = 0;
-                        currentMiningBlock = intersect.object;
-                        
-                        if (breakingBlockOverlay) scene.remove(breakingBlockOverlay);
-                        
-                        breakingBlockOverlay = new THREE.Mesh(blockGeometry, breakingMaterial.clone());
-                        breakingBlockOverlay.position.copy(currentMiningBlock.position);
-                        breakingBlockOverlay.renderOrder = 1; 
-                        breakingBlockOverlay.material.map = destroyTextures[0];
-                        scene.add(breakingBlockOverlay);
-                    }
-                } 
+                // CAMBIO: Lógica de inventario finito
+                const selectedItem = inventory[selectedSlot];
+                if (!selectedItem || selectedItem.quantity <= 0) return; 
                 
-                // Botón Derecho (2): Poner bloque
-                else if (event.button === 2) {
-                    stopMining();
-                    
-                    const selectedItemKey = inventory[selectedSlot];
-                    if (!selectedItemKey) return; 
-                    
-                    const selectedMaterial = materials[selectedItemKey];
-                    if (!selectedMaterial) return;
+                const selectedMaterial = materials[selectedItem.type];
+                if (!selectedMaterial) return;
+                
+                // --- OPTIMIZACIÓN: Raycast solo para poner bloque ---
+                raycaster.setFromCamera(new THREE.Vector2(), camera); 
+                const allBlocks = Array.from(worldBlocks.values()).flat();
+                const intersects = raycaster.intersectObjects(allBlocks);
 
+                if (intersects.length > 0) {
+                    const intersect = intersects[0];
                     const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
                     newBlockPos.round();
                     
@@ -1324,7 +1528,16 @@
                     );
 
                     if (!playerBox.intersectsBox(newBlockBox)) {
-                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, null, true);
+                        // Añadir bloque al mundo
+                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, selectedItem.type, true);
+                        
+                        // Restar del inventario
+                        selectedItem.quantity--;
+                        if (selectedItem.quantity === 0) {
+                            selectedItem.type = null; // Vaciar slot
+                        }
+                        updateHotbarInventoryUI();
+                        saveInventory();
                     }
                 }
             }
@@ -1332,6 +1545,8 @@
         
         function onMouseUp(event) {
             if (event.button === 0) { // Botón Izquierdo
+                isMining = false;
+                // CAMBIO: Llamar a stopMining() para limpiar la UI y el estado
                 stopMining();
             }
         }
@@ -1340,6 +1555,8 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            // NUEVO: Redimensionar el renderer de etiquetas
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
         }
         
         // --- Funciones de Vida y Daño ---
@@ -1414,6 +1631,11 @@
                 canvas.className = 'hotbar-canvas';
                 slot.appendChild(canvas);
                 
+                // NUEVO: Añadir div para la cantidad
+                const quantityDiv = document.createElement('div');
+                quantityDiv.className = 'hotbar-quantity';
+                slot.appendChild(quantityDiv);
+                
                 hotbarElement.appendChild(slot);
                 hotbarSlots.push(slot); 
 
@@ -1433,21 +1655,15 @@
                 renderer.setSize(50, 50); 
                 hotbarRenderers[i] = renderer;
 
-                const itemKey = inventory[i];
-                if (itemKey) {
-                    const material = materials[itemKey];
-                    const mesh = new THREE.Mesh(blockGeometry, material);
-                    
-                    mesh.rotation.x = 0.5; 
-                    mesh.rotation.y = -0.7;
-
-                    scene.add(mesh);
-                    hotbarMeshes[i] = mesh;
-                } else {
-                    hotbarMeshes[i] = null;
-                }
+                // CAMBIO: Crear el mesh pero ocultarlo. Se mostrará en updateHotbarInventoryUI
+                const mesh = new THREE.Mesh(blockGeometry); // Material se asigna después
+                mesh.rotation.x = 0.5; 
+                mesh.rotation.y = -0.7;
+                mesh.visible = false; // Oculto por defecto
+                scene.add(mesh);
+                hotbarMeshes[i] = mesh;
             }
-            updateHotbarUI();
+            updateHotbarActiveSlotUI();
         }
 
         // Bucle de animación SÓLO para la hotbar
@@ -1457,13 +1673,41 @@
             for(let i = 0; i < 9; i++) {
                 const renderer = hotbarRenderers[i];
                 const scene = hotbarScenes[i];
-                if (renderer && scene) {
+                if (renderer && scene && hotbarMeshes[i] && hotbarMeshes[i].visible) { // Solo renderizar si es visible
                     renderer.render(scene, hotbarCamera);
                 }
             }
         }
+        
+        // NUEVO: Actualiza los items 3D y las cantidades
+        function updateHotbarInventoryUI() {
+            if (!inventory || inventory.length === 0) return;
+            
+            for (let i = 0; i < 9; i++) {
+                const slotData = inventory[i];
+                const mesh = hotbarMeshes[i];
+                const quantityElement = hotbarSlots[i].querySelector('.hotbar-quantity');
 
-        function updateHotbarUI() {
+                if (slotData && slotData.type && slotData.quantity > 0) {
+                    mesh.material = materials[slotData.type];
+                    mesh.visible = true;
+                    quantityElement.textContent = slotData.quantity;
+                    quantityElement.style.display = 'block';
+                } else {
+                    mesh.visible = false;
+                    quantityElement.style.display = 'none';
+                }
+            }
+            // Forzar un renderizado de la hotbar
+            for(let i = 0; i < 9; i++) {
+                if (hotbarRenderers[i] && hotbarScenes[i]) {
+                    hotbarRenderers[i].render(hotbarScenes[i], hotbarCamera);
+                }
+            }
+        }
+
+        // CAMBIO: Renombrada. Solo actualiza el slot activo
+        function updateHotbarActiveSlotUI() {
             for (let i = 0; i < 9; i++) {
                 const slot = hotbarSlots[i];
                 if (i === selectedSlot) {
@@ -1486,7 +1730,7 @@
             if (selectedSlot > 8) selectedSlot = 0;
             if (selectedSlot < 0) selectedSlot = 8;
 
-            updateHotbarUI();
+            updateHotbarActiveSlotUI();
         }
 
         // --- Iniciar el juego ---
