@@ -36,6 +36,7 @@
         }
 
         /* El efecto shimmer se aplica a la tarjeta entera usando un pseudo-elemento */
+        /* NECESITA que el contenedor (la <a>) tenga 'relative' y 'overflow-hidden' */
         .card-animate-shimmer::after {
             content: '';
             position: absolute;
@@ -93,24 +94,30 @@
 
                     // --- NUEVA Lógica para aplicar efectos a la tarjeta ---
                     let cardEffectClass = '';
+                    let utilityClass = ''; // Clase de utilidad (para overflow-hidden)
+
                     if (project.tags && Array.isArray(project.tags)) {
                         const lowerCaseTags = project.tags.map(t => t.toLowerCase());
                         
                         // Priorizamos shimmer si ambos están presentes
                         if (lowerCaseTags.includes('shimmer')) {
                             cardEffectClass = 'card-animate-shimmer';
+                            utilityClass = 'overflow-hidden'; // Shimmer NECESITA overflow-hidden
                         } else if (lowerCaseTags.includes('glow')) {
                             cardEffectClass = 'card-animate-glow';
+                            // Glow NO debe tener overflow-hidden, así que utilityClass queda vacía
                         }
                         // Otros tags como "new" simplemente se ignoran para los efectos visuales de la tarjeta
                     }
                     // --- Fin de la nueva lógica ---
 
                     const projectCard = `
-                        <!-- Se añade la clase de efecto (si existe) y se mantiene 'relative' y 'overflow-hidden' para que shimmer funcione -->
-                        <a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white ${cardEffectClass}">
+                        <!-- Se quita 'overflow-hidden' de las clases base -->
+                        <!-- Se añaden ${cardEffectClass} y ${utilityClass} (que tendrá overflow-hidden SÓLO para shimmer) -->
+                        <a href="${project.link}" class="relative block rounded-lg shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white ${cardEffectClass} ${utilityClass}">
                             <!-- Ya no se insertan los tags HTML aquí -->
-                            <img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
+                            <!-- Se añade 'rounded-lg' a la imagen para que respete los bordes redondeados (importante para 'glow') -->
+                            <img src="${project.image}" alt="${project.alt}" class="w-full h-auto rounded-lg" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
                         </a>
                     `;
                     projectGrid.innerHTML += projectCard;
