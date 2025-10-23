@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio de Logise</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <!-- Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter --><link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -17,28 +15,60 @@
             background-color: #ffffff; /* Fondo blanco */
             color: #111827; /* Texto oscuro */
         }
+
+        /* --- NUEVOS ESTILOS Y ANIMACIONES PARA GLOW Y SHIMMER --- */
+
+        /* Animación para el efecto "glow" */
+        @keyframes glow-animation {
+            0% { box-shadow: 0 0 5px #facc15; } /* Amarillo tenue */
+            50% { box-shadow: 0 0 15px #facc15, 0 0 25px #fde047; } /* Amarillo brillante */
+            100% { box-shadow: 0 0 5px #facc15; }
+        }
+
+        .animate-glow {
+            animation: glow-animation 2s infinite ease-in-out;
+        }
+
+        /* Animación para el efecto "shimmer" */
+        @keyframes shimmer-animation {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .animate-shimmer {
+            /* Necesitamos un gradiente lineal que se moverá */
+            background: linear-gradient(to right, #facc15 0%, #fde047 25%, #facc15 50%, #fde047 75%, #facc15 100%);
+            background-size: 200% auto; /* El tamaño es el doble para que el gradiente se mueva */
+            -webkit-background-clip: text; /* Clip de fondo para que el texto sea el brillo */
+            -webkit-text-fill-color: transparent; /* Hace que el texto sea transparente para ver el fondo */
+            animation: shimmer-animation 3s linear infinite;
+        }
+
+        /* Ajuste para que el tag "shimmer" se vea bien sobre el fondo de la imagen */
+        .tag-shimmer-bg {
+            /* Esto es para el *fondo* del tag shimmer, no para el texto en sí */
+            background-color: rgba(255, 255, 0, 0.2); /* Un fondo semitransparente para que el texto shimmer se vea mejor */
+            backdrop-filter: blur(2px); /* Un pequeño blur para el fondo */
+        }
+        /* --- FIN DE NUEVOS ESTILOS --- */
+
     </style>
 </head>
 <body class="antialiased">
 
-    <!-- Contenedor principal -->
-    <div class="container mx-auto max-w-6xl px-6 py-12 md:py-20">
+    <!-- Contenedor principal --><div class="container mx-auto max-w-6xl px-6 py-12 md:py-20">
 
-        <!-- Encabezado -->
-        <header class="text-center mb-16">
+        <!-- Encabezado --><header class="text-center mb-16">
             <h1 class="text-5xl font-bold text-gray-900">Logise</h1>
             <p class="text-lg text-gray-600 mt-2">¡Bienvenido a mi portfolio!</p>
         </header>
 
         <main>
-            <!-- Sección de Proyectos -->
-            <section id="proyectos">
+            <!-- Sección de Proyectos --><section id="proyectos">
                 <h3 class="text-3xl font-bold mb-12 text-center text-gray-900">Mis Proyectos</h3>
                 
-                <!-- Grid de Proyectos -->
-                <div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-                    <!-- Los proyectos se cargarán aquí desde projects.json -->
-                </div>
+                <!-- Grid de Proyectos --><div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+                    <!-- Los proyectos se cargarán aquí desde projects.json --></div>
             </section>
         </main>
     </div>
@@ -52,26 +82,30 @@
                 projectGrid.innerHTML = ''; // Limpiar cualquier contenido
                 projects.forEach(project => {
 
-                    // --- NUEVO: Lógica para generar los tags ---
+                    // --- Lógica para generar los tags ---
                     let tagsContainerHtml = '';
                     if (project.tags && Array.isArray(project.tags) && project.tags.length > 0) {
                         
                         const tagsListHtml = project.tags.map(tag => {
                             let tagClass = 'bg-gray-700 text-white'; // Estilo por defecto
+                            let tagContent = tag; // El texto del tag
                             
                             switch (tag.toLowerCase()) {
                                 case 'new':
                                     tagClass = 'bg-blue-500 text-white';
                                     break;
                                 case 'glow':
-                                    tagClass = 'bg-yellow-400 text-gray-900 animate-pulse';
+                                    tagClass = 'bg-yellow-400 text-gray-900 animate-glow'; // Aplica la nueva animación glow
                                     break;
                                 case 'shimmer':
-                                    tagClass = 'bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-white';
+                                    // Para shimmer, el texto necesita el gradiente animado
+                                    // Y el span que lo contiene necesita un fondo base
+                                    tagClass = 'tag-shimmer-bg'; // Fondo base para el tag shimmer
+                                    tagContent = `<span class="animate-shimmer">${tag}</span>`; // El texto interno es el que tiene la animación
                                     break;
                             }
-                            // Base para cada tag
-                            return `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${tagClass}">${tag}</span>`;
+                            // Base para cada tag. Para shimmer, el contenido ya incluye el span animado.
+                            return `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${tagClass}">${tagContent}</span>`;
                         }).join(' '); // Unir los spans con un espacio
 
                         // Contenedor que se posicionará de forma absoluta
@@ -84,10 +118,8 @@
                     // --- Fin de la lógica de tags ---
 
                     const projectCard = `
-                        <!-- Se añade 'relative' para que los tags absolutos se posicionen correctamente -->
-                        <a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
-                            ${tagsContainerHtml} <!-- Aquí se insertan los tags -->
-                            <img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
+                        <!-- Se añade 'relative' para que los tags absolutos se posicionen correctamente --><a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
+                            ${tagsContainerHtml} <!-- Aquí se insertan los tags --><img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
                         </a>
                     `;
                     projectGrid.innerHTML += projectCard;
