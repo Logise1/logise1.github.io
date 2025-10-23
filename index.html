@@ -36,7 +36,6 @@
                 <h3 class="text-3xl font-bold mb-12 text-center text-gray-900">Mis Proyectos</h3>
                 
                 <!-- Grid de Proyectos -->
-                <!-- Cambiado de flex a grid para un diseño de columnas -->
                 <div id="project-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
                     <!-- Los proyectos se cargarán aquí desde projects.json -->
                 </div>
@@ -50,11 +49,44 @@
 
             // Función para renderizar los proyectos
             const renderProjects = (projects) => {
-                projectGrid.innerHTML = ''; // Limpiar cualquier contenido de marcador de posición
+                projectGrid.innerHTML = ''; // Limpiar cualquier contenido
                 projects.forEach(project => {
+
+                    // --- NUEVO: Lógica para generar los tags ---
+                    let tagsContainerHtml = '';
+                    if (project.tags && Array.isArray(project.tags) && project.tags.length > 0) {
+                        
+                        const tagsListHtml = project.tags.map(tag => {
+                            let tagClass = 'bg-gray-700 text-white'; // Estilo por defecto
+                            
+                            switch (tag.toLowerCase()) {
+                                case 'new':
+                                    tagClass = 'bg-blue-500 text-white';
+                                    break;
+                                case 'glow':
+                                    tagClass = 'bg-yellow-400 text-gray-900 animate-pulse';
+                                    break;
+                                case 'shimmer':
+                                    tagClass = 'bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-white';
+                                    break;
+                            }
+                            // Base para cada tag
+                            return `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${tagClass}">${tag}</span>`;
+                        }).join(' '); // Unir los spans con un espacio
+
+                        // Contenedor que se posicionará de forma absoluta
+                        tagsContainerHtml = `
+                            <div class="absolute top-2 right-2 z-10 flex flex-wrap gap-1 justify-end">
+                                ${tagsListHtml}
+                            </div>
+                        `;
+                    }
+                    // --- Fin de la lógica de tags ---
+
                     const projectCard = `
-                        <a href="${project.link}" class="block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
-                            <!-- CAMBIO AQUÍ: Se reemplazó 'h-48 object-cover' por 'h-auto' -->
+                        <!-- Se añade 'relative' para que los tags absolutos se posicionen correctamente -->
+                        <a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
+                            ${tagsContainerHtml} <!-- Aquí se insertan los tags -->
                             <img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
                         </a>
                     `;
