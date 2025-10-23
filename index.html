@@ -18,37 +18,46 @@
 
         /* --- NUEVOS ESTILOS Y ANIMACIONES PARA GLOW Y SHIMMER --- */
 
-        /* Animación para el efecto "glow" */
+        /* Animación para el efecto "glow" en la TARJETA */
         @keyframes glow-animation {
             0% { box-shadow: 0 0 5px #facc15; } /* Amarillo tenue */
             50% { box-shadow: 0 0 15px #facc15, 0 0 25px #fde047; } /* Amarillo brillante */
             100% { box-shadow: 0 0 5px #facc15; }
         }
 
-        .animate-glow {
+        .card-animate-glow {
             animation: glow-animation 2s infinite ease-in-out;
         }
 
-        /* Animación para el efecto "shimmer" */
-        @keyframes shimmer-animation {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+        /* Animación para el efecto "shimmer" en la TARJETA */
+        @keyframes card-shimmer-animation {
+            0% { transform: translateX(-100%) skewX(-20deg); }
+            100% { transform: translateX(200%) skewX(-20deg); }
         }
 
-        .animate-shimmer {
-            /* Necesitamos un gradiente lineal que se moverá */
-            background: linear-gradient(to right, #facc15 0%, #fde047 25%, #facc15 50%, #fde047 75%, #facc15 100%);
-            background-size: 200% auto; /* El tamaño es el doble para que el gradiente se mueva */
-            -webkit-background-clip: text; /* Clip de fondo para que el texto sea el brillo */
-            -webkit-text-fill-color: transparent; /* Hace que el texto sea transparente para ver el fondo */
-            animation: shimmer-animation 3s linear infinite;
-        }
-
-        /* Ajuste para que el tag "shimmer" se vea bien sobre el fondo de la imagen */
-        .tag-shimmer-bg {
-            /* Esto es para el *fondo* del tag shimmer, no para el texto en sí */
-            background-color: rgba(255, 255, 0, 0.2); /* Un fondo semitransparente para que el texto shimmer se vea mejor */
-            backdrop-filter: blur(2px); /* Un pequeño blur para el fondo */
+        /* El efecto shimmer se aplica a la tarjeta entera usando un pseudo-elemento */
+        .card-animate-shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%; /* Ancho del brillo */
+            height: 100%;
+            
+            /* El "brillo" (shine) */
+            background: linear-gradient(
+                90deg, 
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.4) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            
+            transform: translateX(-100%) skewX(-20deg); /* Empieza fuera, a la izquierda */
+            animation: card-shimmer-animation 2.5s infinite linear;
+            animation-delay: 0.5s; /* Un pequeño retraso */
+            z-index: 5; /* Por encima de la imagen */
+            pointer-events: none; /* Para que no bloquee el clic */
+            filter: blur(5px); /* Suaviza los bordes del brillo */
         }
         /* --- FIN DE NUEVOS ESTILOS --- */
 
@@ -82,44 +91,26 @@
                 projectGrid.innerHTML = ''; // Limpiar cualquier contenido
                 projects.forEach(project => {
 
-                    // --- Lógica para generar los tags ---
-                    let tagsContainerHtml = '';
-                    if (project.tags && Array.isArray(project.tags) && project.tags.length > 0) {
+                    // --- NUEVA Lógica para aplicar efectos a la tarjeta ---
+                    let cardEffectClass = '';
+                    if (project.tags && Array.isArray(project.tags)) {
+                        const lowerCaseTags = project.tags.map(t => t.toLowerCase());
                         
-                        const tagsListHtml = project.tags.map(tag => {
-                            let tagClass = 'bg-gray-700 text-white'; // Estilo por defecto
-                            let tagContent = tag; // El texto del tag
-                            
-                            switch (tag.toLowerCase()) {
-                                case 'new':
-                                    tagClass = 'bg-blue-500 text-white';
-                                    break;
-                                case 'glow':
-                                    tagClass = 'bg-yellow-400 text-gray-900 animate-glow'; // Aplica la nueva animación glow
-                                    break;
-                                case 'shimmer':
-                                    // Para shimmer, el texto necesita el gradiente animado
-                                    // Y el span que lo contiene necesita un fondo base
-                                    tagClass = 'tag-shimmer-bg'; // Fondo base para el tag shimmer
-                                    tagContent = `<span class="animate-shimmer">${tag}</span>`; // El texto interno es el que tiene la animación
-                                    break;
-                            }
-                            // Base para cada tag. Para shimmer, el contenido ya incluye el span animado.
-                            return `<span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${tagClass}">${tagContent}</span>`;
-                        }).join(' '); // Unir los spans con un espacio
-
-                        // Contenedor que se posicionará de forma absoluta
-                        tagsContainerHtml = `
-                            <div class="absolute top-2 right-2 z-10 flex flex-wrap gap-1 justify-end">
-                                ${tagsListHtml}
-                            </div>
-                        `;
+                        // Priorizamos shimmer si ambos están presentes
+                        if (lowerCaseTags.includes('shimmer')) {
+                            cardEffectClass = 'card-animate-shimmer';
+                        } else if (lowerCaseTags.includes('glow')) {
+                            cardEffectClass = 'card-animate-glow';
+                        }
+                        // Otros tags como "new" simplemente se ignoran para los efectos visuales de la tarjeta
                     }
-                    // --- Fin de la lógica de tags ---
+                    // --- Fin de la nueva lógica ---
 
                     const projectCard = `
-                        <!-- Se añade 'relative' para que los tags absolutos se posicionen correctamente --><a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white">
-                            ${tagsContainerHtml} <!-- Aquí se insertan los tags --><img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
+                        <!-- Se añade la clase de efecto (si existe) y se mantiene 'relative' y 'overflow-hidden' para que shimmer funcione -->
+                        <a href="${project.link}" class="relative block rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white ${cardEffectClass}">
+                            <!-- Ya no se insertan los tags HTML aquí -->
+                            <img src="${project.image}" alt="${project.alt}" class="w-full h-auto" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
                         </a>
                     `;
                     projectGrid.innerHTML += projectCard;
