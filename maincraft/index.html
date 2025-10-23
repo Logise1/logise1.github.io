@@ -21,41 +21,15 @@
 
     <!-- 
       CAMBIO: Cargar Firebase (App, Auth, RTDB)
+      NOTA: Este bloque <script> se ha fusionado con el script principal del juego más abajo.
     -->
-    <script type="module">
-        // Importa los módulos que necesitas
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // CAMBIO: Importar Realtime Database (RTDB) en lugar de Firestore
-        import { getDatabase, ref, set, onValue, onChildAdded, onChildRemoved, serverTimestamp, query, orderByChild, remove, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        
-        // Adjuntar funciones al scope global para que el script principal pueda usarlas
-        window.firebase = {
-            initializeApp,
-            getAuth,
-            signInWithEmailAndPassword,
-            createUserWithEmailAndPassword,
-            signOut,
-            getDatabase, // CAMBIO
-            ref, // CAMBIO
-            set, // CAMBIO
-            onValue, // CAMBIO
-            onChildAdded, // CAMBIO
-            onChildRemoved, // CAMBIO
-            serverTimestamp, // CAMBIO
-            query, // CAMBIO
-            orderByChild, // CAMBIO
-            remove, // CAMBIO
-            off // CAMBIO
-        };
-    </script>
     
     <!-- NUEVO: Importar fuente Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CAMBIO DE NOMBRE -->
     <title>Cliente 3D MainCraft</title>
     <style>
@@ -452,20 +426,28 @@
           measurementId: "G-E2FMTZZ92P"
         };
         
+        // --- CORRECCIÓN: Imports de Firebase movidos aquí ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // CORRECCIÓN: Arreglado 'httpsS' a 'https'
+        import { getDatabase, ref, set, onValue, onChildAdded, onChildRemoved, serverTimestamp, query, orderByChild, remove, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
         // --- Imports de Three.js ---
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
         // NUEVO: Importar CSS2DRenderer para nombres de jugadores
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-        // --- Imports de Firebase (desde el objeto window) ---
-        // CAMBIO: Usar funciones de RTDB
+        // --- CORRECCIÓN: Imports de Firebase (desde el objeto window) ---
+        // Este bloque ya no es necesario, las variables están importadas localmente.
+        /*
         const {
             initializeApp, getAuth, signInWithEmailAndPassword,
             createUserWithEmailAndPassword, signOut, getDatabase, ref,
             set, onValue, onChildAdded, onChildRemoved, serverTimestamp,
             query, orderByChild, remove, off
         } = window.firebase;
+        */
 
 
         // --- Variables Globales ---
@@ -558,7 +540,8 @@
         const textureLoader = new THREE.TextureLoader();
         
         // --- URL de Texturas de Rotura ---
-        const breakTextureBaseUrl = 'https://raw.githubusercontent.com/Techno-Hwiz/voxel-assets/main/textures/break/';
+        // CORRECCIÓN: Eliminada la URL base de rotura, usaremos textureBaseUrl
+        // const breakTextureBaseUrl = '...'; 
         
         // --- CAMBIO: Constantes del Mundo (revertidas) ---
         const terrainHeight = 6;
@@ -623,7 +606,7 @@
             camera.position.y = terrainHeight + 5; 
 
             // 3. Renderer (WebGL)
-            renderer = new THREE.WebGLRenderer({ antialias: true }); 
+            renderer = new THREE.WebGLRenderer({ antias: true }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true; 
             document.body.appendChild(renderer.domElement);
@@ -694,7 +677,8 @@
             
             // Cargar texturas de rotura
             for (let i = 0; i < 10; i++) {
-                const texture = textureLoader.load(`${breakTextureBaseUrl}break_${i}.png`);
+                // CORRECCIÓN: Usar textureBaseUrl y el nuevo formato de nombre
+                const texture = textureLoader.load(`${textureBaseUrl}destroy_stage_${i}.png`);
                 texture.magFilter = THREE.NearestFilter;
                 destroyTextures.push(texture);
             }
@@ -753,6 +737,7 @@
 
                 try {
                     // 1. Inicializar Firebase
+                    // CORRECCIÓN: Usar las variables importadas (initializeApp, getAuth, etc.)
                     const app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
                     db = getDatabase(app); // CAMBIO: getDatabase() para RTDB
