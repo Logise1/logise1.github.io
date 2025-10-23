@@ -55,7 +55,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <!-- CAMBIO DE NOMBRE -->
     <title>Cliente 3D MainCraft</title>
     <style>
@@ -1529,7 +1529,10 @@
 
                     if (!playerBox.intersectsBox(newBlockBox)) {
                         // Añadir bloque al mundo
-                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, selectedItem.type, true);
+                        // CORRECCIÓN DE BUG: Argumentos pasados incorrectamente. 
+                        // 6to arg era 'true' (para notifyFirebase), pero se esperaba 'chunkArray'.
+                        // Ahora pasamos 'null' para chunkArray y 'true' para notifyFirebase.
+                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, selectedItem.type, null, true);
                         
                         // Restar del inventario
                         selectedItem.quantity--;
