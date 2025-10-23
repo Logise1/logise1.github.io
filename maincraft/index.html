@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- 
+      IMPORTANTE: Cargar los módulos de Three.js desde un CDN
+    -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <!-- 
+      Cargamos el generador de ruido Simplex para el terreno 
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.js"></script>
+
+    <!-- 
+      CAMBIO: Cargar Firebase (App, Auth, RTDB)
+    -->
+    <script type="module">
+        // Importa los módulos que necesitas
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // CAMBIO: Importar Realtime Database (RTDB) en lugar de Firestore
+        import { getDatabase, ref, set, onValue, onChildAdded, onChildRemoved, serverTimestamp, query, orderByChild, remove, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        
+        // Adjuntar funciones al scope global para que el script principal pueda usarlas
+        window.firebase = {
+            initializeApp,
+            getAuth,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            getDatabase, // CAMBIO
+            ref, // CAMBIO
+            set, // CAMBIO
+            onValue, // CAMBIO
+            onChildAdded, // CAMBIO
+            onChildRemoved, // CAMBIO
+            serverTimestamp, // CAMBIO
+            query, // CAMBIO
+            orderByChild, // CAMBIO
+            remove, // CAMBIO
+            off // CAMBIO
+        };
+    </script>
+    
+    <!-- NUEVO: Importar fuente Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CAMBIO DE NOMBRE -->
+    <title>Cliente 3D MainCraft</title>
+    <style>
+        /* --- NUEVO: Estilos Modernos (Modo Oscuro) --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif; /* Fuente Inter */
+            background-color: #1a1a1a; /* Fondo oscuro */
+            color: #f0f0f0;
+        }
+        canvas {
+            display: block;
+        }
+        
+        /* --- Contenedores de Pantalla --- */
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(26, 26, 26, 0.95); /* Fondo oscuro semitransparente */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+        }
+        
+        /* Ocultar pantallas por defecto */
+        #homescreen, #game-ui, #crosshair {
+            display: none;
+        }
+
+        /* --- Estilos de Cajas de Formulario --- */
+        .form-box {
+            width: 380px;
+            padding: 30px;
+            background-color: #2c2c2c; /* Gris oscuro para el formulario */
+            border-radius: 12px;
+            text-align: center;
+            color: #f0f0f0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+        
+        .form-box h2 {
+            margin-top: 0;
+            color: #66bb6a; /* Verde claro */
+            font-weight: 700;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 700;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .input-group input {
+            width: 95%; /* Ajustado para padding */
+            padding: 12px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background-color: #3a3a3a; /* Fondo de input oscuro */
+            color: #f0f0f0;
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+        }
+        
+        /* Placeholder styling */
+        .input-group input::placeholder {
+            color: #888;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 18px;
+            background-color: #66bb6a; /* Verde claro */
+            color: #111; /* Texto oscuro para mejor contraste */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 99;
+            margin-top: 10px;
+            font-weight: 700;
+            transition: background-color 0.2s ease;
+        }
+        .btn:hover {
+            background-color: #81c784;
+        }
+        .btn:disabled {
+            background-color: #555;
+            color: #888;
+        }
+        
+        .status-message {
+            margin-top: 15px;
+            color: #f44336; /* Rojo */
+            font-weight: bold;
+        }
+        
+        /* --- Estilos del Homescreen (Selector de Servidor) --- */
+        #server-list-container {
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #555;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            background: #3a3a3a; /* Fondo oscuro */
+        }
+        
+        .server-item {
+            padding: 14px;
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.2s ease;
+            /* CAMBIO: Añadido flex para alinear botón */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .server-item:hover {
+            background-color: #4a5a4a; /* Verde oscuro hover */
+        }
+        .server-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* CAMBIO: Contenedor para el nombre y creador */
+        .server-item-name {
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            flex-grow: 1; /* Ocupa el espacio */
+        }
+        .server-item-name span {
+            font-size: 1.1em;
+            color: #f0f0f0;
+        }
+        
+        /* Estilo para el nombre del creador */
+        .creator-name {
+            font-size: 0.8em;
+            color: #aaa;
+            /* margin-left: 10px; (Eliminado, ahora está debajo) */
+        }
+        
+        /* CAMBIO: Estilo para el botón de eliminar */
+        .delete-world-btn {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 0.9em;
+            background-color: #f44336; /* Rojo */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px; /* Espacio del nombre */
+            transition: background-color 0.2s ease;
+            font-weight: 700;
+        }
+        .delete-world-btn:hover {
+            background-color: #e57373;
+        }
+        
+        #create-world-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #create-world-group input {
+            flex-grow: 1; 
+            width: 60%;
+        }
+        
+        #createWorldButton {
+            width: auto;
+            flex-grow: 0;
+            font-size: 16px;
+        }
+        
+        #logoutButton {
+            background-color: #f44336; /* Rojo */
+            color: white;
+            margin-top: 20px;
+        }
+        #logoutButton:hover {
+            background-color: #e57373;
+        }
+
+        /* --- Estilos del Juego --- */
+        
+        /* Mirilla (crosshair) en el centro */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background-color: white;
+            border: 1px solid rgba(0,0,0,0.5);
+            border-radius: 50%; /* Punto circular */
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none; /* Evita que la mirilla bloquee los clics */
+        }
+
+        /* Interfaz de Usuario (Vida y Hotbar) */
+        #ui-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            /* display: none; Oculto por #game-ui */
+            flex-direction: column; /* Apila la vida encima de la hotbar */
+            align-items: center;
+            z-index: 20;
+            pointer-events: none; /* No intercepta clics */
+        }
+        
+        /* Barra de Vida */
+        #health-bar {
+            display: flex;
+            margin-bottom: 5px; /* Espacio entre vida y hotbar */
+        }
+        
+        .heart {
+            font-size: 20px;
+            margin: 0 1px;
+            user-select: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7); 
+        }
+
+        /* Estilos de la Hotbar 3D */
+        #hotbar {
+            display: flex;
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .hotbar-slot {
+            width: 50px;
+            height: 50px;
+            margin: 2px;
+            border: 2px solid #888;
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            overflow: hidden; 
+        }
+        
+        .hotbar-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .hotbar-slot.active {
+            border: 3px solid #ffffff;
+            transform: scale(1.05); /* Resaltar */
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <!-- PANTALLA 1: LOGIN -->
+    <div id="login-screen" class="screen">
+        <div class="form-box">
+            <!-- CAMBIO DE NOMBRE -->
+            <h2>MainCraft Online</h2>
+            <div class="input-group">
+                <label for="username">Usuario:</label>
+                <!-- CAMBIO: Eliminado 'value' y añadido 'placeholder' -->
+                <input type="text" id="username" placeholder="TuUsuario">
+            </div>
+            <div class="input-group">
+                <label for="password">Contraseña:</label>
+                <!-- CAMBIO: Eliminado 'value' y añadido 'placeholder' -->
+                <input type="password" id="password" placeholder="TuContraseña">
+            </div>
+            <button id="loginButton" class="btn">Login / Registrarse</button>
+            <div id="loginStatus" class="status-message"></div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: HOMESCREEN (SELECTOR DE MUNDO) -->
+    <div id="homescreen" class="screen">
+        <div class="form-box">
+            <h2>Selecciona un Mundo</h2>
+            <div id="server-list-container">
+                <div id="server-list">
+                    <!-- Los servidores se llenan con JS -->
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="newWorldName">O crea uno nuevo:</label>
+                <div id="create-world-group">
+                    <input type="text" id="newWorldName" placeholder="Nombre del nuevo mundo...">
+                    <button id="createWorldButton" class="btn">Crear</button>
+                </div>
+            </div>
+            
+            <button id="logoutButton" class="btn">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <!-- PANTALLA 3: JUEGO -->
+    <!-- La mirilla -->
+    <div id="crosshair"></div>
+
+    <!-- Contenedor de la Interfaz (Vida + Hotbar) -->
+    <div id="game-ui">
+        <div id="ui-container">
+            <!-- Barra de vida -->
+            <div id="health-bar">
+                <!-- Los corazones se generan dinámicamente con JS -->
+            </div>
+            <!-- Contenedor de la Hotbar -->
+            <div id="hotbar">
+                <!-- Los slots y canvas se generan dinámicamente con JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+      Script principal del juego
+    -->
+    <script type="module">
+        
+        // --- Configuración de Firebase (dada por el usuario) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCvqvernkGHCvBuGArnJSXcka40lCFBKGk",
+          authDomain: "maincraft-e2b8c.firebaseapp.com",
+          // CORRECCIÓN: Faltaba una 't' en firebasedatabase.app
+          databaseURL: "https://maincraft-e2b8c-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "maincraft-e2b8c",
+          storageBucket: "maincraft-e2b8c.firebasestorage.app",
+          messagingSenderId: "10833551639",
+          appId: "1:10833551639:web:d2f83d3967b38710f31752",
+          measurementId: "G-E2FMTZZ92P"
+        };
+        
+        // --- Imports de Three.js ---
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // --- Imports de Firebase (desde el objeto window) ---
+        // CAMBIO: Usar funciones de RTDB
+        const {
+            initializeApp, getAuth, signInWithEmailAndPassword,
+            createUserWithEmailAndPassword, signOut, getDatabase, ref,
+            set, onValue, onChildAdded, onChildRemoved, serverTimestamp,
+            query, orderByChild, remove, off
+        } = window.firebase;
+
+
+        // --- Variables Globales ---
+        let scene, camera, renderer, controls, raycaster;
+        let noise; // Generador de ruido
+        
+        // --- Constantes del Jugador ---
+        const playerHeight = 1.9; // Altura del jugador
+        const playerWidth = 0.4; 
+        const gravity = -30.0; 
+        const jumpForce = 12.0; 
+        const moveSpeed = 40.0; 
+
+        // --- Variables de Firebase ---
+        let db, auth;
+        let worldName; // El "servidor"
+        let userId;    // Nuestro ID de Firebase
+        let lastFirebaseUpdate = 0;
+        let players = new Map(); // Mapa para [userId, mesh] de otros jugadores
+        const playerMeshGeometry = new THREE.BoxGeometry(playerWidth * 2, playerHeight, playerWidth * 2);
+        const playerMeshMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, opacity: 0.6, transparent: true });
+        
+        // Listeners de Firebase (para poder desconectarlos)
+        let playersListener = null;
+        let blocksListener = { added: null, removed: null }; // CAMBIO: Objeto para múltiples listeners
+        let worldsListener = null;
+
+
+        // --- Sistema de Chunks ---
+        const worldBlocks = new Map(); 
+        const blockData = new Map(); // Guarda la Mesh
+        
+        const chunkSize = 16; 
+        const renderDistance = 1; 
+        
+        let currentChunk = new THREE.Vector2(Infinity, Infinity); 
+
+        // --- Variables del Jugador ---
+        let playerVelocity = new THREE.Vector3();
+        let playerDirection = new THREE.Vector3();
+        let playerOnFloor = false; 
+        let playerBox = new THREE.Box3(); 
+        let lastPlayerVelY = 0; // Para calcular daño por caída
+
+        // --- Sistema de Vida ---
+        let playerHealth = 20;
+        let playerMaxHealth = 20;
+
+        // --- Variables de Movimiento ---
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let canJump = false;
+        
+        let prevTime = performance.now(); 
+
+        // --- Sistema de Minería ---
+        let isMining = false;
+        let miningTimer = 0;
+        let currentMiningBlock = null; 
+        const blockBreakTime = 0.5; 
+        
+        // --- Animación de Rotura ---
+        let destroyTextures = []; 
+        let breakingBlockOverlay = null; 
+        let breakingMaterial; 
+
+        // --- Variables de Inventario y Hotbar 3D ---
+        let hotbarElement;
+        let hotbarSlots = []; 
+        let selectedSlot = 0; 
+        let inventory = []; 
+        let materials = {}; 
+        
+        let hotbarScenes = [];      
+        let hotbarRenderers = [];   
+        let hotbarMeshes = [];      
+        let hotbarCamera;           
+
+        // --- URLs de Texturas ---
+        const textureBaseUrl = 'https://logise1.github.io/maincraft/';
+        const textureLoader = new THREE.TextureLoader();
+        
+        // --- URL de Texturas de Rotura ---
+        const breakTextureBaseUrl = 'https://raw.githubusercontent.com/Techno-Hwiz/voxel-assets/main/textures/break/';
+        
+        // --- Constantes del Mundo ---
+        const terrainHeight = 6;  
+        const terrainScale = 0.05; 
+
+        // Geometría y material de los bloques (reutilizables)
+        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+        // --- ¡CARGA DE TEXTURAS! ---
+        const stoneTexture = textureLoader.load(`${textureBaseUrl}stone.png`);
+        const dirtTexture = textureLoader.load(`${textureBaseUrl}dirt.png`);
+        const grassTopTexture = textureLoader.load(`${textureBaseUrl}grass_block_top.png`);
+        const grassSideTexture = textureLoader.load(`${textureBaseUrl}grass_block_side.png`);
+        
+        stoneTexture.magFilter = THREE.NearestFilter;
+        dirtTexture.magFilter = THREE.NearestFilter;
+        grassTopTexture.magFilter = THREE.NearestFilter;
+        grassSideTexture.magFilter = THREE.NearestFilter;
+
+
+        // --- ¡MATERIALES ACTUALIZADOS CON TEXTURAS! ---
+        const grassMaterial = [
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (right)
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (left)
+            new THREE.MeshStandardMaterial({ map: grassTopTexture, color: 0x90ee90 }),  // Arriba (top) - Tinte verde
+            new THREE.MeshStandardMaterial({ map: dirtTexture }),          // Abajo (bottom)
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (front)
+            new THREE.MeshStandardMaterial({ map: grassSideTexture })      // Lado (back)
+        ];
+        
+        const dirtMaterial = new THREE.MeshStandardMaterial({ map: dirtTexture });
+        const stoneMaterial = new THREE.MeshStandardMaterial({ map: stoneTexture });
+
+        // --- OPTIMIZACIÓN DE COLISIÓN ---
+        const collisionCheckBlockBox = new THREE.Box3();
+        const boxMin = new THREE.Vector3();
+        const boxMax = new THREE.Vector3();
+
+
+        // --- Inicialización ---
+        function init() {
+            inventory = [
+                'dirt', 'grass', 'stone',
+                null, null, null, null, null, null
+            ];
+            
+            materials = {
+                'dirt': dirtMaterial,
+                'grass': grassMaterial,
+                'stone': stoneMaterial
+            };
+
+            // 1. Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 0, (renderDistance + 1) * chunkSize); 
+
+            // 2. Cámara
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.y = terrainHeight + 5; 
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true }); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; 
+            document.body.appendChild(renderer.domElement);
+
+            // 4. Luces
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); 
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048; 
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // 5. Controles (Pointer Lock)
+            controls = new PointerLockControls(camera, document.body);
+            scene.add(controls.getObject()); 
+            
+            // --- ARREGLO: Mover el listener 'unlock' aquí ---
+            // --- Lógica de desbloqueo de cursor ---
+            controls.addEventListener('unlock', () => {
+                // Si el juego está activo (worldName está seteado), volver al homescreen
+                if (worldName) {
+                    // 1. Desconectar listeners del mundo
+                    if (playersListener) playersListener();
+                    
+                    // CAMBIO: Desconectar listeners de RTDB
+                    const playersRef = ref(db, `worlds/${worldName}/players`);
+                    off(playersRef);
+                    
+                    const blocksRef = ref(db, `worlds/${worldName}/blocks`);
+                    off(blocksRef);
+                    
+                    // 2. Limpiar variables del mundo
+                    playersListener = null;
+                    blocksListener = { added: null, removed: null };
+                    worldName = null;
+                    players.forEach(mesh => scene.remove(mesh));
+                    players.clear();
+                    
+                    // 3. Mostrar homescreen
+                    document.getElementById('game-ui').style.display = 'none';
+                    document.getElementById('crosshair').style.display = 'none';
+                    document.getElementById('ui-container').style.display = 'none';
+                    showHomescreen(); // Volver a la lista de servidores
+                }
+            });
+            
+            // --- NUEVO: Lógica del Login ---
+            initLoginScreen();
+            
+            // 6. Raycaster (para poner/quitar bloques)
+            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 5); // 5 unidades de alcance
+
+            // 7. Generador de Ruido
+            noise = new window.SimplexNoise(); 
+            
+            // Cargar texturas de rotura
+            for (let i = 0; i < 10; i++) {
+                const texture = textureLoader.load(`${breakTextureBaseUrl}break_${i}.png`);
+                texture.magFilter = THREE.NearestFilter;
+                destroyTextures.push(texture);
+            }
+            
+            // Material de rotura
+            breakingMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                depthTest: false,
+                depthWrite: false
+            });
+            
+            // --- Configurar UI (Vida y Hotbar) ---
+            setupHealthBar();
+            setupHotbar();
+            
+            // --- Eventos de Teclado y Ratón ---
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown);
+            document.addEventListener('mouseup', onMouseUp); 
+            document.addEventListener('wheel', onMouseWheel); 
+
+            // --- Manejador de Redimensión de Ventana ---
+            window.addEventListener('resize', onWindowResize);
+            
+            // Iniciar AMBOS bucles del juego
+            animate();
+            animateHotbar(); 
+        }
+        
+        // --- NUEVO: Flujo de Autenticación y Lobby ---
+        
+        function initLoginScreen() {
+            const loginButton = document.getElementById('loginButton');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginStatus = document.getElementById('loginStatus');
+
+            loginButton.addEventListener('click', async () => {
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                const email = username + "@email.org";
+
+                if (!username || !password) {
+                    loginStatus.textContent = "Rellena todos los campos.";
+                    return;
+                }
+                
+                loginStatus.textContent = "Conectando...";
+                loginButton.disabled = true;
+
+                try {
+                    // 1. Inicializar Firebase
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getDatabase(app); // CAMBIO: getDatabase() para RTDB
+
+                    // 2. Intentar Iniciar Sesión
+                    try {
+                        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                        userId = userCredential.user.uid;
+                    } catch (signInError) {
+                        // 3. Si falla el login (usuario no existe O contraseña incorrecta)
+                        //    El error 'auth/invalid-credential' es el nuevo estándar.
+                        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
+                            // Intentamos crear la cuenta
+                            try {
+                                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                                userId = userCredential.user.uid;
+                            } catch (createError) {
+                                // Si 'email-already-in-use', significa que el usuario SÍ existe,
+                                // y la contraseña del login era incorrecta.
+                                if (createError.code === 'auth/email-already-in-use') {
+                                    loginStatus.textContent = "Contraseña incorrecta.";
+                                    loginButton.disabled = false;
+                                    return; // No continuar
+                                } else {
+                                    // Otro error al crear
+                                    throw createError;
+                                }
+                            }
+                        } else {
+                            // Otro error de login (red, etc.)
+                            throw signInError; 
+                        }
+                    }
+                    
+                    // 4. Si todo va bien, ir al Homescreen
+                    loginStatus.textContent = "";
+                    showHomescreen();
+
+                } catch (error) {
+                    console.error("Error de autenticación:", error);
+                    loginStatus.textContent = `Error: ${error.message}`;
+                    loginButton.disabled = false;
+                }
+            });
+        }
+        
+        function showHomescreen() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('homescreen').style.display = 'flex';
+            
+            const createButton = document.getElementById('createWorldButton');
+            const newWorldInput = document.getElementById('newWorldName');
+            const logoutButton = document.getElementById('logoutButton');
+            
+            createButton.onclick = async () => {
+                const newWorld = newWorldInput.value.trim();
+                if (newWorld) {
+                    // 1. Crear la entrada en la lista de mundos (RTDB)
+                    const worldListRef = ref(db, "worldList/" + newWorld);
+                    
+                    // CAMBIO: Añadir creatorId y creatorName
+                    await set(worldListRef, { 
+                        createdAt: serverTimestamp(),
+                        creatorId: userId,
+                        creatorName: auth.currentUser.email.split('@')[0] // Guardamos el nombre de usuario
+                    });
+                    
+                    // 2. Unirse al mundo
+                    joinWorld(newWorld);
+                }
+            };
+            
+            logoutButton.onclick = async () => {
+                await signOut(auth);
+                // Desconectar listeners
+                if (worldsListener) {
+                    off(ref(db, "worldList"), 'value', worldsListener);
+                }
+                
+                document.getElementById('homescreen').style.display = 'none';
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('loginButton').disabled = false;
+                document.getElementById('loginStatus').textContent = "Sesión cerrada.";
+            };
+
+            // Empezar a escuchar la lista de mundos (RTDB)
+            const worldListRef = ref(db, "worldList");
+            const q = query(worldListRef, orderByChild("createdAt"));
+            
+            worldsListener = onValue(q, (snapshot) => {
+                const serverList = document.getElementById('server-list');
+                serverList.innerHTML = ''; // Limpiar lista
+                
+                if(!snapshot.exists()) {
+                    serverList.innerHTML = '<div style="padding: 10px; color: #777;">No hay mundos. ¡Crea uno!</div>';
+                    return;
+                }
+                
+                // CAMBIO: RTDB onValue da los datos, hay que iterar y revertir para orden desc.
+                const worlds = [];
+                snapshot.forEach(childSnapshot => {
+                    worlds.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                
+                worlds.reverse().forEach(world => {
+                    const serverItem = document.createElement('div');
+                    serverItem.className = 'server-item';
+                    
+                    // Contenedor del nombre (para clic)
+                    const serverNameDiv = document.createElement('div');
+                    serverNameDiv.className = 'server-item-name';
+                    
+                    const creator = world.creatorName || 'Desconocido';
+                    serverNameDiv.innerHTML = `<span>${world.id}</span> <span class="creator-name">(Creador: ${creator})</span>`;
+                    
+                    serverNameDiv.onclick = () => {
+                        joinWorld(world.id);
+                    };
+                    serverItem.appendChild(serverNameDiv);
+                    
+                    // CAMBIO: Lógica de AJUSTES (Botón Eliminar)
+                    if (world.creatorId === userId) {
+                        const deleteButton = document.createElement('button');
+                        deleteButton.className = 'delete-world-btn';
+                        deleteButton.textContent = 'Eliminar';
+                        deleteButton.onclick = async (e) => {
+                            e.stopPropagation(); // Evitar unirse al mundo
+                            if (confirm(`¿Seguro que quieres eliminar el mundo "${world.id}"? Esta acción no se puede deshacer.`)) {
+                                await deleteWorld(world.id);
+                            }
+                        };
+                        serverItem.appendChild(deleteButton);
+                    }
+                    
+                    serverList.appendChild(serverItem);
+                });
+            });
+        }
+        
+        // CAMBIO: Nueva función para eliminar mundos
+        async function deleteWorld(worldId) {
+            // Eliminar de la lista de mundos
+            const worldListRef = ref(db, `worldList/${worldId}`);
+            await remove(worldListRef);
+            
+            // Eliminar todos los datos del mundo (bloques, jugadores)
+            const worldDataRef = ref(db, `worlds/${worldId}`);
+            await remove(worldDataRef);
+            
+            // El listener 'onValue' de la lista de mundos se actualizará solo
+        }
+        
+        function joinWorld(selectedWorldName) {
+            worldName = selectedWorldName;
+            
+            // Desconectar el listener de la lista de mundos
+            if (worldsListener) {
+                off(ref(db, "worldList"), 'value', worldsListener);
+            }
+            
+            // Ocultar homescreen y mostrar UI del juego
+            document.getElementById('homescreen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block'; // Es el contenedor
+            document.getElementById('ui-container').style.display = 'flex';
+            document.getElementById('crosshair').style.display = 'block';
+            
+            controls.lock(); // Bloquear el cursor
+            
+            // Iniciar listeners de Firebase para ESE mundo
+            initFirebaseWorldListeners();
+        }
+        
+        // --- CAMBIO: Función para escuchar cambios de Firebase (RTDB) ---
+        function initFirebaseWorldListeners() {
+            
+            // --- 1. Listener para Jugadores (RTDB) ---
+            const playersRef = ref(db, `worlds/${worldName}/players`);
+            playersListener = onValue(playersRef, (snapshot) => {
+                const activePlayers = new Set();
+                
+                if (!snapshot.exists()) return; // Salir si no hay jugadores
+
+                snapshot.forEach(childSnapshot => {
+                    const data = childSnapshot.val();
+                    const playerId = childSnapshot.key;
+                    
+                    if (playerId === userId) return; // Somos nosotros
+                    
+                    activePlayers.add(playerId);
+                    
+                    const now = Date.now();
+                    if (data.timestamp && (now - data.timestamp > 10000)) {
+                        return; // Ignorar jugador desconectado
+                    }
+
+                    let playerMesh = players.get(playerId);
+                    if (!playerMesh) {
+                        playerMesh = new THREE.Mesh(playerMeshGeometry, playerMeshMaterial);
+                        scene.add(playerMesh);
+                        players.set(playerId, playerMesh);
+                    }
+                    
+                    playerMesh.position.set(data.x, data.y - (playerHeight / 2), data.z);
+                });
+                
+                // Limpiar jugadores que ya no están
+                for (const [playerId, mesh] of players.entries()) {
+                    if (!activePlayers.has(playerId)) {
+                        scene.remove(mesh);
+                        players.delete(playerId);
+                    }
+                }
+            });
+            
+            // --- 2. Listener para Bloques (RTDB) ---
+            const blocksRef = ref(db, `worlds/${worldName}/blocks`);
+            
+            // Listener para bloques AÑADIDOS
+            blocksListener.added = onChildAdded(blocksRef, (snapshot) => {
+                const data = snapshot.val();
+                const blockKey = `${data.x}_${data.y}_${data.z}`; // CAMBIO: Usar _
+                const existingBlock = blockData.get(blockKey);
+
+                if (!existingBlock) {
+                    const material = materials[data.type];
+                    if (material) {
+                        addBlock(data.x, data.y, data.z, material, null, false); // false = no notificar
+                    }
+                }
+            });
+            
+            // Listener para bloques ELIMINADOS
+            blocksListener.removed = onChildRemoved(blocksRef, (snapshot) => {
+                const data = snapshot.val();
+                const blockKey = `${data.x}_${data.y}_${data.z}`; // CAMBIO: Usar _
+                const existingBlock = blockData.get(blockKey);
+                
+                if (existingBlock) {
+                    removeBlock(existingBlock, false); // false = no notificar
+                }
+            });
+        }
+        
+        // --- Lógica de desbloqueo de cursor (MOVIDA A INIT) ---
+
+
+        // --- FUNCIONES DE CHUNKS ---
+
+        function getChunkKey(chunkX, chunkZ) {
+            return `${chunkX},${chunkZ}`;
+        }
+        
+        function getBlock(x, y, z) {
+            return blockData.get(`${x}_${y}_${z}`); // CAMBIO: Usar _
+        }
+
+        function loadChunk(chunkX, chunkZ) {
+            const chunkKey = getChunkKey(chunkX, chunkZ);
+            if (worldBlocks.has(chunkKey)) {
+                return;
+            }
+
+            const chunkBlocks = [];
+            const startX = chunkX * chunkSize;
+            const startZ = chunkZ * chunkSize;
+
+            for (let x = 0; x < chunkSize; x++) {
+                for (let z = 0; z < chunkSize; z++) {
+                    const worldX = startX + x;
+                    const worldZ = startZ + z;
+                    
+                    const noiseVal = noise.noise2D(worldX * terrainScale, worldZ * terrainScale);
+                    const height = THREE.MathUtils.mapLinear(noiseVal, -1, 1, 0, terrainHeight);
+                    const y = Math.floor(height);
+
+                    // Solo añade si Firebase no ha puesto "aire"
+                    if (!getBlock(worldX, y, worldZ)) { 
+                         addBlock(worldX, y, worldZ, materials.grass, chunkBlocks, false);
+                    }
+
+                    for (let y_fill = y - 1; y_fill > y - 4 && y_fill >= 0; y_fill--) {
+                         if (!getBlock(worldX, y_fill, worldZ)) {
+                            addBlock(worldX, y_fill, worldZ, materials.dirt, chunkBlocks, false);
+                         }
+                    }
+                    
+                    for (let y_fill = y - 4; y_fill >= 0; y_fill--) {
+                         if (!getBlock(worldX, y_fill, worldZ)) {
+                            addBlock(worldX, y_fill, worldZ, materials.stone, chunkBlocks, false);
+                         }
+                    }
+                }
+            }
+            worldBlocks.set(chunkKey, chunkBlocks);
+        }
+
+        function unloadChunk(chunkX, chunkZ) {
+            const chunkKey = getChunkKey(chunkX, chunkZ);
+            if (worldBlocks.has(chunkKey)) {
+                const chunkBlocks = worldBlocks.get(chunkKey);
+                for (const block of chunkBlocks) {
+                    scene.remove(block);
+                    blockData.delete(`${block.position.x}_${block.position.y}_${block.position.z}`); // CAMBIO: Usar _
+                }
+                worldBlocks.delete(chunkKey);
+            }
+        }
+
+        function addBlock(x, y, z, material, chunkArray = null, notifyFirebase = true) {
+            const block = new THREE.Mesh(blockGeometry, material);
+            block.position.set(x, y, z);
+            block.castShadow = true;
+            block.receiveShadow = true;
+            scene.add(block);
+            
+            blockData.set(`${x}_${y}_${z}`, block); // CAMBIO: Usar _
+            
+            if (chunkArray) {
+                chunkArray.push(block);
+            } else {
+                const chunkX = Math.floor(x / chunkSize);
+                const chunkZ = Math.floor(z / chunkSize);
+                const chunkKey = getChunkKey(chunkX, chunkZ);
+                
+                if (worldBlocks.has(chunkKey)) {
+                    worldBlocks.get(chunkKey).push(block);
+                } else {
+                    const newChunkBlocks = [block];
+                    worldBlocks.set(chunkKey, newChunkBlocks);
+                }
+            }
+            
+            // CAMBIO: Escribir en RTDB
+            if (notifyFirebase && db && worldName) {
+                const blockKey = `${x}_${y}_${z}`; // CAMBIO: Usar _
+                const blockType = (material === materials.grass) ? 'grass' : (material === materials.dirt) ? 'dirt' : 'stone';
+                const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
+                set(blockRef, { x, y, z, type: blockType });
+            }
+        }
+
+        function removeBlock(object, notifyFirebase = true) {
+            const pos = object.position;
+            const blockKey = `${pos.x}_${pos.y}_${pos.z}`; // CAMBIO: Usar _
+            
+            scene.remove(object);
+            
+            blockData.delete(blockKey);
+            
+            const chunkX = Math.floor(pos.x / chunkSize);
+            const chunkZ = Math.floor(pos.z / chunkSize);
+            const chunkKey = getChunkKey(chunkX, chunkZ);
+
+            if (worldBlocks.has(chunkKey)) {
+                const chunkBlocks = worldBlocks.get(chunkKey);
+                const index = chunkBlocks.indexOf(object);
+                if (index > -1) {
+                    chunkBlocks.splice(index, 1);
+                }
+            }
+            
+            // CAMBIO: Eliminar de RTDB
+            if (notifyFirebase && db && worldName) {
+                const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
+                remove(blockRef);
+            }
+        }
+        
+        function updatePlayerBox(position) {
+            playerBox.setFromCenterAndSize(
+                position,
+                new THREE.Vector3(playerWidth * 2, playerHeight, playerWidth * 2)
+            );
+            playerBox.min.y = position.y - (playerHeight / 2);
+            playerBox.max.y = position.y + (playerHeight / 2);
+        }
+
+        function checkCollision() {
+            const minX = Math.floor(playerBox.min.x);
+            const maxX = Math.ceil(playerBox.max.x);
+            const minY = Math.floor(playerBox.min.y);
+            const maxY = Math.ceil(playerBox.max.y);
+            const minZ = Math.floor(playerBox.min.z);
+            const maxZ = Math.ceil(playerBox.max.z);
+
+            for (let x = minX; x < maxX; x++) {
+                for (let y = minY; y < maxY; y++) {
+                    for (let z = minZ; z < maxZ; z++) {
+                        
+                        if (getBlock(x, y, z)) { 
+                            boxMin.set(x - 0.5, y - 0.5, z - 0.5);
+                            boxMax.set(x + 0.5, y + 0.5, z + 0.5);
+                            collisionCheckBlockBox.set(boxMin, boxMax);
+                            
+                            if (playerBox.intersectsBox(collisionCheckBlockBox)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+
+        function updateChunks() {
+            const playerPos = controls.getObject().position;
+            const chunkX = Math.floor(playerPos.x / chunkSize);
+            const chunkZ = Math.floor(playerPos.z / chunkSize);
+
+            if (currentChunk.x === chunkX && currentChunk.y === chunkZ) {
+                return; 
+            }
+            
+            currentChunk.set(chunkX, chunkZ); 
+
+            for (let x = chunkX - renderDistance; x <= chunkX + renderDistance; x++) {
+                for (let z = chunkZ - renderDistance; z <= chunkZ + renderDistance; z++) {
+                    loadChunk(x, z);
+                }
+            }
+
+            for (const chunkKey of worldBlocks.keys()) {
+                const [cx, cz] = chunkKey.split(',').map(Number);
+                const dist_x = Math.abs(cx - chunkX);
+                const dist_z = Math.abs(cz - chunkZ);
+                
+                if (dist_x > renderDistance || dist_z > renderDistance) {
+                    unloadChunk(cx, cz);
+                }
+            }
+        }
+
+
+        // --- Bucle del Juego (Animación) ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            
+            let delta = (time - prevTime) / 1000;
+            delta = Math.min(delta, 0.05); 
+
+            if (controls.isLocked === true) {
+                
+                updateChunks();
+
+                lastPlayerVelY = playerVelocity.y;
+
+                // Fricción
+                playerVelocity.x -= playerVelocity.x * 10.0 * delta;
+                playerVelocity.z -= playerVelocity.z * 10.0 * delta;
+
+                // Gravedad
+                playerVelocity.y += gravity * delta;
+                
+                // Dirección
+                playerDirection.z = Number(moveForward) - Number(moveBackward);
+                playerDirection.x = Number(moveRight) - Number(moveLeft);
+                playerDirection.normalize(); 
+
+                // Aplicar movimiento
+                if (moveForward || moveBackward) playerVelocity.z -= playerDirection.z * moveSpeed * delta;
+                if (moveLeft || moveRight) playerVelocity.x -= playerDirection.x * moveSpeed * delta;
+
+                // Colisión por ejes
+                const playerPos = controls.getObject().position;
+                const deltaVelX = -playerVelocity.x * delta;
+                const deltaVelZ = -playerVelocity.z * delta;
+                const deltaVelY = playerVelocity.y * delta;
+
+                controls.moveRight(deltaVelX);
+                updatePlayerBox(playerPos);
+                if (checkCollision()) {
+                    controls.moveRight(-deltaVelX); 
+                    playerVelocity.x = 0;
+                }
+
+                controls.moveForward(deltaVelZ);
+                updatePlayerBox(playerPos);
+                if (checkCollision()) {
+                    controls.moveForward(-deltaVelZ); 
+                    playerVelocity.z = 0;
+                }
+
+                playerPos.y += deltaVelY;
+                updatePlayerBox(playerPos);
+                if (checkCollision()) {
+                    playerPos.y -= deltaVelY; 
+                    if (lastPlayerVelY < 0) {
+                        canJump = true; 
+                        handleFallDamage(lastPlayerVelY); 
+                    }
+                    playerVelocity.y = 0;
+                } else {
+                    canJump = false;
+                }
+                
+                // Lógica de Minería
+                if (isMining) {
+                    raycaster.setFromCamera(new THREE.Vector2(), camera);
+                    const allBlocks = Array.from(worldBlocks.values()).flat();
+                    const intersects = raycaster.intersectObjects(allBlocks);
+
+                    if (intersects.length > 0 && intersects[0].object === currentMiningBlock) {
+                        miningTimer += delta;
+                        const breakStage = Math.min(9, Math.floor((miningTimer / blockBreakTime) * 10));
+                        
+                        if (breakingBlockOverlay) {
+                            breakingBlockOverlay.material.map = destroyTextures[breakStage];
+                            breakingBlockOverlay.material.needsUpdate = true;
+                        }
+
+                        if (miningTimer >= blockBreakTime) {
+                            removeBlock(currentMiningBlock, true);
+                            stopMining();
+                        }
+                    } else {
+                        stopMining();
+                    }
+                }
+                
+                // Actualizar posición en Firebase (RTDB)
+                if (worldName && db && userId && time - lastFirebaseUpdate > 200) { 
+                    lastFirebaseUpdate = time;
+                    const pos = controls.getObject().position;
+                    const playerRef = ref(db, `worlds/${worldName}/players/${userId}`);
+                    set(playerRef, { 
+                        x: pos.x, 
+                        y: pos.y, 
+                        z: pos.z, 
+                        timestamp: serverTimestamp() 
+                    });
+                }
+                
+                if (playerPos.y < -50) {
+                    respawnPlayer();
+                }
+            }
+            
+            prevTime = time;
+
+            renderer.render(scene, camera);
+        }
+        
+        function stopMining() {
+            isMining = false;
+            miningTimer = 0;
+            currentMiningBlock = null;
+            if (breakingBlockOverlay) {
+                scene.remove(breakingBlockOverlay);
+                breakingBlockOverlay = null;
+            }
+        }
+
+        // --- Manejadores de Eventos ---
+
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space':
+                    if (canJump === true) playerVelocity.y += jumpForce;
+                    canJump = false;
+                    break;
+                
+                // Controles de Hotbar (1-9)
+                case 'Digit1': selectedSlot = 0; updateHotbarUI(); break;
+                case 'Digit2': selectedSlot = 1; updateHotbarUI(); break;
+                case 'Digit3': selectedSlot = 2; updateHotbarUI(); break;
+                case 'Digit4': selectedSlot = 3; updateHotbarUI(); break;
+                case 'Digit5': selectedSlot = 4; updateHotbarUI(); break;
+                case 'Digit6': selectedSlot = 5; updateHotbarUI(); break;
+                case 'Digit7': selectedSlot = 6; updateHotbarUI(); break;
+                case 'Digit8': selectedSlot = 7; updateHotbarUI(); break;
+                case 'Digit9': selectedSlot = 8; updateHotbarUI(); break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+        
+        function onMouseDown(event) {
+            if (!controls.isLocked) return; 
+
+            raycaster.setFromCamera(new THREE.Vector2(), camera); 
+            const allBlocks = Array.from(worldBlocks.values()).flat();
+            const intersects = raycaster.intersectObjects(allBlocks);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                
+                // Botón Izquierdo (0): Iniciar minería
+                if (event.button === 0) {
+                    if (intersect.object && intersect.object.isMesh) {
+                        isMining = true;
+                        miningTimer = 0;
+                        currentMiningBlock = intersect.object;
+                        
+                        if (breakingBlockOverlay) scene.remove(breakingBlockOverlay);
+                        
+                        breakingBlockOverlay = new THREE.Mesh(blockGeometry, breakingMaterial.clone());
+                        breakingBlockOverlay.position.copy(currentMiningBlock.position);
+                        breakingBlockOverlay.renderOrder = 1; 
+                        breakingBlockOverlay.material.map = destroyTextures[0];
+                        scene.add(breakingBlockOverlay);
+                    }
+                } 
+                
+                // Botón Derecho (2): Poner bloque
+                else if (event.button === 2) {
+                    stopMining();
+                    
+                    const selectedItemKey = inventory[selectedSlot];
+                    if (!selectedItemKey) return; 
+                    
+                    const selectedMaterial = materials[selectedItemKey];
+                    if (!selectedMaterial) return;
+
+                    const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
+                    newBlockPos.round();
+                    
+                    const newBlockBox = new THREE.Box3(
+                        newBlockPos.clone().subScalar(0.5),
+                        newBlockPos.clone().addScalar(0.5)
+                    );
+
+                    if (!playerBox.intersectsBox(newBlockBox)) {
+                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, null, true);
+                    }
+                }
+            }
+        }
+        
+        function onMouseUp(event) {
+            if (event.button === 0) { // Botón Izquierdo
+                stopMining();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // --- Funciones de Vida y Daño ---
+        
+        function setupHealthBar() {
+            const healthBar = document.getElementById('health-bar');
+            healthBar.innerHTML = '';
+            for(let i = 0; i < playerMaxHealth / 2; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'heart';
+                healthBar.appendChild(heart);
+            }
+            updateHealthUI();
+        }
+
+        function updateHealthUI() {
+            const hearts = document.querySelectorAll('#health-bar .heart');
+            const fullHearts = Math.floor(playerHealth / 2);
+            
+            hearts.forEach((heart, index) => {
+                if (index < fullHearts) {
+                    heart.textContent = '❤️';
+                } else {
+                    heart.textContent = '🖤';
+                }
+            });
+        }
+        
+        function handleFallDamage(fallVelocity) {
+            const damageThreshold = -15; 
+            
+            if (fallVelocity < damageThreshold) {
+                const damage = Math.round(Math.abs(fallVelocity) - Math.abs(damageThreshold));
+                takeDamage(damage);
+            }
+        }
+        
+        function takeDamage(amount) {
+            playerHealth -= amount;
+            if (playerHealth < 0) {
+                playerHealth = 0;
+            }
+            
+            updateHealthUI();
+            
+            if (playerHealth === 0) {
+                respawnPlayer();
+            }
+        }
+        
+        function respawnPlayer() {
+            playerHealth = playerMaxHealth;
+            updateHealthUI();
+            controls.getObject().position.set(0, terrainHeight + 5, 0); 
+            playerVelocity.set(0, 0, 0);
+        }
+
+        
+        // --- FUNCIONES DE HOTBAR 3D ---
+
+        function setupHotbar() {
+            hotbarElement = document.getElementById('hotbar');
+            
+            hotbarCamera = new THREE.PerspectiveCamera(75, 1.0, 0.1, 10);
+            hotbarCamera.position.z = 1.3; 
+
+            for (let i = 0; i < 9; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'hotbar-slot';
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'hotbar-canvas';
+                slot.appendChild(canvas);
+                
+                hotbarElement.appendChild(slot);
+                hotbarSlots.push(slot); 
+
+                const scene = new THREE.Scene();
+                const light = new THREE.AmbientLight(0xffffff, 2.0); 
+                scene.add(light);
+                const pointLight = new THREE.PointLight(0xffffff, 1.0);
+                pointLight.position.set(1, 2, 3);
+                scene.add(pointLight);
+                hotbarScenes[i] = scene;
+
+                const renderer = new THREE.WebGLRenderer({ 
+                    canvas: canvas, 
+                    alpha: true, 
+                    antialias: true 
+                });
+                renderer.setSize(50, 50); 
+                hotbarRenderers[i] = renderer;
+
+                const itemKey = inventory[i];
+                if (itemKey) {
+                    const material = materials[itemKey];
+                    const mesh = new THREE.Mesh(blockGeometry, material);
+                    
+                    mesh.rotation.x = 0.5; 
+                    mesh.rotation.y = -0.7;
+
+                    scene.add(mesh);
+                    hotbarMeshes[i] = mesh;
+                } else {
+                    hotbarMeshes[i] = null;
+                }
+            }
+            updateHotbarUI();
+        }
+
+        // Bucle de animación SÓLO para la hotbar
+        function animateHotbar() {
+            requestAnimationFrame(animateHotbar);
+            
+            for(let i = 0; i < 9; i++) {
+                const renderer = hotbarRenderers[i];
+                const scene = hotbarScenes[i];
+                if (renderer && scene) {
+                    renderer.render(scene, hotbarCamera);
+                }
+            }
+        }
+
+        function updateHotbarUI() {
+            for (let i = 0; i < 9; i++) {
+                const slot = hotbarSlots[i];
+                if (i === selectedSlot) {
+                    slot.classList.add('active');
+                } else {
+                    slot.classList.remove('active');
+                }
+            }
+        }
+
+        function onMouseWheel(event) {
+            stopMining(); 
+            
+            if (event.deltaY > 0) {
+                selectedSlot++;
+            } else {
+                selectedSlot--;
+            }
+
+            if (selectedSlot > 8) selectedSlot = 0;
+            if (selectedSlot < 0) selectedSlot = 8;
+
+            updateHotbarUI();
+        }
+
+        // --- Iniciar el juego ---
+        init();
+    </script>
+</body>
+</html>
