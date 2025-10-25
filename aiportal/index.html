@@ -18,7 +18,24 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .chat-textarea { resize: none; overflow-y: hidden; }
-        .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 1.25rem; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; }
+        
+        /* --- Mobile-Friendly Redesign Styles --- */
+        .chat-bubble { 
+            max-width: 80%; /* Bubbles use 80% of screen width max */
+            padding: 12px 16px; 
+            border-radius: 1.25rem; 
+            margin-bottom: 8px; 
+            word-wrap: break-word; 
+            white-space: pre-wrap; 
+        }
+        /* NEW: Rule to fix images overflowing bubbles */
+        .chat-bubble img {
+            max-width: 100%; /* Ensures image fits bubble */
+            height: auto;
+            border-radius: 0.75rem; /* Match rounded-lg */
+        }
+        /* --- End Redesign Styles --- */
+
         .user-message { background-color: #3b82f6; color: #ffffff; border-bottom-right-radius: 0.5rem; align-self: flex-end; margin-left: auto; }
         .ai-message { background-color: transparent; color: #1f2937; border-bottom-left-radius: 0.5rem; align-self: flex-start; }
         #sidebar, #mainContent { transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); }
@@ -46,8 +63,10 @@
 </head>
 <body class="overflow-hidden">
 
-<div class="flex w-screen h-dvh"> <!-- Use h-dvh for dynamic viewport height -->
+<!-- CHANGED: h-dvh to h-screen for keyboard stability -->
+<div class="flex w-screen h-screen">
     <!-- Sidebar -->
+    <!-- h-full here inherits h-screen from parent, which is correct -->
     <div id="sidebar" class="bg-gray-100 flex flex-col z-20 h-full shadow-lg flex-shrink-0 absolute md:relative">
         <div class="flex justify-end p-2 md:hidden"><button id="mobileCloseSidebarButton" class="text-gray-600 hover:text-gray-900 p-2 rounded-full"><svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
         <div class="flex-1 flex flex-col p-2 space-y-4 overflow-hidden">
@@ -58,28 +77,31 @@
     </div>
 
     <!-- Main Content Area -->
-    <div id="mainContent" class="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
+    <!-- CHANGED: h-full to h-screen for keyboard stability -->
+    <div id="mainContent" class="flex-1 flex flex-col h-screen bg-white relative overflow-hidden">
         <div class="flex items-center p-4 border-b border-gray-200 flex-shrink-0">
             <button id="mobileOpenSidebarButton" class="md:hidden text-gray-800 p-2 rounded-full hover:bg-gray-200"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg></button>
             <h1 class="text-lg font-semibold ml-2 flex-1">AiPortal+</h1>
             <div id="authContainer" class="relative"></div>
         </div>
-        <div id="chatHistory" class="flex-1 p-6 overflow-y-auto scrollbar-hide flex flex-col space-y-4"></div>
+        
+        <!-- CHANGED: Padding to p-4 md:p-6 for better mobile spacing -->
+        <div id="chatHistory" class="flex-1 p-4 md:p-6 overflow-y-auto scrollbar-hide flex flex-col space-y-4"></div>
+        
         <button id="scrollToBottomBtn" class="hidden absolute bottom-28 right-10 bg-blue-500 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-opacity duration-300"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg></button>
-        <div class="px-4 pt-2 pb-6 bg-white border-t border-gray-200 flex-shrink-0">
-             <!-- Wrap input area in a form for better mobile submission -->
+        
+        <!-- CHANGED: Padding to px-4 py-3 for better mobile spacing -->
+        <div class="px-4 py-3 bg-white border-t border-gray-200 flex-shrink-0">
              <form id="chatForm" class="flex items-center w-full max-w-3xl mx-auto rounded-xl shadow-md border border-gray-300 bg-white px-2">
                 <button id="attachFileBtn" type="button" class="p-2 text-gray-500 hover:text-gray-700">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept="image/*" />
                 
-                <!-- New Camera Button -->
                 <button id="cameraBtn" type="button" class="p-2 text-gray-500 hover:text-gray-700">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
                 <input type="file" id="cameraInput" class="hidden" accept="image/*" capture="environment" />
-                <!-- End New Camera Button -->
 
                 <textarea id="chatInput" class="chat-textarea flex-1 p-2 bg-transparent text-sm md:text-base focus:outline-none placeholder-gray-500" placeholder="Escribe un mensaje..." rows="1" style="min-height: 40px; max-height: 200px;"></textarea>
                 <button id="sendButton" type="submit" class="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-300" disabled><svg class="h-6 w-6 transform rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
@@ -133,11 +155,11 @@
 
         // --- DOM Elements ---
         const sidebar = document.getElementById('sidebar'), mainContent = document.getElementById('mainContent'), mobileOpenSidebarButton = document.getElementById('mobileOpenSidebarButton'), mobileCloseSidebarButton = document.getElementById('mobileCloseSidebarButton'), desktopToggleButton = document.getElementById('desktopToggleButton'), newChatButton = document.getElementById('newChatButton'), toggleIcon = document.getElementById('toggleIcon'), sidebarTexts = document.querySelectorAll('.sidebar-text'), chatInput = document.getElementById('chatInput'), sendButton = document.getElementById('sendButton'), chatHistory = document.getElementById('chatHistory'), chatList = document.getElementById('chatList'), scrollToBottomBtn = document.getElementById('scrollToBottomBtn'), authContainer = document.getElementById('authContainer'), authModal = document.getElementById('authModal'), closeModalBtn = document.getElementById('closeModalBtn'), loginForm = document.getElementById('loginForm'), emailInput = document.getElementById('emailInput'), passwordInput = document.getElementById('passwordInput'), loginBtn = document.getElementById('loginBtn'), signupBtn = document.getElementById('signupBtn'), authError = document.getElementById('authError'),
-        chatForm = document.getElementById('chatForm'), // Added form
+        chatForm = document.getElementById('chatForm'),
         attachFileBtn = document.getElementById('attachFileBtn'),
         fileInput = document.getElementById('fileInput'),
-        cameraBtn = document.getElementById('cameraBtn'), // Added camera button
-        cameraInput = document.getElementById('cameraInput'); // Added camera input
+        cameraBtn = document.getElementById('cameraBtn'),
+        cameraInput = document.getElementById('cameraInput');
 
         // --- Constants ---
         const DESKTOP_BREAKPOINT = 768, SIDEBAR_WIDTH_EXPANDED = '16rem', SIDEBAR_WIDTH_COLLAPSED = '5rem', MISTRAL_API_KEY = 'o0kW3QDl3KG9HXPbxqSsuYJqJiXVfOsU', MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions', AI_SYSTEM_PROMPT = `As an AI assistant, you are collaborative and proactive. You must speak in Spanish unless the user specifies another language. You can also generate images. Use the command \`[IMAGE:A brief, descriptive prompt in English for the image]\` to do so. This command will be processed to display an image. Example: 'Claro, aquí tienes un gatito: [IMAGE:a cute kitten]'. The command will be hidden from the user.`;
@@ -181,6 +203,7 @@
         const scrollToBottom = () => chatHistory.scrollTop = chatHistory.scrollHeight;
         const addCopyButtons = (container) => { container.querySelectorAll('pre').forEach(block => { if (block.querySelector('.copy-code-btn')) return; const button = document.createElement('button'); button.className = 'copy-code-btn'; button.textContent = 'Copiar'; button.onclick = () => { navigator.clipboard.writeText(block.querySelector('code').innerText).then(() => { button.textContent = '¡Copiado!'; setTimeout(() => { button.textContent = 'Copiar'; }, 2000); }); }; block.appendChild(button); }); };
         
+        // --- CHANGED: createChatBubble ---
         const createChatBubble = (message) => {
             if (message.type === 'assistant-image') {
                 generateAndDisplayImage(message.content);
@@ -191,7 +214,8 @@
             bubble.className = `chat-bubble w-fit ${isUser ? 'user-message' : 'ai-message'}`;
 
             if (message.type === 'image') {
-                bubble.innerHTML = `<img src="${message.content}" class="rounded-lg max-w-xs" />`;
+                // REMOVED classes like max-w-xs. The new CSS rule `.chat-bubble img` handles styling.
+                bubble.innerHTML = `<img src="${message.content}" alt="Imagen cargada" />`;
             } else {
                 if(isUser) {
                     bubble.textContent = message.content;
@@ -206,6 +230,7 @@
             if (!userHasScrolledUp) scrollToBottom();
             return bubble;
         };
+        // --- END CHANGED ---
 
         const updateAuthUI = () => { if (currentUser) { const username = currentUser.email.split('@')[0]; authContainer.innerHTML = `<button id="accountBtn" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm">${username}</button><div id="logoutDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20"><a href="#" id="logoutBtn" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</a></div>`; document.getElementById('accountBtn').addEventListener('click', () => document.getElementById('logoutDropdown').classList.toggle('hidden')); document.getElementById('logoutBtn').addEventListener('click', handleLogout); } else { authContainer.innerHTML = `<button id="openLoginBtn" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">Cuenta</button>`; document.getElementById('openLoginBtn').addEventListener('click', () => authModal.classList.remove('hidden')); } };
 
@@ -237,9 +262,11 @@
             saveData();
         };
         
+        // --- CHANGED: generateAndDisplayImage ---
         const generateAndDisplayImage = (prompt) => {
             const placeholderBubble = document.createElement('div');
             placeholderBubble.className = 'chat-bubble w-fit ai-message';
+            // Placeholder uses w-64, but final image will be constrained by CSS
             placeholderBubble.innerHTML = `<div class="w-64 h-64 rounded-lg shimmer-bg"></div>`;
             chatHistory.appendChild(placeholderBubble);
             if (!userHasScrolledUp) scrollToBottom();
@@ -247,7 +274,8 @@
             const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1000&height=1000&nologo=true&seed=42`;
             const img = new Image();
             img.src = imageUrl;
-            img.className = 'rounded-lg max-w-xs';
+            img.alt = prompt; // Add alt text for accessibility
+            // REMOVED img.className. The new CSS rule `.chat-bubble img` handles styling.
             img.onload = () => {
                 placeholderBubble.innerHTML = '';
                 placeholderBubble.appendChild(img);
@@ -257,14 +285,13 @@
                 placeholderBubble.style.backgroundColor = '#fecaca';
             };
         };
+        // --- END CHANGED ---
         
-        // --- MODIFIED sendMessage Function ---
         const sendMessage = async () => {
             const userMessageContent = chatInput.value.trim();
             if (!userMessageContent) return;
 
             // 1. Clear input and disable button IMMEDIATELY.
-            // This ensures the UI updates even if a subsequent operation fails.
             chatInput.value = '';
             chatInput.style.height = '40px';
             sendButton.disabled = true;
@@ -382,15 +409,12 @@
                 }
             }
         };
-        // --- END MODIFIED sendMessage Function ---
-
         
         // --- Auth & UI Listeners ---
         const handleSignup = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await createUserWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
         const handleLogin = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await signInWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
         const handleLogout = async () => { await signOut(auth); };
         
-        // Updated file upload handler to reset the correct input
         const handleFileUpload = (event) => {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
@@ -405,7 +429,7 @@
                 };
                 reader.readAsDataURL(file);
             }
-            event.target.value = ''; // Reset the specific input that was used
+            event.target.value = '';
         };
 
         const setDesktopSidebarState = (c) => { isDesktopSidebarCollapsed = c; const w = c ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED; sidebar.style.width = w; mainContent.style.marginLeft = w; sidebarTexts.forEach(t => t.classList.toggle('hidden', c)); toggleIcon.classList.toggle('rotate-180', !c); };
@@ -433,11 +457,10 @@
         signupBtn.addEventListener('click', handleSignup);
         loginBtn.addEventListener('click', handleLogin);
         
-        // Updated listeners
-        attachFileBtn.addEventListener('click', () => fileInput.click()); // Paperclip
-        cameraBtn.addEventListener('click', () => cameraInput.click()); // Camera
-        fileInput.addEventListener('change', handleFileUpload); // File picker
-        cameraInput.addEventListener('change', handleFileUpload); // Camera input
+        attachFileBtn.addEventListener('click', () => fileInput.click());
+        cameraBtn.addEventListener('click', () => cameraInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        cameraInput.addEventListener('change', handleFileUpload);
 
         window.addEventListener('resize', applyInitialState);
         
@@ -447,7 +470,6 @@
             sendButton.disabled = chatInput.value.trim() === ''; 
         });
 
-        // New: Listen for form submission
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!sendButton.disabled) {
@@ -455,12 +477,11 @@
             }
         });
 
-        // New: Use keydown and programmatic submit for Enter key
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (!sendButton.disabled) {
-                    chatForm.requestSubmit(); // Triggers the 'submit' event
+                    chatForm.requestSubmit();
                 }
             }
         });
