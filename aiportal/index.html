@@ -258,19 +258,36 @@
             };
         };
         
+        // --- MODIFIED sendMessage Function ---
         const sendMessage = async () => {
             const userMessageContent = chatInput.value.trim();
             if (!userMessageContent) return;
 
-            if (!activeChatId || !allChats[activeChatId]) { startNewChat(); }
+            // 1. Clear input and disable button IMMEDIATELY.
+            // This ensures the UI updates even if a subsequent operation fails.
+            chatInput.value = '';
+            chatInput.style.height = '40px';
+            sendButton.disabled = true;
 
+            // 2. Ensure chat exists
+            if (!activeChatId || !allChats[activeChatId]) {
+                startNewChat();
+            }
+
+            // 3. Add user message to UI and state
             const userMessage = { role: "user", content: userMessageContent, type: 'text' };
             createChatBubble(userMessage);
             allChats[activeChatId].messages.push(userMessage);
-            saveData();
-            renderChatList();
-            chatInput.value = ''; chatInput.style.height = '40px'; sendButton.disabled = true;
 
+            // 4. Save and update list (with error handling)
+            try {
+                saveData();
+                renderChatList();
+            } catch (e) {
+                console.error("Error saving or rendering chat list:", e);
+            }
+
+            // 5. Prepare for AI response (bubble and API messages)
             const aiBubble = createChatBubble({ role: 'assistant', content: '', type: 'text' });
             aiBubble.innerHTML = `<div class="p-4"><div class="flex items-center space-x-1 justify-center"><div class="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div></div></div>`;
             
@@ -279,7 +296,6 @@
 
             for (let i = 0; i < conversationHistory.length; i++) {
                 const msg = conversationHistory[i];
-
                 if (msg.role === 'assistant') {
                     if (msg.type === 'text') {
                         messagesForAPI.push({ role: 'assistant', content: msg.content });
@@ -297,58 +313,77 @@
                 }
             }
 
-            let lastError = null;
-            for (let attempt = 1; attempt <= 5; attempt++) {
-                try {
-                    const response = await fetch(MISTRAL_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MISTRAL_API_KEY}` }, body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForAPI, stream: true }), });
-                    if (!response.ok) throw new Error(await response.text());
+            // 6. Call API (wrapped in its own try...catch for safety)
+            try {
+                let lastError = null;
+                for (let attempt = 1; attempt <= 5; attempt++) {
+                    try {
+                        const response = await fetch(MISTRAL_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MISTRAL_API_KEY}` }, body: JSON.stringify({ model: 'mistral-small-latest', messages: messagesForAPI, stream: true }), });
+                        if (!response.ok) throw new Error(await response.text());
 
-                    const reader = response.body.getReader(); const decoder = new TextDecoder(); let fullResponse = "";
-                    
-                    while (true) {
-                        const { value, done } = await reader.read(); if (done) break;
-                        const chunk = decoder.decode(value, { stream: true });
-                        for (const line of chunk.split('\n').filter(line => line.startsWith('data: '))) {
-                            const jsonStr = line.replace('data: ', ''); if (jsonStr === '[DONE]') break;
-                            try {
-                                const content = JSON.parse(jsonStr).choices[0].delta.content;
-                                if (content) {
-                                    fullResponse += content;
-                                    aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(fullResponse.replace(/\[IMAGE:.*?\]/g, '')));
-                                    if (!userHasScrolledUp) scrollToBottom(); else scrollToBottomBtn.classList.remove('hidden');
-                                }
-                            } catch (e) { }
-                        }
-                    }
-                    
-                    const textParts = fullResponse.split(/(\[IMAGE:.*?\])/g).filter(Boolean);
-                    let hasTextContent = false;
-                    textParts.forEach(part => {
-                        if (part.startsWith('[IMAGE:')) {
-                            const prompt = part.substring(7, part.length - 1);
-                            allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
-                            generateAndDisplayImage(prompt);
-                        } else if (part.trim()) {
-                            if (!hasTextContent) {
-                                aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(part.trim()));
-                                aiBubble.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-                                addCopyButtons(aiBubble);
-                                allChats[activeChatId].messages.push({ role: "assistant", content: part.trim(), type: 'text' });
-                                hasTextContent = true;
-                            } else {
-                                const newTextMsg = { role: "assistant", content: part.trim(), type: 'text' };
-                                createChatBubble(newTextMsg);
-                                allChats[activeChatId].messages.push(newTextMsg);
+                        const reader = response.body.getReader(); const decoder = new TextDecoder(); let fullResponse = "";
+                        
+                        while (true) {
+                            const { value, done } = await reader.read(); if (done) break;
+                            const chunk = decoder.decode(value, { stream: true });
+                            for (const line of chunk.split('\n').filter(line => line.startsWith('data: '))) {
+                                const jsonStr = line.replace('data: ', ''); if (jsonStr === '[DONE]') break;
+                                try {
+                                    const content = JSON.parse(jsonStr).choices[0].delta.content;
+                                    if (content) {
+                                        fullResponse += content;
+                                        aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(fullResponse.replace(/\[IMAGE:.*?\]/g, '')));
+                                        if (!userHasScrolledUp) scrollToBottom(); else scrollToBottomBtn.classList.remove('hidden');
+                                    }
+                                } catch (e) { /* Ignore parsing errors on incomplete chunks */ }
                             }
                         }
-                    });
+                        
+                        const textParts = fullResponse.split(/(\[IMAGE:.*?\])/g).filter(Boolean);
+                        let hasTextContent = false;
+                        textParts.forEach(part => {
+                            if (part.startsWith('[IMAGE:')) {
+                                const prompt = part.substring(7, part.length - 1);
+                                allChats[activeChatId].messages.push({ role: "assistant", type: 'assistant-image', content: prompt });
+                                generateAndDisplayImage(prompt);
+                            } else if (part.trim()) {
+                                if (!hasTextContent) {
+                                    aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(part.trim()));
+                                    aiBubble.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+                                    addCopyButtons(aiBubble);
+                                    allChats[activeChatId].messages.push({ role: "assistant", content: part.trim(), type: 'text' });
+                                    hasTextContent = true;
+                                } else {
+                                    const newTextMsg = { role: "assistant", content: part.trim(), type: 'text' };
+                                    createChatBubble(newTextMsg);
+                                    allChats[activeChatId].messages.push(newTextMsg);
+                                }
+                            }
+                        });
 
-                    if (!hasTextContent) aiBubble.remove();
-                    saveData(); return;
-                } catch (error) { lastError = error; console.error(`Attempt ${attempt} failed:`, error.message); if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000)); }
+                        if (!hasTextContent) aiBubble.remove();
+                        saveData(); 
+                        return; // Success
+                    } catch (error) { 
+                        lastError = error; 
+                        console.error(`Attempt ${attempt} failed:`, error.message); 
+                        if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000)); 
+                    }
+                }
+                // If loop finishes, all retries failed
+                throw lastError; // Throw the last error encountered
+
+            } catch (apiError) {
+                console.error("API Error after all retries:", apiError); 
+                if (aiBubble) { // Check if aiBubble exists before modifying
+                    aiBubble.innerHTML = `Lo siento, ha ocurrido un error.`; 
+                    aiBubble.style.backgroundColor = '#fecaca'; 
+                    aiBubble.style.color = '#991b1b';
+                }
             }
-            console.error("API Error after all retries:", lastError); aiBubble.innerHTML = `Lo siento, ha ocurrido un error.`; aiBubble.style.backgroundColor = '#fecaca'; aiBubble.style.color = '#991b1b';
         };
+        // --- END MODIFIED sendMessage Function ---
+
         
         // --- Auth & UI Listeners ---
         const handleSignup = async (e) => { e.preventDefault(); authError.textContent = ''; const email = emailInput.value.trim() + '@email.org', password = passwordInput.value; try { await createUserWithEmailAndPassword(auth, email, password); authModal.classList.add('hidden'); } catch (error) { authError.textContent = error.message; } };
@@ -429,10 +464,6 @@
                 }
             }
         });
-
-        // Removed old listeners:
-        // sendButton.addEventListener('click', sendMessage);
-        // chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
         // --- App Initialization ---
         onAuthStateChanged(auth, user => {
