@@ -643,10 +643,12 @@
         let inventoryListener = null; 
 
         // --- Sistema de Chunks ---
-        const worldBlocks = new Map(); 
-        const blockData = new Map(); // Guarda la Mesh
+        const worldData = new Map(); // Guarda los DATOS de bloques ({type: 'stone'}) por chunk
+        const chunkMeshes = new Map(); // Guarda las MALLAS generadas por chunk
         
         const chunkSize = 16; 
+        // CAMBIO: Altura del chunk (profundidad)
+        const chunkHeight = 128; // Desde y=64 hasta y=-64 
         const renderDistance = 1; // 3x3
         
         let currentChunk = new THREE.Vector2(Infinity, Infinity); 
@@ -674,7 +676,7 @@
         // --- Sistema de Minería ---
         let isMining = false;
         let miningTimer = 0;
-        let currentMiningBlock = null; 
+        let currentMiningBlockCoords = null; // Guarda {x, y, z}
         const blockBreakTime = 0.5; 
         
         // --- Animación de Rotura ---
@@ -710,9 +712,10 @@
         // --- Constantes del Mundo ---
         const terrainHeight = 6;
         const terrainScale = 0.05; 
-        const worldDepth = 0;
+        // CAMBIO: Profundidad del mundo
+        const worldDepth = -64; 
         
-        // --- Geometría de Bloque (única) ---
+        // --- Geometría de Bloque (única, para animación rotura) ---
         const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
         
         // --- Set de tipos de items (para evitar colocarlos) ---
@@ -774,56 +777,85 @@
 
 
         // --- Materiales (Bloques) ---
+        // CAMBIO: Ahora son arrays de materiales, uno por tipo de bloque
+        // Usaremos multi-materiales en la malla del chunk
         
-        const grassMaterial = [
+        const blockMaterials = [
+            // Índice 0: grass_side
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),
-            new THREE.MeshStandardMaterial({ map: grassSideTexture }),
+            // Índice 1: grass_top
             new THREE.MeshStandardMaterial({ map: grassTopTexture, color: 0x90ee90 }), // Tinte verde
+            // Índice 2: dirt
             new THREE.MeshStandardMaterial({ map: dirtTexture }),
-            new THREE.MeshStandardMaterial({ map: grassSideTexture }),
-            new THREE.MeshStandardMaterial({ map: grassSideTexture })
-        ];
-        const dirtMaterial = new THREE.MeshStandardMaterial({ map: dirtTexture });
-        const stoneMaterial = new THREE.MeshStandardMaterial({ map: stoneTexture });
-        const cobblestoneMaterial = new THREE.MeshStandardMaterial({ map: cobblestoneTexture });
-        const oakPlanksMaterial = new THREE.MeshStandardMaterial({ map: oakPlanksTexture });
-        
-        const oakLeavesMaterial = new THREE.MeshStandardMaterial({ 
-            map: oakLeavesTexture, 
-            transparent: true, 
-            alphaTest: 0.1, 
-            side: THREE.DoubleSide,
-            color: 0x90ee90 // Tinte verde
-        });
-        
-        const oakLogMaterial = [
+            // Índice 3: stone
+            new THREE.MeshStandardMaterial({ map: stoneTexture }),
+            // Índice 4: cobblestone
+            new THREE.MeshStandardMaterial({ map: cobblestoneTexture }),
+            // Índice 5: oak_log_side
             new THREE.MeshStandardMaterial({ map: oakLogTexture }),
+            // Índice 6: oak_log_top
             new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),
-            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),
-            new THREE.MeshStandardMaterial({ map: oakLogTexture }),
-            new THREE.MeshStandardMaterial({ map: oakLogTexture }),
-            new THREE.MeshStandardMaterial({ map: oakLogTexture })
-        ];
-        
-        const craftingTableMaterial = [
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }),
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }),
-            new THREE.MeshStandardMaterial({ map: craftingTableTopTexture }),
+            // Índice 7: oak_planks
             new THREE.MeshStandardMaterial({ map: oakPlanksTexture }),
-        
+            // Índice 8: oak_leaves
+            new THREE.MeshStandardMaterial({ 
+                map: oakLeavesTexture, 
+                transparent: true, 
+                alphaTest: 0.1, 
+                side: THREE.DoubleSide, // Importante para que se vea por dentro
+                color: 0x90ee90 // Tinte verde
+            }),
+            // Índice 9: crafting_table_top
+            new THREE.MeshStandardMaterial({ map: craftingTableTopTexture }),
+            // Índice 10: crafting_table_side
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }),
+            // Índice 11: crafting_table_front
             new THREE.MeshStandardMaterial({ map: craftingTableFrontTexture }),
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture })
+            // Índice 12: coal_ore
+            new THREE.MeshStandardMaterial({ map: coalOreTexture }),
+            // Índice 13: iron_ore
+            new THREE.MeshStandardMaterial({ map: ironOreTexture }),
+            // Índice 14: gold_ore
+            new THREE.MeshStandardMaterial({ map: goldOreTexture }),
+            // Índice 15: diamond_ore
+            new THREE.MeshStandardMaterial({ map: diamondOreTexture }),
+            // Índice 16: emerald_ore
+            new THREE.MeshStandardMaterial({ map: emeraldOreTexture }),
+            // Índice 17: lapis_ore
+            new THREE.MeshStandardMaterial({ map: lapisOreTexture }),
+            // Índice 18: redstone_ore
+            new THREE.MeshStandardMaterial({ map: redstoneOreTexture }),
         ];
         
-        // Ores
-        const coalOreMaterial = new THREE.MeshStandardMaterial({ map: coalOreTexture });
-        const ironOreMaterial = new THREE.MeshStandardMaterial({ map: ironOreTexture });
-        const goldOreMaterial = new THREE.MeshStandardMaterial({ map: goldOreTexture });
-        const diamondOreMaterial = new THREE.MeshStandardMaterial({ map: diamondOreTexture });
-        const emeraldOreMaterial = new THREE.MeshStandardMaterial({ map: emeraldOreTexture });
-        const lapisOreMaterial = new THREE.MeshStandardMaterial({ map: lapisOreTexture });
-        // CORRECCIÓN: Usar redstoneOreTexture
-        const redstoneOreMaterial = new THREE.MeshStandardMaterial({ map: redstoneOreTexture });
+        // Mapeo de Tipo de Bloque -> Índices de Material para cada cara [px, nx, py, ny, pz, nz]
+        const blockMaterialIndices = {
+            'grass': [0, 0, 1, 2, 0, 0],
+            'dirt': [2, 2, 2, 2, 2, 2],
+            'stone': [3, 3, 3, 3, 3, 3],
+            'cobblestone': [4, 4, 4, 4, 4, 4],
+            'oak_log': [5, 5, 6, 6, 5, 5],
+            'oak_planks': [7, 7, 7, 7, 7, 7],
+            'oak_leaves': [8, 8, 8, 8, 8, 8],
+            'crafting_table': [10, 10, 9, 7, 11, 10], // px, nx, py(top), ny(bottom), pz(front), nz
+            'coal_ore': [12, 12, 12, 12, 12, 12],
+            'iron_ore': [13, 13, 13, 13, 13, 13],
+            'gold_ore': [14, 14, 14, 14, 14, 14],
+            'diamond_ore': [15, 15, 15, 15, 15, 15],
+            'emerald_ore': [16, 16, 16, 16, 16, 16],
+            'lapis_ore': [17, 17, 17, 17, 17, 17],
+            'redstone_ore': [18, 18, 18, 18, 18, 18],
+        };
+        
+        // Caras de un cubo [direccion x, y, z], [vértices (índices)]
+        const faces = [
+            { dir: [ 1,  0,  0], vertices: [ [1,1,1], [1,0,1], [1,0,0], [1,1,0] ] }, // px
+            { dir: [-1,  0,  0], vertices: [ [0,1,0], [0,0,0], [0,0,1], [0,1,1] ] }, // nx
+            { dir: [ 0,  1,  0], vertices: [ [1,1,1], [0,1,1], [0,1,0], [1,1,0] ] }, // py
+            { dir: [ 0, -1,  0], vertices: [ [1,0,0], [0,0,0], [0,0,1], [1,0,1] ] }, // ny
+            { dir: [ 0,  0,  1], vertices: [ [0,1,1], [0,0,1], [1,0,1], [1,1,1] ] }, // pz
+            { dir: [ 0,  0, -1], vertices: [ [1,1,0], [1,0,0], [0,0,0], [0,1,0] ] }  // nz
+        ];
+
 
         // --- Optimización de Colisión ---
         const collisionCheckBlockBox = new THREE.Box3();
@@ -839,25 +871,6 @@
             }
             for (let i = 0; i < 4; i++) craftingGrid2x2.push({ type: null, quantity: 0 });
             for (let i = 0; i < 9; i++) craftingGrid3x3.push({ type: null, quantity: 0 });
-            
-            // Materiales (Bloques)
-            materials = {
-                'dirt': dirtMaterial,
-                'grass': grassMaterial,
-                'stone': stoneMaterial,
-                'cobblestone': cobblestoneMaterial,
-                'oak_log': oakLogMaterial,
-                'oak_planks': oakPlanksMaterial,
-                'oak_leaves': oakLeavesMaterial,
-                'crafting_table': craftingTableMaterial,
-                'coal_ore': coalOreMaterial,
-                'iron_ore': ironOreMaterial,
-                'gold_ore': goldOreMaterial,
-                'diamond_ore': diamondOreMaterial,
-                'emerald_ore': emeraldOreMaterial,
-                'lapis_ore': lapisOreMaterial,
-                'redstone_ore': redstoneOreMaterial,
-            };
 
             // 1. Escena
             scene = new THREE.Scene();
@@ -921,6 +934,11 @@
                     });
                     players.clear();
                     
+                    // Limpiar Mallas de Chunks
+                    chunkMeshes.forEach(mesh => scene.remove(mesh));
+                    chunkMeshes.clear();
+                    worldData.clear(); // Limpiar datos de bloques
+                    
                     // Ocultar UI del juego
                     document.getElementById('game-ui').style.display = 'none';
                     document.getElementById('crosshair').style.display = 'none';
@@ -936,7 +954,8 @@
             initLoginScreen();
             
             // 7. Raycaster
-            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 5);
+            raycaster = new THREE.Raycaster(); // CAMBIO: Sin parámetros por defecto
+            raycaster.far = 7; // Límite de alcance para minar/poner
 
             // 8. Generador de Ruido
             noise = new window.SimplexNoise(); 
@@ -1161,6 +1180,12 @@
             document.getElementById('label-container').style.display = 'block'; 
             document.getElementById('game-canvas').style.display = 'block'; 
             
+            // Limpiar datos del mundo anterior si los hubiera
+            chunkMeshes.forEach(mesh => scene.remove(mesh));
+            chunkMeshes.clear();
+            worldData.clear();
+            currentChunk.set(Infinity, Infinity); // Forzar carga inicial
+            
             // Cargar inventario
             await loadInventory();
             
@@ -1258,50 +1283,115 @@
                 }
             });
             
-            // 2. Listener para Bloques
+            // 2. Listener para Bloques (Simplificado)
             const blocksRef = ref(db, `worlds/${worldName}/blocks`);
             
-            // Bloques AÑADIDOS
+            // Al añadir un bloque online, actualiza el chunk localmente
             blocksListener.added = onChildAdded(blocksRef, (snapshot) => {
                 const data = snapshot.val();
-                const blockKey = `${data.x}_${data.y}_${data.z}`;
-                const existingBlock = blockData.get(blockKey);
-
-                if (!existingBlock) {
-                    const material = materials[data.type];
-                    if (material) {
-                        addBlock(data.x, data.y, data.z, material, data.type, null, false); // false = no notificar
-                    }
-                }
+                setBlockType(data.x, data.y, data.z, data.type, false); // No notificar a Firebase de vuelta
+                regenerateAffectedChunkMeshes(data.x, data.y, data.z);
             });
             
-            // Bloques ELIMINADOS
+            // Al quitar un bloque online, actualiza el chunk localmente
             blocksListener.removed = onChildRemoved(blocksRef, (snapshot) => {
                 const data = snapshot.val();
-                const blockKey = `${data.x}_${data.y}_${data.z}`;
-                const existingBlock = blockData.get(blockKey);
-                
-                if (existingBlock) {
-                    removeBlock(existingBlock, false); // false = no notificar
-                }
+                setBlockType(data.x, data.y, data.z, null, false); // null = aire
+                regenerateAffectedChunkMeshes(data.x, data.y, data.z);
             });
         }
         
-        // --- FUNCIONES DE CHUNKS ---
+        // --- FUNCIONES DE CHUNKS Y MESHING ---
 
         function getChunkKey(chunkX, chunkZ) {
             return `${chunkX},${chunkZ}`;
         }
         
-        function getBlock(x, y, z) {
-            return blockData.get(`${x}_${y}_${z}`);
+        // Obtiene el TIPO de bloque en coordenadas globales
+        function getBlockType(x, y, z) {
+            const chunkX = Math.floor(x / chunkSize);
+            const chunkZ = Math.floor(z / chunkSize);
+            const chunkKey = getChunkKey(chunkX, chunkZ);
+            
+            const chunkData = worldData.get(chunkKey);
+            if (!chunkData) return null; // Chunk no cargado
+            
+            const localX = x - chunkX * chunkSize;
+            const localY = y + chunkHeight / 2; // Ajuste por rango -64 a 64
+            const localZ = z - chunkZ * chunkSize;
+            
+            if (localX < 0 || localX >= chunkSize || 
+                localY < 0 || localY >= chunkHeight || 
+                localZ < 0 || localZ >= chunkSize) {
+                return null; // Fuera de los límites del chunk (raro, pero seguro)
+            }
+            
+            // CAMBIO: Acceder al array 3D
+            return chunkData[localX][localY][localZ]; 
         }
         
-        function generateTree(x, y, z, chunkBlocks) {
+        // Establece el TIPO de bloque en coordenadas globales
+        function setBlockType(x, y, z, type, notifyFirebase = true) {
+            const chunkX = Math.floor(x / chunkSize);
+            const chunkZ = Math.floor(z / chunkSize);
+            const chunkKey = getChunkKey(chunkX, chunkZ);
+            
+            let chunkData = worldData.get(chunkKey);
+            if (!chunkData) {
+                // Si el chunk no existe (p.ej., al poner el primer bloque), crearlo
+                chunkData = createEmptyChunkData();
+                worldData.set(chunkKey, chunkData);
+            }
+            
+            const localX = x - chunkX * chunkSize;
+            const localY = y + chunkHeight / 2; // Ajuste
+            const localZ = z - chunkZ * chunkSize;
+            
+            if (localX < 0 || localX >= chunkSize || 
+                localY < 0 || localY >= chunkHeight || 
+                localZ < 0 || localZ >= chunkSize) {
+                console.error("Intento de escribir fuera de los límites del chunk", x, y, z);
+                return; 
+            }
+            
+            // CAMBIO: Actualizar el array 3D
+            chunkData[localX][localY][localZ] = type;
+            
+            // Notificar a Firebase si es necesario
+            if (notifyFirebase && db && worldName) {
+                const blockKey = `${x}_${y}_${z}`;
+                const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
+                if (type) {
+                    set(blockRef, { x, y, z, type: type });
+                } else {
+                    remove(blockRef);
+                }
+            }
+        }
+        
+        // Crea la estructura de datos vacía para un chunk
+        function createEmptyChunkData() {
+            // CAMBIO: Array 3D [x][y][z]
+            const chunkData = [];
+            for (let x = 0; x < chunkSize; x++) {
+                chunkData[x] = [];
+                for (let y = 0; y < chunkHeight; y++) {
+                    chunkData[x][y] = [];
+                    for (let z = 0; z < chunkSize; z++) {
+                        chunkData[x][y][z] = null; // null representa aire
+                    }
+                }
+            }
+            return chunkData;
+        }
+
+        
+        function generateTree(x, y, z) {
             // Tronco
             const height = Math.floor(Math.random() * 2) + 4; // 4-5 bloques de alto
             for (let i = 0; i < height; i++) {
-                addBlock(x, y + i, z, materials.oak_log, 'oak_log', chunkBlocks, false);
+                 // CAMBIO: Usar setBlockType para guardar DATOS
+                setBlockType(x, y + i, z, 'oak_log', false); 
             }
             
             // Hojas
@@ -1314,8 +1404,9 @@
                                 const leafX = x + lx;
                                 const leafY = y + height + ly -1;
                                 const leafZ = z + lz;
-                                if (!getBlock(leafX, leafY, leafZ)) {
-                                    addBlock(leafX, leafY, leafZ, materials.oak_leaves, 'oak_leaves', chunkBlocks, false);
+                                if (!getBlockType(leafX, leafY, leafZ)) {
+                                     // CAMBIO: Usar setBlockType
+                                    setBlockType(leafX, leafY, leafZ, 'oak_leaves', false);
                                 }
                             }
                         }
@@ -1326,11 +1417,15 @@
 
         function loadChunk(chunkX, chunkZ) {
             const chunkKey = getChunkKey(chunkX, chunkZ);
-            if (worldBlocks.has(chunkKey)) {
+            // CAMBIO: Comprobar si los DATOS ya existen
+            if (worldData.has(chunkKey)) {
                 return;
             }
 
-            const chunkBlocks = [];
+            // CAMBIO: Crear datos, no mallas
+            const chunkData = createEmptyChunkData();
+            worldData.set(chunkKey, chunkData); 
+            
             const startX = chunkX * chunkSize;
             const startZ = chunkZ * chunkSize;
 
@@ -1341,154 +1436,210 @@
                     
                     const noiseVal = noise.noise2D(worldX * terrainScale, worldZ * terrainScale);
                     const height = THREE.MathUtils.mapLinear(noiseVal, -1, 1, 0, terrainHeight);
-                    const y = Math.floor(height);
+                    const surfaceY = Math.floor(height);
 
-                    // Capa de Pasto
-                    if (!getBlock(worldX, y, worldZ)) { 
-                         addBlock(worldX, y, worldZ, materials.grass, 'grass', chunkBlocks, false);
-                    }
-
-                    // Capa de Tierra
-                    for (let y_fill = y - 1; y_fill > y - 4 && y_fill >= 0; y_fill--) {
-                         if (!getBlock(worldX, y_fill, worldZ)) {
-                            addBlock(worldX, y_fill, worldZ, materials.dirt, 'dirt', chunkBlocks, false);
+                    // Generar terreno base hasta la superficie
+                    for (let y = worldDepth; y <= surfaceY; y++) {
+                         // CAMBIO: Usar setBlockType, no addBlock
+                         let blockType;
+                         if (y === surfaceY) {
+                             blockType = 'grass';
+                         } else if (y > surfaceY - 4) {
+                             blockType = 'dirt';
+                         } else {
+                             // --- Lógica de Cuevas y Minerales ---
+                             const caveNoiseScale = 0.08;
+                             const caveNoise = noise.noise3D(
+                                 worldX * caveNoiseScale, 
+                                 y * caveNoiseScale * 2, // Hacer las cuevas más estiradas verticalmente
+                                 worldZ * caveNoiseScale
+                             );
+                             
+                             // CAMBIO: Ajustar umbral para MÁS cuevas
+                             const caveThreshold = 0.55; 
+                             if (caveNoise > caveThreshold) {
+                                 continue; // Aire (cueva)
+                             }
+                             
+                             blockType = 'stone';
+                             const oreRand = Math.random();
+                             
+                             if (oreRand < 0.03 && y < surfaceY - 2) blockType = 'coal_ore';
+                             else if (oreRand < 0.05 && y < -5) blockType = 'iron_ore';
+                             else if (oreRand < 0.06 && y < -10) blockType = Math.random() < 0.5 ? 'gold_ore' : 'lapis_ore';
+                             else if (oreRand < 0.07 && y < -12) blockType = 'redstone_ore';
+                             else if (oreRand < 0.075 && y < -15) blockType = Math.random() < 0.5 ? 'diamond_ore' : 'emerald_ore';
                          }
-                    }
-                    
-                    // Capa de Piedra y Minerales
-                    for (let y_fill = y - 4; y_fill >= worldDepth; y_fill--) {
-                         if (!getBlock(worldX, y_fill, worldZ)) {
-                            
-                            // --- NUEVO: Lógica de Cuevas ---
-                            const caveNoiseScale = 0.08;
-                            const caveNoise = noise.noise3D(
-                                worldX * caveNoiseScale, 
-                                y_fill * caveNoiseScale, 
-                                worldZ * caveNoiseScale
-                            );
-                            
-                            // Si el ruido está por encima de un umbral, es aire (cueva)
-                            const caveThreshold = 0.6;
-                            if (caveNoise > caveThreshold) {
-                                // Es aire, no poner bloque
-                                continue; 
-                            }
-                            // --- FIN Lógica de Cuevas ---
-                            
-                            let currentBlockType = 'stone';
-                            let currentMaterial = materials.stone;
-                            const rand = Math.random();
-                            
-                            if (rand < 0.03 && y_fill < y - 2) { 
-                                currentBlockType = 'coal_ore';
-                                currentMaterial = materials.coal_ore;
-                            } else if (rand < 0.05 && y_fill < -5) {
-                                currentBlockType = 'iron_ore';
-                                currentMaterial = materials.iron_ore;
-                            } else if (rand < 0.06 && y_fill < -10) { 
-                                if(Math.random() < 0.5) {
-                                    currentBlockType = 'gold_ore';
-                                    currentMaterial = materials.gold_ore;
-                                } else {
-                                    currentBlockType = 'lapis_ore';
-                                    currentMaterial = materials.lapis_ore;
-                                }
-                            } else if (rand < 0.07 && y_fill < -12) {
-                                currentBlockType = 'redstone_ore';
-                                currentMaterial = materials.redstone_ore;
-                            } else if (rand < 0.075 && y_fill < -15) {
-                                if(Math.random() < 0.5) {
-                                    currentBlockType = 'diamond_ore';
-                                    currentMaterial = materials.diamond_ore;
-                                } else {
-                                    currentBlockType = 'emerald_ore';
-                                    currentMaterial = materials.emerald_ore;
-                                }
-                            }
-                            
-                            addBlock(worldX, y_fill, worldZ, currentMaterial, currentBlockType, chunkBlocks, false);
-                         }
+                         setBlockType(worldX, y, blockType, false);
                     }
                     
                     // Generar Árboles
                     if (x > 1 && x < chunkSize - 2 && z > 1 && z < chunkSize - 2) {
-                        if (y >= worldDepth && y < terrainHeight && Math.random() < 0.01) { // 1% de chance
-                            generateTree(worldX, y + 1, worldZ, chunkBlocks);
+                        if (surfaceY >= worldDepth && surfaceY < terrainHeight && Math.random() < 0.01) { 
+                            generateTree(worldX, surfaceY + 1, worldZ); // CAMBIO: No pasar chunkBlocks
                         }
                     }
                 }
             }
-            worldBlocks.set(chunkKey, chunkBlocks);
+            
+            // CAMBIO: Generar la malla DESPUÉS de crear los datos
+            generateChunkMesh(chunkX, chunkZ);
         }
 
         function unloadChunk(chunkX, chunkZ) {
             const chunkKey = getChunkKey(chunkX, chunkZ);
-            if (worldBlocks.has(chunkKey)) {
-                const chunkBlocks = worldBlocks.get(chunkKey);
-                for (const block of chunkBlocks) {
-                    scene.remove(block);
-                    blockData.delete(`${block.position.x}_${block.position.y}_${block.position.z}`);
-                }
-                worldBlocks.delete(chunkKey);
+            // CAMBIO: Quitar malla y datos
+            if (chunkMeshes.has(chunkKey)) {
+                scene.remove(chunkMeshes.get(chunkKey));
+                chunkMeshes.delete(chunkKey);
+            }
+            if (worldData.has(chunkKey)) {
+                worldData.delete(chunkKey);
             }
         }
-
-        function addBlock(x, y, z, material, blockType, chunkArray = null, notifyFirebase = true) {
-            if (y > terrainHeight + 10) return; 
-            
-            const block = new THREE.Mesh(blockGeometry, material);
-            block.position.set(x, y, z);
-            block.castShadow = true;
-            block.receiveShadow = true;
-            block.userData = { type: blockType };
-            
-            scene.add(block);
-            blockData.set(`${x}_${y}_${z}`, block); 
-            
-            if (chunkArray) {
-                chunkArray.push(block);
-            } else {
-                const chunkX = Math.floor(x / chunkSize);
-                const chunkZ = Math.floor(z / chunkSize);
-                const chunkKey = getChunkKey(chunkX, chunkZ);
-                
-                if (worldBlocks.has(chunkKey)) {
-                    worldBlocks.get(chunkKey).push(block);
-                } else {
-                    worldBlocks.set(chunkKey, [block]);
-                }
-            }
-            
-            if (notifyFirebase && db && worldName) {
-                const blockKey = `${x}_${y}_${z}`;
-                const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
-                set(blockRef, { x, y, z, type: blockType });
-            }
-        }
-
-        function removeBlock(object, notifyFirebase = true) {
-            const pos = object.position;
-            const blockKey = `${pos.x}_${pos.y}_${pos.z}`; 
-            
-            scene.remove(object);
-            blockData.delete(blockKey);
-            
-            const chunkX = Math.floor(pos.x / chunkSize);
-            const chunkZ = Math.floor(pos.z / chunkSize);
+        
+        // --- NUEVA FUNCIÓN: Generar Malla del Chunk ---
+        function generateChunkMesh(chunkX, chunkZ) {
             const chunkKey = getChunkKey(chunkX, chunkZ);
+            const chunkData = worldData.get(chunkKey);
+            if (!chunkData) return; // No hay datos para generar
 
-            if (worldBlocks.has(chunkKey)) {
-                const chunkBlocks = worldBlocks.get(chunkKey);
-                const index = chunkBlocks.indexOf(object);
-                if (index > -1) {
-                    chunkBlocks.splice(index, 1);
+            // Eliminar malla antigua si existe
+            if (chunkMeshes.has(chunkKey)) {
+                scene.remove(chunkMeshes.get(chunkKey));
+            }
+            
+            const startX = chunkX * chunkSize;
+            const startZ = chunkZ * chunkSize;
+            
+            const positions = [];
+            const normals = [];
+            const uvs = [];
+            const indices = [];
+            const groups = []; // Para multi-material
+            
+            let groupMaterialIndex = -1;
+            let groupStart = 0;
+            let groupCount = 0;
+            let currentIndex = 0;
+            
+            const processedMaterials = new Map(); // Mapa [materialIndex, { start, count }]
+
+            for (let x = 0; x < chunkSize; x++) {
+                for (let y = 0; y < chunkHeight; y++) {
+                    for (let z = 0; z < chunkSize; z++) {
+                        const blockType = chunkData[x][y][z];
+                        if (!blockType || blockType === 'oak_leaves') continue; // Ignorar aire y hojas por ahora
+
+                        const worldX = startX + x;
+                        const worldY = y - chunkHeight / 2; // Convertir de vuelta a coords de mundo
+                        const worldZ = startZ + z;
+                        
+                        const materialIndices = blockMaterialIndices[blockType];
+                        if (!materialIndices) continue; // Bloque desconocido
+
+                        // Comprobar las 6 caras
+                        for (let i = 0; i < faces.length; i++) {
+                            const face = faces[i];
+                            const neighborX = worldX + face.dir[0];
+                            const neighborY = worldY + face.dir[1];
+                            const neighborZ = worldZ + face.dir[2];
+                            
+                            const neighborType = getBlockType(neighborX, neighborY, neighborZ);
+                            
+                            // Si el vecino es aire o transparente (hojas), añadir esta cara
+                            if (!neighborType || neighborType === 'oak_leaves') {
+                                const materialIndex = materialIndices[i];
+                                
+                                // Añadir vértices
+                                for (const vert of face.vertices) {
+                                    positions.push(worldX + vert[0] - 0.5, worldY + vert[1] - 0.5, worldZ + vert[2] - 0.5);
+                                    normals.push(face.dir[0], face.dir[1], face.dir[2]);
+                                }
+                                
+                                // Añadir UVs (simple, para toda la cara)
+                                uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+                                
+                                // Añadir índices (2 triángulos)
+                                indices.push(currentIndex, currentIndex + 1, currentIndex + 2);
+                                indices.push(currentIndex, currentIndex + 2, currentIndex + 3);
+                                
+                                // Gestionar grupos de material
+                                let groupInfo = processedMaterials.get(materialIndex);
+                                if (!groupInfo) {
+                                    groupInfo = { start: indices.length - 6, count: 0 };
+                                    processedMaterials.set(materialIndex, groupInfo);
+                                }
+                                groupInfo.count += 6; // 6 índices por cara
+                                
+                                currentIndex += 4; // 4 vértices por cara
+                            }
+                        }
+                    }
                 }
             }
             
-            if (notifyFirebase && db && worldName) {
-                const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
-                remove(blockRef);
-            }
+            if (positions.length === 0) return; // Chunk vacío
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            geometry.setIndex(indices);
+            
+            // Añadir grupos
+            processedMaterials.forEach((groupInfo, materialIndex) => {
+                 geometry.addGroup(groupInfo.start, groupInfo.count, materialIndex);
+            });
+            
+            geometry.computeBoundingSphere(); // Necesario para frustum culling
+            
+            // Crear malla con multi-material
+            const chunkMesh = new THREE.Mesh(geometry, blockMaterials); 
+            chunkMesh.castShadow = true;
+            chunkMesh.receiveShadow = true;
+            
+            scene.add(chunkMesh);
+            chunkMeshes.set(chunkKey, chunkMesh);
+        }
+        
+        // Regenera la malla del chunk y los vecinos afectados si es necesario
+        function regenerateAffectedChunkMeshes(worldX, worldY, worldZ) {
+            const chunkX = Math.floor(worldX / chunkSize);
+            const chunkZ = Math.floor(worldZ / chunkSize);
+            
+            generateChunkMesh(chunkX, chunkZ); // Regenerar el chunk principal
+            
+            // Comprobar si el bloque estaba en un borde y regenerar vecinos
+            const localX = worldX - chunkX * chunkSize;
+            const localZ = worldZ - chunkZ * chunkSize;
+            
+            if (localX === 0) generateChunkMesh(chunkX - 1, chunkZ);
+            if (localX === chunkSize - 1) generateChunkMesh(chunkX + 1, chunkZ);
+            if (localZ === 0) generateChunkMesh(chunkX, chunkZ - 1);
+            if (localZ === chunkSize - 1) generateChunkMesh(chunkX, chunkZ + 1);
+        }
+
+        // --- FIN FUNCIONES DE CHUNKS Y MESHING ---
+
+
+        // CAMBIO: addBlock y removeBlock ahora solo modifican DATOS y regeneran mallas
+        
+        function addBlock(x, y, z, blockType, notifyFirebase = true) {
+            if (y > terrainHeight + 10 || y < worldDepth) return; 
+            
+            setBlockType(x, y, z, blockType, notifyFirebase);
+            regenerateAffectedChunkMeshes(x, y, z);
+        }
+
+        function removeBlock(x, y, z, notifyFirebase = true) {
+            const currentType = getBlockType(x, y, z);
+            if (!currentType || currentType === 'oak_leaves') return null; // No se puede romper aire u hojas
+            
+            setBlockType(x, y, z, null, notifyFirebase); // null = aire
+            regenerateAffectedChunkMeshes(x, y, z);
+            
+            return currentType; // Devuelve el tipo de bloque roto para el drop
         }
         
         function updatePlayerBox(position) {
@@ -1500,6 +1651,7 @@
             playerBox.max.y = position.y + (playerHeight / 2);
         }
 
+        // CAMBIO: checkCollision ahora usa getBlockType
         function checkCollision() {
             const minX = Math.floor(playerBox.min.x);
             const maxX = Math.ceil(playerBox.max.x);
@@ -1511,9 +1663,8 @@
             for (let x = minX; x < maxX; x++) {
                 for (let y = minY; y < maxY; y++) {
                     for (let z = minZ; z < maxZ; z++) {
-                        const block = getBlock(x, y, z);
-                        // No colisionar con hojas
-                        if (block && block.userData.type !== 'oak_leaves') { 
+                        const blockType = getBlockType(x, y, z);
+                        if (blockType && blockType !== 'oak_leaves') { // Ignorar aire y hojas
                             boxMin.set(x - 0.5, y - 0.5, z - 0.5);
                             boxMax.set(x + 0.5, y + 0.5, z + 0.5);
                             collisionCheckBlockBox.set(boxMin, boxMax);
@@ -1542,17 +1693,18 @@
 
             for (let x = chunkX - renderDistance; x <= chunkX + renderDistance; x++) {
                 for (let z = chunkZ - renderDistance; z <= chunkZ + renderDistance; z++) {
-                    loadChunk(x, z);
+                    loadChunk(x, z); // Ahora carga datos y genera malla
                 }
             }
 
-            for (const chunkKey of worldBlocks.keys()) {
+            // CAMBIO: Comprobar worldData en lugar de worldBlocks
+            for (const chunkKey of worldData.keys()) {
                 const [cx, cz] = chunkKey.split(',').map(Number);
                 const dist_x = Math.abs(cx - chunkX);
                 const dist_z = Math.abs(cz - chunkZ);
                 
                 if (dist_x > renderDistance || dist_z > renderDistance) {
-                    unloadChunk(cx, cz);
+                    unloadChunk(cx, cz); // Ahora quita malla y datos
                 }
             }
         }
@@ -1622,36 +1774,44 @@
                     canJump = false;
                 }
                 
-                const allBlocks = Array.from(worldBlocks.values()).flat();
-                
+                // CAMBIO: Raycasting ahora intersecta las mallas de los chunks
+                raycaster.setFromCamera({x:0, y:0}, camera); 
+                const meshesToIntersect = Array.from(chunkMeshes.values());
+                const intersects = raycaster.intersectObjects(meshesToIntersect);
+
                 // Lógica de Minería
-                raycaster.setFromCamera(new THREE.Vector2(), camera);
-                const intersects = raycaster.intersectObjects(allBlocks);
-
                 if (isMining) {
-                    if (intersects.length > 0 && intersects[0].object.userData.type) {
-                        const intersectedBlock = intersects[0].object;
+                    let blockToMineCoords = null;
+                    if (intersects.length > 0) {
+                        const intersect = intersects[0];
+                        // Calcular coordenadas del bloque golpeado
+                        const hitPos = intersect.point.clone().sub(intersect.face.normal.clone().multiplyScalar(0.1));
+                        hitPos.floor(); 
                         
-                        if (intersectedBlock.userData.type === 'oak_leaves') {
-                            stopMining();
-                            return; // No se pueden minar hojas
+                        const blockType = getBlockType(hitPos.x, hitPos.y, hitPos.z);
+                        
+                        if (blockType && blockType !== 'oak_leaves') {
+                             blockToMineCoords = hitPos;
                         }
-
-                        if (currentMiningBlock === null) {
-                            // Empezar a minar
-                            currentMiningBlock = intersectedBlock;
+                    }
+                    
+                    if (blockToMineCoords) {
+                        // Empezar a minar o continuar
+                        if (!currentMiningBlockCoords || !currentMiningBlockCoords.equals(blockToMineCoords)) {
+                            // Empezar a minar un bloque nuevo
+                            currentMiningBlockCoords = blockToMineCoords.clone();
                             miningTimer = 0;
                             
                             if (breakingBlockOverlay) scene.remove(breakingBlockOverlay);
                             breakingBlockOverlay = new THREE.Mesh(blockGeometry, breakingMaterial.clone());
-                            breakingBlockOverlay.position.copy(currentMiningBlock.position);
+                            // Posicionar el overlay en el centro del bloque
+                            breakingBlockOverlay.position.copy(currentMiningBlockCoords); 
                             breakingBlockOverlay.renderOrder = 1; 
                             breakingBlockOverlay.material.map = destroyTextures[0];
                             scene.add(breakingBlockOverlay);
-
                         } 
-                        else if (currentMiningBlock && intersectedBlock.position.equals(currentMiningBlock.position)) {
-                            // Continuar minando
+                        else {
+                            // Continuar minando el mismo bloque
                             miningTimer += delta;
                             const breakStage = Math.min(9, Math.floor((miningTimer / blockBreakTime) * 10));
                             
@@ -1662,22 +1822,16 @@
 
                             if (miningTimer >= blockBreakTime) {
                                 // Bloque roto
-                                const blockType = currentMiningBlock.userData.type;
+                                const blockType = removeBlock(currentMiningBlockCoords.x, currentMiningBlockCoords.y, currentMiningBlockCoords.z, true); 
                                 const dropType = getBlockDrop(blockType);
                                 if (dropType) {
                                     addToInventory(dropType, 1);
                                 }
-                                removeBlock(currentMiningBlock, true);
-                                stopMining();
+                                stopMining(); // Resetea currentMiningBlockCoords
                             }
                         }
-                        else {
-                            // Se movió a otro bloque
-                            stopMining();
-                        }
-                    } 
-                    else {
-                        // Se dejó de apuntar
+                    } else {
+                        // Se dejó de apuntar a un bloque válido
                         stopMining();
                     }
                 }
@@ -1697,7 +1851,7 @@
                 }
                 
                 // Caída al vacío
-                if (playerPos.y < -50) {
+                if (playerPos.y < worldDepth - 20) { // Ajustar límite
                     respawnPlayer();
                 }
             }
@@ -1766,11 +1920,10 @@
             if (remaining > 0) {
                 for (let i = 0; i < 36; i++) {
                     const slot = inventory[i];
-                    // CORRECCIÓN: 'quantity === 0' es un slot vacío
                     if (slot.type === null || slot.quantity === 0) {
                         slot.type = itemType;
                         const toAdd = Math.min(remaining, 64);
-                        slot.quantity = toAdd; // CORRECCIÓN: No sumar, asignar
+                        slot.quantity = toAdd; 
                         remaining -= toAdd;
                         if (remaining === 0) break;
                     }
@@ -1792,9 +1945,8 @@
 
         
         function stopMining() {
-            // CORRECCIÓN: NO cambiar isMining aquí
             miningTimer = 0;
-            currentMiningBlock = null;
+            currentMiningBlockCoords = null; // CAMBIO: Usar coordenadas
             if (breakingBlockOverlay) {
                 scene.remove(breakingBlockOverlay);
                 breakingBlockOverlay = null;
@@ -1856,6 +2008,7 @@
             // Botón Izquierdo (0): Iniciar minería
             if (event.button === 0) {
                 isMining = true;
+                // La lógica de qué minar se hace en animate()
             } 
             
             // Botón Derecho (2): Poner bloque / Interactuar
@@ -1864,13 +2017,20 @@
                 
                 const selectedItem = inventory[selectedSlot];
                 
-                raycaster.setFromCamera(new THREE.Vector2(), camera); 
-                const allBlocks = Array.from(worldBlocks.values()).flat();
-                const intersects = raycaster.intersectObjects(allBlocks);
+                raycaster.setFromCamera({x:0, y:0}, camera); 
+                const meshesToIntersect = Array.from(chunkMeshes.values());
+                const intersects = raycaster.intersectObjects(meshesToIntersect);
 
                 if (intersects.length > 0) {
                     const intersect = intersects[0];
-                    const targetBlockType = intersect.object.userData.type;
+                    // Calcular coordenadas del bloque ADYACENTE donde poner
+                    const placePos = intersect.point.clone().add(intersect.face.normal.clone().multiplyScalar(0.1));
+                    placePos.floor(); 
+                    
+                    const targetBlockPos = intersect.point.clone().sub(intersect.face.normal.clone().multiplyScalar(0.1));
+                    targetBlockPos.floor();
+                    
+                    const targetBlockType = getBlockType(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
                     
                     // Click derecho en Mesa de Crafteo
                     if (targetBlockType === 'crafting_table') {
@@ -1883,23 +2043,20 @@
                     if (!selectedItem || selectedItem.quantity <= 0 || itemTypes.has(selectedItem.type)) {
                         return;
                     }
-                
-                    const selectedMaterial = materials[selectedItem.type];
-                    if (!selectedMaterial) return;
                     
-                    if (targetBlockType === 'oak_leaves') return; // No se puede poner en hojas
+                    if (targetBlockType === 'oak_leaves') return; // No se puede poner pegado a hojas
                     
-                    const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
-                    newBlockPos.round();
-                    
+                    // Comprobar colisión con el jugador antes de poner
                     const newBlockBox = new THREE.Box3(
-                        newBlockPos.clone().subScalar(0.5),
-                        newBlockPos.clone().addScalar(0.5)
+                        placePos.clone().subScalar(0.5),
+                        placePos.clone().addScalar(0.5)
                     );
 
+                    updatePlayerBox(controls.getObject().position); // Asegurarse de que playerBox esté actualizado
+
                     if (!playerBox.intersectsBox(newBlockBox)) {
-                        // Añadir bloque al mundo
-                        addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, selectedItem.type, null, true);
+                        // Añadir bloque al mundo (solo datos, la malla se regenera)
+                        addBlock(placePos.x, placePos.y, placePos.z, selectedItem.type, true);
                         
                         // Restar del inventario
                         selectedItem.quantity--;
