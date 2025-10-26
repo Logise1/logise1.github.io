@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuizPlat AI (RTDB - Test)</title>
+    <title>Quizzer</title>
     <!-- Carga de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Carga de Lucide Icons -->
@@ -38,20 +38,20 @@
         }
         /* Estilos para las pestañas de Auth */
         .auth-tab.active {
-            border-bottom-color: #3b82f6; /* blue-500 */
-            color: #3b82f6;
+            border-bottom-color: #6366f1; /* indigo-500 */
+            color: #6366f1;
             font-weight: 600;
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-gray-50 text-gray-900">
 
     <!-- Contenedor principal -->
     <div class="container mx-auto p-4 max-w-3xl">
 
         <!-- Encabezado -->
-        <header class="bg-white shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-between items-center gap-4">
-            <h1 class="text-3xl font-bold text-blue-600">QuizPlat AI (RTDB - Test)</h1>
+        <header class="bg-white/70 backdrop-blur-sm shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-between items-center gap-4 sticky top-4 z-10">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Quizzer</h1>
             <!-- Controles de autenticación y navegación -->
             <div id="auth-controls" class="hidden flex items-center gap-4">
                 <!-- Mostraremos el Nombre de Usuario -->
@@ -63,12 +63,12 @@
                     <span id="user-coin-balance" class="font-bold text-lg">0</span>
                 </div>
 
-                <button id="home-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors">
+                <button id="home-btn" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                     <i data-lucide="home"></i>
                     <span>Inicio</span>
                 </button>
                 <!-- Botón de Sign Out -->
-                <button id="sign-out-btn" class="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition-colors">
+                <button id="sign-out-btn" class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     <span>Salir</span>
                 </button>
@@ -78,7 +78,7 @@
         <main>
             <!-- VISTA DE AUTENTICACIÓN -->
             <section id="view-auth" class="view active">
-                <div class="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto">
+                <div class="bg-white p-8 rounded-lg shadow-xl max-w-md mx-auto">
                     <!-- Pestañas -->
                     <div class="flex border-b mb-6">
                         <button id="tab-login" class="auth-tab active flex-1 py-3 text-center text-gray-500 border-b-2 border-transparent transition-colors" data-form="login-form-container">Iniciar Sesión</button>
@@ -91,13 +91,13 @@
                         <form id="login-form" class="space-y-4">
                             <div>
                                 <label for="login-username" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
-                                <input type="text" id="login-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" id="login-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                             </div>
                             <div>
                                 <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                                <input type="password" id="login-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <input type="password" id="login-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                             </div>
-                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors">
+                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                                 <span>Entrar</span>
                             </button>
                         </form>
@@ -109,13 +109,13 @@
                         <form id="register-form" class="space-y-4">
                             <div>
                                 <label for="register-username" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
-                                <input type="text" id="register-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <input type="text" id="register-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                             </div>
                             <div>
                                 <label for="register-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                                <input type="password" id="register-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <input type="password" id="register-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                             </div>
-                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition-colors">
+                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                                 <span>Registrarse</span>
                             </button>
                         </form>
@@ -128,11 +128,11 @@
                 <div class="flex flex-wrap justify-between items-center gap-3">
                     <h2 class="text-2xl font-semibold">Quizzes Disponibles</h2>
                     <div class="flex gap-2">
-                        <button id="show-general-leaderboard-btn" class="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg shadow hover:bg-yellow-600 transition-colors">
+                        <button id="show-general-leaderboard-btn" class="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg shadow hover:bg-amber-600 transition-colors">
                             <i data-lucide="trophy"></i>
                             <span>Ranking General</span>
                         </button>
-                        <button id="show-create-view-btn" class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors">
+                        <button id="show-create-view-btn" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                             <i data-lucide="plus"></i>
                             <span>Crear Quiz</span>
                         </button>
@@ -145,20 +145,20 @@
 
             <!-- Vista: Crear Quiz -->
             <section id="view-create" class="view">
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
                     <h2 class="text-2xl font-semibold mb-4">Crear Nuevo Quiz</h2>
                     <form id="create-quiz-form" class="space-y-4">
                         <div>
                             <label for="quiz-title" class="block text-sm font-medium text-gray-700">Título del Quiz</label>
-                            <input type="text" id="quiz-title" name="quiz-title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Los Planetas del Sistema Solar">
+                            <input type="text" id="quiz-title" name="quiz-title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300" placeholder="Ej: Los Planetas del Sistema Solar">
                         </div>
                         <div>
                             <label for="quiz-topic" class="block text-sm font-medium text-gray-700">Tema del Quiz (para la IA)</label>
-                            <input type="text" id="quiz-topic" name="quiz-topic" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Historia de Roma, Capitales del Mundo">
+                            <input type="text" id="quiz-topic" name="quiz-topic" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300" placeholder="Ej: Historia de Roma, Capitales del Mundo">
                         </div>
                         <div>
                             <label for="quiz-level" class="block text-sm font-medium text-gray-700">Nivel Educativo</label>
-                            <select id="quiz-level" name="quiz-level" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white">
+                            <select id="quiz-level" name="quiz-level" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 bg-white">
                                 <option>General</option>
                                 <optgroup label="Primaria">
                                     <option>1º Primaria</option>
@@ -184,28 +184,28 @@
                         </div>
                         <div>
                             <label for="quiz-num-questions" class="block text-sm font-medium text-gray-700">Número de Preguntas</label>
-                            <input type="number" id="quiz-num-questions" name="quiz-num-questions" min="3" max="25" value="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <input type="number" id="quiz-num-questions" name="quiz-num-questions" min="3" max="25" value="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Tipo de Quiz</label>
                             <div class="mt-2 flex gap-4">
                                 <label class="flex items-center">
-                                    <input type="radio" name="quiz-type" value="free" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" checked>
+                                    <input type="radio" name="quiz-type" value="free" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
                                     <span class="ml-2 text-gray-700">Gratis (Ganas 2 monedas si lo juegan)</span>
                                 </label>
                                 <label class="flex items-center">
-                                    <input type="radio" name="quiz-type" value="paid" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300">
+                                    <input type="radio" name="quiz-type" value="paid" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
                                     <span class="ml-2 text-gray-700">De Pago</span>
                                 </label>
                             </div>
                         </div>
                         <div id="quiz-price-container" class="hidden">
                             <label for="quiz-price" class="block text-sm font-medium text-gray-700">Precio (monedas)</label>
-                            <input type="number" id="quiz-price" name="quiz-price" min="1" max="100" value="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <input type="number" id="quiz-price" name="quiz-price" min="1" max="100" value="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                         </div>
 
-                        <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors">
+                        <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                             <i data-lucide="wand-2"></i>
                             <span>Generar Quiz con IA</span>
                         </button>
@@ -215,10 +215,10 @@
 
             <!-- Vista: Jugando Quiz -->
             <section id="view-play" class="view">
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h2 id="play-quiz-title" class="text-2xl font-semibold"></h2>
-                        <span id="score-display" class="text-xl font-bold text-blue-600">Puntaje: 0</span>
+                        <span id="score-display" class="text-xl font-bold text-indigo-600">Puntaje: 0</span>
                     </div>
                     
                     <div id="question-container" class="mb-6">
@@ -230,12 +230,12 @@
 
                     <div id="end-quiz-container" class="hidden text-center">
                         <h3 class="text-2xl font-bold mb-2">¡Quiz Terminado!</h3>
-                        <p id="final-score-text" class="text-xl mb-4"></p>
+                        <p id="final-score-text" class="text-2xl font-light mb-4"></p>
                         <!-- NUEVO: Mensaje de Monedas -->
                         <p id="final-coin-text" class="text-lg mb-4 text-yellow-600 font-semibold"></p>
                         <form id="leaderboard-form" class="flex flex-col sm:flex-row gap-2 justify-center">
-                            <input type="text" id="player-name" placeholder="Tu nombre para el ranking" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors">
+                            <input type="text" id="player-name" placeholder="Tu nombre para el ranking" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
+                            <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                                 <i data-lucide="save"></i>
                                 <span>Guardar Puntaje</span>
                             </button>
@@ -246,10 +246,10 @@
 
             <!-- Vista: Leaderboard (Quiz Específico) -->
             <section id="view-leaderboard" class="view">
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h2 id="leaderboard-title" class="text-2xl font-semibold">Leaderboard</h2>
-                        <button id="leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors">
+                        <button id="leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg shadow hover:bg-slate-600 transition-colors">
                             <i data-lucide="arrow-left"></i>
                             <span>Volver</span>
                         </button>
@@ -262,10 +262,10 @@
 
             <!-- VISTA: Leaderboard General (Monedas) -->
             <section id="view-general-leaderboard" class="view">
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h2 id="general-leaderboard-title" class="text-2xl font-semibold">Ranking General de Monedas</h2>
-                        <button id="general-leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors">
+                        <button id="general-leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg shadow hover:bg-slate-600 transition-colors">
                             <i data-lucide="arrow-left"></i>
                             <span>Volver</span>
                         </button>
@@ -278,8 +278,8 @@
 
             <!-- Vista: Cargando -->
             <section id="view-loading" class="view">
-                <div class="bg-white p-12 rounded-lg shadow-md text-center flex flex-col items-center gap-4">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+                <div class="bg-white p-12 rounded-lg shadow-xl text-center flex flex-col items-center gap-4">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500"></div>
                     <h2 class="text-2xl font-semibold text-gray-700">Generando tu quiz con IA...</h2>
                     <p class="text-gray-500">Esto puede tardar unos segundos.</p>
                 </div>
@@ -305,8 +305,8 @@
             <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-4">Confirmar Acción</h3>
             <p id="confirm-message" class="text-gray-700 mb-6"></p>
             <div class="flex justify-end gap-3">
-                <button id="confirm-cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">Cancelar</button>
-                <button id="confirm-ok-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Confirmar</button>
+                <button id="confirm-cancel-btn" class="px-4 py-2 bg-slate-300 text-gray-800 rounded-lg hover:bg-slate-400 transition-colors">Cancelar</button>
+                <button id="confirm-ok-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Confirmar</button>
             </div>
         </div>
     </div>
@@ -476,7 +476,7 @@
             quizListContainer.innerHTML = '';
             quizzes.forEach(quiz => {
                 const quizCard = document.createElement('div');
-                quizCard.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+                quizCard.className = 'bg-white p-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
                 
@@ -485,7 +485,7 @@
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
                         <p class="text-sm text-gray-600">Tema: ${quiz.topic} (${quiz.questions.length} preguntas)</p>
                         <p class="text-sm text-gray-500">Nivel: <span class="font-medium">${quiz.level || 'General'}</span></p>
-                        <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-blue-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
+                        <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
                     </div>
                     <div class="flex flex-col items-start sm:items-end gap-2">
                         <div class="flex items-center gap-1 ${quizType === 'paid' ? 'text-yellow-600' : 'text-green-600'}">
@@ -493,11 +493,11 @@
                             <span class="font-semibold">${quizType === 'paid' ? `${quizPrice} monedas` : 'Gratis'}</span>
                         </div>
                         <div class="flex gap-2">
-                            <button class="play-btn flex items-center gap-2 px-3 py-2 bg-yellow-400 text-yellow-900 rounded-lg shadow hover:bg-yellow-500 transition-colors" data-quiz-id="${quiz.id}">
+                            <button class="play-btn flex items-center gap-2 px-3 py-2 bg-yellow-500 text-black rounded-lg shadow hover:bg-yellow-600 transition-colors" data-quiz-id="${quiz.id}">
                                 <i data-lucide="play"></i>
                                 <span>Jugar</span>
                             </button>
-                            <button class="leaderboard-btn flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors" data-quiz-id="${quiz.id}">
+                            <button class="leaderboard-btn flex items-center gap-2 px-3 py-2 bg-slate-500 text-white rounded-lg shadow hover:bg-slate-600 transition-colors" data-quiz-id="${quiz.id}">
                                 <i data-lucide="bar-chart-3"></i>
                                 <span>Leaderboard</span>
                             </button>
@@ -559,10 +559,6 @@
 
             try {
                 const walletsRef = ref(db, `${dbPath}/wallets`);
-                // Consultar RTDB ordenando por 'coins'
-                // CAMBIO: Se elimina la query con orderByChild para ordenar en el cliente
-                // const walletsQuery = query(walletsRef, orderByChild('coins'));
-                
                 // CAMBIO: Se usa la referencia directa
                 const snapshot = await get(walletsRef);
 
@@ -572,7 +568,7 @@
                 }
 
                 const wallets = Object.values(snapshot.val());
-                // CAMBIO: Se ordena en el cliente en lugar de invertir la query
+                // CAMBIO: Se ordena en el cliente
                 wallets.sort((a, b) => b.coins - a.coins); // Ordenar por monedas, descendente
                 
                 list.innerHTML = wallets.slice(0, 20).map((wallet, index) => `
@@ -726,7 +722,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 const jsonText = result.choices[0].message.content;
                 const newQuizData = JSON.parse(jsonText);
                 
-                if (!newQuizData.title || !newQuizData.questions || newQuizData.questions.length === 0) {
+                if (!newQuizData.questions || newQuizData.questions.length === 0) {
                     throw new Error("Datos del quiz incompletos o en formato incorrecto.");
                 }
                 
@@ -738,8 +734,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     ownerUsername: loggedInUser, 
                     createdAt: new Date().toISOString(), 
                     quizType: quizType, 
-                    price: price, 
-                    ...newQuizData 
+                    price: price
                 };
                 
                 // Guardar en RTDB
