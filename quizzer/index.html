@@ -149,12 +149,42 @@
                     <h2 class="text-2xl font-semibold mb-4">Crear Nuevo Quiz</h2>
                     <form id="create-quiz-form" class="space-y-4">
                         <div>
-                            <label for="quiz-topic" class="block text-sm font-medium text-gray-700">Tema del Quiz</label>
+                            <label for="quiz-title" class="block text-sm font-medium text-gray-700">Título del Quiz</label>
+                            <input type="text" id="quiz-title" name="quiz-title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Los Planetas del Sistema Solar">
+                        </div>
+                        <div>
+                            <label for="quiz-topic" class="block text-sm font-medium text-gray-700">Tema del Quiz (para la IA)</label>
                             <input type="text" id="quiz-topic" name="quiz-topic" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Historia de Roma, Capitales del Mundo">
                         </div>
                         <div>
+                            <label for="quiz-level" class="block text-sm font-medium text-gray-700">Nivel Educativo</label>
+                            <select id="quiz-level" name="quiz-level" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                <option>General</option>
+                                <optgroup label="Primaria">
+                                    <option>1º Primaria</option>
+                                    <option>2º Primaria</option>
+                                    <option>3º Primaria</option>
+                                    <option>4º Primaria</option>
+                                    <option>5º Primaria</option>
+                                    <option>6º Primaria</option>
+                                </optgroup>
+                                <optgroup label="ESO">
+                                    <option>1º ESO</option>
+                                    <option>2º ESO</option>
+                                    <option>3º ESO</option>
+                                    <option>4º ESO</option>
+                                </optgroup>
+                                <optgroup label="Bachillerato">
+                                    <option>1º Bachillerato</option>
+                                    <option>2º Bachillerato</option>
+                                </optgroup>
+                                <option>Universidad</option>
+                                <option>Otro</option>
+                            </select>
+                        </div>
+                        <div>
                             <label for="quiz-num-questions" class="block text-sm font-medium text-gray-700">Número de Preguntas</label>
-                            <input type="number" id="quiz-num-questions" name="quiz-num-questions" min="3" max="10" value="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <input type="number" id="quiz-num-questions" name="quiz-num-questions" min="3" max="25" value="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         
                         <div>
@@ -454,7 +484,7 @@
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
                         <p class="text-sm text-gray-600">Tema: ${quiz.topic} (${quiz.questions.length} preguntas)</p>
-                        <!-- NUEVO: Mostrar ownerUsername -->
+                        <p class="text-sm text-gray-500">Nivel: <span class="font-medium">${quiz.level || 'General'}</span></p>
                         <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-blue-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
                     </div>
                     <div class="flex flex-col items-start sm:items-end gap-2">
@@ -530,9 +560,11 @@
             try {
                 const walletsRef = ref(db, `${dbPath}/wallets`);
                 // Consultar RTDB ordenando por 'coins'
-                const walletsQuery = query(walletsRef, orderByChild('coins'));
+                // CAMBIO: Se elimina la query con orderByChild para ordenar en el cliente
+                // const walletsQuery = query(walletsRef, orderByChild('coins'));
                 
-                const snapshot = await get(walletsQuery);
+                // CAMBIO: Se usa la referencia directa
+                const snapshot = await get(walletsRef);
 
                 if (!snapshot.exists()) {
                     list.innerHTML = `<li class="text-gray-500">No hay datos de monedas.</li>`;
@@ -540,7 +572,8 @@
                 }
 
                 const wallets = Object.values(snapshot.val());
-                wallets.reverse(); // RTDB ordena ascendente, lo invertimos
+                // CAMBIO: Se ordena en el cliente en lugar de invertir la query
+                wallets.sort((a, b) => b.coins - a.coins); // Ordenar por monedas, descendente
                 
                 list.innerHTML = wallets.slice(0, 20).map((wallet, index) => `
                     <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
@@ -607,6 +640,8 @@
                 showErrorModal("Debes iniciar sesión para crear un quiz.");
                 return;
             }
+            const title = document.getElementById('quiz-title').value;
+            const level = document.getElementById('quiz-level').value;
             const topic = document.getElementById('quiz-topic').value;
             const numQuestions = document.getElementById('quiz-num-questions').value;
             const quizType = document.querySelector('input[name="quiz-type"]:checked').value;
@@ -697,7 +732,10 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 
                 const newQuiz = { 
                     topic: topic, 
-                    ownerUsername: loggedInUser, // NUEVO: Guardar username
+                    level: level, // NUEVO
+                    title: title, // NUEVO (usamos el título del formulario)
+                    questions: newQuizData.questions, // Obtenemos solo las preguntas de la IA
+                    ownerUsername: loggedInUser, 
                     createdAt: new Date().toISOString(), 
                     quizType: quizType, 
                     price: price, 
@@ -1215,4 +1253,3 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
     </script>
 </body>
 </html>
-
