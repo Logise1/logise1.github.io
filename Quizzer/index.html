@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizPlat AI (RTDB - Test)</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        /* Fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Transiciones suaves para las vistas */
+        .view {
+            display: none; /* Oculto por defecto */
+        }
+        .view.active {
+            display: block; /* Visible cuando está activo */
+        }
+        /* Estilos para el feedback de las respuestas */
+        .option-btn.correct {
+            background-color: #22c55e !important; /* green-500 */
+            color: white !important;
+            border-color: #16a34a !important; /* green-600 */
+        }
+        .option-btn.incorrect {
+            background-color: #ef4444 !important; /* red-500 */
+            color: white !important;
+            border-color: #dc2626 !important; /* red-600 */
+        }
+        .option-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        /* Estilos para las pestañas de Auth */
+        .auth-tab.active {
+            border-bottom-color: #3b82f6; /* blue-500 */
+            color: #3b82f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Contenedor principal -->
+    <div class="container mx-auto p-4 max-w-3xl">
+
+        <!-- Encabezado -->
+        <header class="bg-white shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-between items-center gap-4">
+            <h1 class="text-3xl font-bold text-blue-600">QuizPlat AI (RTDB - Test)</h1>
+            <!-- Controles de autenticación y navegación -->
+            <div id="auth-controls" class="hidden flex items-center gap-4">
+                <!-- Mostraremos el Nombre de Usuario -->
+                <div id="user-name-display" class="text-sm font-semibold text-gray-700"></div>
+                
+                <!-- Monedero -->
+                <div id="user-coin-display" class="flex items-center gap-1 text-yellow-600 border-l-2 border-gray-200 pl-4 ml-2">
+                    <i data-lucide="circle-dollar-sign" class="w-5 h-5"></i>
+                    <span id="user-coin-balance" class="font-bold text-lg">0</span>
+                </div>
+
+                <button id="home-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors">
+                    <i data-lucide="home"></i>
+                    <span>Inicio</span>
+                </button>
+                <!-- Botón de Sign Out -->
+                <button id="sign-out-btn" class="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Salir</span>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- VISTA DE AUTENTICACIÓN -->
+            <section id="view-auth" class="view active">
+                <div class="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto">
+                    <!-- Pestañas -->
+                    <div class="flex border-b mb-6">
+                        <button id="tab-login" class="auth-tab active flex-1 py-3 text-center text-gray-500 border-b-2 border-transparent transition-colors" data-form="login-form-container">Iniciar Sesión</button>
+                        <button id="tab-register" class="auth-tab flex-1 py-3 text-center text-gray-500 border-b-2 border-transparent transition-colors" data-form="register-form-container">Registrarse</button>
+                    </div>
+
+                    <!-- Formulario de Login -->
+                    <div id="login-form-container" class="space-y-4">
+                        <h2 class="text-2xl font-bold text-center text-gray-800">Iniciar Sesión</h2>
+                        <form id="login-form" class="space-y-4">
+                            <div>
+                                <label for="login-username" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                                <input type="text" id="login-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                                <input type="password" id="login-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                <span>Entrar</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Formulario de Registro -->
+                    <div id="register-form-container" class="space-y-4 hidden">
+                        <h2 class="text-2xl font-bold text-center text-gray-800">Crear Cuenta</h2>
+                        <form id="register-form" class="space-y-4">
+                            <div>
+                                <label for="register-username" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                                <input type="text" id="register-username" name="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="register-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                                <input type="password" id="register-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition-colors">
+                                <span>Registrarse</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vista: Inicio (Lista de Quizzes) -->
+            <section id="view-home" class="view space-y-4">
+                <div class="flex flex-wrap justify-between items-center gap-3">
+                    <h2 class="text-2xl font-semibold">Quizzes Disponibles</h2>
+                    <div class="flex gap-2">
+                        <button id="show-general-leaderboard-btn" class="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg shadow hover:bg-yellow-600 transition-colors">
+                            <i data-lucide="trophy"></i>
+                            <span>Ranking General</span>
+                        </button>
+                        <button id="show-create-view-btn" class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors">
+                            <i data-lucide="plus"></i>
+                            <span>Crear Quiz</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="quiz-list-container" class="space-y-4">
+                    <p class="text-gray-500">Cargando quizzes...</p>
+                </div>
+            </section>
+
+            <!-- Vista: Crear Quiz -->
+            <section id="view-create" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">Crear Nuevo Quiz</h2>
+                    <form id="create-quiz-form" class="space-y-4">
+                        <div>
+                            <label for="quiz-topic" class="block text-sm font-medium text-gray-700">Tema del Quiz</label>
+                            <input type="text" id="quiz-topic" name="quiz-topic" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Historia de Roma, Capitales del Mundo">
+                        </div>
+                        <div>
+                            <label for="quiz-num-questions" class="block text-sm font-medium text-gray-700">Número de Preguntas</label>
+                            <input type="number" id="quiz-num-questions" name="quiz-num-questions" min="3" max="10" value="5" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tipo de Quiz</label>
+                            <div class="mt-2 flex gap-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="quiz-type" value="free" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300" checked>
+                                    <span class="ml-2 text-gray-700">Gratis (Ganas 2 monedas si lo juegan)</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="quiz-type" value="paid" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300">
+                                    <span class="ml-2 text-gray-700">De Pago</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="quiz-price-container" class="hidden">
+                            <label for="quiz-price" class="block text-sm font-medium text-gray-700">Precio (monedas)</label>
+                            <input type="number" id="quiz-price" name="quiz-price" min="1" max="100" value="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <button type="submit" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors">
+                            <i data-lucide="wand-2"></i>
+                            <span>Generar Quiz con IA</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Vista: Jugando Quiz -->
+            <section id="view-play" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="play-quiz-title" class="text-2xl font-semibold"></h2>
+                        <span id="score-display" class="text-xl font-bold text-blue-600">Puntaje: 0</span>
+                    </div>
+                    
+                    <div id="question-container" class="mb-6">
+                        <p id="question-text" class="text-lg font-medium mb-4"></p>
+                        <div id="options-container" class="space-y-3">
+                            <!-- Opciones generadas aquí -->
+                        </div>
+                    </div>
+
+                    <div id="end-quiz-container" class="hidden text-center">
+                        <h3 class="text-2xl font-bold mb-2">¡Quiz Terminado!</h3>
+                        <p id="final-score-text" class="text-xl mb-4"></p>
+                        <!-- NUEVO: Mensaje de Monedas -->
+                        <p id="final-coin-text" class="text-lg mb-4 text-yellow-600 font-semibold"></p>
+                        <form id="leaderboard-form" class="flex flex-col sm:flex-row gap-2 justify-center">
+                            <input type="text" id="player-name" placeholder="Tu nombre para el ranking" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition-colors">
+                                <i data-lucide="save"></i>
+                                <span>Guardar Puntaje</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vista: Leaderboard (Quiz Específico) -->
+            <section id="view-leaderboard" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="leaderboard-title" class="text-2xl font-semibold">Leaderboard</h2>
+                        <button id="leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors">
+                            <i data-lucide="arrow-left"></i>
+                            <span>Volver</span>
+                        </button>
+                    </div>
+                    <ol id="leaderboard-list" class="list-decimal list-inside space-y-2">
+                        <li class="text-gray-500">Cargando leaderboard...</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- VISTA: Leaderboard General (Monedas) -->
+            <section id="view-general-leaderboard" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="general-leaderboard-title" class="text-2xl font-semibold">Ranking General de Monedas</h2>
+                        <button id="general-leaderboard-back-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors">
+                            <i data-lucide="arrow-left"></i>
+                            <span>Volver</span>
+                        </button>
+                    </div>
+                    <ol id="general-leaderboard-list" class="list-decimal list-inside space-y-2">
+                        <li class="text-gray-500">Cargando ranking...</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Vista: Cargando -->
+            <section id="view-loading" class="view">
+                <div class="bg-white p-12 rounded-lg shadow-md text-center flex flex-col items-center gap-4">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+                    <h2 class="text-2xl font-semibold text-gray-700">Generando tu quiz con IA...</h2>
+                    <p class="text-gray-500">Esto puede tardar unos segundos.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modales -->
+    <div id="error-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-red-600">Error</h3>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <p id="error-message" class="text-gray-700"></p>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+            <h3 id="confirm-title" class="text-xl font-bold text-gray-900 mb-4">Confirmar Acción</h3>
+            <p id="confirm-message" class="text-gray-700 mb-6"></p>
+            <div class="flex justify-end gap-3">
+                <button id="confirm-cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button id="confirm-ok-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Importaciones de Firebase (SIN AUTH)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Importaciones de REALTIME DATABASE
+        import { 
+            getDatabase,
+            ref,
+            onValue, 
+            get,     
+            set,     
+            push,    
+            runTransaction,
+            query, // Para el ranking general
+            orderByChild // Para el ranking general
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // IDs de las Vistas
+        const VIEWS = {
+            AUTH: 'view-auth', 
+            HOME: 'view-home',
+            CREATE: 'view-create',
+            PLAY: 'view-play',
+            LEADERBOARD: 'view-leaderboard',
+            GENERAL_LEADERBOARD: 'view-general-leaderboard', // Nueva vista
+            LOADING: 'view-loading'
+        };
+
+        // Estado de la aplicación
+        let quizzes = []; 
+        let currentQuiz = null; 
+        let currentQuizDocId = null; 
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userCoinBalance = 0;
+        let quizStartTime = 0; // Para el bonus de tiempo
+        let loggedInUser = null; // Username del usuario logueado
+
+        // Variables de Firebase
+        let db, appId, dbPath; // dbPath será la ruta base saneada
+        let confirmModal, confirmTitle, confirmMessage, confirmCancelBtn, confirmOkBtn;
+        let userWalletRef = null; // Referencia en tiempo real al monedero
+        let userWalletListener = null; // Listener para desconectar
+
+        // Elementos del DOM
+        const views = {
+            auth: document.getElementById(VIEWS.AUTH), 
+            home: document.getElementById(VIEWS.HOME),
+            create: document.getElementById(VIEWS.CREATE),
+            play: document.getElementById(VIEWS.PLAY),
+            leaderboard: document.getElementById(VIEWS.LEADERBOARD),
+            generalLeaderboard: document.getElementById(VIEWS.GENERAL_LEADERBOARD),
+            loading: document.getElementById(VIEWS.LOADING),
+        };
+        // (Resto de elementos del DOM...)
+        const quizListContainer = document.getElementById('quiz-list-container');
+        const createQuizForm = document.getElementById('create-quiz-form');
+        const leaderboardForm = document.getElementById('leaderboard-form');
+        const errorModal = document.getElementById('error-modal');
+        const errorMessage = document.getElementById('error-message');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const userNameDisplay = document.getElementById('user-name-display'); 
+        const userCoinDisplay = document.getElementById('user-coin-display');
+        const userCoinBalanceEl = document.getElementById('user-coin-balance');
+        const homeBtn = document.getElementById('home-btn');
+        const signOutBtn = document.getElementById('sign-out-btn');
+        const authControls = document.getElementById('auth-controls');
+        
+        // Elementos de Auth
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const loginFormContainer = document.getElementById('login-form-container');
+        const registerFormContainer = document.getElementById('register-form-container');
+        
+        // --- Funciones de Utilidad ---
+        
+        /** Sanea el AppID para usarlo en rutas de RTDB */
+        function sanitizeRtdbPath(path) {
+            return path.replace(/[.#$[\]]/g, '_');
+        }
+
+        /** Hashea una contraseña usando SHA-256 */
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            // Convertir buffer a string hex
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // --- Navegación ---
+        function showView(viewId) {
+            Object.values(views).forEach(view => {
+                if (view.id === viewId) {
+                    view.classList.add('active');
+                } else {
+                    view.classList.remove('active');
+                }
+            });
+        }
+
+        // --- Almacenamiento RTDB ---
+
+        /** Carga quizzes desde RTDB en tiempo real */
+        function loadQuizzes() {
+            if (!dbPath) return; 
+            const quizzesRef = ref(db, `${dbPath}/quizzes`);
+            
+            onValue(quizzesRef, (snapshot) => {
+                quizzes = [];
+                const quizzesData = snapshot.val();
+                if (quizzesData) {
+                    Object.keys(quizzesData).forEach(key => {
+                        quizzes.push({ id: key, ...quizzesData[key] });
+                    });
+                }
+                renderQuizList();
+            }, (error) => {
+                console.error("Error al cargar quizzes (RTDB): ", error);
+                showErrorModal("No se pudieron cargar los quizzes desde la base de datos.");
+                quizListContainer.innerHTML = `<p class="text-red-500">Error al cargar quizzes.</p>`;
+            });
+        }
+
+        /** Escucha el monedero del usuario (RTDB) */
+        function setupUserWalletListener(username) {
+            if (!dbPath) return;
+            // Desconectar listener anterior si existe
+            if (userWalletListener) {
+                userWalletListener(); // onValue() devuelve una función para desuscribirse
+            }
+
+            userWalletRef = ref(db, `${dbPath}/wallets/${username}/coins`);
+            
+            userWalletListener = onValue(userWalletRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    userCoinBalance = snapshot.val();
+                } else {
+                    // Esto no debería pasar si el registro fue exitoso, pero es un fallback
+                    userCoinBalance = 10;
+                    set(userWalletRef, userCoinBalance);
+                }
+                userCoinBalanceEl.textContent = userCoinBalance;
+                userCoinDisplay.classList.remove('hidden');
+            }, (error) => {
+                console.error("Error al escuchar el monedero (RTDB):", error);
+                showErrorModal("No se pudo conectar a tu monedero de monedas.");
+            });
+        }
+
+        // --- Renderizado ---
+
+        /** Renderiza la lista de quizzes */
+        function renderQuizList() {
+            if (quizzes.length === 0) {
+                quizListContainer.innerHTML = `<p class="text-gray-500">No hay quizzes creados todavía. ¡Crea uno!</p>`;
+                return;
+            }
+            quizListContainer.innerHTML = '';
+            quizzes.forEach(quiz => {
+                const quizCard = document.createElement('div');
+                quizCard.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+                const quizPrice = quiz.price || 0;
+                const quizType = quiz.quizType || 'free';
+                
+                quizCard.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="text-xl font-semibold">${quiz.title}</h3>
+                        <p class="text-sm text-gray-600">Tema: ${quiz.topic} (${quiz.questions.length} preguntas)</p>
+                        <!-- NUEVO: Mostrar ownerUsername -->
+                        <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-blue-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
+                    </div>
+                    <div class="flex flex-col items-start sm:items-end gap-2">
+                        <div class="flex items-center gap-1 ${quizType === 'paid' ? 'text-yellow-600' : 'text-green-600'}">
+                            <i data-lucide="${quizType === 'paid' ? 'circle-dollar-sign' : 'gift'}" class="w-4 h-4"></i>
+                            <span class="font-semibold">${quizType === 'paid' ? `${quizPrice} monedas` : 'Gratis'}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="play-btn flex items-center gap-2 px-3 py-2 bg-yellow-400 text-yellow-900 rounded-lg shadow hover:bg-yellow-500 transition-colors" data-quiz-id="${quiz.id}">
+                                <i data-lucide="play"></i>
+                                <span>Jugar</span>
+                            </button>
+                            <button class="leaderboard-btn flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors" data-quiz-id="${quiz.id}">
+                                <i data-lucide="bar-chart-3"></i>
+                                <span>Leaderboard</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                quizListContainer.appendChild(quizCard);
+            });
+            lucide.createIcons(); 
+        }
+
+        /** Muestra el leaderboard de un quiz (RTDB) */
+        async function renderLeaderboard(quizId) {
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+
+            document.getElementById('leaderboard-title').textContent = `Leaderboard: ${quiz.title}`;
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = `<li class="text-gray-500">Cargando leaderboard...</li>`;
+            showView(VIEWS.LEADERBOARD);
+
+            try {
+                const leaderboardRef = ref(db, `${dbPath}/leaderboards/${quizId}/entries`);
+                const snapshot = await get(leaderboardRef);
+
+                let entries = [];
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    if (Array.isArray(data)) {
+                        entries = data;
+                    } else if (typeof data === 'object' && data !== null) {
+                        entries = Object.values(data);
+                    }
+                }
+
+                if (entries.length === 0) {
+                    list.innerHTML = `<li class="text-gray-500">Aún no hay puntajes para este quiz.</li>`;
+                } else {
+                    entries.sort((a, b) => b.score - a.score); // Ordenar por puntaje
+                    list.innerHTML = entries.slice(0, 10).map((entry, index) => `
+                        <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
+                            <span>${index + 1}. ${entry.name}</span>
+                            <span class="font-semibold">${entry.score} pts</span>
+                        </li>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error("Error al cargar leaderboard (RTDB): ", error);
+                showErrorModal("No se pudo cargar el leaderboard.");
+                list.innerHTML = `<li class="text-red-500">Error al cargar leaderboard.</li>`;
+            }
+        }
+
+        /** NUEVO: Muestra el leaderboard general de monedas (RTDB) */
+        async function renderGeneralLeaderboard() {
+            const list = document.getElementById('general-leaderboard-list');
+            list.innerHTML = `<li class="text-gray-500">Cargando ranking...</li>`;
+            showView(VIEWS.GENERAL_LEADERBOARD);
+
+            try {
+                const walletsRef = ref(db, `${dbPath}/wallets`);
+                // Consultar RTDB ordenando por 'coins'
+                const walletsQuery = query(walletsRef, orderByChild('coins'));
+                
+                const snapshot = await get(walletsQuery);
+
+                if (!snapshot.exists()) {
+                    list.innerHTML = `<li class="text-gray-500">No hay datos de monedas.</li>`;
+                    return;
+                }
+
+                const wallets = Object.values(snapshot.val());
+                wallets.reverse(); // RTDB ordena ascendente, lo invertimos
+                
+                list.innerHTML = wallets.slice(0, 20).map((wallet, index) => `
+                    <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
+                        <span>${index + 1}. ${wallet.username}</span>
+                        <span class="font-semibold flex items-center gap-1">
+                            <i data-lucide="circle-dollar-sign" class="w-4 h-4 text-yellow-600"></i>
+                            ${wallet.coins}
+                        </span>
+                    </li>
+                `).join('');
+                lucide.createIcons();
+
+            } catch (error) {
+                console.error("Error al cargar leaderboard general (RTDB): ", error);
+                showErrorModal("No se pudo cargar el ranking general.");
+                list.innerHTML = `<li class="text-red-500">Error al cargar el ranking.</li>`;
+            }
+        }
+
+
+        // --- Lógica de Creación de Quiz (IA) ---
+
+        /** Llama a la API de IA */
+        async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
+            // (Función sin cambios)
+            try {
+                const response = await fetch(url, options);
+                if (response.status === 429) {
+                    if (retries > 0) {
+                        console.warn(`Error 429 (Too Many Requests). Reintento en ${delay}ms... (${retries} restantes)`);
+                        await new Promise(res => setTimeout(res, delay));
+                        return fetchWithRetry(url, options, retries - 1, delay * 2);
+                    } else { throw new Error(`Error en la API: ${response.status} ${response.statusText}. Sin reintentos.`); }
+                }
+                if (!response.ok && response.status >= 500) {
+                     if (retries > 0) {
+                        console.warn(`Error de servidor (${response.status}). Reintento en ${delay}ms... (${retries} restantes)`);
+                        await new Promise(res => setTimeout(res, delay));
+                        return fetchWithRetry(url, options, retries - 1, delay * 2);
+                     } else { throw new Error(`Error en la API: ${response.status} ${response.statusText}. Sin reintentos.`); }
+                }
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error("Error de cliente:", errorBody);
+                    throw new Error(`Error en la API: ${response.status} ${response.statusText}. (Error de cliente, no se reintenta)`);
+                }
+                return await response.json();
+            } catch (error) {
+                if (retries > 0 && !(error.message.startsWith("Error en la API"))) {
+                    console.warn(`Error de red (${error.message}). Reintento en ${delay}ms... (${retries} restantes)`);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                } else {
+                    console.error("Fallaron todos los reintentos o fue un error fatal:", error);
+                    throw error;
+                }
+            }
+        }
+
+        /** Maneja el envío del formulario de creación de quiz (RTDB) */
+        async function handleCreateQuiz(e) {
+            e.preventDefault();
+            if (!loggedInUser) {
+                showErrorModal("Debes iniciar sesión para crear un quiz.");
+                return;
+            }
+            const topic = document.getElementById('quiz-topic').value;
+            const numQuestions = document.getElementById('quiz-num-questions').value;
+            const quizType = document.querySelector('input[name="quiz-type"]:checked').value;
+            const price = (quizType === 'paid') ? parseInt(document.getElementById('quiz-price').value, 10) : 0;
+            
+            if (quizType === 'paid' && (isNaN(price) || price <= 0)) {
+                showErrorModal("Por favor, ingresa un precio válido para el quiz.");
+                return;
+            }
+            
+            showView(VIEWS.LOADING);
+            
+            // Lógica de Mistral API
+            const mistralApiKey = "evxly62Xv91b752fbnHA2I3HD988C5RT";
+            const mistralApiUrl = "https://api.mistral.ai/v1/chat/completions";
+            const schemaDefinition = `
+            {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Un título corto y atractivo para el quiz."
+                    },
+                    "questions": {
+                        "type": "array",
+                        "description": "La lista de preguntas.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "question": {
+                                    "type": "string",
+                                    "description": "El texto de la pregunta."
+                                },
+                                "options": {
+                                    "type": "array",
+                                    "description": "Un array de 4 posibles respuestas (strings).",
+                                    "items": { "type": "string" }
+                                },
+                                "correctAnswer": {
+                                    "type": "string",
+                                    "description": "El string exacto de la respuesta correcta, debe coincidir con una de las 'options'."
+                                }
+                            },
+                            "required": ["question", "options", "correctAnswer"]
+                        }
+                    }
+                },
+                "required": ["title", "questions"]
+            }`;
+            
+            // Escapar los backticks dentro del prompt del sistema
+            const systemPrompt = `Eres un experto creador de quizzes. Tu tarea es generar un quiz basado en un tema.
+Debes responder ÚNICAMENTE con un objeto JSON válido que siga este esquema:
+\`\`\`json
+${schemaDefinition}
+\`\`\`
+El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu respuesta, solo el JSON.`;
+            
+            const userPrompt = `Genera un quiz de ${numQuestions} preguntas sobre el tema: "${topic}".`;
+            
+            const payload = { 
+                model: 'mistral-medium-latest', 
+                messages: [ 
+                    { role: 'system', content: systemPrompt }, 
+                    { role: 'user', content: userPrompt } 
+                ], 
+                response_format: { type: 'json_object' } 
+            };
+            
+            const options = { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${mistralApiKey}`, 
+                    'Accept': 'application/json' 
+                }, 
+                body: JSON.stringify(payload) 
+            };
+
+            try {
+                const result = await fetchWithRetry(mistralApiUrl, options);
+                const jsonText = result.choices[0].message.content;
+                const newQuizData = JSON.parse(jsonText);
+                
+                if (!newQuizData.title || !newQuizData.questions || newQuizData.questions.length === 0) {
+                    throw new Error("Datos del quiz incompletos o en formato incorrecto.");
+                }
+                
+                const newQuiz = { 
+                    topic: topic, 
+                    ownerUsername: loggedInUser, // NUEVO: Guardar username
+                    createdAt: new Date().toISOString(), 
+                    quizType: quizType, 
+                    price: price, 
+                    ...newQuizData 
+                };
+                
+                // Guardar en RTDB
+                const quizzesRef = ref(db, `${dbPath}/quizzes`);
+                await push(quizzesRef, newQuiz); 
+
+                showView(VIEWS.HOME);
+                createQuizForm.reset();
+            } catch (error) {
+                console.error("Error al generar el quiz (RTDB):", error);
+                showErrorModal(`No se pudo generar el quiz. ${error.message}`);
+                showView(VIEWS.CREATE); 
+            }
+        }
+
+        // --- Lógica de Juego (RTDB) ---
+
+        /** Intercepta el clic de "Jugar" */
+        async function handlePlayQuizClick(quizId) {
+            const quiz = quizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+            
+            // Jugar tu propio quiz es gratis
+            if (quiz.ownerUsername === loggedInUser) { 
+                startQuiz(quizId); 
+                return; 
+            }
+            
+            const quizType = quiz.quizType || 'free';
+            
+            if (quizType === 'paid') {
+                const price = quiz.price || 0;
+                if (userCoinBalance < price) { 
+                    showErrorModal(`No tienes suficientes monedas. Necesitas ${price} para jugar. Tienes ${userCoinBalance}.`); 
+                    return; 
+                }
+                
+                showConfirmModal( 
+                    `Pagar ${price} monedas`, 
+                    `¿Quieres pagar ${price} monedas para jugar a "${quiz.title}"? Los fondos se transferirán a ${quiz.ownerUsername}.`,
+                    async () => { 
+                        try {
+                            await transferCoins(quiz.ownerUsername, loggedInUser, price);
+                            // El listener onValue actualizará el saldo visualmente
+                            startQuiz(quizId);
+                        } catch (error) { 
+                            console.error("Error en la transacción de pago (RTDB):", error);
+                            showErrorModal(`Falló la transacción: ${error.message}`); 
+                        }
+                    }
+                );
+            } else {
+                // Es un quiz gratis creado por otro usuario
+                // CAMBIO: La recompensa se da al final, en handleSaveScore
+                startQuiz(quizId); 
+            }
+        }
+
+        /** Transfiere monedas (RTDB) - Actualizado para usernames */
+        async function transferCoins(creatorUsername, playerUsername, amount) {
+            // Transacción en el nodo raíz de wallets
+            const walletsRef = ref(db, `${dbPath}/wallets`);
+            return runTransaction(walletsRef, (currentData) => {
+                if (currentData === null) { 
+                    console.warn("Transacción abortada: el nodo de wallets no existe.");
+                    return; // Abortar
+                }
+                
+                if (!currentData[playerUsername] || !currentData[creatorUsername]) {
+                     console.warn("Transacción abortada: el monedero del jugador o creador no existe.");
+                    return;
+                }
+                
+                const playerCoins = currentData[playerUsername].coins;
+                
+                if (playerCoins < amount) { 
+                    console.warn("Transacción abortada: fondos insuficientes.");
+                    return; // Abortar
+                } 
+                
+                currentData[playerUsername].coins -= amount;
+                currentData[creatorUsername].coins += amount;
+                return currentData;
+            });
+        }
+
+        /** Otorga monedas a un usuario (RTDB) - Actualizado para usernames */
+        async function awardCoins(targetUsername, amount) {
+            if (amount <= 0) return; // No hacer nada si no hay premio
+            const targetWalletRef = ref(db, `${dbPath}/wallets/${targetUsername}/coins`);
+            return runTransaction(targetWalletRef, (currentCoins) => {
+                // Si no existe, se crea con el premio (no debería pasar si se registró)
+                return (currentCoins || 0) + amount;
+            });
+        }
+
+        /** Inicia un quiz - NUEVO: guarda la hora de inicio */
+        function startQuiz(quizId) {
+            currentQuiz = quizzes.find(q => q.id === quizId);
+            if (!currentQuiz) return;
+            currentQuizDocId = quizId; 
+            currentQuestionIndex = 0;
+            score = 0;
+            quizStartTime = Date.now(); // Guardar hora de inicio
+            document.getElementById('play-quiz-title').textContent = currentQuiz.title;
+            document.getElementById('score-display').textContent = `Puntaje: 0`;
+            document.getElementById('end-quiz-container').classList.add('hidden');
+            document.getElementById('question-container').classList.remove('hidden');
+            document.getElementById('final-coin-text').textContent = ''; // Limpiar monedas
+            leaderboardForm.reset();
+            // Poner el nombre de usuario por defecto en el leaderboard
+            document.getElementById('player-name').value = loggedInUser; 
+            displayQuestion();
+            showView(VIEWS.PLAY);
+        }
+
+        /** Muestra la pregunta actual (sin cambios) */
+        function displayQuestion() {
+            const question = currentQuiz.questions[currentQuestionIndex];
+            document.getElementById('question-text').textContent = question.question;
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            // Barajar opciones
+            const shuffledOptions = [...question.options].sort(() => Math.random() - 0.5);
+            shuffledOptions.forEach(option => {
+                const optionButton = document.createElement('button');
+                optionButton.className = 'option-btn block w-full text-left px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors';
+                optionButton.textContent = option;
+                optionButton.addEventListener('click', handleAnswerClick);
+                optionsContainer.appendChild(optionButton);
+            });
+        }
+
+        /** Maneja el clic en una respuesta (sin cambios) */
+        function handleAnswerClick(e) {
+            const selectedButton = e.target;
+            const selectedAnswer = selectedButton.textContent;
+            const question = currentQuiz.questions[currentQuestionIndex];
+            const correctAnswer = question.correctAnswer;
+            const optionButtons = document.querySelectorAll('.option-btn');
+            optionButtons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === correctAnswer) { btn.classList.add('correct'); }
+                else if (btn === selectedButton) { btn.classList.add('incorrect'); }
+            });
+            if (selectedAnswer === correctAnswer) {
+                score++;
+                document.getElementById('score-display').textContent = `Puntaje: ${score}`;
+            }
+            currentQuestionIndex++;
+            setTimeout(() => {
+                if (currentQuestionIndex < currentQuiz.questions.length) { displayQuestion(); } 
+                else { endQuiz(); }
+            }, 1200); 
+        }
+
+        /** Finaliza el quiz - NUEVO: prepara texto de monedas */
+        function endQuiz() {
+            document.getElementById('question-container').classList.add('hidden');
+            const endContainer = document.getElementById('end-quiz-container');
+            const finalScoreText = document.getElementById('final-score-text');
+            const finalCoinText = document.getElementById('final-coin-text');
+            
+            finalScoreText.textContent = `Tu puntaje final es ${score} de ${currentQuiz.questions.length}.`;
+            
+            // Calcular bonus y recompensas (pero se otorgan al guardar)
+            const timeTaken = (Date.now() - quizStartTime) / 1000; // segundos
+            const maxTime = currentQuiz.questions.length * 20; // 20 seg por pregunta
+            const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
+            
+            let rewardCoins = 0;
+            if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
+                rewardCoins = 2; // Se dará al creador
+            }
+            
+            let coinMessage = "";
+            if (bonusCoins > 0) {
+                coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
+            }
+            if (rewardCoins > 0) {
+                coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
+            }
+            finalCoinText.textContent = coinMessage.trim();
+            
+            endContainer.classList.remove('hidden');
+        }
+
+        /** Guarda el puntaje - NUEVO: otorga monedas (bonus y recompensa) */
+        async function handleSaveScore(e) {
+            e.preventDefault();
+            const playerName = document.getElementById('player-name').value;
+            if (!playerName.trim()) { showErrorModal("Por favor, ingresa un nombre."); return; }
+            
+            const leaderboardRef = ref(db, `${dbPath}/leaderboards/${currentQuizDocId}/entries`);
+            const newEntry = { name: playerName, score: score, username: loggedInUser, createdAt: new Date().toISOString() };
+            
+            try {
+                // 1. Guardar puntaje en leaderboard (sin cambios)
+                const snapshot = await get(leaderboardRef);
+                let entries = [];
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    if (Array.isArray(data)) { entries = data; }
+                    else if (typeof data === 'object' && data !== null) { entries = Object.values(data); }
+                }
+                entries.push(newEntry);
+                entries.sort((a, b) => b.score - a.score);
+                const finalEntries = entries.slice(0, 10);
+                await set(leaderboardRef, finalEntries); 
+                
+                // 2. Otorgar monedas (NUEVA LOGICA)
+                const timeTaken = (Date.now() - quizStartTime) / 1000; 
+                const maxTime = currentQuiz.questions.length * 20;
+                const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
+                
+                let rewardCoins = 0;
+                if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
+                    rewardCoins = 2;
+                }
+                
+                // Otorgar bonus al jugador
+                if (bonusCoins > 0) {
+                    await awardCoins(loggedInUser, bonusCoins);
+                }
+                // Otorgar recompensa al creador
+                if (rewardCoins > 0) {
+                    await awardCoins(currentQuiz.ownerUsername, rewardCoins);
+                }
+                
+                // 3. Mostrar el leaderboard
+                renderLeaderboard(currentQuizDocId); 
+            } catch (error) {
+                console.error("Error al guardar puntaje (RTDB): ", error);
+                showErrorModal("No se pudo guardar tu puntaje. Inténtalo de nuevo.");
+            }
+        }
+        
+        // --- LÓGICA DE AUTENTICACIÓN (Manual) ---
+
+        /** Maneja el formulario de registro */
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = e.target.username.value.trim();
+            const password = e.target.password.value;
+            
+            if (username.length < 3) {
+                showErrorModal("El nombre de usuario debe tener al menos 3 caracteres.");
+                return;
+            }
+            if (password.length < 6) {
+                showErrorModal("La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
+
+            try {
+                // 1. Verificar si el usuario ya existe
+                const userRef = ref(db, `${dbPath}/users/${username}`);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                    showErrorModal("Ese nombre de usuario ya está en uso. Prueba con otro.");
+                    return;
+                }
+                
+                // 2. Hashear la contraseña
+                const passwordHash = await hashPassword(password);
+                
+                // 3. Crear el usuario
+                await set(userRef, { 
+                    passwordHash: passwordHash, 
+                    createdAt: new Date().toISOString() 
+                });
+                
+                // 4. Crear el monedero
+                const walletRef = ref(db, `${dbPath}/wallets/${username}`);
+                await set(walletRef, { 
+                    coins: 10, // Saldo inicial
+                    username: username // Para el ranking general
+                });
+                
+                // 5. Iniciar sesión
+                localStorage.setItem('quizAppUser', username);
+                loggedInUser = username;
+                await onLoginSuccess();
+                
+            } catch (error) {
+                console.error("Error al registrar:", error);
+                showErrorModal(`Error al registrar: ${error.message}`);
+            }
+        }
+
+        /** Maneja el formulario de inicio de sesión */
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = e.target.username.value.trim();
+            const password = e.target.password.value;
+            
+            try {
+                // 1. Obtener datos del usuario
+                const userRef = ref(db, `${dbPath}/users/${username}`);
+                const snapshot = await get(userRef);
+                
+                if (!snapshot.exists()) {
+                    showErrorModal("Nombre de usuario o contraseña incorrectos.");
+                    return;
+                }
+                
+                // 2. Verificar la contraseña
+                const userData = snapshot.val();
+                const storedHash = userData.passwordHash;
+                const providedHash = await hashPassword(password);
+                
+                if (storedHash !== providedHash) {
+                    showErrorModal("Nombre de usuario o contraseña incorrectos.");
+                    return;
+                }
+                
+                // 3. Iniciar sesión
+                localStorage.setItem('quizAppUser', username);
+                loggedInUser = username;
+                await onLoginSuccess();
+
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error);
+                showErrorModal(`Error al iniciar sesión: ${error.message}`);
+            }
+        }
+        
+        /** Maneja el cierre de sesión */
+        function handleSignOut() {
+            localStorage.removeItem('quizAppUser');
+            loggedInUser = null;
+            
+            // Ocultar UI de la app
+            authControls.classList.add('hidden');
+            
+            // Detener listener del monedero
+            if (userWalletListener) {
+                userWalletListener();
+                userWalletListener = null;
+                userWalletRef = null;
+            }
+            
+            // Mostrar vista de Auth
+            showView(VIEWS.AUTH);
+        }
+        
+        /** Acciones a tomar después de un login exitoso */
+        async function onLoginSuccess() {
+            userNameDisplay.textContent = loggedInUser;
+            authControls.classList.remove('hidden');
+            
+            // Empezar a escuchar el monedero
+            setupUserWalletListener(loggedInUser);
+            
+            // Cargar quizzes
+            loadQuizzes(); 
+            
+            // Mostrar la app
+            showView(VIEWS.HOME);
+        }
+
+        // --- Manejo de Errores y Modales (sin cambios) ---
+
+        function showErrorModal(message) {
+            errorMessage.textContent = message;
+            errorModal.classList.remove('hidden');
+        }
+
+        function hideErrorModal() {
+            errorModal.classList.add('hidden');
+        }
+        
+        function showConfirmModal(title, message, onConfirm) {
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            
+            const newOkBtn = confirmOkBtn.cloneNode(true);
+            confirmOkBtn.parentNode.replaceChild(newOkBtn, confirmOkBtn);
+            confirmOkBtn = newOkBtn;
+            const newCancelBtn = confirmCancelBtn.cloneNode(true);
+            confirmCancelBtn.parentNode.replaceChild(newCancelBtn, confirmCancelBtn);
+            confirmCancelBtn = newCancelBtn;
+            
+            confirmOkBtn.addEventListener('click', () => {
+                onConfirm();
+                confirmModal.classList.add('hidden');
+            });
+            confirmCancelBtn.addEventListener('click', () => {
+                confirmModal.classList.add('hidden');
+            });
+            confirmModal.classList.remove('hidden');
+        }
+
+        
+        // --- Inicialización de la App y Firebase ---
+
+        /** Inicializa los listeners de la UI (se llama una vez) */
+        function initAppListeners() {
+            lucide.createIcons();
+
+            // Navegación
+            homeBtn.addEventListener('click', () => { showView(VIEWS.HOME); });
+            document.getElementById('show-create-view-btn').addEventListener('click', () => showView(VIEWS.CREATE));
+            document.getElementById('leaderboard-back-btn').addEventListener('click', () => { showView(VIEWS.HOME); });
+            
+            // Leaderboard General
+            document.getElementById('show-general-leaderboard-btn').addEventListener('click', renderGeneralLeaderboard);
+            document.getElementById('general-leaderboard-back-btn').addEventListener('click', () => { showView(VIEWS.HOME); });
+
+
+            // Formularios
+            createQuizForm.addEventListener('submit', handleCreateQuiz);
+            leaderboardForm.addEventListener('submit', handleSaveScore);
+            
+            // Listeners de Auth
+            loginForm.addEventListener('submit', handleLogin);
+            registerForm.addEventListener('submit', handleRegister);
+            signOutBtn.addEventListener('click', handleSignOut);
+
+            // Pestañas de Auth
+            tabLogin.addEventListener('click', () => {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                loginFormContainer.classList.remove('hidden');
+                registerFormContainer.classList.add('hidden');
+            });
+            tabRegister.addEventListener('click', () => {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+                registerFormContainer.classList.remove('hidden');
+                loginFormContainer.classList.add('hidden');
+            });
+
+            // Listeners para el formulario de creación (tipo de quiz)
+            const quizTypeRadios = document.querySelectorAll('input[name="quiz-type"]');
+            const quizPriceContainer = document.getElementById('quiz-price-container');
+            quizTypeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'paid') {
+                        quizPriceContainer.classList.remove('hidden');
+                    } else {
+                        quizPriceContainer.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Clics delegados en la lista de quizzes
+            quizListContainer.addEventListener('click', (e) => {
+                const playBtn = e.target.closest('.play-btn');
+                if (playBtn) { handlePlayQuizClick(playBtn.dataset.quizId); return; }
+                const leaderboardBtn = e.target.closest('.leaderboard-btn');
+                if (leaderboardBtn) { renderLeaderboard(leaderboardBtn.dataset.quizId); return; }
+            });
+
+            // Modal de error
+            closeModalBtn.addEventListener('click', hideErrorModal);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Configuración de Firebase
+            const firebaseConfigFallback = {
+                apiKey: "AIzaSyC5v9fm-aHc5LrRWf-Qd3fy4-elcjjhJYw", 
+                authDomain: "everyquiz-65c14.firebaseapp.com",
+                projectId: "everyquiz-65c14",
+                // URL Específica de RTDB
+                databaseURL: "https://everyquiz-65c14-default-rtdb.europe-west1.firebasedatabase.app/",
+                storageBucket: "everyquiz-65c14.firebasestorage.app",
+                messagingSenderId: "841737281047",
+                appId: "1:841737281047:web:1a8f56177179e3d03a0652"
+            };
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' 
+                ? JSON.parse(__firebase_config) 
+                : firebaseConfigFallback;
+
+            // CAMBIO: Usar un ID de app estático si __app_id no está definido
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'everyquiz-app-test';
+            // CAMBIO: Saneamos la ruta base UNA VEZ y la hacemos más simple
+            // Se quita 'artifacts/' para evitar posibles conflictos de reglas de seguridad anidadas
+            dbPath = sanitizeRtdbPath(appId);
+
+            // Asignar elementos del modal de confirmación
+            confirmModal = document.getElementById('confirm-modal');
+            confirmTitle = document.getElementById('confirm-title');
+            confirmMessage = document.getElementById('confirm-message');
+            confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+            confirmOkBtn = document.getElementById('confirm-ok-btn');
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app); 
+                
+                initAppListeners();
+
+                // --- Manejo de sesión (localStorage) ---
+                const savedUser = localStorage.getItem('quizAppUser');
+                if (savedUser) {
+                    loggedInUser = savedUser;
+                    await onLoginSuccess();
+                } else {
+                    showView(VIEWS.AUTH);
+                }
+
+            } catch (error) {
+                console.error("Error al inicializar Firebase:", error);
+                showErrorModal("Error crítico: No se pudo conectar a la base de datos. " + error.message);
+            }
+        });
+
+    </script>
+</body>
+</html>
+
