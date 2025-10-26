@@ -55,7 +55,8 @@
         }
         
         /* Ocultar pantallas por defecto */
-        #homescreen, #game-ui, #crosshair {
+        /* CAMBIO: Añadida #crafting-screen */
+        #homescreen, #game-ui, #crosshair, #crafting-screen {
             display: none;
         }
 
@@ -292,7 +293,7 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.7); 
         }
 
-        /* Estilos de la Hotbar 3D */
+        /* --- CAMBIO: Estilos de la Hotbar (Simplificados a 2D) --- */
         #hotbar {
             display: flex;
             background-color: rgba(0, 0, 0, 0.4);
@@ -309,14 +310,19 @@
             border: 2px solid #888;
             border-radius: 6px;
             background-color: rgba(255, 255, 255, 0.1);
-            overflow: hidden; 
-            position: relative; /* NUEVO: Para posicionar la cantidad */
+            position: relative; 
+            /* Para centrar la imagen */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
-        .hotbar-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+        /* NUEVO: Estilo para el icono 2D del item */
+        .hotbar-item-icon {
+            width: 36px;
+            height: 36px;
+            image-rendering: pixelated; /* Mantiene los píxeles nítidos */
+            display: none; /* Oculto por defecto */
         }
 
         .hotbar-slot.active {
@@ -338,31 +344,58 @@
             display: none; /* Oculto por defecto */
         }
         
-        /* NUEVO: Botón de Crafteo */
-        #crafting-ui {
-            margin-bottom: 10px; /* Espacio sobre la vida */
-            pointer-events: auto; /* Recibe clics */
+        /* --- NUEVO: Estilos de la Pantalla de Crafteo --- */
+        #crafting-screen {
+            z-index: 100;
+            flex-direction: column;
         }
         
-        .craft-btn {
-            padding: 8px 12px;
-            background-color: #66bb6a;
-            color: #111;
-            border: none;
+        #crafting-modal {
+            width: 500px;
+            min-height: 300px;
+            padding: 20px;
+            background-color: #2c2c2c;
+            border-radius: 12px;
+            border: 1px solid #444;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+        
+        #crafting-modal h2 {
+            margin-top: 0;
+            color: #66bb6a;
+            text-align: center;
+        }
+        
+        #recipe-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .recipe-btn {
+            padding: 12px;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
             border-radius: 6px;
-            cursor: pointer;
+            color: #f0f0f0;
             font-family: 'Inter', sans-serif;
             font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: background-color 0.2s ease;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            text-align: left;
         }
-        .craft-btn:hover {
-            background-color: #81c784;
+        
+        .recipe-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #777;
         }
-        .craft-btn:disabled {
-            background-color: #555;
-            color: #888;
+        
+        .recipe-btn small {
+            color: #aaa;
+            font-weight: 400;
+            display: block;
+            margin-top: 4px;
         }
         
     </style>
@@ -417,15 +450,38 @@
     
     <!-- La mirilla -->
     <div id="crosshair"></div>
+    
+    <!-- NUEVO: Pantalla de Crafteo (oculta) -->
+    <div id="crafting-screen" class="screen">
+        <div id="crafting-modal">
+            <h2>Crafteo</h2>
+            <p style="text-align: center; color: #aaa; margin-top: -10px; margin-bottom: 20px;">Pulsa 'E' para cerrar</p>
+            
+            <div id="recipe-list">
+                <button id="craft-planks" class="recipe-btn">
+                    4x Tablones de Roble
+                    <small>Necesita: 1x Tronco de Roble</small>
+                </button>
+                <button id="craft-sticks" class="recipe-btn">
+                    4x Palos
+                    <small>Necesita: 2x Tablones de Roble</small>
+                </button>
+                <button id="craft-table" class="recipe-btn">
+                    1x Mesa de Crafteo
+                    <small>Necesita: 4x Tablones de Roble</small>
+                </button>
+                <button id="craft-wooden-pickaxe" class="recipe-btn">
+                    1x Pico de Madera
+                    <small>Necesita: 3x Tablones, 2x Palos</small>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Contenedor de la Interfaz (Vida + Hotbar) -->
     <div id="game-ui">
         <div id="ui-container">
-            <!-- NUEVO: UI de Crafteo -->
-            <div id="crafting-ui">
-                <button id="craftPlanksButton" class="craft-btn" title="Craftear 4 Tablones (necesita 1 Tronco)">Craft Planks</button>
-                <button id="craftTableButton" class="craft-btn" title="Craftear Mesa (necesita 4 Tablones)">Craft Table</button>
-            </div>
+            <!-- CAMBIO: UI de Crafteo eliminada de aquí -->
             
             <!-- Barra de vida -->
             <div id="health-bar">
@@ -433,7 +489,7 @@
             </div>
             <!-- Contenedor de la Hotbar -->
             <div id="hotbar">
-                <!-- Los slots y canvas se generan dinámicamente con JS -->
+                <!-- Los slots se generan dinámicamente con JS -->
             </div>
         </div>
     </div>
@@ -541,18 +597,16 @@
         let breakingBlockOverlay = null; 
         let breakingMaterial; 
 
-        // --- CAMBIO: Variables de Inventario y Hotbar 3D ---
+        // --- CAMBIO: Variables de Inventario y Hotbar (Simplificadas) ---
         let hotbarElement;
         let hotbarSlots = []; 
         let selectedSlot = 0; 
         let inventory = []; // Ahora será un array de { type, quantity }
-        let materials = {}; 
+        let materials = {}; // SOLO para bloques
         
-        let hotbarScenes = [];      
-        let hotbarRenderers = [];   
-        let hotbarMeshes = [];      
-        let hotbarCamera;           
-
+        // --- NUEVO: Variable de estado de Crafteo ---
+        let isCrafting = false;
+        
         // --- URLs de Texturas ---
         const textureBaseUrl = 'https://logise1.github.io/maincraft/';
         const textureLoader = new THREE.TextureLoader();
@@ -562,11 +616,11 @@
         const terrainScale = 0.05; 
         const worldDepth = 0; // Revertido
         
-        // --- CAMBIO: Geometrías reutilizables para Bloques y Items ---
+        // --- CAMBIO: Geometría de Bloque (única) ---
         const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const itemGeometry = new THREE.PlaneGeometry(0.8, 0.8); // Para items 2D en la hotbar
         
-        // --- CAMBIO: Set de tipos de items (para la hotbar) ---
+        // --- CAMBIO: Set de tipos de items (para evitar colocarlos) ---
+        // Sigue siendo necesario para saber qué no se puede colocar
         const itemTypes = new Set([
             'diamond', 'emerald', 'redstone', 'iron_ingot', 'gold_ingot', 'stick',
             'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'golden_pickaxe',
@@ -583,17 +637,16 @@
             return texture;
         }
 
-        // Bloques existentes
+        // --- CAMBIO: Carga de texturas SOLO para BLOQUES ---
         const stoneTexture = loadTexture(`${textureBaseUrl}stone.png`);
         const dirtTexture = loadTexture(`${textureBaseUrl}dirt.png`);
         const grassTopTexture = loadTexture(`${textureBaseUrl}grass_block_top.png`);
         const grassSideTexture = loadTexture(`${textureBaseUrl}grass_block_side.png`);
-        
-        // --- NUEVO: Carga de todos los nuevos bloques ---
         const cobblestoneTexture = loadTexture(`${textureBaseUrl}cobblestone.png`);
         const oakLogTexture = loadTexture(`${textureBaseUrl}oak_log.png`);
         const oakLogTopTexture = loadTexture(`${textureBaseUrl}oak_log_top.png`);
         const oakPlanksTexture = loadTexture(`${textureBaseUrl}oak_planks.png`);
+        const oakLeavesTexture = loadTexture(`${textureBaseUrl}oak_leaves.png`); // NUEVO
         
         const craftingTableTopTexture = loadTexture(`${textureBaseUrl}crafting_table_top.png`);
         const craftingTableSideTexture = loadTexture(`${textureBaseUrl}crafting_table_side.png`);
@@ -608,39 +661,10 @@
         const lapisOreTexture = loadTexture(`${textureBaseUrl}lapis_ore.png`);
         const redstoneOreTexture = loadTexture(`${textureBaseUrl}redstone_ore.png`);
 
-        // --- NUEVO: Carga de todos los nuevos items ---
-        // Drops
-        const diamondTexture = loadTexture(`${textureBaseUrl}diamond.png`);
-        const emeraldTexture = loadTexture(`${textureBaseUrl}emerald.png`);
-        const redstoneTexture = loadTexture(`${textureBaseUrl}redstone.png`);
-        const ironIngotTexture = loadTexture(`${textureBaseUrl}iron_ingot.png`);
-        const goldIngotTexture = loadTexture(`${textureBaseUrl}gold_ingot.png`);
-        
-        // Crafting
-        const stickTexture = loadTexture(`${textureBaseUrl}stick.png`);
-        
-        // Herramientas
-        const woodenPickaxeTexture = loadTexture(`${textureBaseUrl}wooden_pickaxe.png`);
-        const stonePickaxeTexture = loadTexture(`${textureBaseUrl}stone_pickaxe.png`);
-        const ironPickaxeTexture = loadTexture(`${textureBaseUrl}iron_pickaxe.png`);
-        const goldenPickaxeTexture = loadTexture(`${textureBaseUrl}golden_pickaxe.png`);
-        const diamondPickaxeTexture = loadTexture(`${textureBaseUrl}diamond_pickaxe.png`);
-        const netheritePickaxeTexture = loadTexture(`${textureBaseUrl}netherite_pickaxe.png`);
-
 
         // --- ¡MATERIALES ACTUALIZADOS CON TEXTURAS! ---
         
-        // Helper para material de item 2D
-        function createItemMaterial(texture) {
-            return new THREE.MeshStandardMaterial({
-                map: texture,
-                transparent: true,
-                alphaTest: 0.1, // No renderizar píxeles totalmente transparentes
-                side: THREE.DoubleSide
-            });
-        }
-        
-        // Materiales de Bloques
+        // CAMBIO: Materiales solo para bloques
         const grassMaterial = [
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (right)
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (left)
@@ -652,9 +676,16 @@
         const dirtMaterial = new THREE.MeshStandardMaterial({ map: dirtTexture });
         const stoneMaterial = new THREE.MeshStandardMaterial({ map: stoneTexture });
         
-        // --- NUEVO: Materiales de todos los nuevos bloques ---
         const cobblestoneMaterial = new THREE.MeshStandardMaterial({ map: cobblestoneTexture });
         const oakPlanksMaterial = new THREE.MeshStandardMaterial({ map: oakPlanksTexture });
+        
+        // NUEVO: Material de Hojas (transparente)
+        const oakLeavesMaterial = new THREE.MeshStandardMaterial({ 
+            map: oakLeavesTexture, 
+            transparent: true, 
+            alphaTest: 0.1, 
+            side: THREE.DoubleSide 
+        });
         
         const oakLogMaterial = [
             new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (right)
@@ -682,22 +713,6 @@
         const emeraldOreMaterial = new THREE.MeshStandardMaterial({ map: emeraldOreTexture });
         const lapisOreMaterial = new THREE.MeshStandardMaterial({ map: lapisOreTexture });
         const redstoneOreMaterial = new THREE.MeshStandardMaterial({ map: redstoneOreTexture });
-        
-        // --- NUEVO: Materiales de todos los nuevos items ---
-        const diamondMaterial = createItemMaterial(diamondTexture);
-        const emeraldMaterial = createItemMaterial(emeraldTexture);
-        const redstoneMaterial = createItemMaterial(redstoneTexture);
-        const ironIngotMaterial = createItemMaterial(ironIngotTexture);
-        const goldIngotMaterial = createItemMaterial(goldIngotTexture);
-        const stickMaterial = createItemMaterial(stickTexture);
-        
-        const woodenPickaxeMaterial = createItemMaterial(woodenPickaxeTexture);
-        const stonePickaxeMaterial = createItemMaterial(stonePickaxeTexture);
-        const ironPickaxeMaterial = createItemMaterial(ironPickaxeTexture);
-        const goldenPickaxeMaterial = createItemMaterial(goldenPickaxeTexture);
-        const diamondPickaxeMaterial = createItemMaterial(diamondPickaxeTexture);
-        const netheritePickaxeMaterial = createItemMaterial(netheritePickaxeTexture);
-
 
         // --- OPTIMIZACIÓN DE COLISIÓN ---
         const collisionCheckBlockBox = new THREE.Box3();
@@ -713,15 +728,15 @@
                 inventory.push({ type: null, quantity: 0 });
             }
             
-            // --- NUEVO: Objeto 'materials' expandido ---
+            // --- CAMBIO: Objeto 'materials' (solo bloques) ---
             materials = {
-                // Bloques
                 'dirt': dirtMaterial,
                 'grass': grassMaterial,
                 'stone': stoneMaterial,
                 'cobblestone': cobblestoneMaterial,
                 'oak_log': oakLogMaterial,
                 'oak_planks': oakPlanksMaterial,
+                'oak_leaves': oakLeavesMaterial, // NUEVO
                 'crafting_table': craftingTableMaterial,
                 'coal_ore': coalOreMaterial,
                 'iron_ore': ironOreMaterial,
@@ -730,20 +745,6 @@
                 'emerald_ore': emeraldOreMaterial,
                 'lapis_ore': lapisOreMaterial,
                 'redstone_ore': redstoneOreMaterial,
-                
-                // Items
-                'diamond': diamondMaterial,
-                'emerald': emeraldMaterial,
-                'redstone': redstoneMaterial,
-                'iron_ingot': ironIngotMaterial,
-                'gold_ingot': goldIngotMaterial,
-                'stick': stickMaterial,
-                'wooden_pickaxe': woodenPickaxeMaterial,
-                'stone_pickaxe': stonePickaxeMaterial,
-                'iron_pickaxe': ironPickaxeMaterial,
-                'golden_pickaxe': goldenPickaxeMaterial,
-                'diamond_pickaxe': diamondPickaxeMaterial,
-                'netherite_pickaxe': netheritePickaxeMaterial
             };
 
             // 1. Escena
@@ -784,16 +785,20 @@
             controls = new PointerLockControls(camera, document.body);
             scene.add(controls.getObject()); 
             
-            // --- Lógica de desbloqueo de cursor ---
+            // --- CAMBIO: Lógica de desbloqueo de cursor ---
             controls.addEventListener('unlock', () => {
+                // Si desbloqueamos para craftear, no hacemos nada
+                if (isCrafting) {
+                    return;
+                }
+                
+                // Si desbloqueamos (con ESC) y NO estamos crafteando, volvemos al lobby
                 if (worldName) {
                     // 1. Desconectar listeners del mundo
                     if (playersListener) off(ref(db, `worlds/${worldName}/players`), 'value', playersListener);
                     if (blocksListener.added) off(ref(db, `worlds/${worldName}/blocks`), 'child_added', blocksListener.added);
                     if (blocksListener.removed) off(ref(db, `worlds/${worldName}/blocks`), 'child_removed', blocksListener.removed);
-                    // NUEVO: Desconectar listener de inventario
                     if (inventoryListener) off(ref(db, `worlds/${worldName}/inventories/${userId}`), 'value', inventoryListener);
-                    
                     
                     // 2. Limpiar variables del mundo
                     playersListener = null;
@@ -846,8 +851,10 @@
             setupHotbar(); // Prepara la ESTRUCTURA de la hotbar
             
             // --- NUEVO: Listeners de Crafteo ---
-            document.getElementById('craftPlanksButton').addEventListener('click', craftPlanks);
-            document.getElementById('craftTableButton').addEventListener('click', craftCraftingTable);
+            document.getElementById('craft-planks').addEventListener('click', craftPlanks);
+            document.getElementById('craft-sticks').addEventListener('click', craftSticks);
+            document.getElementById('craft-table').addEventListener('click', craftCraftingTable);
+            document.getElementById('craft-wooden-pickaxe').addEventListener('click', craftWoodenPickaxe);
             
             // --- Eventos de Teclado y Ratón ---
             document.addEventListener('keydown', onKeyDown);
@@ -859,9 +866,9 @@
             // --- Manejador de Redimensión de Ventana ---
             window.addEventListener('resize', onWindowResize);
             
-            // Iniciar AMBOS bucles del juego
+            // --- CAMBIO: Bucle de Juego (Solo uno) ---
             animate();
-            animateHotbar(); 
+            // (animateHotbar() ha sido eliminado)
         }
         
         // --- NUEVO: Flujo de Autenticación y Lobby ---
@@ -1217,19 +1224,21 @@
                 addBlock(x, y + i, z, materials.oak_log, 'oak_log', chunkBlocks, false);
             }
             
-            // Hojas (No tenemos, usaremos planks por ahora como placeholder visual)
-            // Esto es solo visual, no funcional
+            // --- CAMBIO: Hojas (oak_leaves) ---
             const radius = 2;
             for (let lx = -radius; lx <= radius; lx++) {
-                for (let ly = -radius; ly <= radius; ly++) {
+                // Reducir hojas en las esquinas
+                for (let ly = -1; ly <= radius; ly++) { 
                     for (let lz = -radius; lz <= radius; lz++) {
-                        if (Math.random() > 0.3) { // No un cubo perfecto
-                            const leafX = x + lx;
-                            const leafY = y + height + ly - 1; // Centrado en la parte superior
-                            const leafZ = z + lz;
-                            if (!getBlock(leafX, leafY, leafZ)) {
-                                // Usamos 'dirt' como placeholder de 'leaves' ya que no dropea nada útil
-                                addBlock(leafX, leafY, leafZ, materials.dirt, 'dirt', chunkBlocks, false);
+                        // Crear una forma más redondeada
+                        if (lx*lx + (ly-1)*(ly-1) + lz*lz < (radius * radius + 1)) {
+                            if (Math.random() > 0.2) { // Un poco menos denso
+                                const leafX = x + lx;
+                                const leafY = y + height + ly -1;
+                                const leafZ = z + lz;
+                                if (!getBlock(leafX, leafY, leafZ)) {
+                                    addBlock(leafX, leafY, leafZ, materials.oak_leaves, 'oak_leaves', chunkBlocks, false);
+                                }
                             }
                         }
                     }
@@ -1422,7 +1431,9 @@
                 for (let y = minY; y < maxY; y++) {
                     for (let z = minZ; z < maxZ; z++) {
                         
-                        if (getBlock(x, y, z)) { 
+                        // CAMBIO: No colisionar con hojas
+                        const block = getBlock(x, y, z);
+                        if (block && block.userData.type !== 'oak_leaves') { 
                             boxMin.set(x - 0.5, y - 0.5, z - 0.5);
                             boxMax.set(x + 0.5, y + 0.5, z + 0.5);
                             collisionCheckBlockBox.set(boxMin, boxMax);
@@ -1542,9 +1553,11 @@
                     if (intersects.length > 0 && intersects[0].object.userData.type) {
                         const intersectedBlock = intersects[0].object;
                         
-                        // No se pueden minar hojas (placeholder)
-                        if (intersectedBlock.userData.type === 'leaves_placeholder') {
+                        // CAMBIO: No se pueden minar hojas
+                        if (intersectedBlock.userData.type === 'oak_leaves') {
                             stopMining();
+                            // (Opcional: romperlas instantáneamente)
+                            // removeBlock(intersectedBlock, true);
                             return;
                         }
 
@@ -1654,8 +1667,10 @@
                     return 'oak_planks';
                 case 'crafting_table':
                     return 'crafting_table';
+                case 'oak_leaves': // CAMBIO
+                    return null; // Las hojas no dropean nada
                 default:
-                    return null; // Hojas, etc. no dropean nada
+                    return null; 
             }
         }
         
@@ -1688,6 +1703,9 @@
                     if (remaining === 0) break;
                 }
             }
+            // Importante: Actualizar UI y guardar DESPUÉS de consumir
+            updateHotbarInventoryUI();
+            saveInventory();
             return true;
         }
         
@@ -1707,6 +1725,27 @@
                 addToInventory('crafting_table');
             } else {
                 console.log("¡Necesitas 4 tablones de roble!");
+            }
+        }
+        
+        // NUEVA RECETA
+        function craftSticks() {
+            if (checkAndConsume('oak_planks', 2)) {
+                addToInventory('stick');
+                addToInventory('stick');
+                addToInventory('stick');
+                addToInventory('stick');
+            } else {
+                console.log("¡Necesitas 2 tablones de roble!");
+            }
+        }
+        
+        // NUEVA RECETA
+        function craftWoodenPickaxe() {
+            if (checkAndConsume('oak_planks', 3) && checkAndConsume('stick', 2)) {
+                addToInventory('wooden_pickaxe');
+            } else {
+                console.log("¡Necesitas 3 tablones y 2 palos!");
             }
         }
         
@@ -1750,6 +1789,17 @@
         // --- Manejadores de Eventos ---
 
         function onKeyDown(event) {
+            // No moverse si el menú de crafteo está abierto
+            if (isCrafting) {
+                // Solo permitir que la 'E' cierre el menú
+                if (event.code === 'KeyE') {
+                    isCrafting = false;
+                    controls.lock();
+                    document.getElementById('crafting-screen').style.display = 'none';
+                }
+                return;
+            }
+            
             switch (event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyA': moveLeft = true; break;
@@ -1758,6 +1808,15 @@
                 case 'Space':
                     if (canJump === true) playerVelocity.y += jumpForce;
                     canJump = false;
+                    break;
+                
+                // --- NUEVO: Lógica de la 'E' para Craftear ---
+                case 'KeyE':
+                    if (controls.isLocked) {
+                        isCrafting = true;
+                        controls.unlock();
+                        document.getElementById('crafting-screen').style.display = 'flex';
+                    }
                     break;
                 
                 // Controles de Hotbar (1-9)
@@ -1783,10 +1842,11 @@
         }
         
         function onMouseDown(event) {
-            if (!controls.isLocked) return; 
+            // No hacer nada si el cursor no está bloqueado o si estamos crafteando
+            if (!controls.isLocked || isCrafting) return; 
             
-            // No permitir clics si se está sobre la UI
-            if (event.target.classList.contains('craft-btn')) return;
+            // No permitir clics si se está sobre la UI (aunque esté oculta)
+            // if (event.target.classList.contains('craft-btn')) return; // Ya no es necesario
 
             // Botón Izquierdo (0): Iniciar minería
             if (event.button === 0) {
@@ -1816,8 +1876,8 @@
                 if (intersects.length > 0) {
                     const intersect = intersects[0];
                     
-                    // No se puede poner un bloque en una "hoja" (placeholder)
-                    if (intersect.object.userData.type === 'leaves_placeholder') return;
+                    // CAMBIO: No se puede poner un bloque en una hoja
+                    if (intersect.object.userData.type === 'oak_leaves') return;
                     
                     const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
                     newBlockPos.round();
@@ -1915,106 +1975,59 @@
         }
 
         
-        // --- FUNCIONES DE HOTBAR 3D ---
+        // --- CAMBIO: FUNCIONES DE HOTBAR (SIMPLIFICADAS A 2D) ---
 
         function setupHotbar() {
             hotbarElement = document.getElementById('hotbar');
             
-            hotbarCamera = new THREE.PerspectiveCamera(75, 1.0, 0.1, 10);
-            hotbarCamera.position.z = 1.3; 
-
             for (let i = 0; i < 9; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'hotbar-slot';
                 
-                const canvas = document.createElement('canvas');
-                canvas.className = 'hotbar-canvas';
-                slot.appendChild(canvas);
+                // Icono 2D
+                const icon = document.createElement('img');
+                icon.className = 'hotbar-item-icon';
+                slot.appendChild(icon);
                 
-                // NUEVO: Añadir div para la cantidad
+                // Div de cantidad
                 const quantityDiv = document.createElement('div');
                 quantityDiv.className = 'hotbar-quantity';
                 slot.appendChild(quantityDiv);
                 
                 hotbarElement.appendChild(slot);
                 hotbarSlots.push(slot); 
-
-                const scene = new THREE.Scene();
-                const light = new THREE.AmbientLight(0xffffff, 2.0); 
-                scene.add(light);
-                const pointLight = new THREE.PointLight(0xffffff, 1.0);
-                pointLight.position.set(1, 2, 3);
-                scene.add(pointLight);
-                hotbarScenes[i] = scene;
-
-                const renderer = new THREE.WebGLRenderer({ 
-                    canvas: canvas, 
-                    alpha: true, 
-                    antialias: true 
-                });
-                renderer.setSize(50, 50); 
-                hotbarRenderers[i] = renderer;
-
-                // CAMBIO: Crear el mesh pero con geometría/rotación por defecto
-                // Se ajustará en updateHotbarInventoryUI
-                const mesh = new THREE.Mesh(blockGeometry); // Geometría por defecto
-                mesh.rotation.x = 0.5; 
-                mesh.rotation.y = -0.7;
-                mesh.visible = false; // Oculto por defecto
-                scene.add(mesh);
-                hotbarMeshes[i] = mesh;
             }
             updateHotbarActiveSlotUI();
         }
 
-        // Bucle de animación SÓLO para la hotbar
-        function animateHotbar() {
-            requestAnimationFrame(animateHotbar);
-            
-            for(let i = 0; i < 9; i++) {
-                const renderer = hotbarRenderers[i];
-                const scene = hotbarScenes[i];
-                if (renderer && scene && hotbarMeshes[i] && hotbarMeshes[i].visible) { // Solo renderizar si es visible
-                    renderer.render(scene, hotbarCamera);
-                }
-            }
-        }
+        // (animateHotbar() ha sido eliminado)
         
-        // --- CAMBIO: Hotbar Híbrida (Items 2D / Bloques 3D) ---
+        // CAMBIO: Hotbar 2D
         function updateHotbarInventoryUI() {
             if (!inventory || inventory.length === 0) return;
             
             for (let i = 0; i < 9; i++) {
                 const slotData = inventory[i];
-                const mesh = hotbarMeshes[i];
-                const quantityElement = hotbarSlots[i].querySelector('.hotbar-quantity');
+                const slotElement = hotbarSlots[i];
+                const iconElement = slotElement.querySelector('.hotbar-item-icon');
+                const quantityElement = slotElement.querySelector('.hotbar-quantity');
 
                 if (slotData && slotData.type && slotData.quantity > 0) {
                     
-                    // Asignar material
-                    mesh.material = materials[slotData.type];
+                    // Establecer la URL del icono
+                    // (Los items puros y los bloques usan la misma convención de nombrado)
+                    const textureUrl = `${textureBaseUrl}${slotData.type}.png`;
+                    iconElement.src = textureUrl;
+                    iconElement.style.display = 'block';
                     
-                    // CAMBIO: Ajustar geometría y rotación
-                    if (itemTypes.has(slotData.type)) {
-                        mesh.geometry = itemGeometry;
-                        mesh.rotation.set(0, 0, 0); // Plano 2D
-                    } else {
-                        mesh.geometry = blockGeometry;
-                        mesh.rotation.set(0.5, -0.7, 0); // Bloque 3D inclinado
-                    }
-                    
-                    mesh.visible = true;
+                    // Mostrar cantidad
                     quantityElement.textContent = slotData.quantity;
                     quantityElement.style.display = 'block';
                 } else {
-                    mesh.visible = false;
+                    // Limpiar slot
+                    iconElement.src = '';
+                    iconElement.style.display = 'none';
                     quantityElement.style.display = 'none';
-                }
-            }
-            // Forzar un renderizado de la hotbar
-            for(let i = 0; i < 9; i++) {
-                if (hotbarRenderers[i] && hotbarScenes[i]) {
-                    hotbarRenderers[i].render(hotbarScenes[i], hotbarCamera);
                 }
             }
         }
@@ -2051,4 +2064,3 @@
     </script>
 </body>
 </html>
-
