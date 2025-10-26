@@ -35,9 +35,15 @@
             font-family: 'Inter', sans-serif; /* Fuente Inter */
             background-color: #1a1a1a; /* Fondo oscuro */
             color: #f0f0f0;
+            user-select: none; /* Evitar seleccionar texto */
         }
-        canvas {
-            display: block;
+        
+        /* CORRECCIÓN: Lienzo 3D oculto al inicio */
+        #game-canvas {
+            display: none; /* Oculto hasta unirse al mundo */
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         
         /* --- Contenedores de Pantalla --- */
@@ -55,8 +61,7 @@
         }
         
         /* Ocultar pantallas por defecto */
-        /* CAMBIO: Añadida #crafting-screen */
-        #homescreen, #game-ui, #crosshair, #crafting-screen {
+        #homescreen, #game-ui, #crosshair, #inventory-screen {
             display: none;
         }
 
@@ -152,7 +157,6 @@
             cursor: pointer;
             text-align: left;
             transition: background-color 0.2s ease;
-            /* CAMBIO: Añadido flex para alinear botón */
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -164,7 +168,6 @@
             border-bottom: none;
         }
         
-        /* CAMBIO: Contenedor para el nombre y creador */
         .server-item-name {
             display: flex;
             flex-direction: column;
@@ -180,10 +183,8 @@
         .creator-name {
             font-size: 0.8em;
             color: #aaa;
-            /* margin-left: 10px; (Eliminado, ahora está debajo) */
         }
         
-        /* CAMBIO: Estilo para el botón de eliminar */
         .delete-world-btn {
             width: auto;
             padding: 6px 12px;
@@ -228,7 +229,7 @@
 
         /* --- Estilos del Juego --- */
         
-        /* NUEVO: Contenedor para las etiquetas de nombres (CSS2D) */
+        /* Contenedor para las etiquetas de nombres (CSS2D) */
         #label-container {
             position: absolute;
             top: 0;
@@ -237,9 +238,10 @@
             height: 100%;
             pointer-events: none; /* No intercepta clics */
             z-index: 5; /* Detrás de la UI pero delante del juego */
+            display: none; /* CORRECCIÓN: Oculto por defecto */
         }
         
-        /* NUEVO: Estilo para la etiqueta del nombre del jugador */
+        /* Estilo para la etiqueta del nombre del jugador */
         .player-label {
             color: white;
             background-color: rgba(0, 0, 0, 0.4);
@@ -273,7 +275,6 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            /* display: none; Oculto por #game-ui */
             flex-direction: column; /* Apila la vida encima de la hotbar */
             align-items: center;
             z-index: 20;
@@ -293,7 +294,22 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.7); 
         }
 
-        /* --- CAMBIO: Estilos de la Hotbar (Simplificados a 2D) --- */
+        /* Clase de Slot Genérica */
+        .slot {
+            width: 50px;
+            height: 50px;
+            margin: 2px;
+            border: 2px solid #888;
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            position: relative; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box; /* Importante para que el borde no sume */
+        }
+        
+        /* Hotbar (in-game) */
         #hotbar {
             display: flex;
             background-color: rgba(0, 0, 0, 0.4);
@@ -303,36 +319,22 @@
             pointer-events: auto; /* La hotbar SÍ recibe clics */
         }
 
-        .hotbar-slot {
-            width: 50px;
-            height: 50px;
-            margin: 2px;
-            border: 2px solid #888;
-            border-radius: 6px;
-            background-color: rgba(255, 255, 255, 0.1);
-            position: relative; 
-            /* Para centrar la imagen */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        /* NUEVO: Estilo para el icono 2D del item */
-        .hotbar-item-icon {
-            width: 36px;
-            height: 36px;
-            image-rendering: pixelated; /* Mantiene los píxeles nítidos */
-            display: none; /* Oculto por defecto */
-        }
-
         .hotbar-slot.active {
             border: 3px solid #ffffff;
             transform: scale(1.05); /* Resaltar */
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
         }
         
-        /* NUEVO: Estilo para la cantidad en la hotbar */
-        .hotbar-quantity {
+        /* Estilos de Item (Icono y Cantidad) */
+        .item-icon {
+            width: 36px;
+            height: 36px;
+            image-rendering: pixelated; /* Mantiene los píxeles nítidos */
+            display: none; /* Oculto por defecto */
+            pointer-events: none; /* No bloquear clics */
+        }
+
+        .item-quantity {
             position: absolute;
             bottom: 2px;
             right: 4px;
@@ -344,58 +346,102 @@
             display: none; /* Oculto por defecto */
         }
         
-        /* --- NUEVO: Estilos de la Pantalla de Crafteo --- */
-        #crafting-screen {
+        /* Estilos de la Pantalla de Inventario/Crafteo */
+        #inventory-screen {
             z-index: 100;
             flex-direction: column;
+            background-color: rgba(26, 26, 26, 0.85); /* Más suave */
         }
         
-        #crafting-modal {
-            width: 500px;
-            min-height: 300px;
+        #inventory-modal {
+            width: auto;
             padding: 20px;
             background-color: #2c2c2c;
             border-radius: 12px;
             border: 1px solid #444;
             box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            
+            display: grid;
+            grid-template-areas: 
+                "title title"
+                "crafting result"
+                "main-inv main-inv"
+                "hotbar-inv hotbar-inv";
+            gap: 20px;
         }
         
-        #crafting-modal h2 {
-            margin-top: 0;
+        #inventory-modal h2 {
+            grid-area: title;
+            margin: 0;
             color: #66bb6a;
             text-align: center;
         }
-        
-        #recipe-list {
+
+        /* Contenedor de Crafteo */
+        #crafting-area {
+            grid-area: crafting;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            grid-template-columns: auto auto; /* 2x2 grid */
+            gap: 5px;
+            --grid-cols: 2; 
         }
         
-        .recipe-btn {
-            padding: 12px;
-            background-color: #3a3a3a;
-            border: 1px solid #555;
+        /* Grid de Crafteo (2x2 o 3x3) */
+        #crafting-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-cols), 54px);
+            gap: 2px;
+            align-self: start;
+        }
+        
+        /* Flecha y Resultado */
+        #crafting-arrow {
+            grid-area: result;
+            display: flex;
+            align-items: center;
+            justify-content: space-evenly;
+            padding: 0 10px;
+        }
+        
+        #crafting-arrow::before {
+            content: "➡️";
+            font-size: 24px;
+            color: #888;
+        }
+        
+        /* Grid del Inventario Principal (27 slots) */
+        #player-inventory-grid {
+            grid-area: main-inv;
+            display: grid;
+            grid-template-columns: repeat(9, 54px);
+            gap: 2px;
+        }
+        
+        /* Grid de la Hotbar (en el inventario) (9 slots) */
+        #player-hotbar-grid {
+            grid-area: hotbar-inv;
+            display: grid;
+            grid-template-columns: repeat(9, 54px);
+            gap: 2px;
+            border-top: 1px solid #555;
+            padding-top: 10px;
+        }
+        
+        /* Item en el cursor (Drag-and-Drop) */
+        #item-cursor {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: rgba(100, 100, 255, 0.3);
+            border: 2px solid white;
             border-radius: 6px;
-            color: #f0f0f0;
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
-            text-align: left;
-        }
-        
-        .recipe-btn:hover {
-            background-color: #4a4a4a;
-            border-color: #777;
-        }
-        
-        .recipe-btn small {
-            color: #aaa;
-            font-weight: 400;
-            display: block;
-            margin-top: 4px;
+            z-index: 999;
+            pointer-events: none; /* No bloquear clics */
+            
+            display: none; /* Oculto por defecto, 'flex' al coger item */
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
         }
         
     </style>
@@ -404,16 +450,13 @@
     <!-- PANTALLA 1: LOGIN -->
     <div id="login-screen" class="screen">
         <div class="form-box">
-            <!-- CAMBIO DE NOMBRE -->
             <h2>MainCraft Online</h2>
             <div class="input-group">
                 <label for="username">Usuario:</label>
-                <!-- CAMBIO: Eliminado 'value' y añadido 'placeholder' -->
                 <input type="text" id="username" placeholder="TuUsuario">
             </div>
             <div class="input-group">
                 <label for="password">Contraseña:</label>
-                <!-- CAMBIO: Eliminado 'value' y añadido 'placeholder' -->
                 <input type="password" id="password" placeholder="TuContraseña">
             </div>
             <button id="loginButton" class="btn">Login / Registrarse</button>
@@ -445,49 +488,99 @@
 
     <!-- PANTALLA 3: JUEGO -->
     
-    <!-- NUEVO: Contenedor para las etiquetas de nombres -->
+    <!-- Lienzo 3D (Oculto al inicio) -->
+    <canvas id="game-canvas"></canvas>
+    
+    <!-- Contenedor para las etiquetas de nombres -->
     <div id="label-container"></div>
     
     <!-- La mirilla -->
     <div id="crosshair"></div>
     
-    <!-- NUEVO: Pantalla de Crafteo (oculta) -->
-    <div id="crafting-screen" class="screen">
-        <div id="crafting-modal">
-            <h2>Crafteo</h2>
-            <p style="text-align: center; color: #aaa; margin-top: -10px; margin-bottom: 20px;">Pulsa 'E' para cerrar</p>
+    <!-- Pantalla de Inventario (oculta) -->
+    <div id="inventory-screen" class="screen">
+        <div id="inventory-modal">
+            <h2 id="inventory-title">Inventario</h2>
             
-            <div id="recipe-list">
-                <button id="craft-planks" class="recipe-btn">
-                    4x Tablones de Roble
-                    <small>Necesita: 1x Tronco de Roble</small>
-                </button>
-                <button id="craft-sticks" class="recipe-btn">
-                    4x Palos
-                    <small>Necesita: 2x Tablones de Roble</small>
-                </button>
-                <button id="craft-table" class="recipe-btn">
-                    1x Mesa de Crafteo
-                    <small>Necesita: 4x Tablones de Roble</small>
-                </button>
-                <button id="craft-wooden-pickaxe" class="recipe-btn">
-                    1x Pico de Madera
-                    <small>Necesita: 3x Tablones, 2x Palos</small>
-                </button>
+            <!-- Crafteo (Grid + Flecha + Resultado) -->
+            <div id="crafting-area">
+                <div id="crafting-grid">
+                    <!-- Slots 0-8 (se muestran/ocultan 2x2 vs 3x3) -->
+                    <div class="slot slot-2x2" data-slot-type="crafting" data-slot-index="0">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-2x2" data-slot-type="crafting" data-slot-index="1">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-3x3" data-slot-type="crafting" data-slot-index="2">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    
+                    <div class="slot slot-2x2" data-slot-type="crafting" data-slot-index="3">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-2x2" data-slot-type="crafting" data-slot-index="4">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-3x3" data-slot-type="crafting" data-slot-index="5">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    
+                    <div class="slot slot-3x3" data-slot-type="crafting" data-slot-index="6">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-3x3" data-slot-type="crafting" data-slot-index="7">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                    <div class="slot slot-3x3" data-slot-type="crafting" data-slot-index="8">
+                        <img class="item-icon">
+                        <span class="item-quantity"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="crafting-arrow">
+                <div class="slot" data-slot-type="result" data-slot-index="0">
+                    <img class="item-icon">
+                    <span class="item-quantity"></span>
+                </div>
+            </div>
+            
+            <!-- Inventario Principal (27 slots) -->
+            <div id="player-inventory-grid">
+                <!-- Slots 9-35 (índices 0-26) -->
+            </div>
+            
+            <!-- Hotbar (9 slots) -->
+            <div id="player-hotbar-grid">
+                <!-- Slots 0-8 (índices 0-8) -->
             </div>
         </div>
     </div>
+    
+    <!-- Item en el cursor -->
+    <div id="item-cursor">
+        <img class="item-icon">
+        <span class="item-quantity"></span>
+    </div>
+
 
     <!-- Contenedor de la Interfaz (Vida + Hotbar) -->
     <div id="game-ui">
         <div id="ui-container">
-            <!-- CAMBIO: UI de Crafteo eliminada de aquí -->
-            
             <!-- Barra de vida -->
             <div id="health-bar">
                 <!-- Los corazones se generan dinámicamente con JS -->
             </div>
-            <!-- Contenedor de la Hotbar -->
+            <!-- Contenedor de la Hotbar (en el juego) -->
             <div id="hotbar">
                 <!-- Los slots se generan dinámicamente con JS -->
             </div>
@@ -503,32 +596,27 @@
         const firebaseConfig = {
           apiKey: "AIzaSyCvqvernkGHCvBuGArnJSXcka40lCFBKGk",
           authDomain: "maincraft-e2b8c.firebaseapp.com",
-          // CORRECCIÓN: Faltaba una 't' en firebasedatabase.app
           databaseURL: "https://maincraft-e2b8c-default-rtdb.europe-west1.firebasedatabase.app",
           projectId: "maincraft-e2b8c",
-          storageBucket: "maincraft-e2b8c.firebasestorage.app",
+          storageBucket: "maincraft-e2b8c.appspot.com", 
           messagingSenderId: "10833551639",
           appId: "1:10833551639:web:d2f83d3967b38710f31752",
           measurementId: "G-E2FMTZZ92P"
         };
         
-        // --- CORRECCIÓN: Imports de Firebase movidos aquí ---
+        // --- Imports de Firebase ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        // CORRECCIÓN: Arreglado 'httpsS' a 'https'
         import { getDatabase, ref, set, onValue, onChildAdded, onChildRemoved, serverTimestamp, query, orderByChild, remove, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         // --- Imports de Three.js ---
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-        // NUEVO: Importar CSS2DRenderer para nombres de jugadores
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
         // --- Variables Globales ---
         let scene, camera, renderer, controls, raycaster;
         let noise; // Generador de ruido
-        
-        // NUEVO: Renderer para las etiquetas 2D
         let labelRenderer;
         
         // --- Constantes del Jugador ---
@@ -542,7 +630,7 @@
         let db, auth;
         let worldName; // El "servidor"
         let userId;    // Nuestro ID de Firebase
-        let userName;  // NUEVO: Nuestro nombre de usuario
+        let userName;  // Nuestro nombre de usuario
         let lastFirebaseUpdate = 0;
         let players = new Map(); // Mapa para [userId, { mesh, label }] de otros jugadores
         const playerMeshGeometry = new THREE.BoxGeometry(playerWidth * 2, playerHeight, playerWidth * 2);
@@ -552,17 +640,14 @@
         let playersListener = null;
         let blocksListener = { added: null, removed: null }; 
         let worldsListener = null;
-        // NUEVO: Listener para nuestro inventario
         let inventoryListener = null; 
-
 
         // --- Sistema de Chunks ---
         const worldBlocks = new Map(); 
         const blockData = new Map(); // Guarda la Mesh
         
         const chunkSize = 16; 
-        // CAMBIO: Render Distance 3x3 (1 de cada lado)
-        const renderDistance = 1;
+        const renderDistance = 1; // 3x3
         
         let currentChunk = new THREE.Vector2(Infinity, Infinity); 
 
@@ -597,47 +682,73 @@
         let breakingBlockOverlay = null; 
         let breakingMaterial; 
 
-        // --- CAMBIO: Variables de Inventario y Hotbar (Simplificadas) ---
+        // --- Variables de Inventario y Crafteo ---
         let hotbarElement;
-        let hotbarSlots = []; 
+        let hotbarSlots = []; // Divs de la hotbar in-game
         let selectedSlot = 0; 
-        let inventory = []; // Ahora será un array de { type, quantity }
-        let materials = {}; // SOLO para bloques
         
-        // --- NUEVO: Variable de estado de Crafteo ---
-        let isCrafting = false;
+        let inventory = []; // 36 slots
+        
+        // Estado de Crafteo
+        let craftingGrid2x2 = [];
+        let craftingGrid3x3 = [];
+        let resultSlot2x2 = { type: null, quantity: 0 };
+        let resultSlot3x3 = { type: null, quantity: 0 };
+        let heldItem = { type: null, quantity: 0 }; // Item en el cursor
+        let isCrafting = false; // ¿Está el inventario abierto?
+        let currentCraftingType = '2x2'; // '2x2' o '3x3'
+        
+        // DOM Elements
+        let gameCanvas, itemCursorElement, playerInventoryGrid, playerHotbarGrid, craftingGridElement, resultSlotElement;
+        
+        let materials = {}; // SOLO para bloques
         
         // --- URLs de Texturas ---
         const textureBaseUrl = 'https://logise1.github.io/maincraft/';
         const textureLoader = new THREE.TextureLoader();
         
-        // --- CAMBIO: Constantes del Mundo (revertidas) ---
+        // --- Constantes del Mundo ---
         const terrainHeight = 6;
         const terrainScale = 0.05; 
-        const worldDepth = 0; // Revertido
+        const worldDepth = 0;
         
-        // --- CAMBIO: Geometría de Bloque (única) ---
+        // --- Geometría de Bloque (única) ---
         const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
         
-        // --- CAMBIO: Set de tipos de items (para evitar colocarlos) ---
-        // Sigue siendo necesario para saber qué no se puede colocar
+        // --- Set de tipos de items (para evitar colocarlos) ---
         const itemTypes = new Set([
             'diamond', 'emerald', 'redstone', 'iron_ingot', 'gold_ingot', 'stick',
             'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'golden_pickaxe',
             'diamond_pickaxe', 'netherite_pickaxe'
         ]);
-
-        // --- ¡CARGA DE TEXTURAS! ---
         
-        // Función helper para cargar texturas pixeladas
+        // --- Base de datos de Recetas ---
+        const RECIPES = {
+            // 2x2
+            'oak_log,null,null,null': { result: 'oak_planks', count: 4 },
+            'null,oak_log,null,null': { result: 'oak_planks', count: 4 },
+            'null,null,oak_log,null': { result: 'oak_planks', count: 4 },
+            'null,null,null,oak_log': { result: 'oak_planks', count: 4 },
+            
+            'oak_planks,null,oak_planks,null': { result: 'stick', count: 4 },
+            'null,oak_planks,null,oak_planks': { result: 'stick', count: 4 },
+            
+            'oak_planks,oak_planks,oak_planks,oak_planks': { result: 'crafting_table', count: 1 },
+            
+            // 3x3 (Llave de 9)
+            'oak_planks,oak_planks,oak_planks,null,stick,null,null,stick,null': { result: 'wooden_pickaxe', count: 1 }
+        };
+
+        // --- Carga de Texturas ---
+        
         function loadTexture(url) {
             const texture = textureLoader.load(url);
             texture.magFilter = THREE.NearestFilter;
-            texture.minFilter = THREE.NearestFilter; // Asegurar pixelado al minificar
+            texture.minFilter = THREE.NearestFilter;
             return texture;
         }
 
-        // --- CAMBIO: Carga de texturas SOLO para BLOQUES ---
+        // --- Carga de texturas SOLO para BLOQUES ---
         const stoneTexture = loadTexture(`${textureBaseUrl}stone.png`);
         const dirtTexture = loadTexture(`${textureBaseUrl}dirt.png`);
         const grassTopTexture = loadTexture(`${textureBaseUrl}grass_block_top.png`);
@@ -646,7 +757,7 @@
         const oakLogTexture = loadTexture(`${textureBaseUrl}oak_log.png`);
         const oakLogTopTexture = loadTexture(`${textureBaseUrl}oak_log_top.png`);
         const oakPlanksTexture = loadTexture(`${textureBaseUrl}oak_planks.png`);
-        const oakLeavesTexture = loadTexture(`${textureBaseUrl}oak_leaves.png`); // NUEVO
+        const oakLeavesTexture = loadTexture(`${textureBaseUrl}oak_leaves.png`);
         
         const craftingTableTopTexture = loadTexture(`${textureBaseUrl}crafting_table_top.png`);
         const craftingTableSideTexture = loadTexture(`${textureBaseUrl}crafting_table_side.png`);
@@ -662,47 +773,46 @@
         const redstoneOreTexture = loadTexture(`${textureBaseUrl}redstone_ore.png`);
 
 
-        // --- ¡MATERIALES ACTUALIZADOS CON TEXTURAS! ---
+        // --- Materiales (Bloques) ---
         
-        // CAMBIO: Materiales solo para bloques
         const grassMaterial = [
-            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (right)
-            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (left)
-            new THREE.MeshStandardMaterial({ map: grassTopTexture, color: 0x90ee90 }),  // Arriba (top) - Tinte verde
-            new THREE.MeshStandardMaterial({ map: dirtTexture }),          // Abajo (bottom)
-            new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (front)
-            new THREE.MeshStandardMaterial({ map: grassSideTexture })      // Lado (back)
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),
+            new THREE.MeshStandardMaterial({ map: grassTopTexture, color: 0x90ee90 }), // Tinte verde
+            new THREE.MeshStandardMaterial({ map: dirtTexture }),
+            new THREE.MeshStandardMaterial({ map: grassSideTexture }),
+            new THREE.MeshStandardMaterial({ map: grassSideTexture })
         ];
         const dirtMaterial = new THREE.MeshStandardMaterial({ map: dirtTexture });
         const stoneMaterial = new THREE.MeshStandardMaterial({ map: stoneTexture });
-        
         const cobblestoneMaterial = new THREE.MeshStandardMaterial({ map: cobblestoneTexture });
         const oakPlanksMaterial = new THREE.MeshStandardMaterial({ map: oakPlanksTexture });
         
-        // NUEVO: Material de Hojas (transparente)
         const oakLeavesMaterial = new THREE.MeshStandardMaterial({ 
             map: oakLeavesTexture, 
             transparent: true, 
             alphaTest: 0.1, 
-            side: THREE.DoubleSide 
+            side: THREE.DoubleSide,
+            color: 0x90ee90 // Tinte verde
         });
         
         const oakLogMaterial = [
-            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (right)
-            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (left)
-            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),   // Arriba (top)
-            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),   // Abajo (bottom)
-            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (front)
-            new THREE.MeshStandardMaterial({ map: oakLogTexture })       // Lado (back)
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),
+            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),
+            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),
+            new THREE.MeshStandardMaterial({ map: oakLogTexture })
         ];
         
         const craftingTableMaterial = [
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }), // Lado (right)
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }), // Lado (left)
-            new THREE.MeshStandardMaterial({ map: craftingTableTopTexture }),  // Arriba (top)
-            new THREE.MeshStandardMaterial({ map: oakPlanksTexture }),         // Abajo (bottom)
-            new THREE.MeshStandardMaterial({ map: craftingTableFrontTexture }),// Lado (front)
-            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture })  // Lado (back)
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }),
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }),
+            new THREE.MeshStandardMaterial({ map: craftingTableTopTexture }),
+            new THREE.MeshStandardMaterial({ map: oakPlanksTexture }),
+        
+            new THREE.MeshStandardMaterial({ map: craftingTableFrontTexture }),
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture })
         ];
         
         // Ores
@@ -712,9 +822,10 @@
         const diamondOreMaterial = new THREE.MeshStandardMaterial({ map: diamondOreTexture });
         const emeraldOreMaterial = new THREE.MeshStandardMaterial({ map: emeraldOreTexture });
         const lapisOreMaterial = new THREE.MeshStandardMaterial({ map: lapisOreTexture });
+        // CORRECCIÓN: Usar redstoneOreTexture
         const redstoneOreMaterial = new THREE.MeshStandardMaterial({ map: redstoneOreTexture });
 
-        // --- OPTIMIZACIÓN DE COLISIÓN ---
+        // --- Optimización de Colisión ---
         const collisionCheckBlockBox = new THREE.Box3();
         const boxMin = new THREE.Vector3();
         const boxMax = new THREE.Vector3();
@@ -722,13 +833,14 @@
 
         // --- Inicialización ---
         function init() {
-            // CAMBIO: Inicializar inventario vacío
-            inventory = [];
-            for (let i = 0; i < 9; i++) {
+            // Inventario
+            for (let i = 0; i < 36; i++) {
                 inventory.push({ type: null, quantity: 0 });
             }
+            for (let i = 0; i < 4; i++) craftingGrid2x2.push({ type: null, quantity: 0 });
+            for (let i = 0; i < 9; i++) craftingGrid3x3.push({ type: null, quantity: 0 });
             
-            // --- CAMBIO: Objeto 'materials' (solo bloques) ---
+            // Materiales (Bloques)
             materials = {
                 'dirt': dirtMaterial,
                 'grass': grassMaterial,
@@ -736,7 +848,7 @@
                 'cobblestone': cobblestoneMaterial,
                 'oak_log': oakLogMaterial,
                 'oak_planks': oakPlanksMaterial,
-                'oak_leaves': oakLeavesMaterial, // NUEVO
+                'oak_leaves': oakLeavesMaterial,
                 'crafting_table': craftingTableMaterial,
                 'coal_ore': coalOreMaterial,
                 'iron_ore': ironOreMaterial,
@@ -757,18 +869,18 @@
             camera.position.y = terrainHeight + 5; 
 
             // 3. Renderer (WebGL)
-            renderer = new THREE.WebGLRenderer({ antias: true }); 
+            gameCanvas = document.getElementById('game-canvas'); 
+            renderer = new THREE.WebGLRenderer({ canvas: gameCanvas, antialias: true }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true; 
-            document.body.appendChild(renderer.domElement);
             
-            // NUEVO: 3b. Renderer (CSS2D para etiquetas)
+            // 3b. Renderer (CSS2D para etiquetas)
             const labelContainer = document.getElementById('label-container');
             labelRenderer = new CSS2DRenderer();
             labelRenderer.setSize(window.innerWidth, window.innerHeight);
             labelRenderer.domElement.style.position = 'absolute';
             labelRenderer.domElement.style.top = '0px';
-            labelContainer.appendChild(labelRenderer.domElement);
+            labelContainer.appendChild(labelRenderer.domElement); 
 
             // 4. Luces
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
@@ -782,25 +894,21 @@
             scene.add(directionalLight);
 
             // 5. Controles (Pointer Lock)
-            controls = new PointerLockControls(camera, document.body);
+            controls = new PointerLockControls(camera, renderer.domElement); 
             scene.add(controls.getObject()); 
             
-            // --- CAMBIO: Lógica de desbloqueo de cursor ---
             controls.addEventListener('unlock', () => {
-                // Si desbloqueamos para craftear, no hacemos nada
                 if (isCrafting) {
-                    return;
+                    return; 
                 }
                 
-                // Si desbloqueamos (con ESC) y NO estamos crafteando, volvemos al lobby
                 if (worldName) {
-                    // 1. Desconectar listeners del mundo
+                    // Desconectar listeners
                     if (playersListener) off(ref(db, `worlds/${worldName}/players`), 'value', playersListener);
                     if (blocksListener.added) off(ref(db, `worlds/${worldName}/blocks`), 'child_added', blocksListener.added);
                     if (blocksListener.removed) off(ref(db, `worlds/${worldName}/blocks`), 'child_removed', blocksListener.removed);
                     if (inventoryListener) off(ref(db, `worlds/${worldName}/inventories/${userId}`), 'value', inventoryListener);
                     
-                    // 2. Limpiar variables del mundo
                     playersListener = null;
                     blocksListener = { added: null, removed: null };
                     inventoryListener = null;
@@ -809,30 +917,32 @@
                     // Limpiar jugadores
                     players.forEach(player => {
                         scene.remove(player.mesh);
-                        player.mesh.remove(player.label); // Quitar etiqueta del mesh
+                        player.mesh.remove(player.label);
                     });
                     players.clear();
                     
-                    // 3. Mostrar homescreen
+                    // Ocultar UI del juego
                     document.getElementById('game-ui').style.display = 'none';
                     document.getElementById('crosshair').style.display = 'none';
                     document.getElementById('ui-container').style.display = 'none';
-                    showHomescreen(); // Volver a la lista de servidores
+                    document.getElementById('label-container').style.display = 'none'; 
+                    document.getElementById('game-canvas').style.display = 'none'; 
+                    
+                    showHomescreen(); 
                 }
             });
             
-            // --- NUEVO: Lógica del Login ---
+            // 6. Flujo de Login
             initLoginScreen();
             
-            // 6. Raycaster (para poner/quitar bloques)
-            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 5); // 5 unidades de alcance
+            // 7. Raycaster
+            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 5);
 
-            // 7. Generador de Ruido
+            // 8. Generador de Ruido
             noise = new window.SimplexNoise(); 
             
             // Cargar texturas de rotura
             for (let i = 0; i < 10; i++) {
-                // CORRECCIÓN: Usar textureBaseUrl y el nuevo formato de nombre
                 const texture = loadTexture(`${textureBaseUrl}destroy_stage_${i}.png`);
                 destroyTextures.push(texture);
             }
@@ -846,32 +956,33 @@
                 depthWrite: false
             });
             
-            // --- Configurar UI (Vida y Hotbar) ---
+            // 9. Configurar UI (Vida y Hotbar)
             setupHealthBar();
-            setupHotbar(); // Prepara la ESTRUCTURA de la hotbar
+            setupHotbar();
             
-            // --- NUEVO: Listeners de Crafteo ---
-            document.getElementById('craft-planks').addEventListener('click', craftPlanks);
-            document.getElementById('craft-sticks').addEventListener('click', craftSticks);
-            document.getElementById('craft-table').addEventListener('click', craftCraftingTable);
-            document.getElementById('craft-wooden-pickaxe').addEventListener('click', craftWoodenPickaxe);
+            // 10. Configurar Inventario y Crafteo
+            initInventoryUI();
             
-            // --- Eventos de Teclado y Ratón ---
+            // 11. Eventos de Teclado y Ratón
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
             document.addEventListener('mousedown', onMouseDown);
             document.addEventListener('mouseup', onMouseUp); 
             document.addEventListener('wheel', onMouseWheel); 
+            
+            // 12. Eventos de Drag-and-Drop
+            document.addEventListener('mousemove', onDragCursor);
+            document.getElementById('inventory-screen').addEventListener('click', onSlotClick);
+            document.getElementById('inventory-screen').addEventListener('contextmenu', onSlotRightClick);
 
-            // --- Manejador de Redimensión de Ventana ---
+            // 13. Manejador de Redimensión de Ventana
             window.addEventListener('resize', onWindowResize);
             
-            // --- CAMBIO: Bucle de Juego (Solo uno) ---
+            // 14. Bucle de Juego
             animate();
-            // (animateHotbar() ha sido eliminado)
         }
         
-        // --- NUEVO: Flujo de Autenticación y Lobby ---
+        // --- Flujo de Autenticación y Lobby ---
         
         function initLoginScreen() {
             const loginButton = document.getElementById('loginButton');
@@ -892,42 +1003,35 @@
                 loginStatus.textContent = "Conectando...";
                 loginButton.disabled = true;
                 
-                // NUEVO: Guardar nombre de usuario
-                userName = username;
+                userName = username; // Guardar nombre de usuario
 
                 try {
                     // 1. Inicializar Firebase
-                    // CORRECCIÓN: Usar las variables importadas (initializeApp, getAuth, etc.)
                     const app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
-                    db = getDatabase(app); // CAMBIO: getDatabase() para RTDB
+                    db = getDatabase(app); 
 
                     // 2. Intentar Iniciar Sesión
                     try {
                         const userCredential = await signInWithEmailAndPassword(auth, email, password);
                         userId = userCredential.user.uid;
                     } catch (signInError) {
-                        // 3. Si falla el login (usuario no existe O contraseña incorrecta)
-                        //    El error 'auth/invalid-credential' es el nuevo estándar.
+                        // 3. Si falla el login
                         if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
                             // Intentamos crear la cuenta
                             try {
                                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                                 userId = userCredential.user.uid;
                             } catch (createError) {
-                                // Si 'email-already-in-use', significa que el usuario SÍ existe,
-                                // y la contraseña del login era incorrecta.
                                 if (createError.code === 'auth/email-already-in-use') {
                                     loginStatus.textContent = "Contraseña incorrecta.";
                                     loginButton.disabled = false;
-                                    return; // No continuar
+                                    return; 
                                 } else {
-                                    // Otro error al crear
                                     throw createError;
                                 }
                             }
                         } else {
-                            // Otro error de login (red, etc.)
                             throw signInError; 
                         }
                     }
@@ -955,24 +1059,18 @@
             createButton.onclick = async () => {
                 const newWorld = newWorldInput.value.trim();
                 if (newWorld) {
-                    // 1. Crear la entrada en la lista de mundos (RTDB)
                     const worldListRef = ref(db, "worldList/" + newWorld);
-                    
-                    // CAMBIO: Añadir creatorId y creatorName
                     await set(worldListRef, { 
                         createdAt: serverTimestamp(),
                         creatorId: userId,
-                        creatorName: userName // Usar el nombre de usuario guardado
+                        creatorName: userName 
                     });
-                    
-                    // 2. Unirse al mundo
                     joinWorld(newWorld);
                 }
             };
             
             logoutButton.onclick = async () => {
                 await signOut(auth);
-                // Desconectar listeners
                 if (worldsListener) {
                     off(ref(db, "worldList"), 'value', worldsListener);
                 }
@@ -983,23 +1081,21 @@
                 document.getElementById('loginStatus').textContent = "Sesión cerrada.";
             };
 
-            // Empezar a escuchar la lista de mundos (RTDB)
+            // Escuchar la lista de mundos (RTDB)
             const worldListRef = ref(db, "worldList");
             const q = query(worldListRef, orderByChild("createdAt"));
             
-            // Desconectar listener anterior si existe
             if (worldsListener) off(ref(db, "worldList"), 'value', worldsListener);
             
             worldsListener = onValue(q, (snapshot) => {
                 const serverList = document.getElementById('server-list');
-                serverList.innerHTML = ''; // Limpiar lista
+                serverList.innerHTML = ''; 
                 
                 if(!snapshot.exists()) {
                     serverList.innerHTML = '<div style="padding: 10px; color: #777;">No hay mundos. ¡Crea uno!</div>';
                     return;
                 }
                 
-                // CAMBIO: RTDB onValue da los datos, hay que iterar y revertir para orden desc.
                 const worlds = [];
                 snapshot.forEach(childSnapshot => {
                     worlds.push({
@@ -1012,7 +1108,6 @@
                     const serverItem = document.createElement('div');
                     serverItem.className = 'server-item';
                     
-                    // Contenedor del nombre (para clic)
                     const serverNameDiv = document.createElement('div');
                     serverNameDiv.className = 'server-item-name';
                     
@@ -1024,13 +1119,13 @@
                     };
                     serverItem.appendChild(serverNameDiv);
                     
-                    // CAMBIO: Lógica de AJUSTES (Botón Eliminar)
+                    // Botón Eliminar
                     if (world.creatorId === userId) {
                         const deleteButton = document.createElement('button');
                         deleteButton.className = 'delete-world-btn';
                         deleteButton.textContent = 'Eliminar';
                         deleteButton.onclick = async (e) => {
-                            e.stopPropagation(); // Evitar unirse al mundo
+                            e.stopPropagation(); 
                             if (confirm(`¿Seguro que quieres eliminar el mundo "${world.id}"? Esta acción no se puede deshacer.`)) {
                                 await deleteWorld(world.id);
                             }
@@ -1043,101 +1138,87 @@
             });
         }
         
-        // CAMBIO: Nueva función para eliminar mundos
         async function deleteWorld(worldId) {
-            // Eliminar de la lista de mundos
             const worldListRef = ref(db, `worldList/${worldId}`);
             await remove(worldListRef);
             
-            // Eliminar todos los datos del mundo (bloques, jugadores)
             const worldDataRef = ref(db, `worlds/${worldId}`);
             await remove(worldDataRef);
-            
-            // El listener 'onValue' de la lista de mundos se actualizará solo
         }
         
-        // CAMBIO: joinWorld ahora carga el inventario
         async function joinWorld(selectedWorldName) {
             worldName = selectedWorldName;
             
-            // Desconectar el listener de la lista de mundos
             if (worldsListener) {
                 off(ref(db, "worldList"), 'value', worldsListener);
             }
             
             // Ocultar homescreen y mostrar UI del juego
             document.getElementById('homescreen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block'; // Es el contenedor
+            document.getElementById('game-ui').style.display = 'block';
             document.getElementById('ui-container').style.display = 'flex';
             document.getElementById('crosshair').style.display = 'block';
+            document.getElementById('label-container').style.display = 'block'; 
+            document.getElementById('game-canvas').style.display = 'block'; 
             
-            // NUEVO: Cargar inventario ANTES de entrar
+            // Cargar inventario
             await loadInventory();
             
             controls.lock(); // Bloquear el cursor
             
-            // Iniciar listeners de Firebase para ESE mundo
+            // Iniciar listeners de Firebase
             initFirebaseWorldListeners();
         }
         
-        // NUEVO: Cargar/crear inventario
+        // Cargar/crear inventario de 36 slots
         async function loadInventory() {
             const invRef = ref(db, `worlds/${worldName}/inventories/${userId}`);
             
-            // Escuchar cambios en el inventario
             inventoryListener = onValue(invRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    // Asegurarse de que el inventario tenga 9 slots
-                    if (Array.isArray(data) && data.length === 9) {
+                    if (Array.isArray(data) && data.length === 36) {
                         inventory = data;
                     } else {
-                        // Datos corruptos, crear uno nuevo
                         createEmptyInventory(invRef);
                     }
                 } else {
-                    // No existe inventario, crear uno vacío
                     createEmptyInventory(invRef);
                 }
-                // Actualizar la UI de la hotbar con los datos cargados/nuevos
                 updateHotbarInventoryUI();
             });
         }
         
-        // NUEVO: Función helper para crear y guardar un inventario vacío
         function createEmptyInventory(invRef) {
              inventory = [];
-             for (let i = 0; i < 9; i++) {
+             for (let i = 0; i < 36; i++) {
                  inventory.push({ type: null, quantity: 0 });
              }
-             set(invRef, inventory); // Guardar el inventario vacío
+             set(invRef, inventory);
         }
         
-        // NUEVO: Guardar inventario en Firebase
         async function saveInventory() {
             if (!db || !worldName || !userId) return;
             const invRef = ref(db, `worlds/${worldName}/inventories/${userId}`);
-            // No usamos await para no bloquear el juego
             set(invRef, inventory);
         }
 
         
-        // --- CAMBIO: Función para escuchar cambios de Firebase (RTDB) ---
+        // Escuchar cambios de Firebase (RTDB)
         function initFirebaseWorldListeners() {
             
-            // --- 1. Listener para Jugadores (RTDB) ---
+            // 1. Listener para Jugadores
             const playersRef = ref(db, `worlds/${worldName}/players`);
             playersListener = onValue(playersRef, (snapshot) => {
                 const activePlayers = new Set();
                 
-                if (!snapshot.exists()) return; // Salir si no hay jugadores
+                if (!snapshot.exists()) return;
 
                 snapshot.forEach(childSnapshot => {
                     const data = childSnapshot.val();
                     const playerId = childSnapshot.key;
                     
-                    if (playerId === userId) return; // Somos nosotros
-                    
+                    if (playerId === userId) return;
                     activePlayers.add(playerId);
                     
                     const now = Date.now();
@@ -1147,17 +1228,17 @@
 
                     let player = players.get(playerId);
                     if (!player) {
-                        // NUEVO: Crear Mesh
+                        // Crear Mesh
                         const playerMesh = new THREE.Mesh(playerMeshGeometry, playerMeshMaterial);
                         
-                        // NUEVO: Crear Label (Etiqueta de nombre)
+                        // Crear Label (Etiqueta de nombre)
                         const labelDiv = document.createElement('div');
                         labelDiv.className = 'player-label';
-                        labelDiv.textContent = data.username || 'Jugador'; // Usar el nombre de Firebase
+                        labelDiv.textContent = data.username || 'Jugador';
                         
                         const playerLabel = new CSS2DObject(labelDiv);
-                        playerLabel.position.set(0, playerHeight / 2 + 0.5, 0); // Posicionar encima de la cabeza
-                        playerMesh.add(playerLabel); // Añadir etiqueta al mesh
+                        playerLabel.position.set(0, playerHeight / 2 + 0.5, 0); 
+                        playerMesh.add(playerLabel);
                         
                         scene.add(playerMesh);
                         player = { mesh: playerMesh, label: playerLabel };
@@ -1171,19 +1252,19 @@
                 for (const [playerId, player] of players.entries()) {
                     if (!activePlayers.has(playerId)) {
                         scene.remove(player.mesh);
-                        player.mesh.remove(player.label); // Quitar etiqueta
+                        player.mesh.remove(player.label);
                         players.delete(playerId);
                     }
                 }
             });
             
-            // --- 2. Listener para Bloques (RTDB) ---
+            // 2. Listener para Bloques
             const blocksRef = ref(db, `worlds/${worldName}/blocks`);
             
-            // Listener para bloques AÑADIDOS
+            // Bloques AÑADIDOS
             blocksListener.added = onChildAdded(blocksRef, (snapshot) => {
                 const data = snapshot.val();
-                const blockKey = `${data.x}_${data.y}_${data.z}`; // CAMBIO: Usar _
+                const blockKey = `${data.x}_${data.y}_${data.z}`;
                 const existingBlock = blockData.get(blockKey);
 
                 if (!existingBlock) {
@@ -1194,10 +1275,10 @@
                 }
             });
             
-            // Listener para bloques ELIMINADOS
+            // Bloques ELIMINADOS
             blocksListener.removed = onChildRemoved(blocksRef, (snapshot) => {
                 const data = snapshot.val();
-                const blockKey = `${data.x}_${data.y}_${data.z}`; // CAMBIO: Usar _
+                const blockKey = `${data.x}_${data.y}_${data.z}`;
                 const existingBlock = blockData.get(blockKey);
                 
                 if (existingBlock) {
@@ -1213,10 +1294,9 @@
         }
         
         function getBlock(x, y, z) {
-            return blockData.get(`${x}_${y}_${z}`); // CAMBIO: Usar _
+            return blockData.get(`${x}_${y}_${z}`);
         }
         
-        // --- NUEVO: Generador de Árboles ---
         function generateTree(x, y, z, chunkBlocks) {
             // Tronco
             const height = Math.floor(Math.random() * 2) + 4; // 4-5 bloques de alto
@@ -1224,15 +1304,13 @@
                 addBlock(x, y + i, z, materials.oak_log, 'oak_log', chunkBlocks, false);
             }
             
-            // --- CAMBIO: Hojas (oak_leaves) ---
+            // Hojas
             const radius = 2;
             for (let lx = -radius; lx <= radius; lx++) {
-                // Reducir hojas en las esquinas
                 for (let ly = -1; ly <= radius; ly++) { 
                     for (let lz = -radius; lz <= radius; lz++) {
-                        // Crear una forma más redondeada
                         if (lx*lx + (ly-1)*(ly-1) + lz*lz < (radius * radius + 1)) {
-                            if (Math.random() > 0.2) { // Un poco menos denso
+                            if (Math.random() > 0.2) { 
                                 const leafX = x + lx;
                                 const leafY = y + height + ly -1;
                                 const leafZ = z + lz;
@@ -1246,8 +1324,6 @@
             }
         }
 
-
-        // CAMBIO: Mundo revertido
         function loadChunk(chunkX, chunkZ) {
             const chunkKey = getChunkKey(chunkX, chunkZ);
             if (worldBlocks.has(chunkKey)) {
@@ -1279,22 +1355,37 @@
                          }
                     }
                     
-                    // --- NUEVO: Capa de Piedra y Minerales ---
+                    // Capa de Piedra y Minerales
                     for (let y_fill = y - 4; y_fill >= worldDepth; y_fill--) {
                          if (!getBlock(worldX, y_fill, worldZ)) {
                             
+                            // --- NUEVO: Lógica de Cuevas ---
+                            const caveNoiseScale = 0.08;
+                            const caveNoise = noise.noise3D(
+                                worldX * caveNoiseScale, 
+                                y_fill * caveNoiseScale, 
+                                worldZ * caveNoiseScale
+                            );
+                            
+                            // Si el ruido está por encima de un umbral, es aire (cueva)
+                            const caveThreshold = 0.6;
+                            if (caveNoise > caveThreshold) {
+                                // Es aire, no poner bloque
+                                continue; 
+                            }
+                            // --- FIN Lógica de Cuevas ---
+                            
                             let currentBlockType = 'stone';
                             let currentMaterial = materials.stone;
-                            
                             const rand = Math.random();
                             
-                            if (rand < 0.03 && y_fill < y - 2) { // Coal
+                            if (rand < 0.03 && y_fill < y - 2) { 
                                 currentBlockType = 'coal_ore';
                                 currentMaterial = materials.coal_ore;
-                            } else if (rand < 0.05 && y_fill < -5) { // Iron
+                            } else if (rand < 0.05 && y_fill < -5) {
                                 currentBlockType = 'iron_ore';
                                 currentMaterial = materials.iron_ore;
-                            } else if (rand < 0.06 && y_fill < -10) { // Gold / Lapis
+                            } else if (rand < 0.06 && y_fill < -10) { 
                                 if(Math.random() < 0.5) {
                                     currentBlockType = 'gold_ore';
                                     currentMaterial = materials.gold_ore;
@@ -1302,10 +1393,10 @@
                                     currentBlockType = 'lapis_ore';
                                     currentMaterial = materials.lapis_ore;
                                 }
-                            } else if (rand < 0.07 && y_fill < -12) { // Redstone
+                            } else if (rand < 0.07 && y_fill < -12) {
                                 currentBlockType = 'redstone_ore';
                                 currentMaterial = materials.redstone_ore;
-                            } else if (rand < 0.075 && y_fill < -15) { // Diamond / Emerald
+                            } else if (rand < 0.075 && y_fill < -15) {
                                 if(Math.random() < 0.5) {
                                     currentBlockType = 'diamond_ore';
                                     currentMaterial = materials.diamond_ore;
@@ -1319,8 +1410,8 @@
                          }
                     }
                     
-                    // --- NUEVO: Generar Árboles ---
-                    if (x > 1 && x < chunkSize - 2 && z > 1 && z < chunkSize - 2) { // Evitar bordes
+                    // Generar Árboles
+                    if (x > 1 && x < chunkSize - 2 && z > 1 && z < chunkSize - 2) {
                         if (y >= worldDepth && y < terrainHeight && Math.random() < 0.01) { // 1% de chance
                             generateTree(worldX, y + 1, worldZ, chunkBlocks);
                         }
@@ -1336,28 +1427,23 @@
                 const chunkBlocks = worldBlocks.get(chunkKey);
                 for (const block of chunkBlocks) {
                     scene.remove(block);
-                    blockData.delete(`${block.position.x}_${block.position.y}_${block.position.z}`); // CAMBIO: Usar _
+                    blockData.delete(`${block.position.x}_${block.position.y}_${block.position.z}`);
                 }
                 worldBlocks.delete(chunkKey);
             }
         }
 
-        // CAMBIO: addBlock ahora guarda el 'type' en userData
         function addBlock(x, y, z, material, blockType, chunkArray = null, notifyFirebase = true) {
-            // Evitar que los árboles generen bloques sobre la nada
             if (y > terrainHeight + 10) return; 
             
             const block = new THREE.Mesh(blockGeometry, material);
             block.position.set(x, y, z);
             block.castShadow = true;
             block.receiveShadow = true;
-            
-            // NUEVO: Guardar el tipo de bloque para saber qué 'dropear'
             block.userData = { type: blockType };
             
             scene.add(block);
-            
-            blockData.set(`${x}_${y}_${z}`, block); // CAMBIO: Usar _
+            blockData.set(`${x}_${y}_${z}`, block); 
             
             if (chunkArray) {
                 chunkArray.push(block);
@@ -1369,15 +1455,12 @@
                 if (worldBlocks.has(chunkKey)) {
                     worldBlocks.get(chunkKey).push(block);
                 } else {
-                    const newChunkBlocks = [block];
-                    worldBlocks.set(chunkKey, newChunkBlocks);
+                    worldBlocks.set(chunkKey, [block]);
                 }
             }
             
-            // CAMBIO: Escribir en RTDB
             if (notifyFirebase && db && worldName) {
-                const blockKey = `${x}_${y}_${z}`; // CAMBIO: Usar _
-                // const blockType = (material === materials.grass) ? 'grass' : (material === materials.dirt) ? 'dirt' : 'stone';
+                const blockKey = `${x}_${y}_${z}`;
                 const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
                 set(blockRef, { x, y, z, type: blockType });
             }
@@ -1385,10 +1468,9 @@
 
         function removeBlock(object, notifyFirebase = true) {
             const pos = object.position;
-            const blockKey = `${pos.x}_${pos.y}_${pos.z}`; // CAMBIO: Usar _
+            const blockKey = `${pos.x}_${pos.y}_${pos.z}`; 
             
             scene.remove(object);
-            
             blockData.delete(blockKey);
             
             const chunkX = Math.floor(pos.x / chunkSize);
@@ -1403,7 +1485,6 @@
                 }
             }
             
-            // CAMBIO: Eliminar de RTDB
             if (notifyFirebase && db && worldName) {
                 const blockRef = ref(db, `worlds/${worldName}/blocks/${blockKey}`);
                 remove(blockRef);
@@ -1430,9 +1511,8 @@
             for (let x = minX; x < maxX; x++) {
                 for (let y = minY; y < maxY; y++) {
                     for (let z = minZ; z < maxZ; z++) {
-                        
-                        // CAMBIO: No colisionar con hojas
                         const block = getBlock(x, y, z);
+                        // No colisionar con hojas
                         if (block && block.userData.type !== 'oak_leaves') { 
                             boxMin.set(x - 0.5, y - 0.5, z - 0.5);
                             boxMax.set(x + 0.5, y + 0.5, z + 0.5);
@@ -1542,10 +1622,9 @@
                     canJump = false;
                 }
                 
-                // --- OPTIMIZACIÓN: Generar lista de bloques una vez por frame ---
                 const allBlocks = Array.from(worldBlocks.values()).flat();
                 
-                // Lógica de Minería (REFACTORIZADA)
+                // Lógica de Minería
                 raycaster.setFromCamera(new THREE.Vector2(), camera);
                 const intersects = raycaster.intersectObjects(allBlocks);
 
@@ -1553,21 +1632,16 @@
                     if (intersects.length > 0 && intersects[0].object.userData.type) {
                         const intersectedBlock = intersects[0].object;
                         
-                        // CAMBIO: No se pueden minar hojas
                         if (intersectedBlock.userData.type === 'oak_leaves') {
                             stopMining();
-                            // (Opcional: romperlas instantáneamente)
-                            // removeBlock(intersectedBlock, true);
-                            return;
+                            return; // No se pueden minar hojas
                         }
 
-                        // Si es la primera vez que se detecta el minado o se cambia de bloque
                         if (currentMiningBlock === null) {
-                            // Empezar a minar este bloque
+                            // Empezar a minar
                             currentMiningBlock = intersectedBlock;
                             miningTimer = 0;
                             
-                            // Crear superposición de rotura
                             if (breakingBlockOverlay) scene.remove(breakingBlockOverlay);
                             breakingBlockOverlay = new THREE.Mesh(blockGeometry, breakingMaterial.clone());
                             breakingBlockOverlay.position.copy(currentMiningBlock.position);
@@ -1576,8 +1650,8 @@
                             scene.add(breakingBlockOverlay);
 
                         } 
-                        // Si seguimos minando el MISMO bloque (comprobando por posición)
                         else if (currentMiningBlock && intersectedBlock.position.equals(currentMiningBlock.position)) {
+                            // Continuar minando
                             miningTimer += delta;
                             const breakStage = Math.min(9, Math.floor((miningTimer / blockBreakTime) * 10));
                             
@@ -1586,32 +1660,29 @@
                                 breakingBlockOverlay.material.needsUpdate = true;
                             }
 
-                            // Si se completó el tiempo
                             if (miningTimer >= blockBreakTime) {
-                                // 1. Añadir al inventario
+                                // Bloque roto
                                 const blockType = currentMiningBlock.userData.type;
                                 const dropType = getBlockDrop(blockType);
                                 if (dropType) {
-                                    addToInventory(dropType);
+                                    addToInventory(dropType, 1);
                                 }
-                                
-                                // 2. Romper el bloque
                                 removeBlock(currentMiningBlock, true);
-                                stopMining(); // Resetear
+                                stopMining();
                             }
                         }
-                        // Si se movió el ratón a OTRO bloque
                         else {
+                            // Se movió a otro bloque
                             stopMining();
                         }
                     } 
-                    // Si se deja de apuntar a un bloque
                     else {
+                        // Se dejó de apuntar
                         stopMining();
                     }
                 }
                 
-                // Actualizar posición en Firebase (RTDB)
+                // Actualizar posición en Firebase
                 if (worldName && db && userId && time - lastFirebaseUpdate > 200) { 
                     lastFirebaseUpdate = time;
                     const pos = controls.getObject().position;
@@ -1621,10 +1692,11 @@
                         y: pos.y, 
                         z: pos.z, 
                         timestamp: serverTimestamp(),
-                        username: userName // NUEVO: Enviar nuestro nombre
+                        username: userName
                     });
                 }
                 
+                // Caída al vacío
                 if (playerPos.y < -50) {
                     respawnPlayer();
                 }
@@ -1633,13 +1705,12 @@
             prevTime = time;
 
             renderer.render(scene, camera);
-            // NUEVO: Renderizar etiquetas 2D
             if (labelRenderer) {
                 labelRenderer.render(scene, camera);
             }
         }
         
-        // --- NUEVO: Función de "Drops" de Bloques ---
+        // "Drops" de Bloques
         function getBlockDrop(blockType) {
             switch (blockType) {
                 case 'grass':
@@ -1650,13 +1721,13 @@
                 case 'oak_log':
                     return 'oak_log';
                 case 'coal_ore':
-                    return 'coal_ore'; // No hay item "coal" aún
+                    return 'coal_ore'; // TODO: Cambiar a 'coal'
                 case 'iron_ore':
-                    return 'iron_ore'; // No hay horno
+                    return 'iron_ore';
                 case 'gold_ore':
-                    return 'gold_ore'; // No hay horno
+                    return 'gold_ore';
                 case 'lapis_ore':
-                    return 'lapis_ore'; // No hay item "lapis"
+                    return 'lapis_ore';
                 case 'redstone_ore':
                     return 'redstone';
                 case 'diamond_ore':
@@ -1667,117 +1738,61 @@
                     return 'oak_planks';
                 case 'crafting_table':
                     return 'crafting_table';
-                case 'oak_leaves': // CAMBIO
-                    return null; // Las hojas no dropean nada
+                case 'oak_leaves':
+                    return null; // Hojas no dropean nada
                 default:
                     return null; 
             }
         }
         
-        // --- NUEVO: Funciones de Crafteo ---
+        // --- Lógica de Inventario (Añadir / Encontrar) ---
         
-        // Helper para chequear y consumir items
-        function checkAndConsume(itemType, quantity) {
-            let count = 0;
-            inventory.forEach(slot => {
-                if (slot.type === itemType) {
-                    count += slot.quantity;
-                }
-            });
-            
-            if (count < quantity) return false; // No hay suficientes
-            
+        function addToInventory(itemType, quantity) {
             let remaining = quantity;
-            for (const slot of inventory) {
-                if (slot.type === itemType) {
-                    if (slot.quantity >= remaining) {
-                        slot.quantity -= remaining;
-                        remaining = 0;
-                    } else {
-                        remaining -= slot.quantity;
-                        slot.quantity = 0;
-                    }
-                    if (slot.quantity === 0) {
-                        slot.type = null;
-                    }
+            
+            // 1. Apilar en slots existentes (36)
+            for (let i = 0; i < 36; i++) {
+                const slot = inventory[i];
+                if (slot.type === itemType && slot.quantity < 64) {
+                    const canAdd = 64 - slot.quantity;
+                    const toAdd = Math.min(remaining, canAdd);
+                    slot.quantity += toAdd;
+                    remaining -= toAdd;
                     if (remaining === 0) break;
                 }
             }
-            // Importante: Actualizar UI y guardar DESPUÉS de consumir
-            updateHotbarInventoryUI();
+            
+            // 2. Buscar slots vacíos
+            if (remaining > 0) {
+                for (let i = 0; i < 36; i++) {
+                    const slot = inventory[i];
+                    // CORRECCIÓN: 'quantity === 0' es un slot vacío
+                    if (slot.type === null || slot.quantity === 0) {
+                        slot.type = itemType;
+                        const toAdd = Math.min(remaining, 64);
+                        slot.quantity = toAdd; // CORRECCIÓN: No sumar, asignar
+                        remaining -= toAdd;
+                        if (remaining === 0) break;
+                    }
+                }
+            }
+            
+            // 3. Actualizar UI y guardar
+            updateHotbarInventoryUI(); 
+            if (isCrafting) {
+                updateFullInventoryUI();
+            }
             saveInventory();
-            return true;
-        }
-        
-        function craftPlanks() {
-            if (checkAndConsume('oak_log', 1)) {
-                addToInventory('oak_planks');
-                addToInventory('oak_planks');
-                addToInventory('oak_planks');
-                addToInventory('oak_planks');
-            } else {
-                console.log("¡Necesitas 1 tronco de roble!");
-            }
-        }
-        
-        function craftCraftingTable() {
-            if (checkAndConsume('oak_planks', 4)) {
-                addToInventory('crafting_table');
-            } else {
-                console.log("¡Necesitas 4 tablones de roble!");
-            }
-        }
-        
-        // NUEVA RECETA
-        function craftSticks() {
-            if (checkAndConsume('oak_planks', 2)) {
-                addToInventory('stick');
-                addToInventory('stick');
-                addToInventory('stick');
-                addToInventory('stick');
-            } else {
-                console.log("¡Necesitas 2 tablones de roble!");
-            }
-        }
-        
-        // NUEVA RECETA
-        function craftWoodenPickaxe() {
-            if (checkAndConsume('oak_planks', 3) && checkAndConsume('stick', 2)) {
-                addToInventory('wooden_pickaxe');
-            } else {
-                console.log("¡Necesitas 3 tablones y 2 palos!");
-            }
-        }
-        
-        // NUEVO: Añadir item al inventario
-        function addToInventory(itemType) {
-            // 1. Intentar apilar en un slot existente
-            // (Stack size de 64, por ejemplo)
-            let targetSlot = inventory.find(slot => slot.type === itemType && slot.quantity < 64);
             
-            // 2. Si no existe, buscar un slot vacío
-            if (!targetSlot) {
-                targetSlot = inventory.find(slot => slot.type === null || slot.quantity === 0);
+            if (remaining > 0) {
+                 console.log("Inventario lleno!");
             }
-            
-            // 3. Si encontramos un slot
-            if (targetSlot) {
-                targetSlot.type = itemType;
-                targetSlot.quantity++;
-                
-                // 4. Actualizar UI y guardar
-                updateHotbarInventoryUI();
-                saveInventory();
-            } else {
-                // Inventario lleno (no se hace nada por ahora)
-                console.log("Inventario lleno!");
-            }
+            return remaining;
         }
 
         
         function stopMining() {
-            // CORRECCIÓN: NO cambiar isMining aquí. Solo en onMouseUp.
-            // isMining = false; 
+            // CORRECCIÓN: NO cambiar isMining aquí
             miningTimer = 0;
             currentMiningBlock = null;
             if (breakingBlockOverlay) {
@@ -1789,17 +1804,15 @@
         // --- Manejadores de Eventos ---
 
         function onKeyDown(event) {
-            // No moverse si el menú de crafteo está abierto
             if (isCrafting) {
-                // Solo permitir que la 'E' cierre el menú
-                if (event.code === 'KeyE') {
-                    isCrafting = false;
-                    controls.lock();
-                    document.getElementById('crafting-screen').style.display = 'none';
+                // Si el inventario está abierto
+                if (event.code === 'KeyE' || event.code === 'Escape') {
+                    closeCraftingUI();
                 }
                 return;
             }
             
+            // Si el juego está activo
             switch (event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyA': moveLeft = true; break;
@@ -1809,13 +1822,9 @@
                     if (canJump === true) playerVelocity.y += jumpForce;
                     canJump = false;
                     break;
-                
-                // --- NUEVO: Lógica de la 'E' para Craftear ---
                 case 'KeyE':
                     if (controls.isLocked) {
-                        isCrafting = true;
-                        controls.unlock();
-                        document.getElementById('crafting-screen').style.display = 'flex';
+                        openCraftingUI(false); // Abrir inventario 2x2
                     }
                     break;
                 
@@ -1842,42 +1851,43 @@
         }
         
         function onMouseDown(event) {
-            // No hacer nada si el cursor no está bloqueado o si estamos crafteando
             if (!controls.isLocked || isCrafting) return; 
             
-            // No permitir clics si se está sobre la UI (aunque esté oculta)
-            // if (event.target.classList.contains('craft-btn')) return; // Ya no es necesario
-
             // Botón Izquierdo (0): Iniciar minería
             if (event.button === 0) {
                 isMining = true;
-                // La lógica de raycast ahora se maneja en animate()
             } 
             
-            // Botón Derecho (2): Poner bloque
+            // Botón Derecho (2): Poner bloque / Interactuar
             else if (event.button === 2) {
-                stopMining(); // Detener minería si se estaba haciendo
+                stopMining(); 
                 
-                // CAMBIO: Lógica de inventario finito
                 const selectedItem = inventory[selectedSlot];
-                if (!selectedItem || selectedItem.quantity <= 0) return; 
                 
-                // No se pueden "poner" items
-                if (itemTypes.has(selectedItem.type)) return;
-                
-                const selectedMaterial = materials[selectedItem.type];
-                if (!selectedMaterial) return;
-                
-                // --- OPTIMIZACIÓN: Raycast solo para poner bloque ---
                 raycaster.setFromCamera(new THREE.Vector2(), camera); 
                 const allBlocks = Array.from(worldBlocks.values()).flat();
                 const intersects = raycaster.intersectObjects(allBlocks);
 
                 if (intersects.length > 0) {
                     const intersect = intersects[0];
+                    const targetBlockType = intersect.object.userData.type;
                     
-                    // CAMBIO: No se puede poner un bloque en una hoja
-                    if (intersect.object.userData.type === 'oak_leaves') return;
+                    // Click derecho en Mesa de Crafteo
+                    if (targetBlockType === 'crafting_table') {
+                        event.preventDefault(); 
+                        openCraftingUI(true); // Abrir UI 3x3
+                        return;
+                    }
+                    
+                    // Si no hay item o es un item, no se puede poner
+                    if (!selectedItem || selectedItem.quantity <= 0 || itemTypes.has(selectedItem.type)) {
+                        return;
+                    }
+                
+                    const selectedMaterial = materials[selectedItem.type];
+                    if (!selectedMaterial) return;
+                    
+                    if (targetBlockType === 'oak_leaves') return; // No se puede poner en hojas
                     
                     const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
                     newBlockPos.round();
@@ -1894,7 +1904,7 @@
                         // Restar del inventario
                         selectedItem.quantity--;
                         if (selectedItem.quantity === 0) {
-                            selectedItem.type = null; // Vaciar slot
+                            selectedItem.type = null;
                         }
                         updateHotbarInventoryUI();
                         saveInventory();
@@ -1906,8 +1916,7 @@
         function onMouseUp(event) {
             if (event.button === 0) { // Botón Izquierdo
                 isMining = false;
-                // CAMBIO: Llamar a stopMining() para limpiar la UI y el estado
-                stopMining();
+                stopMining(); // Limpiar UI y estado
             }
         }
 
@@ -1915,7 +1924,6 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // NUEVO: Redimensionar el renderer de etiquetas
             labelRenderer.setSize(window.innerWidth, window.innerHeight);
         }
         
@@ -1947,7 +1955,6 @@
         
         function handleFallDamage(fallVelocity) {
             const damageThreshold = -15; 
-            
             if (fallVelocity < damageThreshold) {
                 const damage = Math.round(Math.abs(fallVelocity) - Math.abs(damageThreshold));
                 takeDamage(damage);
@@ -1956,12 +1963,8 @@
         
         function takeDamage(amount) {
             playerHealth -= amount;
-            if (playerHealth < 0) {
-                playerHealth = 0;
-            }
-            
+            if (playerHealth < 0) playerHealth = 0;
             updateHealthUI();
-            
             if (playerHealth === 0) {
                 respawnPlayer();
             }
@@ -1975,23 +1978,21 @@
         }
 
         
-        // --- CAMBIO: FUNCIONES DE HOTBAR (SIMPLIFICADAS A 2D) ---
+        // --- Funciones de Hotbar (2D) ---
 
         function setupHotbar() {
             hotbarElement = document.getElementById('hotbar');
             
             for (let i = 0; i < 9; i++) {
                 const slot = document.createElement('div');
-                slot.className = 'hotbar-slot';
+                slot.className = 'hotbar-slot slot';
                 
-                // Icono 2D
                 const icon = document.createElement('img');
-                icon.className = 'hotbar-item-icon';
+                icon.className = 'item-icon';
                 slot.appendChild(icon);
                 
-                // Div de cantidad
-                const quantityDiv = document.createElement('div');
-                quantityDiv.className = 'hotbar-quantity';
+                const quantityDiv = document.createElement('span');
+                quantityDiv.className = 'item-quantity';
                 slot.appendChild(quantityDiv);
                 
                 hotbarElement.appendChild(slot);
@@ -1999,40 +2000,22 @@
             }
             updateHotbarActiveSlotUI();
         }
-
-        // (animateHotbar() ha sido eliminado)
         
-        // CAMBIO: Hotbar 2D
         function updateHotbarInventoryUI() {
             if (!inventory || inventory.length === 0) return;
             
+            // Actualizar la hotbar IN-GAME (slots 0-8)
             for (let i = 0; i < 9; i++) {
                 const slotData = inventory[i];
                 const slotElement = hotbarSlots[i];
-                const iconElement = slotElement.querySelector('.hotbar-item-icon');
-                const quantityElement = slotElement.querySelector('.hotbar-quantity');
-
-                if (slotData && slotData.type && slotData.quantity > 0) {
-                    
-                    // Establecer la URL del icono
-                    // (Los items puros y los bloques usan la misma convención de nombrado)
-                    const textureUrl = `${textureBaseUrl}${slotData.type}.png`;
-                    iconElement.src = textureUrl;
-                    iconElement.style.display = 'block';
-                    
-                    // Mostrar cantidad
-                    quantityElement.textContent = slotData.quantity;
-                    quantityElement.style.display = 'block';
-                } else {
-                    // Limpiar slot
-                    iconElement.src = '';
-                    iconElement.style.display = 'none';
-                    quantityElement.style.display = 'none';
-                }
+                renderSlot(slotElement, slotData);
+            }
+            
+            if (isCrafting) {
+                updateFullInventoryUI();
             }
         }
 
-        // CAMBIO: Renombrada. Solo actualiza el slot activo
         function updateHotbarActiveSlotUI() {
             for (let i = 0; i < 9; i++) {
                 const slot = hotbarSlots[i];
@@ -2045,6 +2028,7 @@
         }
 
         function onMouseWheel(event) {
+            if (isCrafting) return; // No cambiar de slot con el inventario abierto
             stopMining(); 
             
             if (event.deltaY > 0) {
@@ -2057,6 +2041,348 @@
             if (selectedSlot < 0) selectedSlot = 8;
 
             updateHotbarActiveSlotUI();
+        }
+        
+        
+        // --- Lógica de Inventario y Crafteo (Drag-and-Drop) ---
+        
+        function initInventoryUI() {
+            itemCursorElement = document.getElementById('item-cursor');
+            playerInventoryGrid = document.getElementById('player-inventory-grid');
+            playerHotbarGrid = document.getElementById('player-hotbar-grid');
+            craftingGridElement = document.getElementById('crafting-grid');
+            resultSlotElement = document.querySelector('[data-slot-type="result"]');
+            
+            // Crear slots del inventario (27)
+            for (let i = 9; i < 36; i++) {
+                playerInventoryGrid.appendChild(createSlot('inventory', i));
+            }
+            
+            // Crear slots de la hotbar (en el inventario) (9)
+            for (let i = 0; i < 9; i++) {
+                playerHotbarGrid.appendChild(createSlot('inventory', i));
+            }
+        }
+        
+        function createSlot(type, index) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.dataset.slotType = type;
+            slot.dataset.slotIndex = index;
+            
+            const icon = document.createElement('img');
+            icon.className = 'item-icon';
+            slot.appendChild(icon);
+            
+            const quantity = document.createElement('span');
+            quantity.className = 'item-quantity';
+            slot.appendChild(quantity);
+            
+            return slot;
+        }
+        
+        // Renderiza un item en un slot (HTML)
+        function renderSlot(element, item) {
+            const icon = element.querySelector('.item-icon');
+            const quantity = element.querySelector('.item-quantity');
+            
+            if (item && item.type) {
+                icon.src = `${textureBaseUrl}${item.type}.png`;
+                icon.style.display = 'block';
+                
+                if (item.quantity > 1) {
+                    quantity.textContent = item.quantity;
+                    quantity.style.display = 'block';
+                } else {
+                    quantity.style.display = 'none';
+                }
+            } else {
+                icon.src = '';
+                icon.style.display = 'none';
+                quantity.style.display = 'none';
+            }
+        }
+        
+        // Mueve el item del cursor
+        function onDragCursor(event) {
+            if (heldItem.type) {
+                // CORRECCIÓN: Usar translate para centrar el item en el cursor
+                itemCursorElement.style.transform = `translate(${event.clientX - 25}px, ${event.clientY - 25}px)`;
+            }
+        }
+        
+        // Click izquierdo en un slot
+        function onSlotClick(event) {
+            event.preventDefault();
+            const slotElement = event.target.closest('.slot');
+            if (!slotElement) return;
+            
+            const { slotType, slotIndex } = slotElement.dataset;
+            handleSlotInteraction(slotType, parseInt(slotIndex), 'left');
+        }
+        
+        // Click derecho en un slot
+        function onSlotRightClick(event) {
+            event.preventDefault();
+            const slotElement = event.target.closest('.slot');
+            if (!slotElement) return;
+            
+            const { slotType, slotIndex } = slotElement.dataset;
+            handleSlotInteraction(slotType, parseInt(slotIndex), 'right');
+        }
+        
+        // Lógica principal de Drag-and-Drop
+        function handleSlotInteraction(type, index, clickType) {
+            let targetSlot;
+            let gridType = 'inventory'; // Para saber si hay que recalcular crafteo
+            
+            const craftGridMapping2x2 = [0, 1, 3, 4]; // Índices HTML
+            
+            if (type === 'inventory') {
+                targetSlot = inventory[index];
+            } else if (type === 'crafting') {
+                gridType = 'crafting';
+                if (currentCraftingType === '2x2') {
+                    const logicalIndex = craftGridMapping2x2.indexOf(index);
+                    if (logicalIndex === -1) return; 
+                    targetSlot = craftingGrid2x2[logicalIndex];
+                } else {
+                    targetSlot = craftingGrid3x3[index];
+                }
+            } else if (type === 'result') {
+                gridType = 'crafting'; // Afecta al crafteo
+                targetSlot = (currentCraftingType === '2x2') ? resultSlot2x2 : resultSlot3x3;
+                
+                // Lógica de coger el resultado
+                if (targetSlot && targetSlot.type) {
+                    // Si el cursor está vacío O se puede apilar
+                    if (!heldItem.type || (heldItem.type === targetSlot.type && heldItem.quantity + targetSlot.quantity <= 64)) {
+                        
+                        if (!heldItem.type) {
+                            heldItem = { ...targetSlot };
+                        } else {
+                            heldItem.quantity += targetSlot.quantity;
+                        }
+                        
+                        // Consumir ingredientes
+                        const grid = (currentCraftingType === '2x2') ? craftingGrid2x2 : craftingGrid3x3;
+                        grid.forEach(slot => {
+                            if (slot.type) {
+                                slot.quantity--;
+                                if (slot.quantity === 0) slot.type = null;
+                            }
+                        });
+                        
+                        checkRecipes(); // Recalcular (limpiará el slot de resultado)
+                    }
+                }
+                updateFullInventoryUI();
+                updateCursorItem();
+                return;
+            } else {
+                return;
+            }
+            
+            if (!targetSlot) {
+                console.warn("Target slot no encontrado:", type, index, currentCraftingType);
+                return;
+            }
+
+            // --- Lógica de Click Izquierdo ---
+            if (clickType === 'left') {
+                if (heldItem.type) {
+                    // Soltar
+                    if (!targetSlot.type) {
+                        targetSlot.type = heldItem.type;
+                        targetSlot.quantity = heldItem.quantity;
+                        heldItem = { type: null, quantity: 0 };
+                    } 
+                    // Apilar
+                    else if (targetSlot.type === heldItem.type) {
+                        const canAdd = 64 - targetSlot.quantity;
+                        const toAdd = Math.min(heldItem.quantity, canAdd);
+                        targetSlot.quantity += toAdd;
+                        heldItem.quantity -= toAdd;
+                        if (heldItem.quantity === 0) heldItem.type = null;
+                    }
+                    // Intercambiar
+                    else {
+                        const temp = { ...targetSlot };
+                        targetSlot.type = heldItem.type;
+                        targetSlot.quantity = heldItem.quantity;
+                        heldItem = temp;
+                    }
+                }
+                // Coger
+                else if (targetSlot.type) {
+                    heldItem = { ...targetSlot };
+                    targetSlot.type = null;
+                    targetSlot.quantity = 0;
+                }
+            }
+            // --- Lógica de Click Derecho ---
+            else if (clickType === 'right') {
+                if (heldItem.type) {
+                    // Soltar 1
+                    if (!targetSlot.type) {
+                        targetSlot.type = heldItem.type;
+                        targetSlot.quantity = 1;
+                        heldItem.quantity--;
+                    }
+                    // Apilar 1
+                    else if (targetSlot.type === heldItem.type && targetSlot.quantity < 64) {
+                        targetSlot.quantity++;
+                        heldItem.quantity--;
+                    }
+                    if (heldItem.quantity === 0) heldItem.type = null;
+                }
+                // Coger la mitad
+                else if (targetSlot.type) {
+                    const half = Math.ceil(targetSlot.quantity / 2);
+                    heldItem.type = targetSlot.type;
+                    heldItem.quantity = half;
+                    targetSlot.quantity -= half;
+                    if (targetSlot.quantity === 0) targetSlot.type = null;
+                }
+            }
+            
+            // Actualizar todo
+            if (gridType === 'crafting') checkRecipes();
+            updateFullInventoryUI();
+            updateCursorItem();
+            if (type === 'inventory') saveInventory(); // Guardar si se tocó el inventario principal
+        }
+        
+        // Actualiza el item del cursor
+        function updateCursorItem() {
+            if (heldItem.type) {
+                renderSlot(itemCursorElement, heldItem);
+                itemCursorElement.style.display = 'flex';
+            } else {
+                itemCursorElement.style.display = 'none';
+            }
+        }
+        
+        // --- Funciones de la UI de Crafteo ---
+        
+        function openCraftingUI(isTable) {
+            isCrafting = true;
+            controls.unlock();
+            
+            currentCraftingType = isTable ? '3x3' : '2x2';
+            
+            const modal = document.getElementById('inventory-modal');
+            const title = document.getElementById('inventory-title');
+            const craftingGrid = document.getElementById('crafting-grid');
+            
+            // Limpiar grids lógicos
+            craftingGrid2x2.forEach(s => { s.type = null; s.quantity = 0; });
+            craftingGrid3x3.forEach(s => { s.type = null; s.quantity = 0; });
+            
+            if (isTable) {
+                title.textContent = 'Mesa de Crafteo';
+                craftingGrid.style.setProperty('--grid-cols', 3); // Usar variable CSS
+                document.querySelectorAll('#crafting-grid .slot').forEach(s => s.style.display = 'flex');
+            } else {
+                title.textContent = 'Inventario';
+                craftingGrid.style.setProperty('--grid-cols', 2);
+                document.querySelectorAll('#crafting-grid .slot').forEach(s => {
+                    s.style.display = s.classList.contains('slot-2x2') ? 'flex' : 'none';
+                });
+            }
+            
+            checkRecipes(); // Calcular resultado (vacío)
+            updateFullInventoryUI();
+            updateCursorItem();
+            
+            document.getElementById('inventory-screen').style.display = 'flex';
+        }
+        
+        function closeCraftingUI() {
+            isCrafting = false;
+            controls.lock();
+            document.getElementById('inventory-screen').style.display = 'none';
+            
+            // Devolver items del crafteo al inventario
+            const grid = (currentCraftingType === '2x2') ? craftingGrid2x2 : craftingGrid3x3;
+            grid.forEach(item => {
+                if (item.type) {
+                    addToInventory(item.type, item.quantity); // addToInventory ya guarda
+                    item.type = null;
+                    item.quantity = 0;
+                }
+            });
+            
+            // Devolver item del cursor
+            if (heldItem.type) {
+                addToInventory(heldItem.type, heldItem.quantity);
+                heldItem = { type: null, quantity: 0 };
+            }
+            
+            resultSlot2x2 = { type: null, quantity: 0 };
+            resultSlot3x3 = { type: null, quantity: 0 };
+            
+            updateHotbarInventoryUI(); // Sincronizar hotbar in-game
+            // saveInventory(); // No es necesario, addToInventory ya guardó
+        }
+        
+        // Renderiza TODOS los slots en el modal de inventario
+        function updateFullInventoryUI() {
+            // Inventario principal (27 slots)
+            for (let i = 9; i < 36; i++) {
+                const slotElement = playerInventoryGrid.querySelector(`[data-slot-index="${i}"]`);
+                renderSlot(slotElement, inventory[i]);
+            }
+            
+            // Hotbar (9 slots)
+            for (let i = 0; i < 9; i++) {
+                const slotElement = playerHotbarGrid.querySelector(`[data-slot-index="${i}"]`);
+                renderSlot(slotElement, inventory[i]);
+            }
+            
+            // Grid de crafteo
+            const gridSlots = craftingGridElement.querySelectorAll('[data-slot-type="crafting"]');
+            
+            if (currentCraftingType === '2x2') {
+                const mapping = [0, 1, 3, 4]; // Índices HTML
+                craftingGrid2x2.forEach((item, logicalIndex) => {
+                    const htmlIndex = mapping[logicalIndex];
+                    renderSlot(gridSlots[htmlIndex], item);
+                });
+            } else {
+                craftingGrid3x3.forEach((item, index) => {
+                    renderSlot(gridSlots[index], item);
+                });
+            }
+            
+            // Slot de resultado
+            const resultSlot = (currentCraftingType === '2x2') ? resultSlot2x2 : resultSlot3x3;
+            renderSlot(resultSlotElement, resultSlot);
+        }
+        
+        // Comprueba las recetas
+        function checkRecipes() {
+            const grid = (currentCraftingType === '2x2') ? craftingGrid2x2 : craftingGrid3x3;
+            const resultSlot = (currentCraftingType === '2x2') ? resultSlot2x2 : resultSlot3x3;
+            
+            let key;
+            if (currentCraftingType === '2x2') {
+                key = grid.map(slot => slot.type || 'null').join(',');
+            } else {
+                key = craftingGrid3x3.map(slot => slot.type || 'null').join(',');
+            }
+            
+            const recipe = RECIPES[key];
+            
+            if (recipe) {
+                resultSlot.type = recipe.result;
+                resultSlot.quantity = recipe.count;
+            } else {
+                resultSlot.type = null;
+                resultSlot.quantity = 0;
+            }
+            
+            renderSlot(resultSlotElement, resultSlot);
         }
 
         // --- Iniciar el juego ---
