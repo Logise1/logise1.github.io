@@ -24,5 +24,10 @@
     "image": "/assets/1000km.png",
     "alt": "1000 Kilómetros",
     "link": "/1000km"
+  },
+  {
+    "image": "/assets/quizzer.png",
+    "alt": "Quizzer",
+    "link": "/quizzer"
   }
 ]
