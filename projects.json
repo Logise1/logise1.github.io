@@ -19,5 +19,10 @@
     "image": "/assets/aiportal.png",
     "alt": "AiPortal",
     "link": "/aiportal"
+  },
+  {
+    "image": "/assets/1000km.png",
+    "alt": "1000 Kilómetros",
+    "link": "/1000km"
   }
 ]
