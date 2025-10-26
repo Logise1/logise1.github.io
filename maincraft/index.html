@@ -18,11 +18,6 @@
       Cargamos el generador de ruido Simplex para el terreno 
     -->
     <script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.js"></script>
-
-    <!-- 
-      CAMBIO: Cargar Firebase (App, Auth, RTDB)
-      NOTA: Este bloque <script> se ha fusionado con el script principal del juego más abajo.
-    -->
     
     <!-- NUEVO: Importar fuente Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -304,6 +299,7 @@
             border: 2px solid #555;
             border-radius: 8px;
             padding: 5px;
+            pointer-events: auto; /* La hotbar SÍ recibe clics */
         }
 
         .hotbar-slot {
@@ -341,6 +337,34 @@
             pointer-events: none;
             display: none; /* Oculto por defecto */
         }
+        
+        /* NUEVO: Botón de Crafteo */
+        #crafting-ui {
+            margin-bottom: 10px; /* Espacio sobre la vida */
+            pointer-events: auto; /* Recibe clics */
+        }
+        
+        .craft-btn {
+            padding: 8px 12px;
+            background-color: #66bb6a;
+            color: #111;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: background-color 0.2s ease;
+        }
+        .craft-btn:hover {
+            background-color: #81c784;
+        }
+        .craft-btn:disabled {
+            background-color: #555;
+            color: #888;
+        }
+        
     </style>
 </head>
 <body>
@@ -397,6 +421,12 @@
     <!-- Contenedor de la Interfaz (Vida + Hotbar) -->
     <div id="game-ui">
         <div id="ui-container">
+            <!-- NUEVO: UI de Crafteo -->
+            <div id="crafting-ui">
+                <button id="craftPlanksButton" class="craft-btn" title="Craftear 4 Tablones (necesita 1 Tronco)">Craft Planks</button>
+                <button id="craftTableButton" class="craft-btn" title="Craftear Mesa (necesita 4 Tablones)">Craft Table</button>
+            </div>
+            
             <!-- Barra de vida -->
             <div id="health-bar">
                 <!-- Los corazones se generan dinámicamente con JS -->
@@ -437,18 +467,6 @@
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
         // NUEVO: Importar CSS2DRenderer para nombres de jugadores
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-
-        // --- CORRECCIÓN: Imports de Firebase (desde el objeto window) ---
-        // Este bloque ya no es necesario, las variables están importadas localmente.
-        /*
-        const {
-            initializeApp, getAuth, signInWithEmailAndPassword,
-            createUserWithEmailAndPassword, signOut, getDatabase, ref,
-            set, onValue, onChildAdded, onChildRemoved, serverTimestamp,
-            query, orderByChild, remove, off
-        } = window.firebase;
-        */
-
 
         // --- Variables Globales ---
         let scene, camera, renderer, controls, raycaster;
@@ -539,31 +557,90 @@
         const textureBaseUrl = 'https://logise1.github.io/maincraft/';
         const textureLoader = new THREE.TextureLoader();
         
-        // --- URL de Texturas de Rotura ---
-        // CORRECCIÓN: Eliminada la URL base de rotura, usaremos textureBaseUrl
-        // const breakTextureBaseUrl = '...'; 
-        
         // --- CAMBIO: Constantes del Mundo (revertidas) ---
         const terrainHeight = 6;
         const terrainScale = 0.05; 
         const worldDepth = 0; // Revertido
         
-        // Geometría y material de los bloques (reutilizables)
+        // --- CAMBIO: Geometrías reutilizables para Bloques y Items ---
         const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const itemGeometry = new THREE.PlaneGeometry(0.8, 0.8); // Para items 2D en la hotbar
+        
+        // --- CAMBIO: Set de tipos de items (para la hotbar) ---
+        const itemTypes = new Set([
+            'diamond', 'emerald', 'redstone', 'iron_ingot', 'gold_ingot', 'stick',
+            'wooden_pickaxe', 'stone_pickaxe', 'iron_pickaxe', 'golden_pickaxe',
+            'diamond_pickaxe', 'netherite_pickaxe'
+        ]);
 
         // --- ¡CARGA DE TEXTURAS! ---
-        const stoneTexture = textureLoader.load(`${textureBaseUrl}stone.png`);
-        const dirtTexture = textureLoader.load(`${textureBaseUrl}dirt.png`);
-        const grassTopTexture = textureLoader.load(`${textureBaseUrl}grass_block_top.png`);
-        const grassSideTexture = textureLoader.load(`${textureBaseUrl}grass_block_side.png`);
         
-        stoneTexture.magFilter = THREE.NearestFilter;
-        dirtTexture.magFilter = THREE.NearestFilter;
-        grassTopTexture.magFilter = THREE.NearestFilter;
-        grassSideTexture.magFilter = THREE.NearestFilter;
+        // Función helper para cargar texturas pixeladas
+        function loadTexture(url) {
+            const texture = textureLoader.load(url);
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter; // Asegurar pixelado al minificar
+            return texture;
+        }
+
+        // Bloques existentes
+        const stoneTexture = loadTexture(`${textureBaseUrl}stone.png`);
+        const dirtTexture = loadTexture(`${textureBaseUrl}dirt.png`);
+        const grassTopTexture = loadTexture(`${textureBaseUrl}grass_block_top.png`);
+        const grassSideTexture = loadTexture(`${textureBaseUrl}grass_block_side.png`);
+        
+        // --- NUEVO: Carga de todos los nuevos bloques ---
+        const cobblestoneTexture = loadTexture(`${textureBaseUrl}cobblestone.png`);
+        const oakLogTexture = loadTexture(`${textureBaseUrl}oak_log.png`);
+        const oakLogTopTexture = loadTexture(`${textureBaseUrl}oak_log_top.png`);
+        const oakPlanksTexture = loadTexture(`${textureBaseUrl}oak_planks.png`);
+        
+        const craftingTableTopTexture = loadTexture(`${textureBaseUrl}crafting_table_top.png`);
+        const craftingTableSideTexture = loadTexture(`${textureBaseUrl}crafting_table_side.png`);
+        const craftingTableFrontTexture = loadTexture(`${textureBaseUrl}crafting_table_front.png`);
+        
+        // Ores
+        const coalOreTexture = loadTexture(`${textureBaseUrl}coal_ore.png`);
+        const ironOreTexture = loadTexture(`${textureBaseUrl}iron_ore.png`);
+        const goldOreTexture = loadTexture(`${textureBaseUrl}gold_ore.png`);
+        const diamondOreTexture = loadTexture(`${textureBaseUrl}diamond_ore.png`);
+        const emeraldOreTexture = loadTexture(`${textureBaseUrl}emerald_ore.png`);
+        const lapisOreTexture = loadTexture(`${textureBaseUrl}lapis_ore.png`);
+        const redstoneOreTexture = loadTexture(`${textureBaseUrl}redstone_ore.png`);
+
+        // --- NUEVO: Carga de todos los nuevos items ---
+        // Drops
+        const diamondTexture = loadTexture(`${textureBaseUrl}diamond.png`);
+        const emeraldTexture = loadTexture(`${textureBaseUrl}emerald.png`);
+        const redstoneTexture = loadTexture(`${textureBaseUrl}redstone.png`);
+        const ironIngotTexture = loadTexture(`${textureBaseUrl}iron_ingot.png`);
+        const goldIngotTexture = loadTexture(`${textureBaseUrl}gold_ingot.png`);
+        
+        // Crafting
+        const stickTexture = loadTexture(`${textureBaseUrl}stick.png`);
+        
+        // Herramientas
+        const woodenPickaxeTexture = loadTexture(`${textureBaseUrl}wooden_pickaxe.png`);
+        const stonePickaxeTexture = loadTexture(`${textureBaseUrl}stone_pickaxe.png`);
+        const ironPickaxeTexture = loadTexture(`${textureBaseUrl}iron_pickaxe.png`);
+        const goldenPickaxeTexture = loadTexture(`${textureBaseUrl}golden_pickaxe.png`);
+        const diamondPickaxeTexture = loadTexture(`${textureBaseUrl}diamond_pickaxe.png`);
+        const netheritePickaxeTexture = loadTexture(`${textureBaseUrl}netherite_pickaxe.png`);
 
 
         // --- ¡MATERIALES ACTUALIZADOS CON TEXTURAS! ---
+        
+        // Helper para material de item 2D
+        function createItemMaterial(texture) {
+            return new THREE.MeshStandardMaterial({
+                map: texture,
+                transparent: true,
+                alphaTest: 0.1, // No renderizar píxeles totalmente transparentes
+                side: THREE.DoubleSide
+            });
+        }
+        
+        // Materiales de Bloques
         const grassMaterial = [
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (right)
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (left)
@@ -572,9 +649,55 @@
             new THREE.MeshStandardMaterial({ map: grassSideTexture }),     // Lado (front)
             new THREE.MeshStandardMaterial({ map: grassSideTexture })      // Lado (back)
         ];
-        
         const dirtMaterial = new THREE.MeshStandardMaterial({ map: dirtTexture });
         const stoneMaterial = new THREE.MeshStandardMaterial({ map: stoneTexture });
+        
+        // --- NUEVO: Materiales de todos los nuevos bloques ---
+        const cobblestoneMaterial = new THREE.MeshStandardMaterial({ map: cobblestoneTexture });
+        const oakPlanksMaterial = new THREE.MeshStandardMaterial({ map: oakPlanksTexture });
+        
+        const oakLogMaterial = [
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (right)
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (left)
+            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),   // Arriba (top)
+            new THREE.MeshStandardMaterial({ map: oakLogTopTexture }),   // Abajo (bottom)
+            new THREE.MeshStandardMaterial({ map: oakLogTexture }),      // Lado (front)
+            new THREE.MeshStandardMaterial({ map: oakLogTexture })       // Lado (back)
+        ];
+        
+        const craftingTableMaterial = [
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }), // Lado (right)
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture }), // Lado (left)
+            new THREE.MeshStandardMaterial({ map: craftingTableTopTexture }),  // Arriba (top)
+            new THREE.MeshStandardMaterial({ map: oakPlanksTexture }),         // Abajo (bottom)
+            new THREE.MeshStandardMaterial({ map: craftingTableFrontTexture }),// Lado (front)
+            new THREE.MeshStandardMaterial({ map: craftingTableSideTexture })  // Lado (back)
+        ];
+        
+        // Ores
+        const coalOreMaterial = new THREE.MeshStandardMaterial({ map: coalOreTexture });
+        const ironOreMaterial = new THREE.MeshStandardMaterial({ map: ironOreTexture });
+        const goldOreMaterial = new THREE.MeshStandardMaterial({ map: goldOreTexture });
+        const diamondOreMaterial = new THREE.MeshStandardMaterial({ map: diamondOreTexture });
+        const emeraldOreMaterial = new THREE.MeshStandardMaterial({ map: emeraldOreTexture });
+        const lapisOreMaterial = new THREE.MeshStandardMaterial({ map: lapisOreTexture });
+        const redstoneOreMaterial = new THREE.MeshStandardMaterial({ map: redstoneOreTexture });
+        
+        // --- NUEVO: Materiales de todos los nuevos items ---
+        const diamondMaterial = createItemMaterial(diamondTexture);
+        const emeraldMaterial = createItemMaterial(emeraldTexture);
+        const redstoneMaterial = createItemMaterial(redstoneTexture);
+        const ironIngotMaterial = createItemMaterial(ironIngotTexture);
+        const goldIngotMaterial = createItemMaterial(goldIngotTexture);
+        const stickMaterial = createItemMaterial(stickTexture);
+        
+        const woodenPickaxeMaterial = createItemMaterial(woodenPickaxeTexture);
+        const stonePickaxeMaterial = createItemMaterial(stonePickaxeTexture);
+        const ironPickaxeMaterial = createItemMaterial(ironPickaxeTexture);
+        const goldenPickaxeMaterial = createItemMaterial(goldenPickaxeTexture);
+        const diamondPickaxeMaterial = createItemMaterial(diamondPickaxeTexture);
+        const netheritePickaxeMaterial = createItemMaterial(netheritePickaxeTexture);
+
 
         // --- OPTIMIZACIÓN DE COLISIÓN ---
         const collisionCheckBlockBox = new THREE.Box3();
@@ -590,10 +713,37 @@
                 inventory.push({ type: null, quantity: 0 });
             }
             
+            // --- NUEVO: Objeto 'materials' expandido ---
             materials = {
+                // Bloques
                 'dirt': dirtMaterial,
                 'grass': grassMaterial,
-                'stone': stoneMaterial
+                'stone': stoneMaterial,
+                'cobblestone': cobblestoneMaterial,
+                'oak_log': oakLogMaterial,
+                'oak_planks': oakPlanksMaterial,
+                'crafting_table': craftingTableMaterial,
+                'coal_ore': coalOreMaterial,
+                'iron_ore': ironOreMaterial,
+                'gold_ore': goldOreMaterial,
+                'diamond_ore': diamondOreMaterial,
+                'emerald_ore': emeraldOreMaterial,
+                'lapis_ore': lapisOreMaterial,
+                'redstone_ore': redstoneOreMaterial,
+                
+                // Items
+                'diamond': diamondMaterial,
+                'emerald': emeraldMaterial,
+                'redstone': redstoneMaterial,
+                'iron_ingot': ironIngotMaterial,
+                'gold_ingot': goldIngotMaterial,
+                'stick': stickMaterial,
+                'wooden_pickaxe': woodenPickaxeMaterial,
+                'stone_pickaxe': stonePickaxeMaterial,
+                'iron_pickaxe': ironPickaxeMaterial,
+                'golden_pickaxe': goldenPickaxeMaterial,
+                'diamond_pickaxe': diamondPickaxeMaterial,
+                'netherite_pickaxe': netheritePickaxeMaterial
             };
 
             // 1. Escena
@@ -678,8 +828,7 @@
             // Cargar texturas de rotura
             for (let i = 0; i < 10; i++) {
                 // CORRECCIÓN: Usar textureBaseUrl y el nuevo formato de nombre
-                const texture = textureLoader.load(`${textureBaseUrl}destroy_stage_${i}.png`);
-                texture.magFilter = THREE.NearestFilter;
+                const texture = loadTexture(`${textureBaseUrl}destroy_stage_${i}.png`);
                 destroyTextures.push(texture);
             }
             
@@ -695,6 +844,10 @@
             // --- Configurar UI (Vida y Hotbar) ---
             setupHealthBar();
             setupHotbar(); // Prepara la ESTRUCTURA de la hotbar
+            
+            // --- NUEVO: Listeners de Crafteo ---
+            document.getElementById('craftPlanksButton').addEventListener('click', craftPlanks);
+            document.getElementById('craftTableButton').addEventListener('click', craftCraftingTable);
             
             // --- Eventos de Teclado y Ratón ---
             document.addEventListener('keydown', onKeyDown);
@@ -1055,6 +1208,35 @@
         function getBlock(x, y, z) {
             return blockData.get(`${x}_${y}_${z}`); // CAMBIO: Usar _
         }
+        
+        // --- NUEVO: Generador de Árboles ---
+        function generateTree(x, y, z, chunkBlocks) {
+            // Tronco
+            const height = Math.floor(Math.random() * 2) + 4; // 4-5 bloques de alto
+            for (let i = 0; i < height; i++) {
+                addBlock(x, y + i, z, materials.oak_log, 'oak_log', chunkBlocks, false);
+            }
+            
+            // Hojas (No tenemos, usaremos planks por ahora como placeholder visual)
+            // Esto es solo visual, no funcional
+            const radius = 2;
+            for (let lx = -radius; lx <= radius; lx++) {
+                for (let ly = -radius; ly <= radius; ly++) {
+                    for (let lz = -radius; lz <= radius; lz++) {
+                        if (Math.random() > 0.3) { // No un cubo perfecto
+                            const leafX = x + lx;
+                            const leafY = y + height + ly - 1; // Centrado en la parte superior
+                            const leafZ = z + lz;
+                            if (!getBlock(leafX, leafY, leafZ)) {
+                                // Usamos 'dirt' como placeholder de 'leaves' ya que no dropea nada útil
+                                addBlock(leafX, leafY, leafZ, materials.dirt, 'dirt', chunkBlocks, false);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         // CAMBIO: Mundo revertido
         function loadChunk(chunkX, chunkZ) {
@@ -1076,22 +1258,63 @@
                     const height = THREE.MathUtils.mapLinear(noiseVal, -1, 1, 0, terrainHeight);
                     const y = Math.floor(height);
 
-                    // Solo añade si Firebase no ha puesto "aire"
+                    // Capa de Pasto
                     if (!getBlock(worldX, y, worldZ)) { 
                          addBlock(worldX, y, worldZ, materials.grass, 'grass', chunkBlocks, false);
                     }
 
+                    // Capa de Tierra
                     for (let y_fill = y - 1; y_fill > y - 4 && y_fill >= 0; y_fill--) {
                          if (!getBlock(worldX, y_fill, worldZ)) {
                             addBlock(worldX, y_fill, worldZ, materials.dirt, 'dirt', chunkBlocks, false);
                          }
                     }
                     
-                    // CAMBIO: Bucle de piedra revertido
+                    // --- NUEVO: Capa de Piedra y Minerales ---
                     for (let y_fill = y - 4; y_fill >= worldDepth; y_fill--) {
                          if (!getBlock(worldX, y_fill, worldZ)) {
-                            addBlock(worldX, y_fill, worldZ, materials.stone, 'stone', chunkBlocks, false);
+                            
+                            let currentBlockType = 'stone';
+                            let currentMaterial = materials.stone;
+                            
+                            const rand = Math.random();
+                            
+                            if (rand < 0.03 && y_fill < y - 2) { // Coal
+                                currentBlockType = 'coal_ore';
+                                currentMaterial = materials.coal_ore;
+                            } else if (rand < 0.05 && y_fill < -5) { // Iron
+                                currentBlockType = 'iron_ore';
+                                currentMaterial = materials.iron_ore;
+                            } else if (rand < 0.06 && y_fill < -10) { // Gold / Lapis
+                                if(Math.random() < 0.5) {
+                                    currentBlockType = 'gold_ore';
+                                    currentMaterial = materials.gold_ore;
+                                } else {
+                                    currentBlockType = 'lapis_ore';
+                                    currentMaterial = materials.lapis_ore;
+                                }
+                            } else if (rand < 0.07 && y_fill < -12) { // Redstone
+                                currentBlockType = 'redstone_ore';
+                                currentMaterial = materials.redstone_ore;
+                            } else if (rand < 0.075 && y_fill < -15) { // Diamond / Emerald
+                                if(Math.random() < 0.5) {
+                                    currentBlockType = 'diamond_ore';
+                                    currentMaterial = materials.diamond_ore;
+                                } else {
+                                    currentBlockType = 'emerald_ore';
+                                    currentMaterial = materials.emerald_ore;
+                                }
+                            }
+                            
+                            addBlock(worldX, y_fill, worldZ, currentMaterial, currentBlockType, chunkBlocks, false);
                          }
+                    }
+                    
+                    // --- NUEVO: Generar Árboles ---
+                    if (x > 1 && x < chunkSize - 2 && z > 1 && z < chunkSize - 2) { // Evitar bordes
+                        if (y >= worldDepth && y < terrainHeight && Math.random() < 0.01) { // 1% de chance
+                            generateTree(worldX, y + 1, worldZ, chunkBlocks);
+                        }
                     }
                 }
             }
@@ -1112,6 +1335,9 @@
 
         // CAMBIO: addBlock ahora guarda el 'type' en userData
         function addBlock(x, y, z, material, blockType, chunkArray = null, notifyFirebase = true) {
+            // Evitar que los árboles generen bloques sobre la nada
+            if (y > terrainHeight + 10) return; 
+            
             const block = new THREE.Mesh(blockGeometry, material);
             block.position.set(x, y, z);
             block.castShadow = true;
@@ -1315,6 +1541,12 @@
                 if (isMining) {
                     if (intersects.length > 0 && intersects[0].object.userData.type) {
                         const intersectedBlock = intersects[0].object;
+                        
+                        // No se pueden minar hojas (placeholder)
+                        if (intersectedBlock.userData.type === 'leaves_placeholder') {
+                            stopMining();
+                            return;
+                        }
 
                         // Si es la primera vez que se detecta el minado o se cambia de bloque
                         if (currentMiningBlock === null) {
@@ -1394,25 +1626,98 @@
             }
         }
         
-        // NUEVO: Determina qué item 'dropear'
+        // --- NUEVO: Función de "Drops" de Bloques ---
         function getBlockDrop(blockType) {
-            if (blockType === 'grass' || blockType === 'dirt') {
-                return 'dirt';
+            switch (blockType) {
+                case 'grass':
+                case 'dirt':
+                    return 'dirt';
+                case 'stone':
+                    return 'cobblestone';
+                case 'oak_log':
+                    return 'oak_log';
+                case 'coal_ore':
+                    return 'coal_ore'; // No hay item "coal" aún
+                case 'iron_ore':
+                    return 'iron_ore'; // No hay horno
+                case 'gold_ore':
+                    return 'gold_ore'; // No hay horno
+                case 'lapis_ore':
+                    return 'lapis_ore'; // No hay item "lapis"
+                case 'redstone_ore':
+                    return 'redstone';
+                case 'diamond_ore':
+                    return 'diamond';
+                case 'emerald_ore':
+                    return 'emerald';
+                case 'oak_planks':
+                    return 'oak_planks';
+                case 'crafting_table':
+                    return 'crafting_table';
+                default:
+                    return null; // Hojas, etc. no dropean nada
             }
-            if (blockType === 'stone') {
-                return 'stone';
+        }
+        
+        // --- NUEVO: Funciones de Crafteo ---
+        
+        // Helper para chequear y consumir items
+        function checkAndConsume(itemType, quantity) {
+            let count = 0;
+            inventory.forEach(slot => {
+                if (slot.type === itemType) {
+                    count += slot.quantity;
+                }
+            });
+            
+            if (count < quantity) return false; // No hay suficientes
+            
+            let remaining = quantity;
+            for (const slot of inventory) {
+                if (slot.type === itemType) {
+                    if (slot.quantity >= remaining) {
+                        slot.quantity -= remaining;
+                        remaining = 0;
+                    } else {
+                        remaining -= slot.quantity;
+                        slot.quantity = 0;
+                    }
+                    if (slot.quantity === 0) {
+                        slot.type = null;
+                    }
+                    if (remaining === 0) break;
+                }
             }
-            return null;
+            return true;
+        }
+        
+        function craftPlanks() {
+            if (checkAndConsume('oak_log', 1)) {
+                addToInventory('oak_planks');
+                addToInventory('oak_planks');
+                addToInventory('oak_planks');
+                addToInventory('oak_planks');
+            } else {
+                console.log("¡Necesitas 1 tronco de roble!");
+            }
+        }
+        
+        function craftCraftingTable() {
+            if (checkAndConsume('oak_planks', 4)) {
+                addToInventory('crafting_table');
+            } else {
+                console.log("¡Necesitas 4 tablones de roble!");
+            }
         }
         
         // NUEVO: Añadir item al inventario
         function addToInventory(itemType) {
             // 1. Intentar apilar en un slot existente
-            let targetSlot = inventory.find(slot => slot.type === itemType);
+            // (Stack size de 64, por ejemplo)
+            let targetSlot = inventory.find(slot => slot.type === itemType && slot.quantity < 64);
             
             // 2. Si no existe, buscar un slot vacío
             if (!targetSlot) {
-                // CORRECCIÓN: Buscar un slot vacío (type null) O un slot con cantidad 0
                 targetSlot = inventory.find(slot => slot.type === null || slot.quantity === 0);
             }
             
@@ -1479,6 +1784,9 @@
         
         function onMouseDown(event) {
             if (!controls.isLocked) return; 
+            
+            // No permitir clics si se está sobre la UI
+            if (event.target.classList.contains('craft-btn')) return;
 
             // Botón Izquierdo (0): Iniciar minería
             if (event.button === 0) {
@@ -1494,6 +1802,9 @@
                 const selectedItem = inventory[selectedSlot];
                 if (!selectedItem || selectedItem.quantity <= 0) return; 
                 
+                // No se pueden "poner" items
+                if (itemTypes.has(selectedItem.type)) return;
+                
                 const selectedMaterial = materials[selectedItem.type];
                 if (!selectedMaterial) return;
                 
@@ -1504,6 +1815,10 @@
 
                 if (intersects.length > 0) {
                     const intersect = intersects[0];
+                    
+                    // No se puede poner un bloque en una "hoja" (placeholder)
+                    if (intersect.object.userData.type === 'leaves_placeholder') return;
+                    
                     const newBlockPos = intersect.object.position.clone().add(intersect.face.normal);
                     newBlockPos.round();
                     
@@ -1514,9 +1829,6 @@
 
                     if (!playerBox.intersectsBox(newBlockBox)) {
                         // Añadir bloque al mundo
-                        // CORRECCIÓN DE BUG: Argumentos pasados incorrectamente. 
-                        // 6to arg era 'true' (para notifyFirebase), pero se esperaba 'chunkArray'.
-                        // Ahora pasamos 'null' para chunkArray y 'true' para notifyFirebase.
                         addBlock(newBlockPos.x, newBlockPos.y, newBlockPos.z, selectedMaterial, selectedItem.type, null, true);
                         
                         // Restar del inventario
@@ -1643,8 +1955,9 @@
                 renderer.setSize(50, 50); 
                 hotbarRenderers[i] = renderer;
 
-                // CAMBIO: Crear el mesh pero ocultarlo. Se mostrará en updateHotbarInventoryUI
-                const mesh = new THREE.Mesh(blockGeometry); // Material se asigna después
+                // CAMBIO: Crear el mesh pero con geometría/rotación por defecto
+                // Se ajustará en updateHotbarInventoryUI
+                const mesh = new THREE.Mesh(blockGeometry); // Geometría por defecto
                 mesh.rotation.x = 0.5; 
                 mesh.rotation.y = -0.7;
                 mesh.visible = false; // Oculto por defecto
@@ -1667,7 +1980,7 @@
             }
         }
         
-        // NUEVO: Actualiza los items 3D y las cantidades
+        // --- CAMBIO: Hotbar Híbrida (Items 2D / Bloques 3D) ---
         function updateHotbarInventoryUI() {
             if (!inventory || inventory.length === 0) return;
             
@@ -1677,7 +1990,19 @@
                 const quantityElement = hotbarSlots[i].querySelector('.hotbar-quantity');
 
                 if (slotData && slotData.type && slotData.quantity > 0) {
+                    
+                    // Asignar material
                     mesh.material = materials[slotData.type];
+                    
+                    // CAMBIO: Ajustar geometría y rotación
+                    if (itemTypes.has(slotData.type)) {
+                        mesh.geometry = itemGeometry;
+                        mesh.rotation.set(0, 0, 0); // Plano 2D
+                    } else {
+                        mesh.geometry = blockGeometry;
+                        mesh.rotation.set(0.5, -0.7, 0); // Bloque 3D inclinado
+                    }
+                    
                     mesh.visible = true;
                     quantityElement.textContent = slotData.quantity;
                     quantityElement.style.display = 'block';
@@ -1726,3 +2051,4 @@
     </script>
 </body>
 </html>
+
