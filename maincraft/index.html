@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voxel World con Crafteo Visual</title>
+    <title>Voxel World Multijugador</title>
     <style>
         body {
             margin: 0;
@@ -28,22 +28,98 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
             display: flex;
             justify-content: center;
             align-items: center;
             text-align: center;
             color: white;
-            font-size: 2em;
+            font-size: 1.2em; /* Reducido para más UI */
             z-index: 10; 
+            overflow-y: auto; /* Para pantallas pequeñas */
         }
 
-        #instructions {
-            width: 50%;
-            cursor: pointer;
+        /* --- NUEVO: Estilos de Menú --- */
+        .menu-container {
+            width: 90%;
+            max-width: 400px;
             padding: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             border-radius: 12px;
+            border: 1px solid #555;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .menu-container h1, .menu-container h2 {
+            margin-top: 0;
+        }
+
+        .menu-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid #777;
+            background-color: #333;
+            color: white;
+            box-sizing: border-box; /* Asegura padding correcto */
+        }
+        
+        .menu-container button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .menu-container button:hover {
+            background-color: #45a049;
+        }
+        
+        .menu-container button.secondary {
+             background-color: #555;
+        }
+        .menu-container button.secondary:hover {
+             background-color: #666;
+        }
+        
+        #user-info {
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        #world-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .world-item {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+        }
+        .world-item:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Contenedor del juego (oculto al inicio) */
+        #game-container {
+            display: none;
         }
 
         #crosshair {
@@ -57,7 +133,7 @@
             background-color: rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             pointer-events: none;
-            display: none;
+            /* display: none; */ /* Controlado por game-container */
             z-index: 10; 
         }
         
@@ -262,79 +338,109 @@
 </head>
 <body>
     <div id="blocker">
-        <!-- El texto de esto se cambiará a "Cargando..." -->
-        <div id="instructions">
-            <h1>Voxel World Optimizado</h1>
-            <p>(W, A, S, D = Moverse, Espacio = Saltar)</p>
-            <p>(Clic Izquierdo = Destruir, Clic Derecho = Construir)</p>
-            <p>(Rueda del ratón o 1-9 = Cambiar bloque)</p>
-            <p>(E = Abrir/Cerrar Inventario/Crafteo)</p>
-            <br>
-            <strong>Haz clic aquí para jugar</strong>
+        <!-- Contenedor del Menú -->
+        <div class="menu-container">
+            
+            <!-- Pantalla de Login -->
+            <div id="login-screen">
+                <h1>Voxel World</h1>
+                <input type="email" id="login-email" placeholder="Email">
+                <input type="password" id="login-password" placeholder="Contraseña">
+                <button id="btn-login">Iniciar Sesión</button>
+                <button id="btn-register" class="secondary">Registrarse</button>
+                <p id="login-error" class="hidden" style="color: red; font-size: 0.9em;"></p>
+            </div>
+            
+            <!-- Pantalla de Selección de Modo -->
+            <div id="game-mode-screen" class="hidden">
+                <h1>Voxel World</h1>
+                <div id="user-info"></div>
+                <button id="btn-single-player">Un Jugador</button>
+                <button id="btn-multiplayer">Multijugador</button>
+                <button id="btn-logout" class="secondary">Cerrar Sesión</button>
+            </div>
+            
+            <!-- Pantalla de Multijugador -->
+            <div id="multiplayer-screen" class="hidden">
+                <h2>Multijugador</h2>
+                <h3>Unirse a un Mundo</h3>
+                <div id="world-list">
+                    <!-- Lista de mundos se llena aquí -->
+                    <p style="padding: 10px; opacity: 0.7;">Buscando mundos...</p>
+                </div>
+                <h3>Crear Mundo</h3>
+                <input type="text" id="create-world-name" placeholder="Nombre del Mundo">
+                <button id="btn-create-world">Crear</button>
+                <button id="btn-back-menu" class="secondary">Volver</button>
+            </div>
+
         </div>
     </div>
     
-    <!-- --- NUEVA PANTALLA DE CRAFTEO --- -->
-    <div id="crafting-screen">
-        <div id="crafting-ui">
-            <h2 id="crafting-title">Inventario</h2> <!-- Título dinámico -->
-            
-            <!-- Área de Crafteo (Izquierda) -->
-            <div id="crafting-area">
-                <!-- Cuadrícula 2x2 (Inventario) -->
-                <div id="crafting-grid-2x2">
-                    <div class="slot" data-slot-type="crafting" data-slot-index="0"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="1"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="2"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="3"></div>
+    <!-- --- CONTENEDOR DEL JUEGO --- -->
+    <div id="game-container">
+        <!-- --- NUEVA PANTALLA DE CRAFTEO --- -->
+        <div id="crafting-screen">
+            <div id="crafting-ui">
+                <h2 id="crafting-title">Inventario</h2> <!-- Título dinámico -->
+                
+                <!-- Área de Crafteo (Izquierda) -->
+                <div id="crafting-area">
+                    <!-- Cuadrícula 2x2 (Inventario) -->
+                    <div id="crafting-grid-2x2">
+                        <div class="slot" data-slot-type="crafting" data-slot-index="0"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="1"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="2"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="3"></div>
+                    </div>
+                    
+                    <!-- Cuadrícula 3x3 (Mesa) -->
+                    <div id="crafting-grid-3x3" class="hidden">
+                        <div class="slot" data-slot-type="crafting" data-slot-index="0"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="1"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="2"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="3"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="4"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="5"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="6"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="7"></div>
+                        <div class="slot" data-slot-type="crafting" data-slot-index="8"></div>
+                    </div>
+
+                    <!-- Slot de Salida -->
+                    <div id="crafting-output-area">
+                        <div class="slot" id="output-slot" data-slot-type="output"></div>
+                    </div>
+                </div>
+
+                <!-- Área de Inventario (Derecha) -->
+                <div id="player-inventory-area">
+                    <!-- --- CORRECCIÓN: h3 eliminado --- -->
+                    <div id="player-inventory-grid">
+                        <!-- 27 slots de inventario (JS los generará) -->
+                    </div>
                 </div>
                 
-                <!-- Cuadrícula 3x3 (Mesa) -->
-                <div id="crafting-grid-3x3" class="hidden">
-                    <div class="slot" data-slot-type="crafting" data-slot-index="0"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="1"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="2"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="3"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="4"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="5"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="6"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="7"></div>
-                    <div class="slot" data-slot-type="crafting" data-slot-index="8"></div>
+                <!-- Hotbar (Abajo) -->
+                <div id="player-hotbar-grid">
+                     <!-- 9 slots de hotbar (JS los generará) -->
                 </div>
 
-                <!-- Slot de Salida -->
-                <div id="crafting-output-area">
-                    <div class="slot" id="output-slot" data-slot-type="output"></div>
-                </div>
             </div>
-
-            <!-- Área de Inventario (Derecha) -->
-            <div id="player-inventory-area">
-                <!-- --- CORRECCIÓN: h3 eliminado --- -->
-                <div id="player-inventory-grid">
-                    <!-- 27 slots de inventario (JS los generará) -->
-                </div>
-            </div>
-            
-            <!-- Hotbar (Abajo) -->
-            <div id="player-hotbar-grid">
-                 <!-- 9 slots de hotbar (JS los generará) -->
-            </div>
-
         </div>
-    </div>
-    
-    <!-- Item que sigue al cursor -->
-    <div id="cursor-item">
-        <span class="slot-count"></span>
-    </div>
-    
-    <div id="crosshair"></div>
-    <canvas id="game-canvas"></canvas>
-    
-    <!-- --- HTML DEL INVENTARIO (HOTBAR) --- -->
-    <div id="hotbar">
-        <!-- 9 slots (JS los generará) -->
+        
+        <!-- Item que segue al cursor -->
+        <div id="cursor-item">
+            <span class="slot-count"></span>
+        </div>
+        
+        <div id="crosshair"></div>
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- --- HTML DEL INVENTARIO (HOTBAR) --- -->
+        <div id="hotbar">
+            <!-- 9 slots (JS los generará) -->
+        </div>
     </div>
 
 
@@ -345,202 +451,116 @@
     <!-- Para combinar geometrías: Three.js BufferGeometryUtils -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script> 
 
-    <script>
-        /* SimplexNoise (sin cambios) */
-        function SimplexNoise(random) {
-            // ... (código de SimplexNoise sin cambios)
-            if (!random) random = Math.random;
-            this.p = new Uint8Array(256);
-            this.perm = new Uint8Array(512);
-            this.permMod12 = new Uint8Array(512);
-            for (var i = 0; i < 256; i++) {
-                this.p[i] = random() * 256;
-            }
-            for (i = 0; i < 512; i++) {
-                this.perm[i] = this.p[i & 255];
-                this.permMod12[i] = this.perm[i] % 12;
-            }
-        }
-        SimplexNoise.prototype = {
-            grad3: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1]),
-            noise2D: function(xin, yin) {
-                var permMod12 = this.permMod12, perm = this.perm, grad3 = this.grad3;
-                var n0 = 0, n1 = 0, n2 = 0;
-                var s = (xin + yin) * 0.3660254037844386;
-                var i = Math.floor(xin + s);
-                var j = Math.floor(yin + s);
-                var t = (i + j) * 0.21132486540518713;
-                var X0 = i - t;
-                var Y0 = j - t;
-                var x0 = xin - X0;
-                var y0 = yin - Y0;
-                var i1, j1;
-                if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
-                var x1 = x0 - i1 + 0.21132486540518713;
-                var y1 = y0 - j1 + 0.21132486540518713;
-                var x2 = x0 - 1.0 + 0.42264973081037425;
-                var y2 = y0 - 1.0 + 0.42264973081037425;
-                var ii = i & 255;
-                var jj = j & 255;
-                var t0 = 0.5 - x0 * x0 - y0 * y0;
-                if (t0 >= 0) {
-                    t0 *= t0;
-                    var gi0 = permMod12[ii + perm[jj]];
-                    n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0);
-                }
-                var t1 = 0.5 - x1 * x1 - y1 * y1;
-                if (t1 >= 0) {
-                    t1 *= t1;
-                    var gi1 = permMod12[ii + i1 + perm[jj + j1]];
-                    n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1);
-                }
-                var t2 = 0.5 - x2 * x2 - y2 * y2;
-                if (t2 >= 0) {
-                    t2 *= t2;
-                    var gi2 = permMod12[ii + 1 + perm[jj + 1]];
-                    n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2);
-                }
-                return 70.0 * (n0 + n1 + n2);
-            }
+    <!-- --- NUEVO: Firebase SDKs --- -->
+    <script type="module">
+        // Importar Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // --- USANDO RTDB (Realtime Database) ---
+        import { 
+            getDatabase, 
+            ref, 
+            onValue, 
+            set, 
+            get, 
+            child,
+            push,
+            remove,
+            onDisconnect,
+            off
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        
+        // --- Configuración de Firebase (proporcionada por el usuario) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCvqvernkGHCvBuGArnJSXcka40lCFBKGk",
+          authDomain: "maincraft-e2b8c.firebaseapp.com",
+          databaseURL: "https://maincraft-e2b8c-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "maincraft-e2b8c",
+          storageBucket: "maincraft-e2b8c.firebasestorage.app",
+          messagingSenderId: "10833551639",
+          appId: "1:10833551639:web:507e06044945406bf31752",
+          measurementId: "G-78SD9HQ3CX"
         };
-        // --- FIN SimplexNoise ---
 
+        // --- Inicializar Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
 
-        // --- Variables Globales ---
+        // --- Variables Globales del Juego ---
         let scene, camera, renderer, controls;
-        let world; // Mundo de físicas (Cannon.js)
-        let playerBody; // Cuerpo de físicas del jugador
-        let noiseGenerator; // Generador de ruido
+        let world;
+        let playerBody;
+        let noiseGenerator;
+        let animationFrameId; // Para detener el bucle
         
         const raycastResult = new CANNON.RaycastResult();
         const rayFrom = new CANNON.Vec3();
         const rayTo = new CANNON.Vec3();
-
         const playerMaterial = new CANNON.Material("playerMaterial");
         const worldMaterial = new CANNON.Material("worldMaterial");
-
         const GROUP_PLAYER = 1;
         const GROUP_WORLD = 2;
-
         let chunks = {}; 
         const CHUNK_SIZE = 15; 
         const renderDistance = 1; 
         let lastChunkCheck = 0; 
-
         const keys = {};
         const clock = new THREE.Clock();
         const raycaster = new THREE.Raycaster();
-
         const moveSpeed = 5;
         const jumpSpeed = 10; 
         let onGround = false; 
-
-        // Propiedades del mundo
         const MAX_HEIGHT = 14; 
         const BASE_HEIGHT = 1; 
         const SCALE_NOISE = 0.05; 
-
         const WORLD_MIN_HEIGHT = -30;
         const WORLD_MAX_HEIGHT = MAX_HEIGHT + BASE_HEIGHT + 1;
         const CHUNK_HEIGHT = WORLD_MAX_HEIGHT - WORLD_MIN_HEIGHT;
-        
-        // --- Texturas ---
         const loadingManager = new THREE.LoadingManager();
         const textureLoader = new THREE.TextureLoader(loadingManager); 
         const TEXTURE_URL = "https://logise1.github.io/maincraft/";
-        
         const textures = {}; 
         const materials = {}; 
-        
         const textureNames = [
-            'grass_block_top.png', 'grass_block_side.png', 'dirt.png',
-            'stone.png', 'cobblestone.png',
-            'oak_log.png', 'oak_log_top.png', 'oak_leaves.png',
-            'coal_ore.png', 'iron_ore.png', 'diamond_ore.png',
-            'destroy_stage_0.png', 'destroy_stage_1.png', 'destroy_stage_2.png',
-            'destroy_stage_3.png', 'destroy_stage_4.png', 'destroy_stage_5.png',
-            'destroy_stage_6.png', 'destroy_stage_7.png', 'destroy_stage_8.png', 'destroy_stage_9.png',
-            'oak_planks.png', 'stick.png',
-            'wooden_pickaxe.png', 'stone_pickaxe.png',
-            'crafting_table_top.png', 'crafting_table_side.png', // <-- NUEVAS
+            'grass_block_top.png', 'grass_block_side.png', 'dirt.png', 'stone.png', 'cobblestone.png',
+            'oak_log.png', 'oak_log_top.png', 'oak_leaves.png', 'coal_ore.png', 'iron_ore.png', 'diamond_ore.png',
+            'destroy_stage_0.png', 'destroy_stage_1.png', 'destroy_stage_2.png', 'destroy_stage_3.png', 
+            'destroy_stage_4.png', 'destroy_stage_5.png', 'destroy_stage_6.png', 'destroy_stage_7.png', 
+            'destroy_stage_8.png', 'destroy_stage_9.png', 'oak_planks.png', 'stick.png',
+            'wooden_pickaxe.png', 'stone_pickaxe.png', 'crafting_table_top.png', 'crafting_table_side.png',
         ];
-        
-        // --- Variables de Rotura ---
         let breakingMaterials = [];
         let breakingDecal;
         let isBreaking = false;
         let breakingStartTime = 0;
         let currentBreakingVoxelPos = null;
         let currentBlockBreakTime = Infinity;
+        const HAND = { id: 0, name: 'hand', isBlock: false, toolType: null, toolTier: 0, icon: null, maxStack: 1 };
 
-        // --- CONSTANTE PARA MANO ---
-        const HAND = { 
-            id: 0, name: 'hand', isBlock: false, 
-            toolType: null, toolTier: 0, icon: null, maxStack: 1
-        };
-
-        // --- REGISTRO DE BLOQUES (Mundo) ---
+        // --- Registros de Bloques, Items y Recetas (sin cambios) ---
         const BLOCKS = {
             EMPTY: { id: 0, name: 'empty' }, 
-            GRASS: {
-                id: 1, name: 'grass',
-                faces: { top: 'grass_block_top.png', bottom: 'dirt.png', side: 'grass_block_side.png' },
-                hardness: 0.6, minTool: null, minTier: 0, drop: 2 // Suelta DIRT
-            },
-            DIRT: {
-                id: 2, name: 'dirt',
-                faces: { top: 'dirt.png', bottom: 'dirt.png', side: 'dirt.png' },
-                hardness: 0.5, minTool: null, minTier: 0, drop: 2
-            },
-            STONE: {
-                id: 3, name: 'stone',
-                faces: { top: 'stone.png', bottom: 'stone.png', side: 'stone.png' },
-                hardness: 1.5, minTool: 'pickaxe', minTier: 1, drop: 4 // Suelta COBBLESTONE
-            },
-            COBBLESTONE: {
-                id: 4, name: 'cobblestone',
-                faces: { top: 'cobblestone.png', bottom: 'cobblestone.png', side: 'cobblestone.png' },
-                hardness: 2.0, minTool: 'pickaxe', minTier: 1, drop: 4
-            },
-            OAK_LOG: {
-                id: 5, name: 'oak_log',
-                faces: { top: 'oak_log_top.png', bottom: 'oak_log_top.png', side: 'oak_log.png' },
-                hardness: 2.0, minTool: null, minTier: 0, drop: 5
-            },
-            OAK_LEAVES: {
-                id: 6, name: 'oak_leaves',
-                faces: { top: 'oak_leaves.png', bottom: 'oak_leaves.png', side: 'oak_leaves.png' },
-                hardness: 0.2, minTool: null, minTier: 0, drop: 0 // No suelta nada
-            },
-            COAL_ORE: {
-                id: 7, name: 'coal_ore',
-                faces: { top: 'coal_ore.png', bottom: 'coal_ore.png', side: 'coal_ore.png' },
-                hardness: 3.0, minTool: 'pickaxe', minTier: 1, drop: 7
-            },
-            IRON_ORE: {
-                id: 8, name: 'iron_ore',
-                faces: { top: 'iron_ore.png', bottom: 'iron_ore.png', side: 'iron_ore.png' },
-                hardness: 3.0, minTool: 'pickaxe', minTier: 2, drop: 8
-            },
-            DIAMOND_ORE: {
-                id: 9, name: 'diamond_ore',
-                faces: { top: 'diamond_ore.png', bottom: 'diamond_ore.png', side: 'diamond_ore.png' },
-                hardness: 3.0, minTool: 'pickaxe', minTier: 3, drop: 9
-            },
-            OAK_PLANKS: {
-                id: 10, name: 'oak_planks',
-                faces: { top: 'oak_planks.png', bottom: 'oak_planks.png', side: 'oak_planks.png' },
-                hardness: 2.0, minTool: null, minTier: 0, drop: 10
-            },
-            CRAFTING_TABLE: { // <-- NUEVO BLOQUE
-                id: 12, name: 'crafting_table',
-                faces: { top: 'crafting_table_top.png', bottom: 'oak_planks.png', side: 'crafting_table_side.png' },
-                hardness: 2.5, minTool: null, minTier: 0, drop: 12
-            }
+            GRASS: { id: 1, name: 'grass', faces: { top: 'grass_block_top.png', bottom: 'dirt.png', side: 'grass_block_side.png' }, hardness: 0.6, minTool: null, minTier: 0, drop: 2 },
+            DIRT: { id: 2, name: 'dirt', faces: { top: 'dirt.png', bottom: 'dirt.png', side: 'dirt.png' }, hardness: 0.5, minTool: null, minTier: 0, drop: 2 },
+            STONE: { id: 3, name: 'stone', faces: { top: 'stone.png', bottom: 'stone.png', side: 'stone.png' }, hardness: 1.5, minTool: 'pickaxe', minTier: 1, drop: 4 },
+            COBBLESTONE: { id: 4, name: 'cobblestone', faces: { top: 'cobblestone.png', bottom: 'cobblestone.png', side: 'cobblestone.png' }, hardness: 2.0, minTool: 'pickaxe', minTier: 1, drop: 4 },
+            OAK_LOG: { id: 5, name: 'oak_log', faces: { top: 'oak_log_top.png', bottom: 'oak_log_top.png', side: 'oak_log.png' }, hardness: 2.0, minTool: null, minTier: 0, drop: 5 },
+            OAK_LEAVES: { id: 6, name: 'oak_leaves', faces: { top: 'oak_leaves.png', bottom: 'oak_leaves.png', side: 'oak_leaves.png' }, hardness: 0.2, minTool: null, minTier: 0, drop: 0 },
+            COAL_ORE: { id: 7, name: 'coal_ore', faces: { top: 'coal_ore.png', bottom: 'coal_ore.png', side: 'coal_ore.png' }, hardness: 3.0, minTool: 'pickaxe', minTier: 1, drop: 7 },
+            IRON_ORE: { id: 8, name: 'iron_ore', faces: { top: 'iron_ore.png', bottom: 'iron_ore.png', side: 'iron_ore.png' }, hardness: 3.0, minTool: 'pickaxe', minTier: 2, drop: 8 },
+            DIAMOND_ORE: { id: 9, name: 'diamond_ore', faces: { top: 'diamond_ore.png', bottom: 'diamond_ore.png', side: 'diamond_ore.png' }, hardness: 3.0, minTool: 'pickaxe', minTier: 3, drop: 9 },
+            OAK_PLANKS: { id: 10, name: 'oak_planks', faces: { top: 'oak_planks.png', bottom: 'oak_planks.png', side: 'oak_planks.png' }, hardness: 2.0, minTool: null, minTier: 0, drop: 10 },
+            CRAFTING_TABLE: { id: 12, name: 'crafting_table', faces: { top: 'crafting_table_top.png', bottom: 'oak_planks.png', side: 'crafting_table_side.png' }, hardness: 2.5, minTool: null, minTier: 0, drop: 12 }
         };
         const BLOCKS_BY_ID = Object.fromEntries(Object.values(BLOCKS).map(b => [b.id, b]));
-        
-        // --- REGISTRO DE ITEMS (Inventario) ---
         const ITEMS = {
             EMPTY: { id: 0, name: 'empty', isBlock: false, icon: null, maxStack: 0 },
             GRASS: { id: 1, name: 'grass', isBlock: true, icon: 'grass_block_side.png', maxStack: 64 },
@@ -554,133 +574,113 @@
             DIAMOND_ORE: { id: 9, name: 'diamond_ore', isBlock: true, icon: 'diamond_ore.png', maxStack: 64 },
             OAK_PLANKS: { id: 10, name: 'oak_planks', isBlock: true, icon: 'oak_planks.png', maxStack: 64 },
             STICK: { id: 11, name: 'stick', isBlock: false, icon: 'stick.png', maxStack: 64 },
-            CRAFTING_TABLE: { id: 12, name: 'crafting_table', isBlock: true, icon: 'crafting_table_top.png', maxStack: 64 }, // <-- NUEVO ITEM
-            WOODEN_PICKAXE: { 
-                id: 101, name: 'wooden_pickaxe', isBlock: false, icon: 'wooden_pickaxe.png',
-                toolType: 'pickaxe', toolTier: 1, maxStack: 1
-            },
-            STONE_PICKAXE: {
-                id: 102, name: 'stone_pickaxe', isBlock: false, icon: 'stone_pickaxe.png',
-                toolType: 'pickaxe', toolTier: 2, maxStack: 1
-            }
+            CRAFTING_TABLE: { id: 12, name: 'crafting_table', isBlock: true, icon: 'crafting_table_top.png', maxStack: 64 },
+            WOODEN_PICKAXE: { id: 101, name: 'wooden_pickaxe', isBlock: false, icon: 'wooden_pickaxe.png', toolType: 'pickaxe', toolTier: 1, maxStack: 1 },
+            STONE_PICKAXE: { id: 102, name: 'stone_pickaxe', isBlock: false, icon: 'stone_pickaxe.png', toolType: 'pickaxe', toolTier: 2, maxStack: 1 }
         };
         const ITEMS_BY_ID = Object.fromEntries(Object.values(ITEMS).map(i => [i.id, i]));
-        
-        // --- NUEVO: REGISTRO DE RECETAS (VISUAL) ---
-        // ' ' es vacío, 'P' es Plank, 'S' es Stick, 'L' es Log, 'C' es Cobblestone
         const RECIPES = [
-            // Shapeless (Shapeless se maneja comprobando 1 slot)
             { type: 'shapeless', input: [{ id: ITEMS.OAK_LOG.id, count: 1 }], output: { id: ITEMS.OAK_PLANKS.id, count: 4 } },
-            
-            // Shaped (2x2)
-            { 
-                type: 'shaped', grid: 2, 
-                shape: ['P', 'P'], 
-                ingredients: { 'P': ITEMS.OAK_PLANKS.id },
-                output: { id: ITEMS.STICK.id, count: 4 }
-            },
-            {
-                type: 'shaped', grid: 2,
-                shape: ['PP', 'PP'],
-                ingredients: { 'P': ITEMS.OAK_PLANKS.id },
-                output: { id: ITEMS.CRAFTING_TABLE.id, count: 1 }
-            },
-            
-            // Shaped (3x3)
-            {
-                type: 'shaped', grid: 3,
-                shape: ['PPP', ' S ', ' S '],
-                ingredients: { 'P': ITEMS.OAK_PLANKS.id, 'S': ITEMS.STICK.id },
-                output: { id: ITEMS.WOODEN_PICKAXE.id, count: 1 }
-            },
-            {
-                type: 'shaped', grid: 3,
-                shape: ['CCC', ' S ', ' S '],
-                ingredients: { 'C': ITEMS.COBBLESTONE.id, 'S': ITEMS.STICK.id },
-                output: { id: ITEMS.STONE_PICKAXE.id, count: 1 }
-            }
+            { type: 'shaped', grid: 2, shape: ['P', 'P'], ingredients: { 'P': ITEMS.OAK_PLANKS.id }, output: { id: ITEMS.STICK.id, count: 4 } },
+            { type: 'shaped', grid: 2, shape: ['PP', 'PP'], ingredients: { 'P': ITEMS.OAK_PLANKS.id }, output: { id: ITEMS.CRAFTING_TABLE.id, count: 1 } },
+            { type: 'shaped', grid: 3, shape: ['PPP', ' S ', ' S '], ingredients: { 'P': ITEMS.OAK_PLANKS.id, 'S': ITEMS.STICK.id }, output: { id: ITEMS.WOODEN_PICKAXE.id, count: 1 } },
+            { type: 'shaped', grid: 3, shape: ['CCC', ' S ', ' S '], ingredients: { 'C': ITEMS.COBBLESTONE.id, 'S': ITEMS.STICK.id }, output: { id: ITEMS.STONE_PICKAXE.id, count: 1 } }
         ];
 
-        
-        // --- NUEVO: SISTEMA DE INVENTARIO POR SLOTS ---
-        // 36 slots = 9 hotbar + 27 inventario
+        // --- Estado del Inventario (sin cambios) ---
         const playerInventorySlots = new Array(36).fill(null).map(() => ({ id: 0, count: 0 }));
-        
-        // 9 slots para la mesa 3x3 (la 2x2 usará los 4 primeros)
         const craftingGridSlots = new Array(9).fill(null).map(() => ({ id: 0, count: 0 }));
         const outputSlot = { id: 0, count: 0 };
-        const cursorItem = { id: 0, count: 0 }; // Item en el cursor
-        
-        let currentUI = 'none'; // 'none', 'inventory', 'table'
+        const cursorItem = { id: 0, count: 0 }; 
+        let currentUI = 'none';
         let selectedHotbarSlot = 0;
-        // --- FIN SISTEMA DE INVENTARIO ---
-
-        // Elementos DOM
         let cursorItemEl;
+        
+        // --- NUEVO: Estado de Sesión y Multijugador ---
+        let userId;
+        let currentWorldId;
+        let isMultiplayer = false;
+        let otherPlayers = {}; // { uid: { mesh: THREE.Mesh, ref: DBRef } }
+        let worldListeners = []; // Array de {ref, type} para desconectar
+        let lastPlayerUpdate = 0;
+        let chunkSaveTimeouts = {}; // { chunkKey: timeoutId }
+        
+        // --- NUEVO: DOM Elements ---
+        const blocker = document.getElementById('blocker');
+        const loginScreen = document.getElementById('login-screen');
+        const gameModeScreen = document.getElementById('game-mode-screen');
+        const multiplayerScreen = document.getElementById('multiplayer-screen');
+        const gameContainer = document.getElementById('game-container');
+        const loginError = document.getElementById('login-error');
 
-        // --- Geometrías de caras pre-rotadas (sin cambios) ---
-        const faceGeometries = {
-            top: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0.5, 0),
-            bottom: new THREE.PlaneGeometry(1, 1).rotateX(Math.PI / 2).translate(0, -0.5, 0),
-            left: new THREE.PlaneGeometry(1, 1).rotateY(-Math.PI / 2).translate(-0.5, 0, 0),
-            right: new THREE.PlaneGeometry(1, 1).rotateY(Math.PI / 2).translate(0.5, 0, 0),
-            front: new THREE.PlaneGeometry(1, 1).translate(0, 0, 0.5),
-            back: new THREE.PlaneGeometry(1, 1).rotateY(Math.PI).translate(0, 0, -0.5)
+        
+        /* SimplexNoise (sin cambios) */
+        function SimplexNoise(random) {
+            if (!random) random = Math.random;
+            this.p = new Uint8Array(256);
+            this.perm = new Uint8Array(512);
+            this.permMod12 = new Uint8Array(512);
+            for (var i = 0; i < 256; i++) { this.p[i] = random() * 256; }
+            for (i = 0; i < 512; i++) { this.perm[i] = this.p[i & 255]; this.permMod12[i] = this.perm[i] % 12; }
+        }
+        SimplexNoise.prototype = {
+            grad3: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1]),
+            noise2D: function(xin, yin) {
+                var permMod12 = this.permMod12, perm = this.perm, grad3 = this.grad3;
+                var n0 = 0, n1 = 0, n2 = 0;
+                var s = (xin + yin) * 0.3660254037844386;
+                var i = Math.floor(xin + s); var j = Math.floor(yin + s);
+                var t = (i + j) * 0.21132486540518713;
+                var X0 = i - t; var Y0 = j - t;
+                var x0 = xin - X0; var y0 = yin - Y0;
+                var i1, j1;
+                if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
+                var x1 = x0 - i1 + 0.21132486540518713; var y1 = y0 - j1 + 0.21132486540518713;
+                var x2 = x0 - 1.0 + 0.42264973081037425; var y2 = y0 - 1.0 + 0.42264973081037425;
+                var ii = i & 255; var jj = j & 255;
+                var t0 = 0.5 - x0 * x0 - y0 * y0;
+                if (t0 >= 0) {
+                    t0 *= t0; var gi0 = permMod12[ii + perm[jj]];
+                    n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0);
+                }
+                var t1 = 0.5 - x1 * x1 - y1 * y1;
+                if (t1 >= 0) {
+                    t1 *= t1; var gi1 = permMod12[ii + i1 + perm[jj + j1]];
+                    n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1);
+                }
+                var t2 = 0.5 - x2 * x2 - y2 * y2;
+                if (t2 >= 0) {
+                    t2 *= t2; var gi2 = permMod12[ii + 1 + perm[jj + 1]];
+                    n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2);
+                }
+                return 70.0 * (n0 + n1 + n2);
+            }
         };
         
-
-        // --- Utilidades para voxels y chunks (sin cambios) ---
-        function getChunkKey(x, z) {
-            const chunkX = Math.floor(x / CHUNK_SIZE) * CHUNK_SIZE;
-            const chunkZ = Math.floor(z / CHUNK_SIZE) * CHUNK_SIZE;
-            return `${chunkX},${chunkZ}`;
-        }
-        function getChunk(x, z) { return chunks[getChunkKey(x, z)]; }
-        function getVoxelIndex(localX, localY, localZ) {
-             const arrayY = localY - WORLD_MIN_HEIGHT;
-             return localX + localZ * CHUNK_SIZE + arrayY * CHUNK_SIZE * CHUNK_SIZE;
-        }
-        function getVoxel(worldX, worldY, worldZ) {
-            const chunk = getChunk(worldX, worldZ); 
-            if (!chunk) return BLOCKS.EMPTY;
-            const localX = (worldX % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-            const localZ = (worldZ % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-            if (worldY < WORLD_MIN_HEIGHT || worldY >= WORLD_MAX_HEIGHT) return BLOCKS.EMPTY;
-            const index = getVoxelIndex(localX, worldY, localZ);
-            if (index < 0 || index >= chunk.voxelData.length) return BLOCKS.EMPTY;
-            const id = chunk.voxelData[index];
-            return BLOCKS_BY_ID[id] || BLOCKS.EMPTY;
-        }
-        function setVoxel(worldX, worldY, worldZ, block) {
-            const chunk = getChunk(worldX, worldZ);
-            if (!chunk) return;
-            const localX = (worldX % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-            const localZ = (worldZ % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-            if (worldY < WORLD_MIN_HEIGHT || worldY >= WORLD_MAX_HEIGHT) return;
-            const index = getVoxelIndex(localX, worldY, localZ);
-            if (index >= 0 && index < chunk.voxelData.length) {
-                chunk.voxelData[index] = block.id;
-            }
-        }
-        
-        // --- Carga de Texturas (sin cambios) ---
+        // --- CORRECCIÓN: Función loadTextures AÑADIDA ---
         function loadTextures() {
-            const instructions = document.getElementById('instructions');
-            instructions.textContent = 'Cargando texturas...';
             textureLoader.setPath(TEXTURE_URL);
             
             for (const name of textureNames) {
                 if (!name) continue;
-                const texture = textureLoader.load(name, () => {}, undefined, () => {
-                    console.error(`Error al cargar la textura: ${name}`);
-                });
+                const texture = textureLoader.load(name, 
+                    () => { /* onLoad */ }, 
+                    undefined, 
+                    () => { // onError
+                        console.error(`Error al cargar la textura: ${name}`);
+                    }
+                );
                 texture.magFilter = THREE.NearestFilter;
                 texture.minFilter = THREE.NearestFilter;
+                
                 textures[name] = texture;
                 
                 if (name.startsWith('destroy_stage_')) {
                     const material = new THREE.MeshBasicMaterial({ 
-                        map: texture, transparent: true, alphaTest: 0.01, side: THREE.DoubleSide
+                        map: texture, 
+                        transparent: true, 
+                        alphaTest: 0.01, 
+                        side: THREE.DoubleSide
                     });
                     breakingMaterials.push(material);
                 } else {
@@ -690,33 +690,281 @@
                         alphaTest: name.includes('leaves') ? 0.1 : 0,
                         side: name.includes('leaves') ? THREE.DoubleSide : THREE.FrontSide
                     };
+
                     if (name === 'grass_block_top.png' || name === 'oak_leaves.png') {
                         materialOptions.color = new THREE.Color(0x416728); 
                     } else {
                         materialOptions.color = new THREE.Color(0xffffff); 
                     }
+
                     materials[name] = new THREE.MeshStandardMaterial(materialOptions);
                 }
             }
         }
         
-        // --- El juego empieza aquí ---
-        loadingManager.onLoad = () => {
-            const instructions = document.getElementById('instructions');
-            instructions.innerHTML = `
-                <h1>Voxel World con Crafteo</h1>
-                <p>(W, A, S, D = Moverse, Espacio = Saltar)</p>
-                <p>(Clic Izquierdo = Destruir, Clic Derecho = Construir)</p>
-                <p>(Rueda del ratón o 1-9 = Cambiar bloque)</p>
-                <p>(E = Abrir/Cerrar Inventario)</p>
-                <br>
-                <strong>Haz clic aquí para jugar</strong>
-            `;
-            init();
-        };
+        // --- NUEVO: Funciones de Auth y Menú ---
+        
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        }
 
-        // --- Inicialización (MODIFICADO) ---
-        function init() {
+        function clearLoginError() {
+            loginError.classList.add('hidden');
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                document.getElementById('user-info').textContent = `Conectado como: ${user.email}`;
+                loginScreen.classList.add('hidden');
+                multiplayerScreen.classList.add('hidden');
+                gameModeScreen.classList.remove('hidden');
+                blocker.style.display = 'flex'; // Asegurarse que el menú sea visible
+                gameContainer.style.display = 'none'; // Ocultar juego
+                clearLoginError();
+            } else {
+                userId = null;
+                gameModeScreen.classList.add('hidden');
+                multiplayerScreen.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                blocker.style.display = 'flex';
+                gameContainer.style.display = 'none';
+            }
+        });
+
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            clearLoginError();
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error);
+                showLoginError(error.message);
+            }
+        });
+        
+        document.getElementById('btn-register').addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            clearLoginError();
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error al registrarse:", error);
+                showLoginError(error.message);
+            }
+        });
+        
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            await signOut(auth);
+            // onAuthStateChanged se encargará de mostrar la pantalla de login
+        });
+        
+        document.getElementById('btn-single-player').addEventListener('click', () => {
+            startGame('local', false);
+        });
+
+        document.getElementById('btn-multiplayer').addEventListener('click', () => {
+            gameModeScreen.classList.add('hidden');
+            multiplayerScreen.classList.remove('hidden');
+            loadWorldList();
+        });
+
+        document.getElementById('btn-back-menu').addEventListener('click', () => {
+            multiplayerScreen.classList.add('hidden');
+            gameModeScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-create-world').addEventListener('click', async () => {
+            const worldName = document.getElementById('create-world-name').value.trim();
+            if (!worldName) {
+                alert("Por favor, introduce un nombre para el mundo.");
+                return;
+            }
+            try {
+                // 'push' genera un ID único
+                const worldListRef = ref(db, 'worlds');
+                const newWorldRef = push(worldListRef);
+                await set(newWorldRef, {
+                    name: worldName,
+                    owner: userId
+                });
+                
+                console.log("Mundo creado con ID:", newWorldRef.key);
+                handleJoinWorld(newWorldRef.key);
+            } catch (error) {
+                console.error("Error al crear el mundo:", error);
+            }
+        });
+
+        async function loadWorldList() {
+            const worldListEl = document.getElementById('world-list');
+            worldListEl.innerHTML = '<p style="padding: 10px; opacity: 0.7;">Buscando mundos...</p>';
+            try {
+                const worldsRef = ref(db, 'worlds');
+                const snapshot = await get(worldsRef);
+                
+                worldListEl.innerHTML = ''; // Limpiar
+                if (!snapshot.exists()) {
+                    worldListEl.innerHTML = '<p style="padding: 10px; opacity: 0.7;">No se encontraron mundos. ¡Crea uno!</p>';
+                    return;
+                }
+                
+                snapshot.forEach((childSnapshot) => {
+                    const worldId = childSnapshot.key;
+                    const world = childSnapshot.val();
+                    const worldEl = document.createElement('div');
+                    worldEl.className = 'world-item';
+                    worldEl.textContent = world.name;
+                    worldEl.onclick = () => handleJoinWorld(worldId);
+                    worldListEl.appendChild(worldEl);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar mundos:", error);
+                worldListEl.innerHTML = '<p style="padding: 10px; color: red;">Error al cargar mundos.</p>';
+            }
+        }
+        
+        function handleJoinWorld(worldId) {
+            console.log(`Uniendo al mundo: ${worldId}`);
+            startGame(worldId, true);
+        }
+
+        // --- NUEVO: Codificadores/Decodificadores de VoxelData ---
+        function encodeVoxelData(uint8array) {
+            // Convertir Uint8Array a string binario
+            let binaryString = '';
+            // Usar apply para evitar "Maximum call stack size exceeded"
+            binaryString = String.fromCharCode.apply(null, uint8array);
+            // Convertir string binario a Base64
+            return btoa(binaryString);
+        }
+
+        function decodeVoxelData(base64) {
+            // Convertir Base64 a string binario
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        // --- NUEVO: Punto de entrada principal del juego ---
+        function startGame(worldId, isMulti) {
+            currentWorldId = worldId;
+            isMultiplayer = isMulti;
+            
+            // Ocultar menús, mostrar juego
+            blocker.style.display = 'none';
+            gameContainer.style.display = 'block';
+
+            // Resetear estado del juego anterior
+            resetGameState();
+            
+            // Iniciar lógica de Three.js, Cannon.js, etc.
+            initGameLogic(); 
+            
+            if (isMultiplayer) {
+                // Suscribirse a cambios
+                subscribeToPlayerPositions();
+                // Marcar mi presencia
+                const playerRef = ref(db, `worlds/${currentWorldId}/players/${userId}`);
+                set(playerRef, { x: 0, y: MAX_HEIGHT + 10, z: 0 }); // Posición inicial
+                // Quitarme si me desconecto
+                onDisconnect(playerRef).remove();
+                worldListeners.push({ ref: playerRef, type: 'onDisconnect' }); // Guardar referencia para limpiar
+            }
+            
+            // Iniciar el bucle de animación
+            animate();
+        }
+
+        function stopGame() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            console.log("Deteniendo el juego y limpiando listeners...");
+            
+            if (isMultiplayer && userId) {
+                 // Quitar mi jugador de la base de datos
+                 const playerRef = ref(db, `worlds/${currentWorldId}/players/${userId}`);
+                 remove(playerRef);
+            }
+            
+            // Desconectar todos los listeners de RTDB
+            worldListeners.forEach(l => {
+                if (l.type === 'value') {
+                    off(l.ref, l.type);
+                } else if (l.type === 'onDisconnect') {
+                    l.ref.onDisconnect().cancel(); // Cancelar el onDisconnect
+                }
+            });
+            
+            // Limpiar timeouts de guardado de chunks
+            Object.values(chunkSaveTimeouts).forEach(timeoutId => clearTimeout(timeoutId));
+            chunkSaveTimeouts = {};
+
+            resetGameState();
+
+            // Mostrar menú principal
+            gameContainer.style.display = 'none';
+            blocker.style.display = 'flex';
+            multiplayerScreen.classList.add('hidden');
+            gameModeScreen.classList.remove('hidden');
+        }
+
+        function resetGameState() {
+            // Limpiar escena
+            if (scene) {
+                // Eliminar todos los chunks
+                Object.values(chunks).forEach(chunk => {
+                    chunk.meshes.forEach(m => scene.remove(m));
+                    // --- CORRECCIÓN --- Añadir comprobación de que 'world' existe antes de usarlo
+                    if (chunk.body && world) world.removeBody(chunk.body);
+                });
+                // Eliminar otros jugadores
+                Object.values(otherPlayers).forEach(p => scene.remove(p.mesh));
+            }
+            
+            // --- CORRECCIÓN ---
+            // Quitar el 'if (world)' que envolvía la inicialización.
+            // El mundo de físicas DEBE crearse SIEMPRE aquí.
+            world = new CANNON.World();
+            world.gravity.set(0, -9.82, 0);
+            world.broadphase = new CANNON.SAPBroadphase(world);
+            world.allowSleep = true; 
+            world.solver.iterations = 10;
+            const playerWorldContactMaterial = new CANNON.ContactMaterial(
+                worldMaterial, playerMaterial,
+                { friction: 0, restitution: 0, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }
+            );
+            world.addContactMaterial(playerWorldContactMaterial);
+
+
+            chunks = {};
+            otherPlayers = {};
+            worldListeners = [];
+            
+            // Resetear inventario (para que no se comparta entre mundos)
+            for (let i = 0; i < 36; i++) playerInventorySlots[i] = { id: 0, count: 0 };
+            updateHotbarUI();
+            
+            // Resetear jugador
+            if (playerBody) {
+                playerBody.position.set(0, MAX_HEIGHT + BASE_HEIGHT + 5, 0);
+                playerBody.velocity.set(0, 0, 0);
+            }
+        }
+        
+        // Esta función ahora solo configura la lógica del juego
+        function initGameLogic() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB); 
 
@@ -736,21 +984,14 @@
             scene.add(directionalLight);
             
             noiseGenerator = new SimplexNoise();
-
-            world = new CANNON.World();
-            world.gravity.set(0, -9.82, 0);
-            world.broadphase = new CANNON.SAPBroadphase(world);
-            world.allowSleep = true; 
-            world.solver.iterations = 10; 
             
-            const playerWorldContactMaterial = new CANNON.ContactMaterial(
-                worldMaterial, playerMaterial,
-                { friction: 0, restitution: 0, contactEquationStiffness: 1e8, contactEquationRelaxation: 3 }
-            );
-            world.addContactMaterial(playerWorldContactMaterial);
-            
-            const playerShape = new CANNON.Sphere(0.5); // Esfera
+            // --- CORRECCIÓN --- 
+            // La llamada a resetGameState() aquí es redundante porque
+            // 'startGame' ya la llamó.
+            // La línea 'if (!world) resetGameState();' se ha eliminado
+            // porque 'resetGameState' AHORA siempre crea el 'world'.
 
+            const playerShape = new CANNON.Sphere(0.5);
             playerBody = new CANNON.Body({ 
                 mass: 5, shape: playerShape, 
                 position: new CANNON.Vec3(0, MAX_HEIGHT + BASE_HEIGHT + 5, 0), 
@@ -759,110 +1000,194 @@
                 collisionFilterMask: GROUP_WORLD    
             });
             playerBody.fixedRotation = true;
-            world.addBody(playerBody);
+            world.addBody(playerBody); // Esta línea ya no dará error
 
             controls = new THREE.PointerLockControls(camera, document.body);
-            const blocker = document.getElementById('blocker');
             const crosshair = document.getElementById('crosshair');
-            const craftingScreen = document.getElementById('crafting-screen');
 
-            blocker.addEventListener('click', () => { controls.lock(); });
-
-            controls.addEventListener('lock', () => {
-                blocker.style.display = 'none';
-                crosshair.style.display = 'block';
-                if (currentUI !== 'none') {
-                    closeCraftingUI();
-                }
-            });
-
+            // El listener de 'lock' ya está configurado en 'init()'
+            
             controls.addEventListener('unlock', () => {
-                if (currentUI === 'none') {
-                    blocker.style.display = 'flex';
+                // Si el juego está corriendo (UI no visible) y presionamos ESC
+                if (currentUI === 'none' && !blocker.style.display || blocker.style.display === 'none') {
+                    stopGame();
                 }
-                crosshair.style.display = 'none';
             });
 
             scene.add(controls.getObject());
 
-            // --- INICIALIZAR DECAL DE ROTURA ---
             const decalGeo = new THREE.PlaneGeometry(1.01, 1.01);
             breakingDecal = new THREE.Mesh(decalGeo, breakingMaterials[0]);
             breakingDecal.visible = false;
             scene.add(breakingDecal);
             
-            // --- NUEVO: Inicializar UI de Crafteo ---
             cursorItemEl = document.getElementById('cursor-item');
             initCraftingUI();
             
-            // --- Pruebas: Dar items iniciales ---
-            // addItemToInventory({ id: ITEMS.OAK_LOG.id, count: 64 });
-            // addItemToInventory({ id: ITEMS.COBBLESTONE.id, count: 64 });
-            
             updateVisibleChunks(); 
             
-            // --- MANEJADORES DE EVENTOS (MODIFICADO) ---
-            document.addEventListener('keydown', (e) => {
-                keys[e.code] = true;
-                
-                if (e.code === 'KeyE' || (e.code === 'Escape' && currentUI !== 'none')) {
-                    e.preventDefault();
-                    toggleCraftingUI();
-                    return;
-                }
-                
-                if (controls.isLocked) { 
-                    if (e.code.startsWith('Digit')) {
-                        const slotIndex = parseInt(e.code.replace('Digit', ''), 10) - 1;
-                        if (slotIndex >= 0 && slotIndex < 9) {
-                            selectedHotbarSlot = slotIndex;
-                            updateHotbarUI(); // Solo refrescar hotbar
-                        }
-                    }
-                }
-            });
-            document.addEventListener('keyup', (e) => keys[e.code] = false);
-            
-            document.addEventListener('wheel', (e) => {
-                if (!controls.isLocked) return; 
-                if (e.deltaY < 0) { selectedHotbarSlot--; } else { selectedHotbarSlot++; }
-                selectedHotbarSlot = (selectedHotbarSlot + 9) % 9; 
-                updateHotbarUI();
-            });
-
+            // Listeners de juego (se re-añaden por si acaso)
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('wheel', onMouseWheel);
             document.addEventListener('mousedown', onMouseDown);
             document.addEventListener('mouseup', onMouseUp);
             window.addEventListener('resize', onWindowResize);
-            
-            // Mover item con cursor
-            document.addEventListener('mousemove', (e) => {
-                if (currentUI !== 'none') {
-                    cursorItemEl.style.left = `${e.clientX - 27}px`;
-                    cursorItemEl.style.top = `${e.clientY - 27}px`;
-                }
-            });
+            document.addEventListener('mousemove', onMouseMove);
 
             updateHotbarUI(); 
-            animate();
+            controls.lock(); // Bloquear control al iniciar
         }
 
-        // --- NUEVAS FUNCIONES DE UI Y LÓGICA DE INVENTARIO ---
+        // --- NUEVO: Handlers de Eventos Separados ---
+        function onKeyDown(e) {
+            keys[e.code] = true;
+            
+            if (e.code === 'KeyE' || (e.code === 'Escape' && currentUI !== 'none')) {
+                e.preventDefault();
+                toggleCraftingUI();
+                return;
+            }
+            
+            if (controls.isLocked) { 
+                if (e.code.startsWith('Digit')) {
+                    const slotIndex = parseInt(e.code.replace('Digit', ''), 10) - 1;
+                    if (slotIndex >= 0 && slotIndex < 9) {
+                        selectedHotbarSlot = slotIndex;
+                        updateHotbarUI(); // Solo refrescar hotbar
+                    }
+                }
+            }
+        }
+        function onKeyUp(e) { keys[e.code] = false; }
         
-        // Genera los slots en el HTML
+        function onMouseWheel(e) {
+            if (!controls.isLocked) return; 
+            if (e.deltaY < 0) { selectedHotbarSlot--; } else { selectedHotbarSlot++; }
+            selectedHotbarSlot = (selectedHotbarSlot + 9) % 9; 
+            updateHotbarUI();
+        }
+
+        function onMouseMove(e) {
+            if (currentUI !== 'none') {
+                cursorItemEl.style.left = `${e.clientX - 27}px`;
+                cursorItemEl.style.top = `${e.clientY - 27}px`;
+            }
+        }
+
+        // --- NUEVAS FUNCIONES DE SINCRONIZACIÓN ---
+        
+        function updatePlayerPositionInDB() {
+            if (!isMultiplayer || !userId || !playerBody) return;
+            const p = playerBody.position;
+            const playerRef = ref(db, `worlds/${currentWorldId}/players/${userId}`);
+            set(playerRef, { x: p.x, y: p.y, z: p.z });
+        }
+
+        function subscribeToPlayerPositions() {
+            const playersRef = ref(db, `worlds/${currentWorldId}/players`);
+            
+            onValue(playersRef, (snapshot) => {
+                const playersData = snapshot.val();
+                if (!playersData) return;
+                
+                // Marcar todos para eliminar
+                Object.keys(otherPlayers).forEach(uid => otherPlayers[uid].markedForDeletion = true);
+
+                for (const uid in playersData) {
+                    if (uid === userId) continue;
+                    
+                    const playerData = playersData[uid];
+                    if (!otherPlayers[uid]) {
+                        // Nuevo jugador
+                        console.log("Nuevo jugador unido:", uid);
+                        const playerGeo = new THREE.BoxGeometry(0.8, 1.8, 0.8);
+                        const playerMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                        const playerMesh = new THREE.Mesh(playerGeo, playerMat);
+                        playerMesh.position.set(playerData.x, playerData.y, playerData.z);
+                        scene.add(playerMesh);
+                        otherPlayers[uid] = { mesh: playerMesh, markedForDeletion: false };
+                    } else {
+                        // Jugador existente
+                        otherPlayers[uid].mesh.position.set(playerData.x, playerData.y, playerData.z);
+                        otherPlayers[uid].markedForDeletion = false;
+                    }
+                }
+                
+                // Limpiar jugadores desconectados
+                Object.keys(otherPlayers).forEach(uid => {
+                    if (otherPlayers[uid].markedForDeletion) {
+                        console.log("Jugador desconectado:", uid);
+                        scene.remove(otherPlayers[uid].mesh);
+                        delete otherPlayers[uid];
+                    }
+                });
+            });
+            
+            worldListeners.push({ ref: playersRef, type: 'value' });
+        }
+        
+        // --- Lógica de Carga de Chunks (Modificada para Multi) ---
+        async function loadOrGenerateMultiplayerChunk(chunk, key) {
+            const chunkRef = ref(db, `worlds/${currentWorldId}/chunks/${key}`);
+            try {
+                const snapshot = await get(chunkRef);
+                if (snapshot.exists()) {
+                    // Chunk existe, cargarlo
+                    chunk.voxelData = decodeVoxelData(snapshot.val().voxelData);
+                    chunk.isGenerated = true;
+                } else {
+                    // Chunk no existe, generarlo y guardarlo
+                    generateChunkData(chunk);
+                    const encodedData = encodeVoxelData(chunk.voxelData);
+                    await set(chunkRef, { voxelData: encodedData });
+                }
+                buildChunkMeshAndPhysics(chunk);
+            } catch (error) {
+                console.error(`Error al cargar/generar chunk ${key}:`, error);
+            }
+        }
+        
+        function queueChunkSave(chunk) {
+            if (!isMultiplayer) return;
+            
+            const key = `${chunk.x},${chunk.z}`;
+            
+            // Si ya hay un timeout, cancelarlo
+            if (chunkSaveTimeouts[key]) {
+                clearTimeout(chunkSaveTimeouts[key]);
+            }
+            
+            // Crear un nuevo timeout
+            chunkSaveTimeouts[key] = setTimeout(async () => {
+                try {
+                    const chunkRef = ref(db, `worlds/${currentWorldId}/chunks/${key}`);
+                    const encodedData = encodeVoxelData(chunk.voxelData);
+                    await set(chunkRef, { voxelData: encodedData });
+                    console.log(`Chunk ${key} guardado en DB.`);
+                } catch (error) {
+                    console.error(`Error al guardar chunk ${key}:`, error);
+                }
+                delete chunkSaveTimeouts[key];
+            }, 3000); // Guardar 3 segundos después de la última modificación
+        }
+        
+
+        // --- Funciones de Inventario (sin cambios) ---
         function initCraftingUI() {
             const hotbarGameEl = document.getElementById('hotbar');
             const hotbarUIEl = document.getElementById('player-hotbar-grid');
             const inventoryUIEl = document.getElementById('player-inventory-grid');
+            hotbarGameEl.innerHTML = ''; // Limpiar por si acaso
+            hotbarUIEl.innerHTML = '';
+            inventoryUIEl.innerHTML = '';
             
-            // Generar Hotbar (en juego)
             for (let i = 0; i < 9; i++) {
                 const slotEl = document.createElement('div');
                 slotEl.className = 'slot';
                 slotEl.id = `hotbar-slot-${i}`;
                 hotbarGameEl.appendChild(slotEl);
             }
-            
-            // Generar Hotbar (en UI)
             for (let i = 0; i < 9; i++) {
                 const slotEl = document.createElement('div');
                 slotEl.className = 'slot';
@@ -870,8 +1195,6 @@
                 slotEl.dataset.slotIndex = i; // 0-8
                 hotbarUIEl.appendChild(slotEl);
             }
-            
-            // Generar Inventario (en UI)
             for (let i = 9; i < 36; i++) {
                 const slotEl = document.createElement('div');
                 slotEl.className = 'slot';
@@ -879,28 +1202,19 @@
                 slotEl.dataset.slotIndex = i; // 9-35
                 inventoryUIEl.appendChild(slotEl);
             }
-            
-            // Listeners de Clics en todos los slots
             document.getElementById('crafting-screen').addEventListener('mousedown', (e) => {
                 const slotEl = e.target.closest('.slot');
                 if (!slotEl) return;
-                
-                e.preventDefault(); // Evitar selección de texto
-                
+                e.preventDefault();
                 const slotType = slotEl.dataset.slotType;
                 const slotIndex = parseInt(slotEl.dataset.slotIndex, 10);
-                
                 handleSlotClick(e, slotType, slotIndex);
             });
         }
-        
-        // Refresca un slot individual (o todos)
         function renderSlot(slotEl, item) {
             if (!slotEl) return;
-            
             const countEl = slotEl.querySelector('.slot-count') || document.createElement('span');
             countEl.className = 'slot-count';
-            
             if (!item || item.id === 0) {
                 slotEl.style.backgroundImage = 'none';
                 countEl.textContent = '';
@@ -909,7 +1223,6 @@
                 const itemData = ITEMS_BY_ID[item.id];
                 const textureName = itemData.icon;
                 slotEl.style.backgroundImage = textureName ? `url(${TEXTURE_URL}${textureName})` : 'none';
-                
                 if (item.count > 1) {
                     countEl.textContent = item.count;
                     slotEl.appendChild(countEl);
@@ -919,8 +1232,6 @@
                 }
             }
         }
-        
-        // Refresca el item en el cursor
         function renderCursorItem() {
             if (cursorItem.id === 0) {
                 cursorItemEl.style.display = 'none';
@@ -929,53 +1240,39 @@
                 const itemData = ITEMS_BY_ID[cursorItem.id];
                 const textureName = itemData.icon;
                 cursorItemEl.style.backgroundImage = textureName ? `url(${TEXTURE_URL}${textureName})` : 'none';
-                
                 const countEl = cursorItemEl.querySelector('.slot-count');
                 countEl.textContent = cursorItem.count > 1 ? cursorItem.count : '';
             }
         }
-        
-        // Refresca la hotbar del juego
         function updateHotbarUI() {
             for (let i = 0; i < 9; i++) {
                 const slotEl = document.getElementById(`hotbar-slot-${i}`);
                 const item = playerInventorySlots[i];
                 renderSlot(slotEl, item);
-                
-                if (i === selectedHotbarSlot) {
-                    slotEl.classList.add('selected');
-                } else {
-                    slotEl.classList.remove('selected');
+                if (slotEl) {
+                    if (i === selectedHotbarSlot) slotEl.classList.add('selected');
+                    else slotEl.classList.remove('selected');
                 }
             }
         }
-        
-        // Refresca toda la UI de crafteo (slots de inv, crafteo y salida)
         function renderCraftingUI() {
-            // Inventario (9-35)
             for (let i = 9; i < 36; i++) {
                 const slotEl = document.querySelector(`#player-inventory-grid .slot[data-slot-index="${i}"]`);
                 renderSlot(slotEl, playerInventorySlots[i]);
             }
-            // Hotbar (0-8)
             for (let i = 0; i < 9; i++) {
                 const slotEl = document.querySelector(`#player-hotbar-grid .slot[data-slot-index="${i}"]`);
                 renderSlot(slotEl, playerInventorySlots[i]);
             }
-            // Crafting (0-8)
             for (let i = 0; i < 9; i++) {
                 const slotEl = document.querySelector(`.slot[data-slot-type="crafting"][data-slot-index="${i}"]`);
                 renderSlot(slotEl, craftingGridSlots[i]);
             }
-            // Salida
             renderSlot(document.getElementById('output-slot'), outputSlot);
         }
-
-        // Abrir/Cerrar UI
         function toggleCraftingUI() {
             const craftingScreen = document.getElementById('crafting-screen');
             if (controls.isLocked) {
-                // Abrir Inventario (2x2)
                 currentUI = 'inventory';
                 document.getElementById('crafting-title').textContent = 'Inventario';
                 document.getElementById('crafting-grid-2x2').classList.remove('hidden');
@@ -984,12 +1281,10 @@
                 renderCraftingUI();
                 controls.unlock();
             } else {
-                // Cerrar cualquier UI
                 closeCraftingUI();
                 controls.lock();
             }
         }
-        
         function openCraftingTableUI() {
             currentUI = 'table';
             document.getElementById('crafting-title').textContent = 'Mesa de Crafteo';
@@ -999,35 +1294,21 @@
             renderCraftingUI();
             controls.unlock();
         }
-        
         function closeCraftingUI() {
-            // Devolver items al inventario
-            if (cursorItem.id > 0) {
-                addItemToInventory(cursorItem);
-                cursorItem.id = 0;
-                cursorItem.count = 0;
-            }
+            if (cursorItem.id > 0) addItemToInventory(cursorItem);
+            cursorItem.id = 0; cursorItem.count = 0;
             for (let i = 0; i < 9; i++) {
-                if (craftingGridSlots[i].id > 0) {
-                    addItemToInventory(craftingGridSlots[i]);
-                    craftingGridSlots[i] = { id: 0, count: 0 };
-                }
+                if (craftingGridSlots[i].id > 0) addItemToInventory(craftingGridSlots[i]);
+                craftingGridSlots[i] = { id: 0, count: 0 };
             }
-            // Limpiar output (no devolver)
-            outputSlot.id = 0;
-            outputSlot.count = 0;
-            
+            outputSlot.id = 0; outputSlot.count = 0;
             document.getElementById('crafting-screen').style.display = 'none';
             currentUI = 'none';
-            renderCursorItem(); // Ocultar cursor
-            updateHotbarUI(); // Sincronizar hotbar
+            renderCursorItem();
+            updateHotbarUI();
         }
-        
-        // Añade un item al inventario (busca stacks o slots vacíos)
         function addItemToInventory(item) {
             const itemData = ITEMS_BY_ID[item.id];
-            
-            // 1. Intentar apilar
             if (itemData.maxStack > 1) {
                 for (let i = 0; i < 36; i++) {
                     const slot = playerInventorySlots[i];
@@ -1036,289 +1317,143 @@
                         const toAdd = Math.min(item.count, canAdd);
                         slot.count += toAdd;
                         item.count -= toAdd;
-                        if (item.count === 0) return true; // Añadido todo
+                        if (item.count === 0) return true;
                     }
                 }
             }
-            
-            // 2. Buscar slot vacío
             for (let i = 0; i < 36; i++) {
                 const slot = playerInventorySlots[i];
                 if (slot.id === 0) {
                     slot.id = item.id;
                     slot.count = item.count;
-                    return true; // Añadido
+                    return true;
                 }
             }
-            
-            return false; // Inventario lleno
+            return false;
         }
-
-        // --- LÓGICA DE CLIC EN SLOTS ---
         function handleSlotClick(event, slotType, slotIndex) {
             const isLeftClick = event.button === 0;
             const isRightClick = event.button === 2;
-            
             let slot = null;
-            
-            if (slotType === 'inventory') {
-                slot = playerInventorySlots[slotIndex];
-            } else if (slotType === 'crafting') {
-                slot = craftingGridSlots[slotIndex];
-            } else if (slotType === 'output') {
-                handleOutputClick(isLeftClick);
-                return;
-            }
-            
+            if (slotType === 'inventory') slot = playerInventorySlots[slotIndex];
+            else if (slotType === 'crafting') slot = craftingGridSlots[slotIndex];
+            else if (slotType === 'output') { handleOutputClick(isLeftClick); return; }
             if (!slot) return;
-            
-            const cursorId = cursorItem.id;
-            const slotId = slot.id;
-            const cursorCount = cursorItem.count;
-            const slotCount = slot.count;
-            
+            const cursorId = cursorItem.id; const slotId = slot.id;
+            const cursorCount = cursorItem.count; const slotCount = slot.count;
             if (isLeftClick) {
                 if (cursorId === 0) {
-                    // Coger: Clic en slot lleno con cursor vacío
-                    if (slotId !== 0) {
-                        cursorItem.id = slotId;
-                        cursorItem.count = slotCount;
-                        slot.id = 0;
-                        slot.count = 0;
-                    }
+                    if (slotId !== 0) { cursorItem.id = slotId; cursorItem.count = slotCount; slot.id = 0; slot.count = 0; }
                 } else {
-                    // Dejar: Clic con cursor lleno
-                    if (slotId === 0) {
-                        // Dejar en slot vacío
-                        slot.id = cursorId;
-                        slot.count = cursorCount;
-                        cursorItem.id = 0;
-                        cursorItem.count = 0;
-                    } else if (slotId === cursorId) {
-                        // Apilar
-                        const itemData = ITEMS_BY_ID[slotId];
-                        const canAdd = itemData.maxStack - slotCount;
+                    if (slotId === 0) { slot.id = cursorId; slot.count = cursorCount; cursorItem.id = 0; cursorItem.count = 0; }
+                    else if (slotId === cursorId) {
+                        const itemData = ITEMS_BY_ID[slotId]; const canAdd = itemData.maxStack - slotCount;
                         const toAdd = Math.min(cursorCount, canAdd);
-                        slot.count += toAdd;
-                        cursorItem.count -= toAdd;
+                        slot.count += toAdd; cursorItem.count -= toAdd;
                         if (cursorItem.count === 0) cursorItem.id = 0;
-                    } else {
-                        // Intercambiar
-                        cursorItem.id = slotId;
-                        cursorItem.count = slotCount;
-                        slot.id = cursorId;
-                        slot.count = cursorCount;
-                    }
+                    } else { cursorItem.id = slotId; cursorItem.count = slotCount; slot.id = cursorId; slot.count = cursorCount; }
                 }
             } else if (isRightClick) {
                 if (cursorId === 0) {
-                    // Coger mitad: Clic en slot lleno con cursor vacío
                     if (slotId !== 0) {
                         const takeCount = Math.ceil(slotCount / 2);
-                        cursorItem.id = slotId;
-                        cursorItem.count = takeCount;
+                        cursorItem.id = slotId; cursorItem.count = takeCount;
                         slot.count -= takeCount;
                         if (slot.count === 0) slot.id = 0;
                     }
                 } else {
-                    // Dejar 1: Clic con cursor lleno
-                    if (slotId === 0) {
-                        // Dejar 1 en slot vacío
-                        slot.id = cursorId;
-                        slot.count = 1;
-                        cursorItem.count--;
-                        if (cursorItem.count === 0) cursorItem.id = 0;
-                    } else if (slotId === cursorId) {
-                        // Apilar 1
+                    if (slotId === 0) { slot.id = cursorId; slot.count = 1; cursorItem.count--; if (cursorItem.count === 0) cursorItem.id = 0; }
+                    else if (slotId === cursorId) {
                         const itemData = ITEMS_BY_ID[slotId];
-                        if (slotCount < itemData.maxStack) {
-                            slot.count++;
-                            cursorItem.count--;
-                            if (cursorItem.count === 0) cursorItem.id = 0;
-                        }
+                        if (slotCount < itemData.maxStack) { slot.count++; cursorItem.count--; if (cursorItem.count === 0) cursorItem.id = 0; }
                     }
-                    // (No intercambiar con clic derecho)
                 }
             }
-            
-            // Refrescar UI
-            renderCursorItem();
-            renderCraftingUI();
-            
-            // Comprobar crafteo si se tocó la cuadrícula
-            if (slotType === 'crafting') {
-                checkCrafting();
-            }
+            renderCursorItem(); renderCraftingUI();
+            if (slotType === 'crafting') checkCrafting();
         }
-        
         function handleOutputClick(isLeftClick) {
-            if (outputSlot.id === 0) return; // Salida vacía
-            
-            if (cursorItem.id === 0) {
-                // Coger item
-                cursorItem.id = outputSlot.id;
-                cursorItem.count = outputSlot.count;
-            } else if (cursorItem.id === outputSlot.id) {
-                // Apilar item
-                const itemData = ITEMS_BY_ID[outputSlot.id];
-                const canAdd = itemData.maxStack - cursorItem.count;
-                if (canAdd >= outputSlot.count) {
-                    cursorItem.count += outputSlot.count;
-                } else {
-                    return; // No hay espacio en el cursor
-                }
-            } else {
-                return; // Cursor lleno con otro item
-            }
-            
-            // Consumir ingredientes
+            if (outputSlot.id === 0) return;
+            if (cursorItem.id === 0) { cursorItem.id = outputSlot.id; cursorItem.count = outputSlot.count; }
+            else if (cursorItem.id === outputSlot.id) {
+                const itemData = ITEMS_BY_ID[outputSlot.id]; const canAdd = itemData.maxStack - cursorItem.count;
+                if (canAdd >= outputSlot.count) { cursorItem.count += outputSlot.count; } else return;
+            } else return;
             for (let i = 0; i < 9; i++) {
                 const slot = craftingGridSlots[i];
-                if (slot.id > 0) {
-                    slot.count--;
-                    if (slot.count === 0) slot.id = 0;
-                }
+                if (slot.id > 0) { slot.count--; if (slot.count === 0) slot.id = 0; }
             }
-            
-            // Refrescar
-            checkCrafting(); // Comprobar si se puede craftear más
-            renderCursorItem();
-            renderCraftingUI();
+            checkCrafting(); renderCursorItem(); renderCraftingUI();
         }
-
-        // --- LÓGICA DE RECETAS (CORREGIDA) ---
         function checkCrafting() {
             const gridType = (currentUI === 'table') ? 3 : 2;
             let foundRecipe = null;
-            
-            // 1. Comprobar recetas sin forma (shapeless)
             const itemsInGrid = [];
             for (let i = 0; i < 9; i++) {
-                // Solo comprobar los slots relevantes para la cuadrícula actual
                 if (gridType === 2 && i >= 4) continue;
-                if (craftingGridSlots[i].id > 0) {
-                    itemsInGrid.push(craftingGridSlots[i]);
-                }
+                if (craftingGridSlots[i].id > 0) itemsInGrid.push(craftingGridSlots[i]);
             }
-            
             if (itemsInGrid.length === 1) {
                 const item = itemsInGrid[0];
-                foundRecipe = RECIPES.find(r => 
-                    r.type === 'shapeless' &&
-                    r.input.length === 1 &&
-                    r.input[0].id === item.id &&
-                    item.count >= r.input[0].count
-                );
+                foundRecipe = RECIPES.find(r => r.type === 'shapeless' && r.input.length === 1 && r.input[0].id === item.id && item.count >= r.input[0].count);
             }
-            
-            // 2. Comprobar recetas con forma (shaped)
             if (!foundRecipe) {
-                const ingredientsMap = {}; // {'A': 10, 'B': 11}
-                let minX = gridType, maxX = -1, minY = gridType, maxY = -1;
-                
+                const ingredientsMap = {}; let minX = gridType, maxX = -1, minY = gridType, maxY = -1;
                 for(let y = 0; y < gridType; y++) {
                     for(let x = 0; x < gridType; x++) {
-                        const i = y * gridType + x;
-                        const item = craftingGridSlots[i];
-                        if (item.id > 0) {
-                            minX = Math.min(minX, x);
-                            maxX = Math.max(maxX, x);
-                            minY = Math.min(minY, y);
-                            maxY = Math.max(maxY, y);
-                        }
+                        const i = y * gridType + x; const item = craftingGridSlots[i];
+                        if (item.id > 0) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
                     }
                 }
-                
-                if (maxX >= minX) { // Si hay algo en la cuadrícula
+                if (maxX >= minX) {
                     let shapeString = '';
                     for (let y = minY; y <= maxY; y++) {
                         for (let x = minX; x <= maxX; x++) {
-                            const i = y * gridType + x;
-                            const item = craftingGridSlots[i];
-                            
+                            const i = y * gridType + x; const item = craftingGridSlots[i];
                             let char = ' ';
                             if (item.id > 0) {
                                 let foundChar = Object.keys(ingredientsMap).find(k => ingredientsMap[k] === item.id);
-                                if (!foundChar) {
-                                    foundChar = String.fromCharCode(65 + Object.keys(ingredientsMap).length); // A, B, C...
-                                    ingredientsMap[foundChar] = item.id;
-                                }
+                                if (!foundChar) { foundChar = String.fromCharCode(65 + Object.keys(ingredientsMap).length); ingredientsMap[foundChar] = item.id; }
                                 char = foundChar;
                             }
                             shapeString += char;
                         }
-                        if (y < maxY) shapeString += '/'; // Separador de fila
+                        if (y < maxY) shapeString += '/';
                     }
-                    
-                    // Buscar la receta que coincida
                     foundRecipe = RECIPES.find(r => {
                         if (r.type !== 'shaped' || r.grid !== gridType) return false;
-                        
                         const recipeShapeString = r.shape.join('/');
-                        
-                        // --- INICIO DE LA CORRECCIÓN ---
-                        
-                        // 1. Crear un mapa de {ID_ITEM -> Char_Receta} ej: {10: 'P', 11: 'S'}
                         const recipeIdToChar = {};
-                        for (const char in r.ingredients) {
-                            recipeIdToChar[r.ingredients[char]] = char;
-                        }
-
-                        // 2. Crear un "mapa traducido" de {Char_Usuario -> Char_Receta} ej: {'A': 'P', 'B': 'S'}
-                        const userCharToRecipeChar = {};
-                        let validMap = true;
+                        for (const char in r.ingredients) { recipeIdToChar[r.ingredients[char]] = char; }
+                        const userCharToRecipeChar = {}; let validMap = true;
                         for (const userChar in ingredientsMap) {
                             const userId = ingredientsMap[userChar];
                             const recipeChar = recipeIdToChar[userId];
-                            if (!recipeChar) {
-                                validMap = false; // El item del usuario no está en la receta
-                                break;
-                            }
+                            if (!recipeChar) { validMap = false; break; }
                             userCharToRecipeChar[userChar] = recipeChar;
                         }
-                        
-                        // 3. Comprobar que todos los ingredientes de la receta estén presentes
-                        if (Object.keys(r.ingredients).length !== Object.keys(ingredientsMap).length) {
-                             validMap = false;
-                        }
-
+                        if (Object.keys(r.ingredients).length !== Object.keys(ingredientsMap).length) validMap = false;
                         if (!validMap) return false;
-
-                        // 4. Traducir el shapeString del usuario (ej: "AA/AA") al shapeString de la receta (ej: "PP/PP")
-                        const translatedShapeString = shapeString.split('')
-                            .map(char => userCharToRecipeChar[char] || char) // Traduce A->P, / -> /
-                            .join('');
-                        
-                        // 5. Comparar
+                        const translatedShapeString = shapeString.split('').map(char => userCharToRecipeChar[char] || char).join('');
                         return recipeShapeString === translatedShapeString;
-                        // --- FIN DE LA CORRECCIÓN ---
                     });
                 }
-            } // Fin shaped
-            
-            // 3. Actualizar slot de salida
-            if (foundRecipe) {
-                outputSlot.id = foundRecipe.output.id;
-                outputSlot.count = foundRecipe.output.count;
-            } else {
-                outputSlot.id = 0;
-                outputSlot.count = 0;
             }
+            if (foundRecipe) { outputSlot.id = foundRecipe.output.id; outputSlot.count = foundRecipe.output.count; }
+            else { outputSlot.id = 0; outputSlot.count = 0; }
             renderSlot(document.getElementById('output-slot'), outputSlot);
         }
-
-        // --- FIN LÓGICA DE INVENTARIO ---
 
         // --- Generación de Chunks (sin cambios) ---
         function initializeChunk(x, z) {
             const key = `${x},${z}`;
-            if (chunks[key]) return chunks[key]; 
+            // if (chunks[key]) return chunks[key]; // Comentado para permitir recarga
             const chunk = {
                 x: x, z: z,
                 voxelData: new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT).fill(BLOCKS.EMPTY.id), 
                 meshes: [], body: null, isGenerated: false 
             };
-            chunks[key] = chunk;
+            chunks[key] = chunk; // Registrarlo
             return chunk;
         }
 
@@ -1326,11 +1461,9 @@
             if (chunk.isGenerated) return; 
             for (let x = 0; x < CHUNK_SIZE; x++) {
                 for (let z = 0; z < CHUNK_SIZE; z++) {
-                    const worldX = chunk.x + x;
-                    const worldZ = chunk.z + z;
+                    const worldX = chunk.x + x; const worldZ = chunk.z + z;
                     let noiseVal = noiseGenerator.noise2D(worldX * SCALE_NOISE, worldZ * SCALE_NOISE);
-                    noiseVal = (noiseVal + 1) / 2; 
-                    noiseVal = Math.pow(noiseVal, 2.2); 
+                    noiseVal = (noiseVal + 1) / 2; noiseVal = Math.pow(noiseVal, 2.2); 
                     const height = Math.floor(noiseVal * MAX_HEIGHT) + BASE_HEIGHT;
                     for (let y = 0; y <= height; y++) {
                         let block = BLOCKS.GRASS;
@@ -1342,8 +1475,7 @@
                     for (let y = stoneStartHeight; y >= WORLD_MIN_HEIGHT; y--) {
                         const currentBlock = getVoxel(worldX, y, worldZ);
                         if (currentBlock === BLOCKS.STONE || currentBlock === BLOCKS.EMPTY) { 
-                            let block = BLOCKS.STONE;
-                            const rand = Math.random();
+                            let block = BLOCKS.STONE; const rand = Math.random();
                             if (y < (WORLD_MIN_HEIGHT + 15) && rand < 0.03) block = BLOCKS.DIAMOND_ORE;
                             else if (y < 0 && rand < 0.08) block = BLOCKS.IRON_ORE;
                             else if (rand < 0.15) block = BLOCKS.COAL_ORE;
@@ -1371,26 +1503,78 @@
             chunk.isGenerated = true;
         }
 
+        // --- Geometrías de caras pre-rotadas (AÑADIDO) ---
+        // Esta variable era necesaria para 'buildChunkMeshAndPhysics'
+        const faceGeometries = {
+            top: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0.5, 0),
+            bottom: new THREE.PlaneGeometry(1, 1).rotateX(Math.PI / 2).translate(0, -0.5, 0),
+            left: new THREE.PlaneGeometry(1, 1).rotateY(-Math.PI / 2).translate(-0.5, 0, 0),
+            right: new THREE.PlaneGeometry(1, 1).rotateY(Math.PI / 2).translate(0.5, 0, 0),
+            front: new THREE.PlaneGeometry(1, 1).translate(0, 0, 0.5),
+            back: new THREE.PlaneGeometry(1, 1).rotateY(Math.PI).translate(0, 0, -0.5)
+        };
 
-        // --- Construcción de Malla y Físicas (Trimesh, sin cambios) ---
-        function buildChunkMeshAndPhysics(chunk) {
-            chunk.meshes.forEach(m => {
-                scene.remove(m);
-                m.geometry.dispose();
-            });
-            chunk.meshes = [];
-            if (chunk.body) {
-                world.removeBody(chunk.body);
-                chunk.body = null;
+        // --- Funciones de Voxel (AÑADIDO) ---
+        // Estas funciones eran necesarias y faltaban
+        function getChunkKey(x, z) {
+            const chunkX = Math.floor(x / CHUNK_SIZE) * CHUNK_SIZE;
+            const chunkZ = Math.floor(z / CHUNK_SIZE) * CHUNK_SIZE;
+            return `${chunkX},${chunkZ}`;
+        }
+        
+        function getChunk(x, z) {
+            return chunks[getChunkKey(x, z)];
+        }
+
+        function getVoxelIndex(localX, localY, localZ) {
+             const arrayY = localY - WORLD_MIN_HEIGHT;
+             return localX + localZ * CHUNK_SIZE + arrayY * CHUNK_SIZE * CHUNK_SIZE;
+        }
+
+        function getVoxel(worldX, worldY, worldZ) {
+            const chunk = getChunk(worldX, worldZ); 
+            if (!chunk) return BLOCKS.EMPTY;
+            
+            const localX = (worldX % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+            const localZ = (worldZ % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+            
+            if (worldY < WORLD_MIN_HEIGHT || worldY >= WORLD_MAX_HEIGHT) return BLOCKS.EMPTY;
+            const index = getVoxelIndex(localX, worldY, localZ);
+            
+            if (index < 0 || index >= chunk.voxelData.length) {
+                return BLOCKS.EMPTY;
             }
+
+            const id = chunk.voxelData[index];
+            return BLOCKS_BY_ID[id] || BLOCKS.EMPTY;
+        }
+
+        function setVoxel(worldX, worldY, worldZ, block) {
+            const chunk = getChunk(worldX, worldZ);
+            if (!chunk) return;
+            
+            const localX = (worldX % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+            const localZ = (worldZ % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+            
+            if (worldY < WORLD_MIN_HEIGHT || worldY >= WORLD_MAX_HEIGHT) return;
+            const index = getVoxelIndex(localX, worldY, localZ);
+            
+            if (index >= 0 && index < chunk.voxelData.length) {
+                chunk.voxelData[index] = block.id;
+            }
+        }
+
+        // --- Construcción de Malla y Físicas (sin cambios) ---
+        function buildChunkMeshAndPhysics(chunk) {
+            chunk.meshes.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+            chunk.meshes = [];
+            if (chunk.body) { world.removeBody(chunk.body); chunk.body = null; }
             const geometriesByTexture = {};
             const physicsFaces = []; 
             for (let x = 0; x < CHUNK_SIZE; x++) {
                 for (let z = 0; z < CHUNK_SIZE; z++) {
                     for (let y = WORLD_MIN_HEIGHT; y < WORLD_MAX_HEIGHT; y++) {
-                        const worldX = x + chunk.x;
-                        const worldY = y;
-                        const worldZ = z + chunk.z;
+                        const worldX = x + chunk.x; const worldY = y; const worldZ = z + chunk.z;
                         const block = getVoxel(worldX, worldY, worldZ);
                         if (block === BLOCKS.EMPTY) continue;
                         const neighbors = {
@@ -1421,10 +1605,8 @@
                 if (!mergedGeo) continue; 
                 const material = materials[textureName]; 
                 const mesh = new THREE.Mesh(mergedGeo, material);
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                scene.add(mesh);
-                chunk.meshes.push(mesh); 
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                scene.add(mesh); chunk.meshes.push(mesh); 
             }
             if (physicsFaces.length > 0) {
                 const combinedPhysicsGeo = THREE.BufferGeometryUtils.mergeBufferGeometries(physicsFaces);
@@ -1444,8 +1626,9 @@
             }
         }
 
-        // --- Carga dinámica de Chunks (sin cambios) ---
+        // --- Carga dinámica de Chunks (Modificada para Multi) ---
         function updateVisibleChunks() {
+            if (!playerBody) return; // Añadir comprobación de que el jugador existe
             const px = playerBody.position.x;
             const pz = playerBody.position.z;
             const playerChunkX = Math.floor(px / CHUNK_SIZE) * CHUNK_SIZE;
@@ -1455,21 +1638,29 @@
                     const chunkX = playerChunkX + x * CHUNK_SIZE;
                     const chunkZ = playerChunkZ + z * CHUNK_SIZE;
                     const key = `${chunkX},${chunkZ}`;
-                    if (!chunks[key]) initializeChunk(chunkX, chunkZ);
-                    if (!chunks[key].isGenerated) generateChunkData(chunks[key]);
-                    if (chunks[key].meshes.length === 0 && chunks[key].isGenerated) buildChunkMeshAndPhysics(chunks[key]);
+                    
+                    if (chunks[key]) continue; // Ya cargado o cargando
+                    
+                    const chunk = initializeChunk(chunkX, chunkZ); // Registra el chunk localmente
+                    
+                    if (isMultiplayer) {
+                        loadOrGenerateMultiplayerChunk(chunk, key);
+                    } else {
+                        // Modo Un Jugador
+                        generateChunkData(chunk);
+                        buildChunkMeshAndPhysics(chunk);
+                    }
                 }
             }
         }
 
-        // --- Lógica de romper bloque (MODIFICADA para nuevo inventario) ---
+        // --- Lógica de romper bloque (Modificada para Multi) ---
         function breakBlock(voxelPos, tool) {
             const destroyedBlock = getVoxel(voxelPos.x, voxelPos.y, voxelPos.z);
             if (destroyedBlock === BLOCKS.EMPTY) return;
 
             const requiredTool = destroyedBlock.minTool;
             const requiredTier = destroyedBlock.minTier;
-            
             let canGetDrop = false;
             if (requiredTool === null) canGetDrop = true;
             else if (tool.toolType === requiredTool && tool.toolTier >= requiredTier) canGetDrop = true;
@@ -1478,31 +1669,33 @@
                 const droppedItemId = destroyedBlock.drop || 0;
                 if (droppedItemId !== 0) {
                     addItemToInventory({ id: droppedItemId, count: 1 });
-                    updateHotbarUI(); // Refrescar hotbar por si el item cayó ahí
+                    updateHotbarUI();
                 }
             } 
 
             setVoxel(voxelPos.x, voxelPos.y, voxelPos.z, BLOCKS.EMPTY);
             
-            // Regenerar chunks afectados (sin cambios)
+            // Regenerar chunks afectados
             const chunk = getChunk(voxelPos.x, voxelPos.z);
-            if(chunk) buildChunkMeshAndPhysics(chunk);
+            if(chunk) {
+                buildChunkMeshAndPhysics(chunk);
+                queueChunkSave(chunk); // Guardar en DB
+            }
             const localX = (voxelPos.x % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
             const localZ = (voxelPos.z % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-            if (localX === 0) {
-                const neighborChunk = getChunk(voxelPos.x - 1, voxelPos.z);
-                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-            } else if (localX === CHUNK_SIZE - 1) {
-                const neighborChunk = getChunk(voxelPos.x + 1, voxelPos.z);
-                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
+            
+            function rebuildNeighbor(nx, nz) {
+                const neighborChunk = getChunk(nx, nz);
+                if (neighborChunk) {
+                    buildChunkMeshAndPhysics(neighborChunk);
+                    queueChunkSave(neighborChunk);
+                }
             }
-            if (localZ === 0) {
-                const neighborChunk = getChunk(voxelPos.x, voxelPos.z - 1);
-                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-            } else if (localZ === CHUNK_SIZE - 1) {
-                const neighborChunk = getChunk(voxelPos.x, voxelPos.z + 1);
-                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-            }
+            
+            if (localX === 0) rebuildNeighbor(voxelPos.x - 1, voxelPos.z);
+            else if (localX === CHUNK_SIZE - 1) rebuildNeighbor(voxelPos.x + 1, voxelPos.z);
+            if (localZ === 0) rebuildNeighbor(voxelPos.x, voxelPos.z - 1);
+            else if (localZ === CHUNK_SIZE - 1) rebuildNeighbor(voxelPos.x, voxelPos.z + 1);
         }
 
         // --- Resetear estado de rotura (sin cambios) ---
@@ -1518,7 +1711,6 @@
         function getBlockBreakTime(block, tool) {
             const baseHardnessMs = block.hardness * 1000;
             const HAND_PENALTY = 5.0;
-            const WRONG_TOOL_PENALTY = 4.0; 
             if (block.minTool === null) {
                 let speedMultiplier = 1;
                 if (tool.toolTier > 0) speedMultiplier = tool.toolTier * 2;
@@ -1530,25 +1722,20 @@
             if (tool.toolTier === 1) speedMultiplier = 2.5;
             if (tool.toolTier === 2) speedMultiplier = 4.0;
             if (tool.toolTier === 3) speedMultiplier = 6.0;
-            if (tool.toolTier === 4) speedMultiplier = 8.0; 
             return baseHardnessMs / speedMultiplier;
         }
 
 
-        // --- Empezar a romper (MODIFICADO para nuevo inventario) ---
+        // --- Empezar a romper (sin cambios) ---
         function startBreaking(voxelPos, face) {
             const block = getVoxel(voxelPos.x, voxelPos.y, voxelPos.z);
             if (block === BLOCKS.EMPTY) return;
-            
             isBreaking = true;
             breakingStartTime = Date.now();
             currentBreakingVoxelPos = voxelPos.clone();
-            
-            // Obtener item actual de la hotbar
             const currentTool = playerInventorySlots[selectedHotbarSlot] || HAND;
             const itemData = currentTool.id > 0 ? ITEMS_BY_ID[currentTool.id] : HAND;
             currentBlockBreakTime = getBlockBreakTime(block, itemData);
-
             const normal = face.normal.clone();
             breakingDecal.position.copy(voxelPos).add(normal.clone().multiplyScalar(0.501));
             if (normal.x === 1) breakingDecal.rotation.set(0, Math.PI / 2, 0);
@@ -1568,52 +1755,33 @@
             }
         }
 
-        // --- Manejo de Eventos (MODIFICADO) ---
+        // --- Manejo de Eventos (Modificado para Multi) ---
         function onMouseDown(event) {
-            if (currentUI !== 'none') return; // No interactuar si la UI está abierta
+            if (currentUI !== 'none') return;
             if (!controls.isLocked) return;
-            
             const intersect = getIntersection();
-            
             if (event.button === 0) { // Clic Izquierdo (Empezar a romper)
                 if (intersect) { 
                     const intersectedVoxelPos = getIntersectedVoxelCoordinates(intersect, false);
-                    if (intersectedVoxelPos) {
-                        startBreaking(intersectedVoxelPos, intersect.face);
-                    }
+                    if (intersectedVoxelPos) startBreaking(intersectedVoxelPos, intersect.face);
                 }
-            
             } else if (event.button === 2) { // Clic Derecho (Construir / Interactuar)
                 if (intersect) { 
-                    
-                    // --- NUEVO: Interactuar con bloques ---
                     const blockPos = getIntersectedVoxelCoordinates(intersect, false);
                     const block = getVoxel(blockPos.x, blockPos.y, blockPos.z);
-                    
                     if (block.id === BLOCKS.CRAFTING_TABLE.id) {
-                        event.preventDefault(); // Evitar que coloque un bloque
-                        openCraftingTableUI();
-                        return; // No colocar bloque
+                        event.preventDefault(); openCraftingTableUI(); return;
                     }
-                    
-                    // --- Lógica de construcción (MODIFICADA para nuevo inventario) ---
                     const slotToPlace = playerInventorySlots[selectedHotbarSlot];
                     if (!slotToPlace || slotToPlace.id === 0) return;
-                    
                     const itemToPlace = ITEMS_BY_ID[slotToPlace.id];
-                    if (!itemToPlace.isBlock) return; // Es un pico
-                    
+                    if (!itemToPlace.isBlock) return;
                     const blockToPlace = BLOCKS_BY_ID[itemToPlace.id];
                     if (!blockToPlace) return; 
-                    
                     const intersectedVoxelPos = getIntersectedVoxelCoordinates(intersect, true); 
                     if (intersectedVoxelPos) {
-                        const newX = intersectedVoxelPos.x;
-                        const newY = intersectedVoxelPos.y;
-                        const newZ = intersectedVoxelPos.z;
-
+                        const newX = intersectedVoxelPos.x; const newY = intersectedVoxelPos.y; const newZ = intersectedVoxelPos.z;
                         if (newY < WORLD_MIN_HEIGHT || newY >= WORLD_MAX_HEIGHT) return;
-                        
                         const playerPos = playerBody.position;
                         const playerBox = new CANNON.Box(new CANNON.Vec3(0.5, 1, 0.5)); 
                         const playerBodySimple = new CANNON.Body({ position: playerPos });
@@ -1621,21 +1789,13 @@
                         const blockBox = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)); 
                         const blockBody = new CANNON.Body({ position: new CANNON.Vec3(newX, newY, newZ) });
                         blockBody.addShape(blockBox);
-                        if (playerBodySimple.aabb.overlaps(blockBody.aabb)) {
-                            return; 
-                        }
-
+                        if (playerBodySimple.aabb.overlaps(blockBody.aabb)) return; 
                         if (getVoxel(newX, newY, newZ) === BLOCKS.EMPTY) {
-                            
-                            // Consumir item del slot
-                            if (itemToPlace.maxStack > 0) { // No consumir si es "infinito" (herramientas)
+                            if (itemToPlace.maxStack > 0) {
                                 slotToPlace.count--;
-                                if (slotToPlace.count === 0) {
-                                    slotToPlace.id = 0;
-                                }
+                                if (slotToPlace.count === 0) slotToPlace.id = 0;
                                 updateHotbarUI();
                             }
-                            
                             let chunk = getChunk(newX, newZ);
                             if(!chunk) {
                                 const chunkX = Math.floor(newX / CHUNK_SIZE) * CHUNK_SIZE;
@@ -1643,27 +1803,25 @@
                                 chunk = initializeChunk(chunkX, chunkZ);
                                 if (!chunk.isGenerated) generateChunkData(chunk);
                             }
-
                             setVoxel(newX, newY, newZ, blockToPlace);
-                            buildChunkMeshAndPhysics(chunk); 
+                            buildChunkMeshAndPhysics(chunk);
+                            queueChunkSave(chunk); // Guardar en DB
                             
-                            // Regenerar vecinos (sin cambios)
                             const localX = (newX % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
                             const localZ = (newZ % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
-                            if (localX === 0) {
-                                const neighborChunk = getChunk(newX - 1, newZ);
-                                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-                            } else if (localX === CHUNK_SIZE - 1) {
-                                const neighborChunk = getChunk(newX + 1, newZ);
-                                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
+                            
+                            function rebuildNeighbor(nx, nz) {
+                                const neighborChunk = getChunk(nx, nz);
+                                if (neighborChunk) {
+                                    buildChunkMeshAndPhysics(neighborChunk);
+                                    queueChunkSave(neighborChunk);
+                                }
                             }
-                            if (localZ === 0) {
-                                const neighborChunk = getChunk(newX, newZ - 1);
-                                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-                            } else if (localZ === CHUNK_SIZE - 1) {
-                                const neighborChunk = getChunk(newX, newZ + 1);
-                                if (neighborChunk) buildChunkMeshAndPhysics(neighborChunk);
-                            }
+
+                            if (localX === 0) rebuildNeighbor(newX - 1, newZ);
+                            else if (localX === CHUNK_SIZE - 1) rebuildNeighbor(newX + 1, newZ);
+                            if (localZ === 0) rebuildNeighbor(newX, newZ - 1);
+                            else if (localZ === CHUNK_SIZE - 1) rebuildNeighbor(newX, newZ + 1);
                         }
                     }
                 }
@@ -1674,22 +1832,21 @@
         function getIntersectedVoxelCoordinates(intersect, forPlacing = false) {
             const centeredPos = intersect.point.clone();
             const normal = intersect.face.normal.clone();
-            if (forPlacing) {
-                centeredPos.add(normal.multiplyScalar(0.5));
-            } else {
-                centeredPos.sub(normal.multiplyScalar(0.5));
-            }
+            if (forPlacing) centeredPos.add(normal.multiplyScalar(0.5));
+            else centeredPos.sub(normal.multiplyScalar(0.5));
             const finalX = Math.round(centeredPos.x);
             const finalY = Math.round(centeredPos.y);
             const finalZ = Math.round(centeredPos.z);
             return new THREE.Vector3(finalX, finalY, finalZ);
         }
         function onWindowResize() {
+            if (!camera || !renderer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         function getIntersection() {
+            if (!raycaster || !camera) return null;
             raycaster.setFromCamera({ x: 0, y: 0 }, camera);
             const chunkMeshes = [];
             Object.values(chunks).forEach(c => {
@@ -1697,15 +1854,14 @@
             });
             if (chunkMeshes.length === 0) return null;
             const intersects = raycaster.intersectObjects(chunkMeshes); 
-            if (intersects.length > 0 && intersects[0].distance < 5) {
-                return intersects[0];
-            }
+            if (intersects.length > 0 && intersects[0].distance < 5) return intersects[0];
             return null;
         }
 
-        // --- Bucle del Juego (Update) (MODIFICADO) ---
+        // --- Bucle del Juego (Update) (Modificado para Multi) ---
         function animate() {
-            requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate);
+            if (!world || !controls || !playerBody || !renderer) return;
             
             const delta = Math.min(clock.getDelta(), 0.1);
             const elapsedTime = clock.getElapsedTime();
@@ -1715,6 +1871,11 @@
             if (controls.isLocked) {
                 handleMovement(delta);
                 updateBreakingAnimation(); 
+                
+                if (isMultiplayer && elapsedTime - lastPlayerUpdate > 0.1) { // 10 veces por seg
+                    updatePlayerPositionInDB();
+                    lastPlayerUpdate = elapsedTime;
+                }
             }
 
             if (elapsedTime - lastChunkCheck > 1.0) {
@@ -1728,18 +1889,15 @@
             renderer.render(scene, camera);
         }
 
-        // --- Actualizar animación de rotura (MODIFICADO) ---
+        // --- Actualizar animación de rotura (sin cambios) ---
         function updateBreakingAnimation() {
             if (!isBreaking) return;
             const intersect = getIntersection();
-            if (!intersect) {
-                resetBreakingState();
-                return;
-            }
+            if (!intersect) { resetBreakingState(); return; }
             const currentVoxel = getIntersectedVoxelCoordinates(intersect, false);
             if (!currentVoxel.equals(currentBreakingVoxelPos)) {
                 resetBreakingState();
-                startBreaking(currentVoxel, intersect.face); // Empezar en el nuevo bloque
+                startBreaking(currentVoxel, intersect.face);
                 return;
             }
             const elapsed = Date.now() - breakingStartTime;
@@ -1750,15 +1908,14 @@
                 breakBlock(currentBreakingVoxelPos, itemData); 
                 resetBreakingState();
             } else {
-                if (breakingMaterials[stage]) {
-                     breakingDecal.material = breakingMaterials[stage];
-                }
+                if (breakingMaterials[stage]) breakingDecal.material = breakingMaterials[stage];
             }
         }
 
 
         // --- Lógica de Movimiento (sin cambios) ---
         function handleMovement(delta) {
+            if (!playerBody || !camera) return;
             const inputVelocity = new THREE.Vector3();
             const euler = new THREE.Euler(0, 0, 0, 'YXZ');
             euler.setFromQuaternion(camera.quaternion);
@@ -1787,8 +1944,58 @@
             playerBody.velocity.z = inputVelocity.z;
         }
         
-        // --- Iniciar Carga ---
-        loadTextures();
+        // --- Iniciar Carga (Modificado) ---
+        // 'init' ahora solo se encarga de los listeners del menú y la carga
+        function init() {
+            // Asignar listeners a los botones del menú
+            document.getElementById('btn-login').addEventListener('click', async () => {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                clearLoginError();
+                try { await signInWithEmailAndPassword(auth, email, password); } 
+                catch (error) { console.error("Error al iniciar sesión:", error); showLoginError(error.message); }
+            });
+            document.getElementById('btn-register').addEventListener('click', async () => {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                clearLoginError();
+                try { await createUserWithEmailAndPassword(auth, email, password); } 
+                catch (error) { console.error("Error al registrarse:", error); showLoginError(error.message); }
+            });
+            document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+            document.getElementById('btn-single-player').addEventListener('click', () => startGame('local', false));
+            document.getElementById('btn-multiplayer').addEventListener('click', () => {
+                gameModeScreen.classList.add('hidden');
+                multiplayerScreen.classList.remove('hidden');
+                loadWorldList();
+            });
+            document.getElementById('btn-back-menu').addEventListener('click', () => {
+                multiplayerScreen.classList.add('hidden');
+                gameModeScreen.classList.remove('hidden');
+            });
+            document.getElementById('btn-create-world').addEventListener('click', async () => {
+                const worldName = document.getElementById('create-world-name').value.trim();
+                if (!worldName) { alert("Por favor, introduce un nombre para el mundo."); return; }
+                try {
+                    const worldListRef = ref(db, 'worlds');
+                    const newWorldRef = push(worldListRef);
+                    await set(newWorldRef, { name: worldName, owner: userId });
+                    handleJoinWorld(newWorldRef.key);
+                } catch (error) { console.error("Error al crear el mundo:", error); }
+            });
+            
+            // Cargar texturas. Cuando termine, el juego estará listo
+            loadTextures();
+        }
+
+        loadingManager.onLoad = () => {
+            console.log("Texturas cargadas. Listo para iniciar.");
+            // Las texturas están listas, pero el juego no empieza
+            // hasta que el usuario haga clic en "Un Jugador" o "Multijugador"
+        };
+        
+        // Iniciar la lógica de menús y carga de texturas
+        init();
 
     </script>
 </body>
