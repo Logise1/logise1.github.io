@@ -855,7 +855,7 @@
         }
 
         // --- NUEVO: Punto de entrada principal del juego ---
-        function startGame(worldId, isMulti) {
+        async function startGame(worldId, isMulti) { // <-- AÑADIDO ASYNC
             currentWorldId = worldId;
             isMultiplayer = isMulti;
             
@@ -870,11 +870,39 @@
             initGameLogic(); 
             
             if (isMultiplayer) {
+                // --- NUEVO: Cargar datos del jugador ---
+                const playerDataRef = ref(db, `worlds/${currentWorldId}/playerData/${userId}`);
+                try {
+                    const snapshot = await get(playerDataRef);
+                    if (snapshot.exists()) {
+                        console.log("Cargando datos de jugador...");
+                        const data = snapshot.val();
+                        if (data.x && data.y && data.z) {
+                            playerBody.position.set(data.x, data.y, data.z);
+                        }
+                        if (data.inventory && Array.isArray(data.inventory)) {
+                            data.inventory.forEach((item, index) => {
+                                if (index < 36) {
+                                    playerInventorySlots[index] = item;
+                                }
+                            });
+                            updateHotbarUI();
+                        }
+                    } else {
+                        console.log("No se encontraron datos de jugador, creando nuevo perfil.");
+                        // (Se usará la posición por defecto de initGameLogic)
+                    }
+                } catch (e) {
+                    console.error("Error al cargar datos del jugador:", e);
+                }
+                // --- FIN Cargar datos ---
+
                 // Suscribirse a cambios
                 subscribeToPlayerPositions();
-                // Marcar mi presencia
+                // Marcar mi presencia (con la posición cargada o por defecto)
                 const playerRef = ref(db, `worlds/${currentWorldId}/players/${userId}`);
-                set(playerRef, { x: 0, y: MAX_HEIGHT + 10, z: 0 }); // Posición inicial
+                // --- MODIFICADO: Usar la posición actual del playerBody ---
+                set(playerRef, { x: playerBody.position.x, y: playerBody.position.y, z: playerBody.position.z });
                 // Quitarme si me desconecto
                 onDisconnect(playerRef).remove();
                 worldListeners.push({ ref: playerRef, type: 'onDisconnect' }); // Guardar referencia para limpiar
@@ -893,7 +921,23 @@
             console.log("Deteniendo el juego y limpiando listeners...");
             
             if (isMultiplayer && userId) {
-                 // Quitar mi jugador de la base de datos
+                // --- NUEVO: Guardar inventario y posición ---
+                try {
+                    const playerDataRef = ref(db, `worlds/${currentWorldId}/playerData/${userId}`);
+                    const pos = playerBody.position;
+                    set(playerDataRef, { 
+                        x: pos.x, 
+                        y: pos.y, 
+                        z: pos.z, 
+                        inventory: playerInventorySlots 
+                    });
+                    console.log("Datos del jugador guardados.");
+                 } catch (e) {
+                    console.error("Error al guardar datos del jugador:", e);
+                 }
+                // --- FIN Guardar ---
+
+                 // Quitar mi jugador de la lista de *online*
                  const playerRef = ref(db, `worlds/${currentWorldId}/players/${userId}`);
                  remove(playerRef);
             }
