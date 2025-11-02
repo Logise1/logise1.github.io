@@ -903,7 +903,10 @@
                 if (l.type === 'value') {
                     off(l.ref, l.type);
                 } else if (l.type === 'onDisconnect') {
-                    l.ref.onDisconnect().cancel(); // Cancelar el onDisconnect
+                    // --- CORRECCIÓN ---
+                    // Error: l.ref.onDisconnect is not a function
+                    // Causa: La llamada es onDisconnect(ref), no ref.onDisconnect()
+                    onDisconnect(l.ref).cancel(); // Cancelar el onDisconnect
                 }
             });
             
