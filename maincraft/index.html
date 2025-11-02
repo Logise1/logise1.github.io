@@ -126,11 +126,16 @@
             padding: 20px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
             display: grid;
+            
+            /* --- CORRECCIÓN DE LAYOUT --- */
             grid-template-areas:
-                "title title"
-                "crafting inventory"
-                "hotbar hotbar";
-            grid-gap: 20px;
+                "title"
+                "crafting"
+                "inventory"
+                "hotbar";
+            grid-gap: 10px; /* Reducir espacio */
+            justify-items: center; /* Centrar todo horizontalmente */
+            align-items: center;
         }
 
         #crafting-ui h2 {
@@ -151,6 +156,7 @@
             grid-template-columns: auto 50px auto;
             grid-template-rows: auto auto;
             align-items: center;
+            justify-self: center; /* Centrar esta área */
         }
 
         /* Cuadrícula 2x2 (Inventario) */
@@ -200,6 +206,7 @@
         /* --- Área de Inventario (Derecha) --- */
         #player-inventory-area {
             grid-area: inventory;
+            justify-self: center; /* Centrar esta área */
         }
 
         #player-inventory-grid {
@@ -218,6 +225,7 @@
             border: 1px solid #333;
             padding: 5px;
             background-color: rgba(0, 0, 0, 0.3);
+            justify-self: center; /* Centrar esta área */
         }
         
         /* --- Item en el Cursor --- */
@@ -302,7 +310,7 @@
 
             <!-- Área de Inventario (Derecha) -->
             <div id="player-inventory-area">
-                <h3>Inventario</h3>
+                <!-- --- CORRECCIÓN: h3 eliminado --- -->
                 <div id="player-inventory-grid">
                     <!-- 27 slots de inventario (JS los generará) -->
                 </div>
@@ -1178,7 +1186,7 @@
             renderCraftingUI();
         }
 
-        // --- LÓGICA DE RECETAS (NUEVA) ---
+        // --- LÓGICA DE RECETAS (CORREGIDA) ---
         function checkCrafting() {
             const gridType = (currentUI === 'table') ? 3 : 2;
             let foundRecipe = null;
@@ -1186,6 +1194,8 @@
             // 1. Comprobar recetas sin forma (shapeless)
             const itemsInGrid = [];
             for (let i = 0; i < 9; i++) {
+                // Solo comprobar los slots relevantes para la cuadrícula actual
+                if (gridType === 2 && i >= 4) continue;
                 if (craftingGridSlots[i].id > 0) {
                     itemsInGrid.push(craftingGridSlots[i]);
                 }
@@ -1203,18 +1213,12 @@
             
             // 2. Comprobar recetas con forma (shaped)
             if (!foundRecipe) {
-                const gridShape = [];
-                const ingredientsMap = {}; // {'P': 10, 'S': 11}
-                let shapeWidth = 0;
-                let shapeHeight = 0;
-                
-                // Convertir grid de slots a grid de caracteres (y encontrar bordes)
-                const gridChars = [];
-                let minX = gridType - 1, maxX = 0, minY = gridType - 1, maxY = 0;
+                const ingredientsMap = {}; // {'A': 10, 'B': 11}
+                let minX = gridType, maxX = -1, minY = gridType, maxY = -1;
                 
                 for(let y = 0; y < gridType; y++) {
                     for(let x = 0; x < gridType; x++) {
-                        const i = y * gridType + x; // Índice del slot
+                        const i = y * gridType + x;
                         const item = craftingGridSlots[i];
                         if (item.id > 0) {
                             minX = Math.min(minX, x);
@@ -1225,18 +1229,13 @@
                     }
                 }
                 
-                if (minX <= maxX) { // Si hay algo en la cuadrícula
-                    shapeWidth = maxX - minX + 1;
-                    shapeHeight = maxY - minY + 1;
-                    
-                    // Extraer la forma normalizada
+                if (maxX >= minX) { // Si hay algo en la cuadrícula
                     let shapeString = '';
                     for (let y = minY; y <= maxY; y++) {
                         for (let x = minX; x <= maxX; x++) {
                             const i = y * gridType + x;
                             const item = craftingGridSlots[i];
                             
-                            // Asignar un carácter (A, B, C...) a cada ID de item
                             let char = ' ';
                             if (item.id > 0) {
                                 let foundChar = Object.keys(ingredientsMap).find(k => ingredientsMap[k] === item.id);
@@ -1255,17 +1254,44 @@
                     foundRecipe = RECIPES.find(r => {
                         if (r.type !== 'shaped' || r.grid !== gridType) return false;
                         
-                        // Combinar shape de la receta (ej: ['PPP', ' S ', ' S '] -> 'PPP/ S / S ')
                         const recipeShapeString = r.shape.join('/');
                         
-                        // Comprobar si la forma coincide
-                        if (recipeShapeString !== shapeString) return false;
+                        // --- INICIO DE LA CORRECCIÓN ---
                         
-                        // Comprobar si los ingredientes coinciden
+                        // 1. Crear un mapa de {ID_ITEM -> Char_Receta} ej: {10: 'P', 11: 'S'}
+                        const recipeIdToChar = {};
                         for (const char in r.ingredients) {
-                            if (r.ingredients[char] !== ingredientsMap[char]) return false;
+                            recipeIdToChar[r.ingredients[char]] = char;
                         }
-                        return true;
+
+                        // 2. Crear un "mapa traducido" de {Char_Usuario -> Char_Receta} ej: {'A': 'P', 'B': 'S'}
+                        const userCharToRecipeChar = {};
+                        let validMap = true;
+                        for (const userChar in ingredientsMap) {
+                            const userId = ingredientsMap[userChar];
+                            const recipeChar = recipeIdToChar[userId];
+                            if (!recipeChar) {
+                                validMap = false; // El item del usuario no está en la receta
+                                break;
+                            }
+                            userCharToRecipeChar[userChar] = recipeChar;
+                        }
+                        
+                        // 3. Comprobar que todos los ingredientes de la receta estén presentes
+                        if (Object.keys(r.ingredients).length !== Object.keys(ingredientsMap).length) {
+                             validMap = false;
+                        }
+
+                        if (!validMap) return false;
+
+                        // 4. Traducir el shapeString del usuario (ej: "AA/AA") al shapeString de la receta (ej: "PP/PP")
+                        const translatedShapeString = shapeString.split('')
+                            .map(char => userCharToRecipeChar[char] || char) // Traduce A->P, / -> /
+                            .join('');
+                        
+                        // 5. Comparar
+                        return recipeShapeString === translatedShapeString;
+                        // --- FIN DE LA CORRECCIÓN ---
                     });
                 }
             } // Fin shaped
