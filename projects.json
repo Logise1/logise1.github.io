@@ -11,6 +11,11 @@
     "link": "/wetype"
   },
   {
+    "image": "/assets/bitcode.png",
+    "alt": "BitCode",
+    "link": "/bitcode"
+  },
+  {
     "image": "/assets/place.png",
     "alt": "Place",
     "link": "/place"
