@@ -261,7 +261,8 @@
                         <!-- NUEVO: Sección Modo Golden -->
                         <div id="golden-mode-prompt" class="mt-8 border-t border-gray-200 pt-6">
                             <h4 class="text-xl font-semibold text-yellow-500 flex items-center justify-center gap-2">
-                                <img src="golden.gif" alt="Golden" class="w-10 h-10 animate-bounce" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                                <!-- CORREGIDO: Añadido object-contain -->
+                                <img src="golden.gif" alt="Golden" class="w-10 h-10 animate-bounce object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
                                 <i data-lucide="award" class="w-10 h-10" style="display:none;"></i> <!-- Fallback icon -->
                                 Modo Golden
                             </h4>
@@ -527,7 +528,8 @@
                 const quizType = quiz.quizType || 'free';
 
                 // NUEVO: Lógica para mostrar el récord
-                let recordHtml = '<p classs="text-sm text-gray-400">Aún no hay récord</p>';
+                // CORREGIDO: Typo de 'classs' a 'class'
+                let recordHtml = '<p class="text-sm text-gray-400">Aún no hay récord</p>';
                 if (quiz.recordHolder) {
                     recordHtml = `
                     <div class="flex items-center gap-2 text-sm text-yellow-600">
@@ -1103,12 +1105,13 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 const newRecord = finalEntries[0];
                 const currentRecord = currentQuiz.recordHolder || { score: -1, time: 9999 };
                 
-                if (newEntry.score > currentRecord.score || (newEntry.score === currentRecord.score && newEntry.time < currentRecord.time)) {
+                // CORREGIDO: Comparar newRecord (el mejor actual) con currentRecord (el guardado)
+                if (newRecord.score > currentRecord.score || (newRecord.score === currentRecord.score && newRecord.time < currentRecord.time)) {
                     const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
                     await set(quizRecordRef, {
-                        name: newEntry.name,
-                        score: newEntry.score,
-                        time: newEntry.time
+                        name: newRecord.name,
+                        score: newRecord.score,
+                        time: newRecord.time
                     });
                 }
                 
