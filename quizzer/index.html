@@ -529,8 +529,9 @@
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
 
-                // **** ¡CAMBIO AQUÍ! ****
+                // **** ¡CAMBIO DE LA VEZ PASADA (SE MANTIENE)! ****
                 // Modificado para que muestre "1." en el récord de la tarjeta
+                // Ahora confiamos en que quiz.recordHolder está SIEMPRE actualizado
                 let recordHtml = '<p class="text-sm text-gray-400">Aún no hay récord</p>';
                 if (quiz.recordHolder) {
                     recordHtml = `
@@ -1096,6 +1097,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 }
                 entries.push(newEntry);
                 
+                // Esta es tu lógica: Primero puntos (descendente), luego tiempo (ascendente)
                 entries.sort((a, b) => {
                     if (a.score !== b.score) { return b.score - a.score; }
                     return (a.time || 999) - (b.time || 999);
@@ -1104,19 +1106,29 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 const finalEntries = entries.slice(0, 10);
                 await set(leaderboardRef, finalEntries); 
                 
-                // NUEVO: Actualizar el récord en el objeto del quiz
-                const newRecord = finalEntries[0];
-                const currentRecord = currentQuiz.recordHolder || { score: -1, time: 9999 };
+                // **** ¡CAMBIO AQUÍ! ****
+                // Hacemos que el campo 'recordHolder' sea siempre fiable.
+                // En lugar de comparar con el récord antiguo, simplemente
+                // establecemos el 'recordHolder' al mejor puntaje actual (finalEntries[0]).
                 
-                // CORREGIDO: Comparar newRecord (el mejor actual) con currentRecord (el guardado)
-                if (newRecord.score > currentRecord.score || (newRecord.score === currentRecord.score && newRecord.time < currentRecord.time)) {
-                    const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
+                const bestEntry = finalEntries[0];
+                const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
+                
+                if (bestEntry) {
+                    // Si hay una entrada en el leaderboard, la guardamos como el récord
+                    // en el objeto principal del quiz.
                     await set(quizRecordRef, {
-                        name: newRecord.name,
-                        score: newRecord.score,
-                        time: newRecord.time
+                        name: bestEntry.name,
+                        score: bestEntry.score,
+                        time: bestEntry.time
                     });
+                } else {
+                    // Si el leaderboard está vacío, nos aseguramos
+                    // de que el recordHolder esté vacío también.
+                    await set(quizRecordRef, null);
                 }
+                // **** FIN DEL CAMBIO ****
+
                 
                 // Otorgar monedas
                 const timeTaken = timeElapsed; 
