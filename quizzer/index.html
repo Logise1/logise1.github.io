@@ -191,7 +191,7 @@
                             <label class="block text-sm font-medium text-gray-700">Tipo de Quiz</label>
                             <div class="mt-2 flex gap-4">
                                 <label class="flex items-center">
-                                    <input type="radio" name="quiz-type" value="free" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                                    <input type="radio" name="quiz-type" value="free" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" checked>
                                     <span class="ml-2 text-gray-700">Gratis (Ganas 2 monedas si lo juegan)</span>
                                 </label>
                                 <label class="flex items-center">
@@ -216,6 +216,21 @@
             <!-- Vista: Jugando Quiz -->
             <section id="view-play" class="view">
                 <div class="bg-white p-6 rounded-lg shadow-xl">
+                    
+                    <!-- NUEVO: Barra de Progreso y Timer -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center text-sm font-medium text-gray-600 mb-1">
+                            <span>Progreso</span>
+                            <span id="timer-display" class="font-mono text-indigo-600 flex items-center gap-1">
+                                <i data-lucide="timer" class="w-4 h-4"></i>
+                                <span>0.0s</span>
+                            </span>
+                        </div>
+                        <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
                     <div class="flex justify-between items-center mb-4">
                         <h2 id="play-quiz-title" class="text-2xl font-semibold"></h2>
                         <span id="score-display" class="text-xl font-bold text-indigo-600">Puntaje: 0</span>
@@ -231,6 +246,7 @@
                     <div id="end-quiz-container" class="hidden text-center">
                         <h3 class="text-2xl font-bold mb-2">¡Quiz Terminado!</h3>
                         <p id="final-score-text" class="text-2xl font-light mb-4"></p>
+                        <p id="final-time-text" class="text-xl font-light mb-4"></p>
                         <!-- NUEVO: Mensaje de Monedas -->
                         <p id="final-coin-text" class="text-lg mb-4 text-yellow-600 font-semibold"></p>
                         <form id="leaderboard-form" class="flex flex-col sm:flex-row gap-2 justify-center">
@@ -324,8 +340,8 @@
             set,     
             push,    
             runTransaction,
-            query, // Para el ranking general
-            orderByChild // Para el ranking general
+            query, 
+            orderByChild 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         // IDs de las Vistas
@@ -335,7 +351,7 @@
             CREATE: 'view-create',
             PLAY: 'view-play',
             LEADERBOARD: 'view-leaderboard',
-            GENERAL_LEADERBOARD: 'view-general-leaderboard', // Nueva vista
+            GENERAL_LEADERBOARD: 'view-general-leaderboard', 
             LOADING: 'view-loading'
         };
 
@@ -346,14 +362,16 @@
         let currentQuestionIndex = 0;
         let score = 0;
         let userCoinBalance = 0;
-        let quizStartTime = 0; // Para el bonus de tiempo
-        let loggedInUser = null; // Username del usuario logueado
+        let quizStartTime = 0; 
+        let loggedInUser = null; 
+        let quizTimerInterval = null; // NUEVO: Para el timer
+        let timeElapsed = 0; // NUEVO: Para el timer
 
         // Variables de Firebase
-        let db, appId, dbPath; // dbPath será la ruta base saneada
+        let db, appId, dbPath; 
         let confirmModal, confirmTitle, confirmMessage, confirmCancelBtn, confirmOkBtn;
-        let userWalletRef = null; // Referencia en tiempo real al monedero
-        let userWalletListener = null; // Listener para desconectar
+        let userWalletRef = null; 
+        let userWalletListener = null; 
 
         // Elementos del DOM
         const views = {
@@ -365,7 +383,6 @@
             generalLeaderboard: document.getElementById(VIEWS.GENERAL_LEADERBOARD),
             loading: document.getElementById(VIEWS.LOADING),
         };
-        // (Resto de elementos del DOM...)
         const quizListContainer = document.getElementById('quiz-list-container');
         const createQuizForm = document.getElementById('create-quiz-form');
         const leaderboardForm = document.getElementById('leaderboard-form');
@@ -389,20 +406,42 @@
         
         // --- Funciones de Utilidad ---
         
-        /** Sanea el AppID para usarlo en rutas de RTDB */
         function sanitizeRtdbPath(path) {
             return path.replace(/[.#$[\]]/g, '_');
         }
 
-        /** Hashea una contraseña usando SHA-256 */
         async function hashPassword(password) {
             const encoder = new TextEncoder();
             const data = encoder.encode(password);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            // Convertir buffer a string hex
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             return hashHex;
+        }
+
+        /** NUEVO: Reproduce un sonido */
+        function playSound(src) {
+            try {
+                // Creamos un nuevo objeto Audio. No es necesario añadirlo al DOM.
+                const audio = new Audio(src);
+                audio.play().catch(e => console.warn("La reproducción automática de sonido fue bloqueada. Se requiere interacción del usuario.", e));
+            } catch (e) {
+                console.warn("No se pudo reproducir el sonido:", e);
+            }
+        }
+
+        /** NUEVO: Reproduce un sonido de acierto aleatorio */
+        function playCorrectSound() {
+            const sounds = ['ok1.mp3', 'ok2.mp3', 'ok3.mp3'];
+            const sound = sounds[Math.floor(Math.random() * sounds.length)];
+            playSound(sound);
+        }
+        
+        /** NUEVO: Reproduce un sonido de fallo aleatorio */
+        function playIncorrectSound() {
+            const sounds = ['fail1.mp3', 'fail2.mp3'];
+            const sound = sounds[Math.floor(Math.random() * sounds.length)];
+            playSound(sound);
         }
 
         // --- Navegación ---
@@ -442,18 +481,14 @@
         /** Escucha el monedero del usuario (RTDB) */
         function setupUserWalletListener(username) {
             if (!dbPath) return;
-            // Desconectar listener anterior si existe
             if (userWalletListener) {
-                userWalletListener(); // onValue() devuelve una función para desuscribirse
+                userWalletListener(); 
             }
-
             userWalletRef = ref(db, `${dbPath}/wallets/${username}/coins`);
-            
             userWalletListener = onValue(userWalletRef, (snapshot) => {
                 if (snapshot.exists()) {
                     userCoinBalance = snapshot.val();
                 } else {
-                    // Esto no debería pasar si el registro fue exitoso, pero es un fallback
                     userCoinBalance = 10;
                     set(userWalletRef, userCoinBalance);
                 }
@@ -483,7 +518,8 @@
                 quizCard.innerHTML = `
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
-                        <p class="text-sm text-gray-600">Tema: ${quiz.topic} (${quiz.questions.length} preguntas)</p>
+                        <!-- MODIFICADO: Se quitó el tema -->
+                        <p class="text-sm text-gray-600">${quiz.questions.length} preguntas</p>
                         <p class="text-sm text-gray-500">Nivel: <span class="font-medium">${quiz.level || 'General'}</span></p>
                         <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
                     </div>
@@ -526,23 +562,38 @@
                 let entries = [];
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    if (Array.isArray(data)) {
-                        entries = data;
-                    } else if (typeof data === 'object' && data !== null) {
-                        entries = Object.values(data);
-                    }
+                    if (Array.isArray(data)) { entries = data; }
+                    else if (typeof data === 'object' && data !== null) { entries = Object.values(data); }
                 }
 
                 if (entries.length === 0) {
                     list.innerHTML = `<li class="text-gray-500">Aún no hay puntajes para este quiz.</li>`;
                 } else {
-                    entries.sort((a, b) => b.score - a.score); // Ordenar por puntaje
+                    // MODIFICADO: Ordenar por puntaje (desc) y luego tiempo (asc)
+                    entries.sort((a, b) => {
+                        if (a.score !== b.score) {
+                            return b.score - a.score; // Más puntos gana
+                        }
+                        return (a.time || 999) - (b.time || 999); // Menos tiempo gana (con fallback)
+                    });
+                    
+                    // MODIFICADO: Mostrar puntaje y tiempo
                     list.innerHTML = entries.slice(0, 10).map((entry, index) => `
                         <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
-                            <span>${index + 1}. ${entry.name}</span>
-                            <span class="font-semibold">${entry.score} pts</span>
+                            <div class="flex items-center gap-2">
+                                <span>${index + 1}.</span>
+                                <span>${entry.name}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-semibold">${entry.score} pts</span>
+                                <span class="text-sm text-gray-600 font-mono flex items-center gap-1">
+                                    <i data-lucide="timer" class="w-4 h-4"></i>
+                                    ${(entry.time || 0).toFixed(2)}s
+                                </span>
+                            </div>
                         </li>
                     `).join('');
+                    lucide.createIcons();
                 }
             } catch (error) {
                 console.error("Error al cargar leaderboard (RTDB): ", error);
@@ -551,7 +602,7 @@
             }
         }
 
-        /** NUEVO: Muestra el leaderboard general de monedas (RTDB) */
+        /** Muestra el leaderboard general de monedas (RTDB) */
         async function renderGeneralLeaderboard() {
             const list = document.getElementById('general-leaderboard-list');
             list.innerHTML = `<li class="text-gray-500">Cargando ranking...</li>`;
@@ -559,7 +610,6 @@
 
             try {
                 const walletsRef = ref(db, `${dbPath}/wallets`);
-                // CAMBIO: Se usa la referencia directa
                 const snapshot = await get(walletsRef);
 
                 if (!snapshot.exists()) {
@@ -568,8 +618,7 @@
                 }
 
                 const wallets = Object.values(snapshot.val());
-                // CAMBIO: Se ordena en el cliente
-                wallets.sort((a, b) => b.coins - a.coins); // Ordenar por monedas, descendente
+                wallets.sort((a, b) => b.coins - a.coins); 
                 
                 list.innerHTML = wallets.slice(0, 20).map((wallet, index) => `
                     <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
@@ -688,7 +737,6 @@
                 "required": ["title", "questions"]
             }`;
             
-            // Escapar los backticks dentro del prompt del sistema
             const systemPrompt = `Eres un experto creador de quizzes. Tu tarea es generar un quiz basado en un tema.
 Debes responder ÚNICAMENTE con un objeto JSON válido que siga este esquema:
 \`\`\`json
@@ -728,21 +776,22 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 
                 const newQuiz = { 
                     topic: topic, 
-                    level: level, // NUEVO
-                    title: title, // NUEVO (usamos el título del formulario)
-                    questions: newQuizData.questions, // Obtenemos solo las preguntas de la IA
+                    level: level, 
+                    title: title, 
+                    questions: newQuizData.questions, 
                     ownerUsername: loggedInUser, 
                     createdAt: new Date().toISOString(), 
                     quizType: quizType, 
                     price: price
                 };
                 
-                // Guardar en RTDB
                 const quizzesRef = ref(db, `${dbPath}/quizzes`);
                 await push(quizzesRef, newQuiz); 
 
                 showView(VIEWS.HOME);
                 createQuizForm.reset();
+                document.getElementById('quiz-price-container').classList.add('hidden');
+                document.querySelector('input[name="quiz-type"][value="free"]').checked = true;
             } catch (error) {
                 console.error("Error al generar el quiz (RTDB):", error);
                 showErrorModal(`No se pudo generar el quiz. ${error.message}`);
@@ -757,7 +806,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             const quiz = quizzes.find(q => q.id === quizId);
             if (!quiz) return;
             
-            // Jugar tu propio quiz es gratis
             if (quiz.ownerUsername === loggedInUser) { 
                 startQuiz(quizId); 
                 return; 
@@ -778,7 +826,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     async () => { 
                         try {
                             await transferCoins(quiz.ownerUsername, loggedInUser, price);
-                            // El listener onValue actualizará el saldo visualmente
                             startQuiz(quizId);
                         } catch (error) { 
                             console.error("Error en la transacción de pago (RTDB):", error);
@@ -787,77 +834,86 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     }
                 );
             } else {
-                // Es un quiz gratis creado por otro usuario
-                // CAMBIO: La recompensa se da al final, en handleSaveScore
                 startQuiz(quizId); 
             }
         }
 
-        /** Transfiere monedas (RTDB) - Actualizado para usernames */
+        /** Transfiere monedas (RTDB) */
         async function transferCoins(creatorUsername, playerUsername, amount) {
-            // Transacción en el nodo raíz de wallets
             const walletsRef = ref(db, `${dbPath}/wallets`);
             return runTransaction(walletsRef, (currentData) => {
                 if (currentData === null) { 
                     console.warn("Transacción abortada: el nodo de wallets no existe.");
-                    return; // Abortar
+                    return; 
                 }
-                
                 if (!currentData[playerUsername] || !currentData[creatorUsername]) {
                      console.warn("Transacción abortada: el monedero del jugador o creador no existe.");
                     return;
                 }
-                
                 const playerCoins = currentData[playerUsername].coins;
-                
                 if (playerCoins < amount) { 
                     console.warn("Transacción abortada: fondos insuficientes.");
-                    return; // Abortar
+                    return; 
                 } 
-                
                 currentData[playerUsername].coins -= amount;
                 currentData[creatorUsername].coins += amount;
                 return currentData;
             });
         }
 
-        /** Otorga monedas a un usuario (RTDB) - Actualizado para usernames */
+        /** Otorga monedas a un usuario (RTDB) */
         async function awardCoins(targetUsername, amount) {
-            if (amount <= 0) return; // No hacer nada si no hay premio
+            if (amount <= 0) return; 
             const targetWalletRef = ref(db, `${dbPath}/wallets/${targetUsername}/coins`);
             return runTransaction(targetWalletRef, (currentCoins) => {
-                // Si no existe, se crea con el premio (no debería pasar si se registró)
                 return (currentCoins || 0) + amount;
             });
         }
 
-        /** Inicia un quiz - NUEVO: guarda la hora de inicio */
+        /** Inicia un quiz - MODIFICADO: inicia timer */
         function startQuiz(quizId) {
             currentQuiz = quizzes.find(q => q.id === quizId);
             if (!currentQuiz) return;
             currentQuizDocId = quizId; 
             currentQuestionIndex = 0;
             score = 0;
-            quizStartTime = Date.now(); // Guardar hora de inicio
+            quizStartTime = Date.now(); 
+            timeElapsed = 0; // NUEVO
+            
+            // Limpiar timer anterior
+            if (quizTimerInterval) clearInterval(quizTimerInterval);
+            
+            // Iniciar nuevo timer
+            const timerDisplay = document.getElementById('timer-display').querySelector('span');
+            quizTimerInterval = setInterval(() => {
+                timeElapsed = (Date.now() - quizStartTime) / 1000;
+                timerDisplay.textContent = `${timeElapsed.toFixed(1)}s`;
+            }, 100); // Actualiza 10 veces por segundo
+
             document.getElementById('play-quiz-title').textContent = currentQuiz.title;
             document.getElementById('score-display').textContent = `Puntaje: 0`;
             document.getElementById('end-quiz-container').classList.add('hidden');
             document.getElementById('question-container').classList.remove('hidden');
-            document.getElementById('final-coin-text').textContent = ''; // Limpiar monedas
+            document.getElementById('final-coin-text').textContent = ''; 
             leaderboardForm.reset();
-            // Poner el nombre de usuario por defecto en el leaderboard
             document.getElementById('player-name').value = loggedInUser; 
+            document.getElementById('progress-bar').style.width = '0%'; // Reset progress bar
+            
             displayQuestion();
             showView(VIEWS.PLAY);
         }
 
-        /** Muestra la pregunta actual (sin cambios) */
+        /** Muestra la pregunta actual - MODIFICADO: actualiza barra progreso */
         function displayQuestion() {
             const question = currentQuiz.questions[currentQuestionIndex];
             document.getElementById('question-text').textContent = question.question;
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
-            // Barajar opciones
+            
+            // Actualizar barra de progreso
+            const progress = (currentQuestionIndex / currentQuiz.questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
             const shuffledOptions = [...question.options].sort(() => Math.random() - 0.5);
             shuffledOptions.forEach(option => {
                 const optionButton = document.createElement('button');
@@ -868,40 +924,59 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             });
         }
 
-        /** Maneja el clic en una respuesta (sin cambios) */
+        /** Maneja el clic en una respuesta - MODIFICADO: añade sonidos */
         function handleAnswerClick(e) {
             const selectedButton = e.target;
             const selectedAnswer = selectedButton.textContent;
             const question = currentQuiz.questions[currentQuestionIndex];
             const correctAnswer = question.correctAnswer;
             const optionButtons = document.querySelectorAll('.option-btn');
+
             optionButtons.forEach(btn => {
                 btn.disabled = true;
                 if (btn.textContent === correctAnswer) { btn.classList.add('correct'); }
                 else if (btn === selectedButton) { btn.classList.add('incorrect'); }
             });
+
             if (selectedAnswer === correctAnswer) {
                 score++;
                 document.getElementById('score-display').textContent = `Puntaje: ${score}`;
+                playCorrectSound(); // NUEVO
+            } else {
+                playIncorrectSound(); // NUEVO
             }
+
             currentQuestionIndex++;
             setTimeout(() => {
-                if (currentQuestionIndex < currentQuiz.questions.length) { displayQuestion(); } 
-                else { endQuiz(); }
+                if (currentQuestionIndex < currentQuiz.questions.length) { 
+                    displayQuestion(); 
+                } 
+                else { 
+                    endQuiz(); 
+                }
             }, 1200); 
         }
 
-        /** Finaliza el quiz - NUEVO: prepara texto de monedas */
+        /** Finaliza el quiz - MODIFICADO: detiene timer */
         function endQuiz() {
+            clearInterval(quizTimerInterval); // Detener el timer
+            quizTimerInterval = null;
+            // timeElapsed ya tiene el valor final
+            
             document.getElementById('question-container').classList.add('hidden');
             const endContainer = document.getElementById('end-quiz-container');
             const finalScoreText = document.getElementById('final-score-text');
+            const finalTimeText = document.getElementById('final-time-text');
             const finalCoinText = document.getElementById('final-coin-text');
             
             finalScoreText.textContent = `Tu puntaje final es ${score} de ${currentQuiz.questions.length}.`;
+            finalTimeText.textContent = `Tiempo total: ${timeElapsed.toFixed(2)} segundos.`;
             
+            // Actualizar barra de progreso al 100%
+            document.getElementById('progress-bar').style.width = '100%';
+
             // Calcular bonus y recompensas (pero se otorgan al guardar)
-            const timeTaken = (Date.now() - quizStartTime) / 1000; // segundos
+            const timeTaken = timeElapsed;
             const maxTime = currentQuiz.questions.length * 20; // 20 seg por pregunta
             const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
             
@@ -922,17 +997,25 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             endContainer.classList.remove('hidden');
         }
 
-        /** Guarda el puntaje - NUEVO: otorga monedas (bonus y recompensa) */
+        /** Guarda el puntaje - MODIFICADO: guarda el tiempo */
         async function handleSaveScore(e) {
             e.preventDefault();
             const playerName = document.getElementById('player-name').value;
             if (!playerName.trim()) { showErrorModal("Por favor, ingresa un nombre."); return; }
             
             const leaderboardRef = ref(db, `${dbPath}/leaderboards/${currentQuizDocId}/entries`);
-            const newEntry = { name: playerName, score: score, username: loggedInUser, createdAt: new Date().toISOString() };
+            
+            // NUEVO: Guardar el tiempo
+            const finalTime = parseFloat(timeElapsed.toFixed(2));
+            const newEntry = { 
+                name: playerName, 
+                score: score, 
+                time: finalTime, // Guardar tiempo
+                username: loggedInUser, 
+                createdAt: new Date().toISOString() 
+            };
             
             try {
-                // 1. Guardar puntaje en leaderboard (sin cambios)
                 const snapshot = await get(leaderboardRef);
                 let entries = [];
                 if (snapshot.exists()) {
@@ -941,12 +1024,20 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     else if (typeof data === 'object' && data !== null) { entries = Object.values(data); }
                 }
                 entries.push(newEntry);
-                entries.sort((a, b) => b.score - a.score);
+                
+                // NUEVO: Ordenar por puntaje y tiempo
+                entries.sort((a, b) => {
+                    if (a.score !== b.score) {
+                        return b.score - a.score;
+                    }
+                    return (a.time || 999) - (b.time || 999);
+                });
+                
                 const finalEntries = entries.slice(0, 10);
                 await set(leaderboardRef, finalEntries); 
                 
-                // 2. Otorgar monedas (NUEVA LOGICA)
-                const timeTaken = (Date.now() - quizStartTime) / 1000; 
+                // Otorgar monedas
+                const timeTaken = timeElapsed; 
                 const maxTime = currentQuiz.questions.length * 20;
                 const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
                 
@@ -955,16 +1046,13 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     rewardCoins = 2;
                 }
                 
-                // Otorgar bonus al jugador
                 if (bonusCoins > 0) {
                     await awardCoins(loggedInUser, bonusCoins);
                 }
-                // Otorgar recompensa al creador
                 if (rewardCoins > 0) {
                     await awardCoins(currentQuiz.ownerUsername, rewardCoins);
                 }
                 
-                // 3. Mostrar el leaderboard
                 renderLeaderboard(currentQuizDocId); 
             } catch (error) {
                 console.error("Error al guardar puntaje (RTDB): ", error);
@@ -990,7 +1078,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             }
 
             try {
-                // 1. Verificar si el usuario ya existe
                 const userRef = ref(db, `${dbPath}/users/${username}`);
                 const snapshot = await get(userRef);
                 
@@ -999,23 +1086,19 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     return;
                 }
                 
-                // 2. Hashear la contraseña
                 const passwordHash = await hashPassword(password);
                 
-                // 3. Crear el usuario
                 await set(userRef, { 
                     passwordHash: passwordHash, 
                     createdAt: new Date().toISOString() 
                 });
                 
-                // 4. Crear el monedero
                 const walletRef = ref(db, `${dbPath}/wallets/${username}`);
                 await set(walletRef, { 
-                    coins: 10, // Saldo inicial
-                    username: username // Para el ranking general
+                    coins: 10, 
+                    username: username 
                 });
                 
-                // 5. Iniciar sesión
                 localStorage.setItem('quizAppUser', username);
                 loggedInUser = username;
                 await onLoginSuccess();
@@ -1033,7 +1116,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             const password = e.target.password.value;
             
             try {
-                // 1. Obtener datos del usuario
                 const userRef = ref(db, `${dbPath}/users/${username}`);
                 const snapshot = await get(userRef);
                 
@@ -1042,7 +1124,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     return;
                 }
                 
-                // 2. Verificar la contraseña
                 const userData = snapshot.val();
                 const storedHash = userData.passwordHash;
                 const providedHash = await hashPassword(password);
@@ -1052,7 +1133,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     return;
                 }
                 
-                // 3. Iniciar sesión
                 localStorage.setItem('quizAppUser', username);
                 loggedInUser = username;
                 await onLoginSuccess();
@@ -1068,17 +1148,14 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             localStorage.removeItem('quizAppUser');
             loggedInUser = null;
             
-            // Ocultar UI de la app
             authControls.classList.add('hidden');
             
-            // Detener listener del monedero
             if (userWalletListener) {
                 userWalletListener();
                 userWalletListener = null;
                 userWalletRef = null;
             }
             
-            // Mostrar vista de Auth
             showView(VIEWS.AUTH);
         }
         
@@ -1086,14 +1163,8 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
         async function onLoginSuccess() {
             userNameDisplay.textContent = loggedInUser;
             authControls.classList.remove('hidden');
-            
-            // Empezar a escuchar el monedero
             setupUserWalletListener(loggedInUser);
-            
-            // Cargar quizzes
             loadQuizzes(); 
-            
-            // Mostrar la app
             showView(VIEWS.HOME);
         }
 
@@ -1144,7 +1215,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             // Leaderboard General
             document.getElementById('show-general-leaderboard-btn').addEventListener('click', renderGeneralLeaderboard);
             document.getElementById('general-leaderboard-back-btn').addEventListener('click', () => { showView(VIEWS.HOME); });
-
 
             // Formularios
             createQuizForm.addEventListener('submit', handleCreateQuiz);
@@ -1200,7 +1270,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 apiKey: "AIzaSyC5v9fm-aHc5LrRWf-Qd3fy4-elcjjhJYw", 
                 authDomain: "everyquiz-65c14.firebaseapp.com",
                 projectId: "everyquiz-65c14",
-                // URL Específica de RTDB
                 databaseURL: "https://everyquiz-65c14-default-rtdb.europe-west1.firebasedatabase.app/",
                 storageBucket: "everyquiz-65c14.firebasestorage.app",
                 messagingSenderId: "841737281047",
@@ -1211,10 +1280,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 ? JSON.parse(__firebase_config) 
                 : firebaseConfigFallback;
 
-            // CAMBIO: Usar un ID de app estático si __app_id no está definido
             appId = typeof __app_id !== 'undefined' ? __app_id : 'everyquiz-app-test';
-            // CAMBIO: Saneamos la ruta base UNA VEZ y la hacemos más simple
-            // Se quita 'artifacts/' para evitar posibles conflictos de reglas de seguridad anidadas
             dbPath = sanitizeRtdbPath(appId);
 
             // Asignar elementos del modal de confirmación
