@@ -217,7 +217,7 @@
             <section id="view-play" class="view">
                 <div class="bg-white p-6 rounded-lg shadow-xl">
                     
-                    <!-- NUEVO: Barra de Progreso y Timer -->
+                    <!-- Barra de Progreso y Timer -->
                     <div class="mb-4">
                         <div class="flex justify-between items-center text-sm font-medium text-gray-600 mb-1">
                             <span>Progreso</span>
@@ -247,8 +247,9 @@
                         <h3 class="text-2xl font-bold mb-2">¡Quiz Terminado!</h3>
                         <p id="final-score-text" class="text-2xl font-light mb-4"></p>
                         <p id="final-time-text" class="text-xl font-light mb-4"></p>
-                        <!-- NUEVO: Mensaje de Monedas -->
                         <p id="final-coin-text" class="text-lg mb-4 text-yellow-600 font-semibold"></p>
+                        
+                        <!-- Formulario de Guardar Puntaje -->
                         <form id="leaderboard-form" class="flex flex-col sm:flex-row gap-2 justify-center">
                             <input type="text" id="player-name" placeholder="Tu nombre para el ranking" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
                             <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
@@ -256,6 +257,19 @@
                                 <span>Guardar Puntaje</span>
                             </button>
                         </form>
+                        
+                        <!-- NUEVO: Sección Modo Golden -->
+                        <div id="golden-mode-prompt" class="mt-8 border-t border-gray-200 pt-6">
+                            <h4 class="text-xl font-semibold text-yellow-500 flex items-center justify-center gap-2">
+                                <img src="golden.gif" alt="Golden" class="w-10 h-10 animate-bounce" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                                <i data-lucide="award" class="w-10 h-10" style="display:none;"></i> <!-- Fallback icon -->
+                                Modo Golden
+                            </h4>
+                            <p class="text-gray-600 my-2">¿Te atreves? Si fallas una sola pregunta, vuelves al principio.</p>
+                            <button id="start-golden-mode-btn" class="w-full px-4 py-2 bg-yellow-500 text-black rounded-lg shadow font-bold hover:bg-yellow-600 transition-colors">
+                                ¡Intentar Modo Golden!
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -364,8 +378,9 @@
         let userCoinBalance = 0;
         let quizStartTime = 0; 
         let loggedInUser = null; 
-        let quizTimerInterval = null; // NUEVO: Para el timer
-        let timeElapsed = 0; // NUEVO: Para el timer
+        let quizTimerInterval = null; 
+        let timeElapsed = 0; 
+        let currentQuizIsGolden = false; // NUEVO: Estado de Modo Golden
 
         // Variables de Firebase
         let db, appId, dbPath; 
@@ -419,25 +434,21 @@
             return hashHex;
         }
 
-        /** NUEVO: Reproduce un sonido */
         function playSound(src) {
             try {
-                // Creamos un nuevo objeto Audio. No es necesario añadirlo al DOM.
                 const audio = new Audio(src);
-                audio.play().catch(e => console.warn("La reproducción automática de sonido fue bloqueada. Se requiere interacción del usuario.", e));
+                audio.play().catch(e => console.warn("La reproducción automática de sonido fue bloqueada.", e));
             } catch (e) {
                 console.warn("No se pudo reproducir el sonido:", e);
             }
         }
 
-        /** NUEVO: Reproduce un sonido de acierto aleatorio */
         function playCorrectSound() {
             const sounds = ['ok1.mp3', 'ok2.mp3', 'ok3.mp3'];
             const sound = sounds[Math.floor(Math.random() * sounds.length)];
             playSound(sound);
         }
         
-        /** NUEVO: Reproduce un sonido de fallo aleatorio */
         function playIncorrectSound() {
             const sounds = ['fail1.mp3', 'fail2.mp3'];
             const sound = sounds[Math.floor(Math.random() * sounds.length)];
@@ -502,7 +513,7 @@
 
         // --- Renderizado ---
 
-        /** Renderiza la lista de quizzes */
+        /** Renderiza la lista de quizzes - MODIFICADO: Muestra el récord */
         function renderQuizList() {
             if (quizzes.length === 0) {
                 quizListContainer.innerHTML = `<p class="text-gray-500">No hay quizzes creados todavía. ¡Crea uno!</p>`;
@@ -514,14 +525,28 @@
                 quizCard.className = 'bg-white p-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
+
+                // NUEVO: Lógica para mostrar el récord
+                let recordHtml = '<p classs="text-sm text-gray-400">Aún no hay récord</p>';
+                if (quiz.recordHolder) {
+                    recordHtml = `
+                    <div class="flex items-center gap-2 text-sm text-yellow-600">
+                        <i data-lucide="award" class="w-4 h-4"></i>
+                        <span class="font-bold">${quiz.recordHolder.name}</span>
+                        <span>(${quiz.recordHolder.score} pts, ${(quiz.recordHolder.time || 0).toFixed(2)}s)</span>
+                    </div>
+                    `;
+                }
                 
                 quizCard.innerHTML = `
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
-                        <!-- MODIFICADO: Se quitó el tema -->
-                        <p class="text-sm text-gray-600">${quiz.questions.length} preguntas</p>
-                        <p class="text-sm text-gray-500">Nivel: <span class="font-medium">${quiz.level || 'General'}</span></p>
-                        <p class="text-sm text-gray-500">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
+                        <p class="text-sm text-gray-600">${quiz.questions.length} preguntas / Nivel: ${quiz.level || 'General'}</p>
+                        <p class="text-sm text-gray-500 mb-2">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
+                        <!-- NUEVO: Récord Holder -->
+                        <div class="border-t border-gray-100 pt-2">
+                            ${recordHtml}
+                        </div>
                     </div>
                     <div class="flex flex-col items-start sm:items-end gap-2">
                         <div class="flex items-center gap-1 ${quizType === 'paid' ? 'text-yellow-600' : 'text-green-600'}">
@@ -569,15 +594,11 @@
                 if (entries.length === 0) {
                     list.innerHTML = `<li class="text-gray-500">Aún no hay puntajes para este quiz.</li>`;
                 } else {
-                    // MODIFICADO: Ordenar por puntaje (desc) y luego tiempo (asc)
                     entries.sort((a, b) => {
-                        if (a.score !== b.score) {
-                            return b.score - a.score; // Más puntos gana
-                        }
-                        return (a.time || 999) - (b.time || 999); // Menos tiempo gana (con fallback)
+                        if (a.score !== b.score) { return b.score - a.score; }
+                        return (a.time || 999) - (b.time || 999); 
                     });
                     
-                    // MODIFICADO: Mostrar puntaje y tiempo
                     list.innerHTML = entries.slice(0, 10).map((entry, index) => `
                         <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
                             <div class="flex items-center gap-2">
@@ -782,7 +803,8 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     ownerUsername: loggedInUser, 
                     createdAt: new Date().toISOString(), 
                     quizType: quizType, 
-                    price: price
+                    price: price,
+                    recordHolder: null // NUEVO: Inicializar el record
                 };
                 
                 const quizzesRef = ref(db, `${dbPath}/quizzes`);
@@ -807,7 +829,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             if (!quiz) return;
             
             if (quiz.ownerUsername === loggedInUser) { 
-                startQuiz(quizId); 
+                startQuiz(quizId, false); // El creador juega gratis
                 return; 
             }
             
@@ -826,7 +848,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     async () => { 
                         try {
                             await transferCoins(quiz.ownerUsername, loggedInUser, price);
-                            startQuiz(quizId);
+                            startQuiz(quizId, false); // Inicia el quiz normal
                         } catch (error) { 
                             console.error("Error en la transacción de pago (RTDB):", error);
                             showErrorModal(`Falló la transacción: ${error.message}`); 
@@ -834,7 +856,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     }
                 );
             } else {
-                startQuiz(quizId); 
+                startQuiz(quizId, false); // Inicia el quiz gratis
             }
         }
 
@@ -870,15 +892,17 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             });
         }
 
-        /** Inicia un quiz - MODIFICADO: inicia timer */
-        function startQuiz(quizId) {
+        /** Inicia un quiz - MODIFICADO: Acepta modo golden */
+        function startQuiz(quizId, isGolden = false) {
             currentQuiz = quizzes.find(q => q.id === quizId);
             if (!currentQuiz) return;
+            
             currentQuizDocId = quizId; 
             currentQuestionIndex = 0;
             score = 0;
             quizStartTime = Date.now(); 
-            timeElapsed = 0; // NUEVO
+            timeElapsed = 0; 
+            currentQuizIsGolden = isGolden; // NUEVO
             
             // Limpiar timer anterior
             if (quizTimerInterval) clearInterval(quizTimerInterval);
@@ -888,22 +912,30 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             quizTimerInterval = setInterval(() => {
                 timeElapsed = (Date.now() - quizStartTime) / 1000;
                 timerDisplay.textContent = `${timeElapsed.toFixed(1)}s`;
-            }, 100); // Actualiza 10 veces por segundo
+            }, 100); 
 
-            document.getElementById('play-quiz-title').textContent = currentQuiz.title;
+            // Modificar título si es Modo Golden
+            const titleEl = document.getElementById('play-quiz-title');
+            titleEl.textContent = currentQuiz.title;
+            titleEl.classList.remove('text-yellow-500', 'font-bold');
+            if (isGolden) {
+                titleEl.textContent += " (Modo Golden)";
+                titleEl.classList.add('text-yellow-500', 'font-bold');
+            }
+
             document.getElementById('score-display').textContent = `Puntaje: 0`;
             document.getElementById('end-quiz-container').classList.add('hidden');
             document.getElementById('question-container').classList.remove('hidden');
             document.getElementById('final-coin-text').textContent = ''; 
             leaderboardForm.reset();
             document.getElementById('player-name').value = loggedInUser; 
-            document.getElementById('progress-bar').style.width = '0%'; // Reset progress bar
+            document.getElementById('progress-bar').style.width = '0%'; 
             
             displayQuestion();
             showView(VIEWS.PLAY);
         }
 
-        /** Muestra la pregunta actual - MODIFICADO: actualiza barra progreso */
+        /** Muestra la pregunta actual */
         function displayQuestion() {
             const question = currentQuiz.questions[currentQuestionIndex];
             document.getElementById('question-text').textContent = question.question;
@@ -924,7 +956,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             });
         }
 
-        /** Maneja el clic en una respuesta - MODIFICADO: añade sonidos */
+        /** Maneja el clic en una respuesta - MODIFICADO: Lógica Modo Golden */
         function handleAnswerClick(e) {
             const selectedButton = e.target;
             const selectedAnswer = selectedButton.textContent;
@@ -941,27 +973,50 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             if (selectedAnswer === correctAnswer) {
                 score++;
                 document.getElementById('score-display').textContent = `Puntaje: ${score}`;
-                playCorrectSound(); // NUEVO
-            } else {
-                playIncorrectSound(); // NUEVO
-            }
+                playCorrectSound();
+                
+                // Avanzar (común para ambos modos si aciertan)
+                currentQuestionIndex++;
+                setTimeout(() => {
+                    if (currentQuestionIndex < currentQuiz.questions.length) { 
+                        displayQuestion(); 
+                    } 
+                    else { 
+                        endQuiz(); 
+                    }
+                }, 1200);
 
-            currentQuestionIndex++;
-            setTimeout(() => {
-                if (currentQuestionIndex < currentQuiz.questions.length) { 
-                    displayQuestion(); 
-                } 
-                else { 
-                    endQuiz(); 
+            } else {
+                // RESPUESTA INCORRECTA
+                playIncorrectSound();
+                
+                if (currentQuizIsGolden) {
+                    // NUEVO: Fallar en Modo Golden
+                    showErrorModal("¡Has fallado! Reiniciando el Modo Golden...");
+                    setTimeout(() => {
+                        hideErrorModal();
+                        startQuiz(currentQuizDocId, true); // Reiniciar desde el principio
+                    }, 2000);
+                    // No avanzar
+                } else {
+                    // Modo Normal: avanzar
+                    currentQuestionIndex++;
+                    setTimeout(() => {
+                        if (currentQuestionIndex < currentQuiz.questions.length) { 
+                            displayQuestion(); 
+                        } 
+                        else { 
+                            endQuiz(); 
+                        }
+                    }, 1200);
                 }
-            }, 1200); 
+            }
         }
 
-        /** Finaliza el quiz - MODIFICADO: detiene timer */
+        /** Finaliza el quiz - MODIFICADO: Oculta Modo Golden si ya está en él */
         function endQuiz() {
-            clearInterval(quizTimerInterval); // Detener el timer
+            clearInterval(quizTimerInterval); 
             quizTimerInterval = null;
-            // timeElapsed ya tiene el valor final
             
             document.getElementById('question-container').classList.add('hidden');
             const endContainer = document.getElementById('end-quiz-container');
@@ -972,45 +1027,56 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             finalScoreText.textContent = `Tu puntaje final es ${score} de ${currentQuiz.questions.length}.`;
             finalTimeText.textContent = `Tiempo total: ${timeElapsed.toFixed(2)} segundos.`;
             
-            // Actualizar barra de progreso al 100%
             document.getElementById('progress-bar').style.width = '100%';
 
-            // Calcular bonus y recompensas (pero se otorgan al guardar)
+            // Calcular bonus y recompensas
             const timeTaken = timeElapsed;
-            const maxTime = currentQuiz.questions.length * 20; // 20 seg por pregunta
+            const maxTime = currentQuiz.questions.length * 20; 
             const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
             
             let rewardCoins = 0;
             if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
-                rewardCoins = 2; // Se dará al creador
+                rewardCoins = 2; 
             }
             
             let coinMessage = "";
-            if (bonusCoins > 0) {
+            // No dar bonus si es Modo Golden (¡ya es la recompensa!)
+            if (bonusCoins > 0 && !currentQuizIsGolden) {
                 coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
             }
-            if (rewardCoins > 0) {
+            if (rewardCoins > 0 && !currentQuizIsGolden) {
                 coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
             }
+            if (currentQuizIsGolden) {
+                coinMessage = "¡Completaste el Modo Golden!";
+            }
             finalCoinText.textContent = coinMessage.trim();
+            
+            // Ocultar la promo de Modo Golden si YA ESTABAN en Modo Golden
+            document.getElementById('golden-mode-prompt').style.display = currentQuizIsGolden ? 'none' : 'block';
+            
+            // Mostrar formulario de guardar (solo si no es Modo Golden)
+            leaderboardForm.style.display = currentQuizIsGolden ? 'none' : 'flex';
             
             endContainer.classList.remove('hidden');
         }
 
-        /** Guarda el puntaje - MODIFICADO: guarda el tiempo */
+        /** Guarda el puntaje - MODIFICADO: Actualiza el récord en el quiz */
         async function handleSaveScore(e) {
             e.preventDefault();
+            // No guardar puntajes de Modo Golden en el leaderboard normal
+            if (currentQuizIsGolden) return;
+
             const playerName = document.getElementById('player-name').value;
             if (!playerName.trim()) { showErrorModal("Por favor, ingresa un nombre."); return; }
             
             const leaderboardRef = ref(db, `${dbPath}/leaderboards/${currentQuizDocId}/entries`);
             
-            // NUEVO: Guardar el tiempo
             const finalTime = parseFloat(timeElapsed.toFixed(2));
             const newEntry = { 
                 name: playerName, 
                 score: score, 
-                time: finalTime, // Guardar tiempo
+                time: finalTime, 
                 username: loggedInUser, 
                 createdAt: new Date().toISOString() 
             };
@@ -1025,16 +1091,26 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 }
                 entries.push(newEntry);
                 
-                // NUEVO: Ordenar por puntaje y tiempo
                 entries.sort((a, b) => {
-                    if (a.score !== b.score) {
-                        return b.score - a.score;
-                    }
+                    if (a.score !== b.score) { return b.score - a.score; }
                     return (a.time || 999) - (b.time || 999);
                 });
                 
                 const finalEntries = entries.slice(0, 10);
                 await set(leaderboardRef, finalEntries); 
+                
+                // NUEVO: Actualizar el récord en el objeto del quiz
+                const newRecord = finalEntries[0];
+                const currentRecord = currentQuiz.recordHolder || { score: -1, time: 9999 };
+                
+                if (newEntry.score > currentRecord.score || (newEntry.score === currentRecord.score && newEntry.time < currentRecord.time)) {
+                    const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
+                    await set(quizRecordRef, {
+                        name: newEntry.name,
+                        score: newEntry.score,
+                        time: newEntry.time
+                    });
+                }
                 
                 // Otorgar monedas
                 const timeTaken = timeElapsed; 
@@ -1181,7 +1257,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
         
         function showConfirmModal(title, message, onConfirm) {
             confirmTitle.textContent = title;
-            confirmMessage.textContent = message;
+            confirmMessage.innerHTML = message; // Cambiado a innerHTML para el GIF
             
             const newOkBtn = confirmOkBtn.cloneNode(true);
             confirmOkBtn.parentNode.replaceChild(newOkBtn, confirmOkBtn);
@@ -1224,6 +1300,11 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             loginForm.addEventListener('submit', handleLogin);
             registerForm.addEventListener('submit', handleRegister);
             signOutBtn.addEventListener('click', handleSignOut);
+
+            // NUEVO: Listener Modo Golden
+            document.getElementById('start-golden-mode-btn').addEventListener('click', () => {
+                startQuiz(currentQuizDocId, true); // Inicia el quiz en Modo Golden
+            });
 
             // Pestañas de Auth
             tabLogin.addEventListener('click', () => {
@@ -1280,9 +1361,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 ? JSON.parse(__firebase_config) 
                 : firebaseConfigFallback;
 
-            // MODIFICADO: Forzar la ruta base a "everyquiz-app-test" ignorando el __app_id
+            // Forzar la ruta base a "everyquiz-app-test"
             appId = 'everyquiz-app-test';
-            dbPath = sanitizeRtdbPath(appId); // dbPath siempre será "everyquiz-app-test"
+            dbPath = sanitizeRtdbPath(appId); 
 
             // Asignar elementos del modal de confirmación
             confirmModal = document.getElementById('confirm-modal');
