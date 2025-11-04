@@ -285,7 +285,8 @@
                             <span>Volver</span>
                         </button>
                     </div>
-                    <ol id="leaderboard-list" class="list-decimal list-inside space-y-2">
+                    <!-- CORREGIDO: Quitado list-decimal y list-inside -->
+                    <ol id="leaderboard-list" class="list-none space-y-2">
                         <li class="text-gray-500">Cargando leaderboard...</li>
                     </ol>
                 </div>
@@ -301,7 +302,8 @@
                             <span>Volver</span>
                         </button>
                     </div>
-                    <ol id="general-leaderboard-list" class="list-decimal list-inside space-y-2">
+                    <!-- CORREGIDO: Quitado list-decimal y list-inside -->
+                    <ol id="general-leaderboard-list" class="list-none space-y-2">
                         <li class="text-gray-500">Cargando ranking...</li>
                     </ol>
                 </div>
@@ -351,9 +353,9 @@
             getDatabase,
             ref,
             onValue, 
-            get,     
-            set,     
-            push,    
+            get,    
+            set,    
+            push,   
             runTransaction,
             query, 
             orderByChild 
