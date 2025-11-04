@@ -529,25 +529,26 @@
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
 
-                // NUEVO: Lógica para mostrar el récord
-                // CORREGIDO: Typo de 'classs' a 'class'
+                // **** ¡CAMBIO AQUÍ! ****
+                // Modificado para que muestre "1." en el récord de la tarjeta
                 let recordHtml = '<p class="text-sm text-gray-400">Aún no hay récord</p>';
                 if (quiz.recordHolder) {
                     recordHtml = `
-                    <div class="flex items-center gap-2 text-sm text-yellow-600">
-                        <i data-lucide="award" class="w-4 h-4"></i>
-                        <span class="font-bold">${quiz.recordHolder.name}</span>
+                    <div class="flex items-center gap-2 text-sm text-yellow-600 font-bold">
+                        <span>1.</span>
+                        <span>${quiz.recordHolder.name}</span>
                         <span>(${quiz.recordHolder.score} pts, ${(quiz.recordHolder.time || 0).toFixed(2)}s)</span>
                     </div>
                     `;
                 }
+                // **** FIN DEL CAMBIO ****
                 
                 quizCard.innerHTML = `
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
                         <p class="text-sm text-gray-600">${quiz.questions.length} preguntas / Nivel: ${quiz.level || 'General'}</p>
                         <p class="text-sm text-gray-500 mb-2">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
-                        <!-- NUEVO: Récord Holder -->
+                        <!-- Récord Holder (actualizado por el código de arriba) -->
                         <div class="border-t border-gray-100 pt-2">
                             ${recordHtml}
                         </div>
