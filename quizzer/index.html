@@ -1280,8 +1280,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 ? JSON.parse(__firebase_config) 
                 : firebaseConfigFallback;
 
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'everyquiz-app-test';
-            dbPath = sanitizeRtdbPath(appId);
+            // MODIFICADO: Forzar la ruta base a "everyquiz-app-test" ignorando el __app_id
+            appId = 'everyquiz-app-test';
+            dbPath = sanitizeRtdbPath(appId); // dbPath siempre será "everyquiz-app-test"
 
             // Asignar elementos del modal de confirmación
             confirmModal = document.getElementById('confirm-modal');
