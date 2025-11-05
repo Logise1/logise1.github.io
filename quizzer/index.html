@@ -428,6 +428,15 @@
             return path.replace(/[.#$[\]]/g, '_');
         }
 
+        // NUEVA FUNCIÓN: Obtiene la fecha de hoy en formato YYYY-MM-DD
+        function getTodayDateString() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Meses son 0-indexados
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
         async function hashPassword(password) {
             const encoder = new TextEncoder();
             const data = encoder.encode(password);
@@ -492,19 +501,27 @@
             });
         }
 
-        /** Escucha el monedero del usuario (RTDB) */
+        /** Escucha el monedero del usuario (RTDB) - CORREGIDO */
         function setupUserWalletListener(username) {
             if (!dbPath) return;
             if (userWalletListener) {
                 userWalletListener(); 
             }
-            userWalletRef = ref(db, `${dbPath}/wallets/${username}/coins`);
+            
+            // 1. Escuchar el OBJETO de wallet, no solo las monedas
+            userWalletRef = ref(db, `${dbPath}/wallets/${username}`); 
+            
             userWalletListener = onValue(userWalletRef, (snapshot) => {
                 if (snapshot.exists()) {
-                    userCoinBalance = snapshot.val();
+                    // 2. Leer las monedas desde el objeto
+                    userCoinBalance = snapshot.val().coins || 0;
                 } else {
-                    userCoinBalance = 10;
-                    set(userWalletRef, userCoinBalance);
+                    // 3. Si el monedero NO existe, crearlo correctamente
+                    userCoinBalance = 10; 
+                    set(userWalletRef, { 
+                        coins: userCoinBalance,
+                        username: username 
+                    }).catch(e => console.error("Fallo al crear el monedero en el login:", e));
                 }
                 userCoinBalanceEl.textContent = userCoinBalance;
                 userCoinDisplay.classList.remove('hidden');
@@ -712,6 +729,27 @@
                 showErrorModal("Debes iniciar sesión para crear un quiz.");
                 return;
             }
+
+            // **** ¡CAMBIO AQUÍ! (Límite de Creación) ****
+            const today = getTodayDateString();
+            const activityRef = ref(db, `${dbPath}/userActivity/${loggedInUser}`);
+            const activitySnap = await get(activityRef);
+            const activityData = activitySnap.val() || {};
+            
+            const lastCreationDate = activityData.lastQuizCreationDate;
+            let quizzesCreatedToday = activityData.quizzesCreatedToday || 0;
+
+            if (lastCreationDate !== today) {
+                quizzesCreatedToday = 0; // Reiniciar contador
+            }
+
+            if (quizzesCreatedToday >= 2) {
+                showErrorModal("Has alcanzado el límite de 2 quizzes creados por día. Vuelve a intentarlo mañana.");
+                return; // Detener ejecución
+            }
+            // **** FIN DEL CAMBIO ****
+
+
             const title = document.getElementById('quiz-title').value;
             const level = document.getElementById('quiz-level').value;
             const topic = document.getElementById('quiz-topic').value;
@@ -815,6 +853,14 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 
                 const quizzesRef = ref(db, `${dbPath}/quizzes`);
                 await push(quizzesRef, newQuiz); 
+
+                // **** ¡CAMBIO AQUÍ! (Actualizar contador de creación) ****
+                await set(activityRef, {
+                    lastQuizCreationDate: today,
+                    quizzesCreatedToday: quizzesCreatedToday + 1,
+                    quizzesCompletedToday: activityData.quizzesCompletedToday || {} // Preservar datos
+                });
+                // **** FIN DEL CAMBIO ****
 
                 showView(VIEWS.HOME);
                 createQuizForm.reset();
@@ -983,12 +1029,12 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 
                 // Avanzar (común para ambos modos si aciertan)
                 currentQuestionIndex++;
-                setTimeout(() => {
+                setTimeout(async () => { // **** ¡CAMBIO AQUÍ! (async) ****
                     if (currentQuestionIndex < currentQuiz.questions.length) { 
                         displayQuestion(); 
                     } 
                     else { 
-                        endQuiz(); 
+                        await endQuiz(); // **** ¡CAMBIO AQUÍ! (await) ****
                     }
                 }, 1200);
 
@@ -1007,20 +1053,20 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 } else {
                     // Modo Normal: avanzar
                     currentQuestionIndex++;
-                    setTimeout(() => {
+                    setTimeout(async () => { // **** ¡CAMBIO AQUÍ! (async) ****
                         if (currentQuestionIndex < currentQuiz.questions.length) { 
                             displayQuestion(); 
                         } 
                         else { 
-                            endQuiz(); 
+                            await endQuiz(); // **** ¡CAMBIO AQUÍ! (await) ****
                         }
                     }, 1200);
                 }
             }
         }
 
-        /** Finaliza el quiz - MODIFICADO: Oculta Modo Golden si ya está en él */
-        function endQuiz() {
+        /** Finaliza el quiz - MODIFICADO: Lógica de recompensa diaria */
+        async function endQuiz() { // **** ¡CAMBIO AQUÍ! (async) ****
             clearInterval(quizTimerInterval); 
             quizTimerInterval = null;
             
@@ -1035,28 +1081,69 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             
             document.getElementById('progress-bar').style.width = '100%';
 
-            // Calcular bonus y recompensas
-            const timeTaken = timeElapsed;
-            const maxTime = currentQuiz.questions.length * 20; 
-            const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
-            
+            // **** ¡CAMBIO AQUÍ! (Lógica de recompensa diaria) ****
+            const today = getTodayDateString();
+            const activityRef = ref(db, `${dbPath}/userActivity/${loggedInUser}`);
+            const activitySnap = await get(activityRef);
+            const activityData = activitySnap.val() || {};
+            const completedToday = activityData.quizzesCompletedToday || {};
+            const quizCompletedDate = completedToday[currentQuizDocId];
+
+            let canReceiveCoins = false;
+            if (currentQuizIsGolden) {
+                canReceiveCoins = false; // Sin monedas por Modo Golden (la recompensa es el honor)
+            } else if (quizCompletedDate !== today) {
+                canReceiveCoins = true;
+                // Marcar como completado hoy *inmediatamente*
+                completedToday[currentQuizDocId] = today;
+                await set(activityRef, {
+                    lastQuizCreationDate: activityData.lastQuizCreationDate || null,
+                    quizzesCreatedToday: activityData.quizzesCreatedToday || 0,
+                    quizzesCompletedToday: completedToday 
+                });
+            }
+
+            let bonusCoins = 0;
             let rewardCoins = 0;
-            if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
-                rewardCoins = 2; 
-            }
-            
             let coinMessage = "";
-            // No dar bonus si es Modo Golden (¡ya es la recompensa!)
-            if (bonusCoins > 0 && !currentQuizIsGolden) {
-                coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
-            }
-            if (rewardCoins > 0 && !currentQuizIsGolden) {
-                coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
-            }
+
             if (currentQuizIsGolden) {
                 coinMessage = "¡Completaste el Modo Golden!";
+            } else if (canReceiveCoins) {
+                // Calcular bonus y recompensas SÓLO si es elegible
+                const timeTaken = timeElapsed;
+                const maxTime = currentQuiz.questions.length * 20; 
+                bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
+                
+                if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
+                    rewardCoins = 2; 
+                }
+
+                if (bonusCoins > 0) {
+                    coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
+                }
+                if (rewardCoins > 0) {
+                    coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
+                }
+                if (bonusCoins === 0 && rewardCoins === 0) {
+                    coinMessage = "¡Quiz completado!"; // Mensaje neutral si no hay monedas
+                }
+
+                // Otorgar las monedas aquí mismo
+                if (bonusCoins > 0) {
+                    await awardCoins(loggedInUser, bonusCoins);
+                }
+                if (rewardCoins > 0) {
+                    await awardCoins(currentQuiz.ownerUsername, rewardCoins);
+                }
+            } else {
+                // Ya ha jugado este quiz hoy
+                coinMessage = "Ya has recibido la recompensa por este quiz hoy.";
             }
+            
             finalCoinText.textContent = coinMessage.trim();
+            // **** FIN DEL CAMBIO ****
+
             
             // Ocultar la promo de Modo Golden si YA ESTABAN en Modo Golden
             document.getElementById('golden-mode-prompt').style.display = currentQuizIsGolden ? 'none' : 'block';
@@ -1067,7 +1154,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             endContainer.classList.remove('hidden');
         }
 
-        /** Guarda el puntaje - MODIFICADO: Actualiza el récord en el quiz */
+        /** Guarda el puntaje - MODIFICADO: Ya no da monedas */
         async function handleSaveScore(e) {
             e.preventDefault();
             // No guardar puntajes de Modo Golden en el leaderboard normal
@@ -1106,10 +1193,8 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 const finalEntries = entries.slice(0, 10);
                 await set(leaderboardRef, finalEntries); 
                 
-                // **** ¡CAMBIO AQUÍ! ****
+                // **** ¡CAMBIO DE LA VEZ PASADA (SE MANTIENE)! ****
                 // Hacemos que el campo 'recordHolder' sea siempre fiable.
-                // En lugar de comparar con el récord antiguo, simplemente
-                // establecemos el 'recordHolder' al mejor puntaje actual (finalEntries[0]).
                 
                 const bestEntry = finalEntries[0];
                 const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
@@ -1130,22 +1215,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 // **** FIN DEL CAMBIO ****
 
                 
-                // Otorgar monedas
-                const timeTaken = timeElapsed; 
-                const maxTime = currentQuiz.questions.length * 20;
-                const bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
-                
-                let rewardCoins = 0;
-                if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
-                    rewardCoins = 2;
-                }
-                
-                if (bonusCoins > 0) {
-                    await awardCoins(loggedInUser, bonusCoins);
-                }
-                if (rewardCoins > 0) {
-                    await awardCoins(currentQuiz.ownerUsername, rewardCoins);
-                }
+                // **** ¡CAMBIO AQUÍ! (Lógica de monedas eliminada) ****
+                // La lógica de otorgar monedas ahora está en endQuiz()
+                // **** FIN DEL CAMBIO ****
                 
                 renderLeaderboard(currentQuizDocId); 
             } catch (error) {
