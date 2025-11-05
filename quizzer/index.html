@@ -617,6 +617,8 @@
                 if (entries.length === 0) {
                     list.innerHTML = `<li class="text-gray-500">Aún no hay puntajes para este quiz.</li>`;
                 } else {
+                    // La data ya debería estar filtrada y ordenada por handleSaveScore,
+                    // pero por seguridad, la re-ordenamos aquí al renderizar.
                     entries.sort((a, b) => {
                         if (a.score !== b.score) { return b.score - a.score; }
                         return (a.time || 999) - (b.time || 999); 
@@ -855,8 +857,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 await push(quizzesRef, newQuiz); 
 
                 // **** ¡CAMBIO AQUÍ! (Actualizar contador de creación) ****
+                // Preservar el campo 'lastQuizCompletionDate' si existe
                 await set(activityRef, {
-                    ...activityData, // Preservar datos de quizzes completados
+                    ...activityData, // Preserva 'lastQuizCompletionDate' y 'quizzesCompletedToday' (legacy)
                     lastQuizCreationDate: today,
                     quizzesCreatedToday: quizzesCreatedToday + 1
                 });
@@ -1065,7 +1068,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             }
         }
 
-        // **** ¡CAMBIO GRANDE AQUÍ! (Lógica de recompensa diaria con Transacción) ****
+        // **** ¡CAMBIO GRANDE AQUÍ! (Reglas de Recompensa "Todo o Nada" y "Global Diaria") ****
         /** Finaliza el quiz - MODIFICADO: Lógica de recompensa diaria */
         async function endQuiz() { 
             clearInterval(quizTimerInterval); 
@@ -1088,28 +1091,40 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             let bonusCoins = 0;
             let rewardCoins = 0;
             let coinMessage = "";
+            
+            // Regla 1: ¿Puntaje perfecto?
+            const isPerfectScore = (score === currentQuiz.questions.length);
 
             if (currentQuizIsGolden) {
                 coinMessage = "¡Completaste el Modo Golden!";
             } else {
                 try {
-                    // Usar una transacción para leer y escribir de forma atómica
+                    // Regla 2: Usar transacción para el límite GLOBAL diario
                     const transactionResult = await runTransaction(activityRef, (currentData) => {
-                        // Si currentData es null, inicializarlo
                         const data = currentData || { 
                             quizzesCreatedToday: 0, 
                             lastQuizCreationDate: null, 
-                            quizzesCompletedToday: {} 
+                            lastQuizCompletionDate: null // <--- CAMPO GLOBAL
                         };
                         
-                        const completedToday = data.quizzesCompletedToday || {};
-                        const quizCompletedDate = completedToday[currentQuizDocId];
+                        // Comprobar si ya ha completado CUALQUIER quiz hoy
+                        const lastCompletion = data.lastQuizCompletionDate;
 
-                        if (quizCompletedDate !== today) {
-                            // 1. Es la primera vez que juega HOY
-                            completedToday[currentQuizDocId] = today; // Marcar como completado
-                            
-                            // Calcular monedas (pero no otorgarlas DENTRO de la transacción)
+                        if (lastCompletion !== today) {
+                            // Es la primera vez que juega HOY
+                            data.lastQuizCompletionDate = today; // Marcar como completado
+                            return data; // Guardar y confirmar
+                        } else {
+                            // Ya ha jugado hoy. Abortar.
+                            return undefined; 
+                        }
+                    });
+
+                    if (transactionResult.committed) {
+                        // La transacción se completó = Era su primer quiz del día.
+                        // Ahora aplicamos Regla 1: ¿Fue perfecto?
+                        if (isPerfectScore) {
+                            // ¡Sí! Calcular y dar monedas.
                             const timeTaken = timeElapsed;
                             const maxTime = currentQuiz.questions.length * 20; 
                             bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
@@ -1117,43 +1132,30 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                             if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
                                 rewardCoins = 2; 
                             }
-                            
-                            // Devolver los datos actualizados para que se guarden
-                            return {
-                                ...data,
-                                quizzesCompletedToday: completedToday
-                            };
-                        } else {
-                            // 2. Ya ha jugado hoy. Abortar la transacción.
-                            return undefined; 
-                        }
-                    });
 
-                    if (transactionResult.committed) {
-                        // La transacción se completó (se guardaron los datos)
-                        // Esto significa que fue la primera jugada del día.
-                        
-                        // Ahora SÍ otorgamos las monedas (en operaciones separadas)
-                        if (bonusCoins > 0) {
-                            coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
-                            await awardCoins(loggedInUser, bonusCoins); 
-                        }
-                        if (rewardCoins > 0) {
-                            coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
-                            await awardCoins(currentQuiz.ownerUsername, rewardCoins);
-                        }
-                        if (bonusCoins === 0 && rewardCoins === 0) {
-                            coinMessage = "¡Quiz completado!";
+                            if (bonusCoins > 0) {
+                                coinMessage += `¡Puntaje Perfecto! Ganaste ${bonusCoins} monedas por rapidez. `;
+                                await awardCoins(loggedInUser, bonusCoins); 
+                            }
+                            if (rewardCoins > 0) {
+                                coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas).`;
+                                await awardCoins(currentQuiz.ownerUsername, rewardCoins);
+                            }
+                            if (bonusCoins === 0 && rewardCoins === 0) {
+                                coinMessage = "¡Puntaje Perfecto! (Recompensa diaria reclamada)";
+                            }
+                        } else {
+                            // Fue su primer quiz, pero no fue perfecto.
+                            coinMessage = "¡Quiz completado! (Necesitas un 100% para la recompensa diaria)";
                         }
                     } else {
                         // La transacción se abortó (el usuario ya había jugado hoy)
-                        coinMessage = "Ya has recibido la recompensa por este quiz hoy.";
+                        coinMessage = "Ya has recibido la recompensa diaria por completar un quiz hoy.";
                     }
 
                 } catch (error) {
                     console.error("Error en la transacción de actividad diaria:", error);
                     coinMessage = "Error al verificar la recompensa.";
-                    // Aún si falla la transacción de recompensa, el quiz termina.
                 }
             }
             
@@ -1170,6 +1172,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             endContainer.classList.remove('hidden');
         }
 
+        // **** ¡CAMBIO GRANDE AQUÍ! (Lógica de entrada única por usuario) ****
         /** Guarda el puntaje - MODIFICADO: Ya no da monedas */
         async function handleSaveScore(e) {
             e.preventDefault();
@@ -1186,7 +1189,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 name: playerName, 
                 score: score, 
                 time: finalTime, 
-                username: loggedInUser, 
+                username: loggedInUser, // El identificador único
                 createdAt: new Date().toISOString() 
             };
             
@@ -1198,7 +1201,32 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     if (Array.isArray(data)) { entries = data; }
                     else if (typeof data === 'object' && data !== null) { entries = Object.values(data); }
                 }
-                entries.push(newEntry);
+
+                // NUEVA LÓGICA: Filtrar para entrada única
+                let existingEntryIndex = -1;
+                if (entries.length > 0) {
+                    existingEntryIndex = entries.findIndex(entry => entry.username === newEntry.username);
+                }
+
+                if (existingEntryIndex !== -1) {
+                    // El usuario ya existe, comprobar si el nuevo puntaje es mejor
+                    const existingEntry = entries[existingEntryIndex];
+                    let isNewScoreBetter = false;
+
+                    if (newEntry.score > existingEntry.score) {
+                        isNewScoreBetter = true;
+                    } else if (newEntry.score === existingEntry.score && newEntry.time < (existingEntry.time || 999)) {
+                        isNewScoreBetter = true;
+                    }
+
+                    if (isNewScoreBetter) {
+                        entries[existingEntryIndex] = newEntry; // Reemplazar el puntaje antiguo
+                    }
+                    // Si no es mejor, no hacemos nada (descartamos el newEntry)
+                } else {
+                    // Es un usuario nuevo en este leaderboard
+                    entries.push(newEntry);
+                }
                 
                 // Esta es tu lógica: Primero puntos (descendente), luego tiempo (ascendente)
                 entries.sort((a, b) => {
@@ -1206,7 +1234,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     return (a.time || 999) - (b.time || 999);
                 });
                 
-                const finalEntries = entries.slice(0, 10);
+                const finalEntries = entries.slice(0, 10); // Guardar solo el Top 10
                 await set(leaderboardRef, finalEntries); 
                 
                 // **** ¡CAMBIO DE LA VEZ PASADA (SE MANTIENE)! ****
