@@ -252,7 +252,7 @@
                         <!-- Formulario de Guardar Puntaje -->
                         <form id="leaderboard-form" class="flex flex-col sm:flex-row gap-2 justify-center">
                             <input type="text" id="player-name" placeholder="Tu nombre para el ranking" required class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300">
-                            <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
+                            <button type="submit" class="flex justify-center items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-7V00 transition-colors">
                                 <i data-lucide="save"></i>
                                 <span>Guardar Puntaje</span>
                             </button>
@@ -856,9 +856,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
                 // **** ¡CAMBIO AQUÍ! (Actualizar contador de creación) ****
                 await set(activityRef, {
+                    ...activityData, // Preservar datos de quizzes completados
                     lastQuizCreationDate: today,
-                    quizzesCreatedToday: quizzesCreatedToday + 1,
-                    quizzesCompletedToday: activityData.quizzesCompletedToday || {} // Preservar datos
+                    quizzesCreatedToday: quizzesCreatedToday + 1
                 });
                 // **** FIN DEL CAMBIO ****
 
@@ -1065,8 +1065,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             }
         }
 
+        // **** ¡CAMBIO GRANDE AQUÍ! (Lógica de recompensa diaria con Transacción) ****
         /** Finaliza el quiz - MODIFICADO: Lógica de recompensa diaria */
-        async function endQuiz() { // **** ¡CAMBIO AQUÍ! (async) ****
+        async function endQuiz() { 
             clearInterval(quizTimerInterval); 
             quizTimerInterval = null;
             
@@ -1081,64 +1082,79 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             
             document.getElementById('progress-bar').style.width = '100%';
 
-            // **** ¡CAMBIO AQUÍ! (Lógica de recompensa diaria) ****
             const today = getTodayDateString();
             const activityRef = ref(db, `${dbPath}/userActivity/${loggedInUser}`);
-            const activitySnap = await get(activityRef);
-            const activityData = activitySnap.val() || {};
-            const completedToday = activityData.quizzesCompletedToday || {};
-            const quizCompletedDate = completedToday[currentQuizDocId];
-
-            let canReceiveCoins = false;
-            if (currentQuizIsGolden) {
-                canReceiveCoins = false; // Sin monedas por Modo Golden (la recompensa es el honor)
-            } else if (quizCompletedDate !== today) {
-                canReceiveCoins = true;
-                // Marcar como completado hoy *inmediatamente*
-                completedToday[currentQuizDocId] = today;
-                await set(activityRef, {
-                    lastQuizCreationDate: activityData.lastQuizCreationDate || null,
-                    quizzesCreatedToday: activityData.quizzesCreatedToday || 0,
-                    quizzesCompletedToday: completedToday 
-                });
-            }
-
+            
             let bonusCoins = 0;
             let rewardCoins = 0;
             let coinMessage = "";
 
             if (currentQuizIsGolden) {
                 coinMessage = "¡Completaste el Modo Golden!";
-            } else if (canReceiveCoins) {
-                // Calcular bonus y recompensas SÓLO si es elegible
-                const timeTaken = timeElapsed;
-                const maxTime = currentQuiz.questions.length * 20; 
-                bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
-                
-                if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
-                    rewardCoins = 2; 
-                }
-
-                if (bonusCoins > 0) {
-                    coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
-                }
-                if (rewardCoins > 0) {
-                    coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
-                }
-                if (bonusCoins === 0 && rewardCoins === 0) {
-                    coinMessage = "¡Quiz completado!"; // Mensaje neutral si no hay monedas
-                }
-
-                // Otorgar las monedas aquí mismo
-                if (bonusCoins > 0) {
-                    await awardCoins(loggedInUser, bonusCoins);
-                }
-                if (rewardCoins > 0) {
-                    await awardCoins(currentQuiz.ownerUsername, rewardCoins);
-                }
             } else {
-                // Ya ha jugado este quiz hoy
-                coinMessage = "Ya has recibido la recompensa por este quiz hoy.";
+                try {
+                    // Usar una transacción para leer y escribir de forma atómica
+                    const transactionResult = await runTransaction(activityRef, (currentData) => {
+                        // Si currentData es null, inicializarlo
+                        const data = currentData || { 
+                            quizzesCreatedToday: 0, 
+                            lastQuizCreationDate: null, 
+                            quizzesCompletedToday: {} 
+                        };
+                        
+                        const completedToday = data.quizzesCompletedToday || {};
+                        const quizCompletedDate = completedToday[currentQuizDocId];
+
+                        if (quizCompletedDate !== today) {
+                            // 1. Es la primera vez que juega HOY
+                            completedToday[currentQuizDocId] = today; // Marcar como completado
+                            
+                            // Calcular monedas (pero no otorgarlas DENTRO de la transacción)
+                            const timeTaken = timeElapsed;
+                            const maxTime = currentQuiz.questions.length * 20; 
+                            bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
+                            
+                            if (currentQuiz.ownerUsername !== loggedInUser && currentQuiz.quizType === 'free') {
+                                rewardCoins = 2; 
+                            }
+                            
+                            // Devolver los datos actualizados para que se guarden
+                            return {
+                                ...data,
+                                quizzesCompletedToday: completedToday
+                            };
+                        } else {
+                            // 2. Ya ha jugado hoy. Abortar la transacción.
+                            return undefined; 
+                        }
+                    });
+
+                    if (transactionResult.committed) {
+                        // La transacción se completó (se guardaron los datos)
+                        // Esto significa que fue la primera jugada del día.
+                        
+                        // Ahora SÍ otorgamos las monedas (en operaciones separadas)
+                        if (bonusCoins > 0) {
+                            coinMessage += `¡Ganaste ${bonusCoins} monedas por rapidez! `;
+                            await awardCoins(loggedInUser, bonusCoins); 
+                        }
+                        if (rewardCoins > 0) {
+                            coinMessage += `(${currentQuiz.ownerUsername} ganó ${rewardCoins} monedas por jugar su quiz).`;
+                            await awardCoins(currentQuiz.ownerUsername, rewardCoins);
+                        }
+                        if (bonusCoins === 0 && rewardCoins === 0) {
+                            coinMessage = "¡Quiz completado!";
+                        }
+                    } else {
+                        // La transacción se abortó (el usuario ya había jugado hoy)
+                        coinMessage = "Ya has recibido la recompensa por este quiz hoy.";
+                    }
+
+                } catch (error) {
+                    console.error("Error en la transacción de actividad diaria:", error);
+                    coinMessage = "Error al verificar la recompensa.";
+                    // Aún si falla la transacción de recompensa, el quiz termina.
+                }
             }
             
             finalCoinText.textContent = coinMessage.trim();
