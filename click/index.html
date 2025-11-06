@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aventura de Clics (Online)</title> <!-- Título actualizado -->
+    <title>Aventura de Clics (Online)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -27,6 +27,15 @@
         button {
             font-family: 'Quicksand', sans-serif;
             font-weight: 700;
+        }
+        
+        /* Ocultar scrollbar pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE y Edge */
+            scrollbar-width: none;  /* Firefox */
         }
 
         /* Contenedor principal del juego */
@@ -61,20 +70,19 @@
         /* Área de estadísticas (Puntos) */
         .stats {
             background-color: #ffffff;
-            padding: 20px 25px; /* Menos padding vertical */
+            padding: 20px 25px;
             text-align: center;
             border-bottom: 1px solid #eef2f1;
             transition: background-color 0.3s ease;
         }
         #score {
-            font-size: 3.5rem; /* Un poco más pequeño para hacer espacio */
+            font-size: 3.5rem;
             font-weight: 700;
             margin: 0;
             color: #1a1a1a;
             transition: color 0.3s ease;
         }
         
-        /* --- NUEVO: Nivel y Barra de XP --- */
         #level-display {
             font-size: 1rem;
             margin: 8px 0 0;
@@ -101,7 +109,6 @@
             margin: 5px 0 0;
             color: #777;
         }
-        /* --- FIN NUEVO --- */
 
         /* Área principal para hacer clic */
         .clicker-area {
@@ -151,7 +158,6 @@
             background-color: #ffffff;
         }
         
-        /* --- NUEVO: Pestañas (Tabs) --- */
         .tab-buttons {
             display: flex;
             border-bottom: 1px solid #eef2f1;
@@ -184,7 +190,6 @@
         .tab-content.active {
             display: block; /* Visible */
         }
-        /* --- FIN NUEVO --- */
 
         .store-item {
             display: flex;
@@ -251,17 +256,25 @@
             100% { opacity: 0; transform: translateY(-70px) scale(1); }
         }
 
-        /* --- NUEVO: Estilos de Clasificación (Leaderboard) --- */
+        /* --- Estilos de Clasificación (Leaderboard) --- */
         #leaderboard-content {
             padding: 10px;
-            display: flex; /* Usamos flex para organizar los contenedores */
+            display: flex;
             flex-direction: column;
             height: 100%;
+            gap: 15px;
         }
+        
+        #leaderboard-content h2 {
+            text-align: center;
+            margin: 5px 0 10px;
+            color: #333;
+        }
+
         #leaderboard-list-container {
-            flex-shrink: 1; /* Permite que la lista se encoja si es necesario */
+            flex-grow: 1; /* Ocupa el espacio disponible */
             overflow-y: auto; /* Scroll solo para la lista */
-            height: 50%; /* Ocupa una porción del espacio */
+            min-height: 150px; /* Altura mínima por si acaso */
         }
         #leaderboard-list {
             list-style: none;
@@ -271,13 +284,34 @@
         #leaderboard-list li {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             padding: 12px 10px;
             border-bottom: 1px solid #eef2f1;
             font-size: 1.1rem;
         }
-        #leaderboard-list li:nth-child(1) { font-weight: 700; color: #d4af37; } /* Oro */
-        #leaderboard-list li:nth-child(2) { font-weight: 700; color: #c0c0c0; } /* Plata */
-        #leaderboard-list li:nth-child(3) { font-weight: 700; color: #cd7f32; } /* Bronce */
+        /* Estilos para los 3 primeros */
+        #leaderboard-list li:nth-child(1) .rank { background-color: #d4af37; color: white; }
+        #leaderboard-list li:nth-child(2) .rank { background-color: #c0c0c0; color: white; }
+        #leaderboard-list li:nth-child(3) .rank { background-color: #cd7f32; color: white; }
+        
+        /* Resaltar al jugador actual */
+        #leaderboard-list li.current-user {
+            background-color: #e6f7ff;
+            border-left: 3px solid #007bff;
+        }
+
+        #leaderboard-list .rank {
+            font-weight: 700;
+            color: #555;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
         
         #leaderboard-list .player-name {
             font-weight: 700;
@@ -285,14 +319,37 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 60%;
+            flex-grow: 1;
         }
         #leaderboard-list .player-score {
             font-weight: 500;
             color: #333;
         }
+        
+        /* Spinner de carga */
+        #leaderboard-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            flex-direction: column;
+            gap: 10px;
+            color: #777;
+        }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
         .leaderboard-actions {
-            margin-top: 20px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -318,7 +375,7 @@
         }
         .leaderboard-actions button:hover { background-color: #0069d9; }
         
-        /* --- NUEVO: Estilos para contenedores Auth/Score --- */
+        /* --- Estilos para contenedores Auth/Score --- */
         #auth-section, #score-section {
             display: flex;
             flex-direction: column;
@@ -351,7 +408,87 @@
         #logout-btn:hover {
             background-color: #5a6268;
         }
-        /* --- FIN NUEVO --- */
+        
+        /* --- Estilos del Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .modal-box {
+            background-color: #ffffff;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            transform: scale(0.9);
+            animation: zoomIn 0.3s 0.1s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            to { transform: scale(1); }
+        }
+
+        .modal-box h2 {
+            margin: 0 0 10px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .modal-box p {
+            margin: 5px 0 20px;
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .modal-buttons button {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        
+        #modal-btn-later {
+            background-color: #6c757d;
+            color: white;
+        }
+        #modal-btn-later:hover {
+            background-color: #5a6268;
+        }
+        
+        #modal-btn-go {
+            background-color: #007bff;
+            color: white;
+        }
+        #modal-btn-go:hover {
+            background-color: #0069d9;
+        }
 
     </style>
 </head>
@@ -362,12 +499,10 @@
         <div class="left-panel">
             <div class="stats">
                 <h1 id="score">0</h1>
-                <!-- NUEVO: Barra de XP y Nivel -->
                 <p id="level-display">Nivel 1 (x1.00)</p>
                 <div class="xp-bar-container">
                     <div id="xp-bar"></div>
                 </div>
-                <!-- FIN NUEVO -->
                 <p id="cpc">1 Puntos por clic</p>
                 <p id="pps">0 Puntos por segundo</p>
             </div>
@@ -378,28 +513,34 @@
 
         <!-- Panel Derecho (Tienda) -->
         <div class="store-panel">
-            <!-- NUEVO: Pestañas -->
+            <!-- Pestañas -->
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="store">Mejoras</button>
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
             </div>
             
             <!-- Contenido de Pestaña: Mejoras -->
-            <div id="store" class="tab-content active">
+            <div id="store" class="tab-content active no-scrollbar">
                 <div id="store-items-container">
                     <!-- Los items se generarán aquí dinámicamente -->
                 </div>
             </div>
 
             <!-- Contenido de Pestaña: Clasificación -->
-            <div id="leaderboard" class="tab-content">
+            <div id="leaderboard" class="tab-content no-scrollbar">
                 <div id="leaderboard-content">
                     
+                    <h2>Clasificación Mundial</h2>
+                    
                     <!-- Contenedor de la Lista (para scroll) -->
-                    <div id="leaderboard-list-container">
-                        <ol id="leaderboard-list">
+                    <div id="leaderboard-list-container" class="no-scrollbar">
+                        <!-- Estado de carga -->
+                        <div id="leaderboard-status">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <ol id="leaderboard-list" style="display: none;">
                             <!-- La lista se genera con JS -->
-                            <li>Cargando...</li>
                         </ol>
                     </div>
                     
@@ -420,7 +561,7 @@
                         <!-- Sección de Puntuación (Oculta si NO estás logueado) -->
                         <div id="score-section" style="display: none;">
                             <p id="logged-in-as">Logueado como: </p>
-                            <button id="save-score-btn">Guardar Puntuación</button>
+                            <button id="save-score-btn">Guardar Puntuación Manual</button>
                             <button id="logout-btn">Cerrar Sesión</button>
                             <p id="save-status"></p>
                         </div>
@@ -428,12 +569,25 @@
                     </div>
                 </div>
             </div>
-            <!-- FIN NUEVO -->
+        </div>
+    </div>
+    
+    <!-- Modal de Iniciar Sesión -->
+    <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¡Únete a la Clasificación!</h2>
+            <p>¡Has alcanzado los 2,000 clics!</p>
+            <p>Para guardar tu puntuación y competir, inicia sesión o regístrate en la pestaña "Clasificación".</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-later">Más Tarde</button>
+                <button id="modal-btn-go">Ir Ahora</button>
+            </div>
         </div>
     </div>
 
+
     <!-- 
-      NUEVO: Importar Firebase (SDK v9 modular)
+      Importar Firebase (SDK v9 modular)
       Usamos type="module" para poder usar 'import'
     -->
     <script type="module">
@@ -446,7 +600,16 @@
             signInWithEmailAndPassword,
             signOut
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getDatabase, ref, set, query, orderByChild, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { 
+            getDatabase, 
+            ref, 
+            set, 
+            query, 
+            orderByChild, 
+            limitToLast, 
+            onValue,
+            get // NUEVO: Importar 'get' para leer datos una vez
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         // Configuración de Firebase (Suministrada por el usuario)
         const firebaseConfig = {
@@ -464,8 +627,10 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
+        
         let userId = null;
         let currentUsername = null; // Guardará el nombre de usuario
+        let autoSaveInterval = null; // Para el intervalo de auto-guardado
 
 
         // --- CONFIGURACIÓN DE MEJORAS ---
@@ -496,21 +661,39 @@
         let pps = 0;
         const gameState = { upgrades: {} };
 
-        // --- NUEVO: Estado de Nivel ---
+        // Estado de Nivel
         let level = 1;
         let xp = 0;
         let xpToNextLevel = 100;
-        let levelMultiplier = 1.0; // Multiplicador de ganancias
-        let totalScore = 0; // Para la clasificación
+        let levelMultiplier = 1.0;
+        let totalScore = 0;
+        
+        // Contador de Clics
+        let totalClicks = 0;
+        let modalShown = false;
 
-        // Inicializar el estado de las mejoras
-        Object.keys(UPGRADES_CONFIG).forEach(key => {
-            gameState.upgrades[key] = {
-                level: 0,
-                cost: UPGRADES_CONFIG[key].baseCost
-            };
-        });
-
+        // Inicializar el estado de las mejoras (función de reseteo)
+        function resetGameState() {
+            score = 0;
+            totalScore = 0;
+            level = 1;
+            xp = 0;
+            totalClicks = 0;
+            modalShown = false;
+            
+            // Reiniciar el estado de las mejoras
+            Object.keys(UPGRADES_CONFIG).forEach(key => {
+                gameState.upgrades[key] = {
+                    level: 0,
+                    cost: UPGRADES_CONFIG[key].baseCost
+                };
+            });
+            
+            recalculateStats(); // Recalcula pps y clickPower
+            recalculateLevelStats(); // Recalcula stats de nivel
+            updateUI(); // Actualiza la UI
+        }
+        
         // --- REFERENCIAS DEL DOM ---
         const scoreDisplay = document.getElementById('score');
         const ppsDisplay = document.getElementById('pps');
@@ -518,13 +701,15 @@
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
         const storeContainer = document.getElementById('store-items-container');
-        // Nuevas refs
+        
         const levelDisplay = document.getElementById('level-display');
         const xpBar = document.getElementById('xp-bar');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
+        
         const leaderboardList = document.getElementById('leaderboard-list');
-        // --- NUEVAS REFERENCIAS DE AUTH ---
+        const leaderboardStatus = document.getElementById('leaderboard-status');
+        
         const authSection = document.getElementById('auth-section');
         const scoreSection = document.getElementById('score-section');
         const usernameInput = document.getElementById('username-input');
@@ -537,7 +722,10 @@
         const saveScoreBtn = document.getElementById('save-score-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const saveStatus = document.getElementById('save-status');
-        // --- FIN NUEVAS REFERENCIAS ---
+        
+        const loginModalOverlay = document.getElementById('login-modal-overlay');
+        const modalBtnLater = document.getElementById('modal-btn-later');
+        const modalBtnGo = document.getElementById('modal-btn-go');
 
         // --- FUNCIONES DEL JUEGO ---
 
@@ -545,16 +733,20 @@
          * Se ejecuta al hacer clic en el botón principal.
          */
         function handleManualClick(event) {
-            // XP se gana del poder base
             const baseGain = clickPower; 
-            // Puntuación se gana con el multiplicador de nivel
             const earnedScore = baseGain * levelMultiplier; 
             
             score += earnedScore;
-            gainXP(baseGain); // XP es 1 a 1 con el poder base
+            gainXP(baseGain);
             
             showClickVisual(event, earnedScore);
             updateUI();
+
+            totalClicks++;
+            if (totalClicks === 2000 && !modalShown) {
+                showLoginModal();
+                modalShown = true;
+            }
         }
 
         /**
@@ -562,16 +754,24 @@
          */
         function gainXP(amount) {
             xp += amount;
-            totalScore += amount * levelMultiplier; // Total score para el leaderboard
+            totalScore += amount * levelMultiplier;
             
             while (xp >= xpToNextLevel) {
                 xp -= xpToNextLevel;
                 level++;
-                // Curva de nivel: 50% más difícil cada vez
-                xpToNextLevel = Math.floor(100 * Math.pow(1.5, level - 1)); 
-                // Multiplicador: +5% por nivel (sobre el base)
-                levelMultiplier = 1 + (level - 1) * 0.05; 
+                recalculateLevelStats(); // Recalcular en lugar de duplicar lógica
             }
+        }
+        
+        /**
+         * NUEVO: Recalcula los stats de nivel (XP para el sig. y multiplicador)
+         */
+        function recalculateLevelStats() {
+            // Nivel 1: 100 * 5^0 = 100
+            // Nivel 2: 100 * 5^1 = 500
+            // Nivel 3: 100 * 5^2 = 2500
+            xpToNextLevel = 100 * Math.pow(5, level - 1); 
+            levelMultiplier = 1 + (level - 1) * 0.05;
         }
 
         /**
@@ -636,7 +836,6 @@
          * El bucle principal del juego, se ejecuta cada segundo.
          */
         function gameLoop() {
-            // Ganancias por segundo
             const baseGain = pps;
             const earnedScore = baseGain * levelMultiplier;
             
@@ -653,17 +852,13 @@
          * Actualiza todos los elementos de la interfaz de usuario.
          */
         function updateUI() {
-            // Actualizar puntuación, PPS y CPC
             scoreDisplay.textContent = Math.floor(score);
-            // Mostrar ganancias multiplicadas
             ppsDisplay.textContent = `${(pps * levelMultiplier).toFixed(1)} Puntos por segundo`;
             cpcDisplay.textContent = `${(clickPower * levelMultiplier).toFixed(1)} Puntos por clic`;
 
-            // Actualizar Nivel y XP
             levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
             xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
 
-            // Actualizar todos los items de la tienda
             Object.keys(UPGRADES_CONFIG).forEach(key => {
                 const state = gameState.upgrades[key];
                 
@@ -708,32 +903,34 @@
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
+                storeContainer.appendChild(button); // Error del pasado, corregido
                 storeContainer.appendChild(itemDiv);
             });
         }
         
-        // --- NUEVO: FUNCIONES DE FIREBASE Y CLASIFICACIÓN ---
+        // --- FUNCIONES DE FIREBASE Y CLASIFICACIÓN ---
 
         /**
-         * Inicia sesión anónimamente y carga la clasificación.
+         * Inicia Firebase, maneja el estado de Auth y carga la clasificación.
          */
         function initializeFirebase() {
-            // Ya no iniciamos sesión anónimamente
-            // signInAnonymously(auth).catch((error) => {
-            //     console.error("Error al iniciar sesión anónimo:", error);
-            // });
-
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => { // Convertido a async
                 if (user) {
                     // Usuario está logueado
                     userId = user.uid;
-                    // Extraer el nombre de usuario del email (el "truco")
                     currentUsername = user.email.split('@')[0];
                     
                     authSection.style.display = 'none';
                     scoreSection.style.display = 'flex';
                     loggedInAs.textContent = `Logueado como: ${currentUsername}`;
                     
+                    // --- NUEVO: Cargar estado del juego ---
+                    await loadGameState();
+                    
+                    // --- NUEVO: Iniciar auto-guardado ---
+                    if (autoSaveInterval) clearInterval(autoSaveInterval); // Limpiar por si acaso
+                    autoSaveInterval = setInterval(() => saveScore(false), 15000); // Guardar cada 15s
+
                 } else {
                     // Usuario no está logueado
                     userId = null;
@@ -742,12 +939,75 @@
                     authSection.style.display = 'flex';
                     scoreSection.style.display = 'none';
                     loggedInAs.textContent = '';
+                    
+                    // --- NUEVO: Parar auto-guardado ---
+                    if (autoSaveInterval) clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                    
+                    // --- NUEVO: Resetear el juego a cero ---
+                    resetGameState();
                 }
             });
 
-            // Cargamos la clasificación independientemente de si está logueado
+            // Cargamos la clasificación (esto es público)
             loadLeaderboard();
         }
+        
+        
+        /**
+         * NUEVO: Carga el estado completo del juego del usuario
+         */
+        async function loadGameState() {
+            if (!userId) return; // No hacer nada si no hay user ID
+            
+            const stateRef = ref(db, `userState/${userId}`);
+            
+            try {
+                const snapshot = await get(stateRef);
+
+                if (snapshot.exists()) {
+                    const savedState = snapshot.val();
+                    
+                    // Cargar estado
+                    score = savedState.score || 0;
+                    totalScore = savedState.totalScore || 0;
+                    level = savedState.level || 1;
+                    xp = savedState.xp || 0;
+                    totalClicks = savedState.totalClicks || 0;
+                    modalShown = savedState.modalShown || false;
+                    
+                    // Cargar mejoras
+                    Object.keys(UPGRADES_CONFIG).forEach(key => {
+                        if (savedState.upgrades && savedState.upgrades[key]) {
+                            // Cargar la mejora guardada
+                            gameState.upgrades[key] = savedState.upgrades[key];
+                        } else {
+                            // Si la mejora no estaba en el guardado (ej. nueva actualización)
+                            gameState.upgrades[key] = {
+                                level: 0,
+                                cost: UPGRADES_CONFIG[key].baseCost
+                            };
+                        }
+                    });
+                    
+                } else {
+                    // No hay estado guardado, es un usuario nuevo o uno viejo
+                    console.log("No saved state found. Starting fresh.");
+                    // resetGameState() ya establece todo a 0/default
+                    resetGameState();
+                }
+            } catch (error) {
+                console.error("Error loading game state:", error);
+                resetGameState(); // En caso de error, resetear
+            }
+            
+            // Recalcular stats derivados
+            recalculateStats(); 
+            recalculateLevelStats();
+            // Actualizar la UI
+            updateUI();
+        }
+
 
         /**
          * Carga y muestra la clasificación desde Firebase.
@@ -755,29 +1015,33 @@
         function loadLeaderboard() {
             if (!db) return;
             const leaderboardRef = ref(db, 'leaderboard');
-            // Pedir los 100 mejores (para ordenarlos bien)
             const leaderboardQuery = query(leaderboardRef, orderByChild('score'), limitToLast(100));
+            
+            leaderboardStatus.style.display = 'flex'; // Mostrar spinner
+            leaderboardList.style.display = 'none';
 
             onValue(leaderboardQuery, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    // Convertir el objeto en un array
                     const scores = Object.values(data);
-                    // Ordenar de mayor a menor (Firebase solo ordena de menor a mayor)
-                    scores.sort((a, b) => b.score - a.score);
-
-                    // Limitar a los 10 mejores
+                    scores.sort((a, b) => b.score - a.score); // Ordenar de mayor a menor
                     const top10 = scores.slice(0, 10);
                     
-                    // Renderizar
                     leaderboardList.innerHTML = ''; // Limpiar lista
                     top10.forEach((entry, index) => {
                         const li = document.createElement('li');
+                        
+                        // Resaltar al jugador actual
+                        if (currentUsername && entry.username === currentUsername) {
+                            li.classList.add('current-user');
+                        }
+                        
                         const rank = document.createElement('span');
                         rank.textContent = `#${index + 1}`;
+                        rank.classList.add('rank');
                         
                         const name = document.createElement('span');
-                        name.textContent = entry.username || "Jugador Anónimo";
+                        name.textContent = entry.username || "Anónimo";
                         name.classList.add('player-name');
                         
                         const scoreVal = document.createElement('span');
@@ -789,43 +1053,100 @@
                         li.appendChild(scoreVal);
                         leaderboardList.appendChild(li);
                     });
+                    
+                    leaderboardStatus.style.display = 'none'; // Ocultar spinner
+                    leaderboardList.style.display = 'block';
+
                 } else {
-                    leaderboardList.innerHTML = '<li>¡Sé el primero en la clasificación!</li>';
+                    leaderboardStatus.innerHTML = '<span>¡Sé el primero en la clasificación!</span>';
+                    leaderboardList.style.display = 'none';
                 }
             });
         }
 
         /**
          * Guarda la puntuación del jugador en Firebase.
+         * MODIFICADO: Ahora también guarda el estado completo del juego.
+         * @param {boolean} manual - True si fue un clic manual (para mostrar mensaje)
          */
-        function saveScore() {
+        function saveScore(manual = false) {
             if (!userId || !db || !currentUsername) {
-                saveStatus.textContent = "Error: Debes iniciar sesión.";
-                saveStatus.className = 'error';
+                if (manual) {
+                    saveStatus.textContent = "Error: Debes iniciar sesión.";
+                    saveStatus.className = 'error';
+                }
                 return;
             }
             
-            // Ya no leemos del input, usamos el nombre de usuario de la sesión
-            const scoreToSave = Math.floor(totalScore); // Guardar puntuación total
+            const scoreToSave = Math.floor(totalScore);
 
-            const userScoreRef = ref(db, `leaderboard/${userId}`);
+            // --- NUEVO: Guardar estado completo del juego ---
+            const stateToSave = {
+                score: score,
+                totalScore: totalScore,
+                level: level,
+                xp: xp,
+                totalClicks: totalClicks,
+                modalShown: modalShown,
+                upgrades: gameState.upgrades
+            };
             
-            set(userScoreRef, {
-                username: currentUsername, // Usamos el nombre de la sesión
+            set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
+                console.error("Error saving game state:", error);
+            });
+            // --- FIN NUEVO ---
+
+            // Actualizar la clasificación pública
+            set(ref(db, `leaderboard/${userId}`), {
+                username: currentUsername,
                 score: scoreToSave
             }).then(() => {
-                saveStatus.textContent = "¡Puntuación guardada!";
-                saveStatus.className = 'success';
-                setTimeout(() => { saveStatus.textContent = ""; }, 2000);
+                if (manual) {
+                    saveStatus.textContent = "¡Puntuación guardada!";
+                    saveStatus.className = 'success';
+                    setTimeout(() => { saveStatus.textContent = ""; }, 2000);
+                }
             }).catch((error) => {
-                saveStatus.textContent = "Error al guardar.";
-                saveStatus.className = 'error';
+                if (manual) {
+                    saveStatus.textContent = "Error al guardar.";
+                    saveStatus.className = 'error';
+                }
                 console.error("Error al guardar puntuación:", error);
             });
         }
         
         /**
-         * --- NUEVO: Maneja el registro de usuario ---
+         * Muestra el modal de inicio de sesión.
+         */
+        function showLoginModal() {
+            loginModalOverlay.style.display = 'flex';
+        }
+
+        /**
+         * Oculta el modal de inicio de sesión.
+         */
+        function hideLoginModal() {
+            loginModalOverlay.style.display = 'none';
+        }
+        
+        /**
+         * Cambia a la pestaña de clasificación.
+         */
+        function showLeaderboardTab() {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            const leaderboardBtn = document.querySelector('.tab-btn[data-tab="leaderboard"]');
+            const leaderboardContent = document.getElementById('leaderboard');
+            
+            if (leaderboardBtn && leaderboardContent) {
+                leaderboardBtn.classList.add('active');
+                leaderboardContent.classList.add('active');
+            }
+        }
+        
+        /**
+         * Maneja el registro de usuario.
          */
         function handleRegister() {
             const username = usernameInput.value.trim();
@@ -836,7 +1157,6 @@
                 authStatus.className = 'error';
                 return;
             }
-            // El "truco" de añadir @click.com
             const email = username + '@click.com';
 
             authStatus.textContent = "Registrando...";
@@ -844,15 +1164,13 @@
 
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // onAuthStateChanged se encargará del resto
+                    // onAuthStateChanged se encargará de cargar/resetear el estado
                     authStatus.textContent = "¡Registrado con éxito!";
                     authStatus.className = 'success';
                 })
                 .catch((error) => {
                     if (error.code === 'auth/email-already-in-use') {
                         authStatus.textContent = "Ese nombre de usuario ya existe.";
-                    } else if (error.code === 'auth/weak-password') {
-                        authStatus.textContent = "Contraseña demasiado débil.";
                     } else {
                         authStatus.textContent = "Error al registrar.";
                     }
@@ -861,7 +1179,7 @@
         }
         
         /**
-         * --- NUEVO: Maneja el inicio de sesión ---
+         * Maneja el inicio de sesión.
          */
         function handleLogin() {
             const username = usernameInput.value.trim();
@@ -872,7 +1190,6 @@
                 authStatus.className = 'error';
                 return;
             }
-            // El "truco" de añadir @click.com
             const email = username + '@click.com';
 
             authStatus.textContent = "Iniciando sesión...";
@@ -880,7 +1197,7 @@
 
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // onAuthStateChanged se encargará del resto
+                    // onAuthStateChanged se encargará de cargar el estado
                     authStatus.textContent = "¡Bienvenido de vuelta!";
                     authStatus.className = 'success';
                 })
@@ -895,9 +1212,12 @@
         }
 
         /**
-         * --- NUEVO: Maneja el cierre de sesión ---
+         * Maneja el cierre de sesión.
          */
         function handleLogout() {
+            // Guardar una última vez antes de salir
+            saveScore(false); 
+            // onAuthStateChanged se encargará de resetear el estado
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
             });
@@ -906,10 +1226,13 @@
 
         // --- INICIALIZACIÓN ---
 
+        // Poner el juego en estado 'cero' al inicio
+        resetGameState();
+        
         // Generar la tienda
         initializeStore();
         
-        // Iniciar Firebase
+        // Iniciar Firebase (esto llamará a onAuthStateChanged)
         initializeFirebase();
 
         // Asignar evento de clic principal
@@ -917,8 +1240,10 @@
 
         // Delegación de eventos para botones de la tienda
         storeContainer.addEventListener('click', (event) => {
-            if (event.target.tagName === 'BUTTON' && event.target.dataset.key) {
-                buyUpgrade(event.target.dataset.key);
+            // Buscar el botón, incluso si se hace clic en el texto interior
+            const button = event.target.closest('button[data-key]');
+            if (button) {
+                buyUpgrade(button.dataset.key);
             }
         });
 
@@ -926,27 +1251,30 @@
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const tabId = button.dataset.tab;
-
-                // Quitar 'active' de todos
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabContents.forEach(content => content.classList.remove('active'));
-
-                // Añadir 'active' al clicado
                 button.classList.add('active');
                 document.getElementById(tabId).classList.add('active');
             });
         });
         
-        // --- NUEVOS EVENTOS DE AUTH ---
+        // Eventos de Auth
         registerBtn.addEventListener('click', handleRegister);
         loginBtn.addEventListener('click', handleLogin);
         logoutBtn.addEventListener('click', handleLogout);
-        saveScoreBtn.addEventListener('click', saveScore);
+        saveScoreBtn.addEventListener('click', () => saveScore(true)); // Guardado manual
+        
+        // Eventos de Modal
+        modalBtnLater.addEventListener('click', hideLoginModal);
+        modalBtnGo.addEventListener('click', () => {
+            hideLoginModal();
+            showLeaderboardTab();
+        });
 
-        // Iniciar el bucle del juego
+        // Iniciar el bucle del juego (1 vez por segundo)
         setInterval(gameLoop, 1000);
 
-        // Actualizar la UI una vez al cargar
+        // Actualizar la UI una vez al cargar (estado reseteado)
         updateUI();
     </script>
 </body>
