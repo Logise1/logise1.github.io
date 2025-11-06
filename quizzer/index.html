@@ -50,32 +50,33 @@
     <div class="container mx-auto p-4 max-w-3xl">
 
         <!-- Encabezado -->
-        <!-- **** ¡CAMBIO AQUÍ! (Banner) **** -->
-        <header class="shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-end items-center gap-4 sticky top-4 z-10" 
-                style="background-image: url('banner.png'); background-size: cover; background-position: center; background-repeat: no-repeat; min-height: 120px;">
+        <!-- **** ¡CAMBIO AQUÍ! (Ajuste de Banner y Controles) **** -->
+        <header class="shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-end items-center gap-4 sticky top-4 z-10 bg-gray-100" 
+                style="background-image: url('banner.png'); background-size: contain; background-position: center; background-repeat: no-repeat; min-height: 120px;">
             <!-- <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Quizzer</h1> --> <!-- Texto Quizzer eliminado -->
-            <!-- Controles de autenticación y navegación -->
-        <!-- **** FIN DEL CAMBIO **** -->
-            <div id="auth-controls" class="hidden flex items-center gap-4">
-                <!-- Mostraremos el Nombre de Usuario -->
-                <div id="user-name-display" class="text-sm font-semibold text-gray-700"></div>
+            
+            <div id="auth-controls" class="hidden flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+                <!-- Mostraremos el Nombre de Usuario (oculto en móvil) -->
+                <div id="user-name-display" class="text-sm font-semibold text-gray-700 hidden sm:block"></div>
                 
-                <!-- Monedero -->
-                <div id="user-coin-display" class="flex items-center gap-1 text-yellow-600 border-l-2 border-gray-200 pl-4 ml-2">
+                <!-- Monedero (sin borde en móvil) -->
+                <div id="user-coin-display" class="flex items-center gap-1 text-yellow-600 sm:border-l-2 sm:border-gray-200 sm:pl-4 sm:ml-2">
                     <i data-lucide="circle-dollar-sign" class="w-5 h-5"></i>
                     <span id="user-coin-balance" class="font-bold text-lg">0</span>
                 </div>
 
-                <button id="home-btn" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
+                <!-- Botón de Inicio (solo icono en móvil) -->
+                <button id="home-btn" class="flex items-center gap-2 px-2 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                     <i data-lucide="home"></i>
-                    <span>Inicio</span>
+                    <span class="hidden sm:inline">Inicio</span>
                 </button>
-                <!-- Botón de Sign Out -->
-                <button id="sign-out-btn" class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors">
+                <!-- Botón de Sign Out (solo icono en móvil) -->
+                <button id="sign-out-btn" class="flex items-center gap-2 px-2 py-2 sm:px-4 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition-colors">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span>Salir</span>
+                    <span class="hidden sm:inline">Salir</span>
                 </button>
             </div>
+            <!-- **** FIN DEL CAMBIO **** -->
         </header>
 
         <main>
