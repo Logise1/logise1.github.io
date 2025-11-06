@@ -54,6 +54,7 @@
                 style="background-image: url('banner.png'); background-size: contain; background-position: center; background-repeat: no-repeat;">
             <!-- <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Quizzer</h1> --> <!-- Texto Quizzer eliminado -->
             
+            <!-- **** ¡CAMBIO AQUÍ! (Añadido Botón de Perfil) **** -->
             <div id="auth-controls" class="hidden flex flex-wrap items-center justify-end gap-2 sm:gap-4">
                 <!-- Mostraremos el Nombre de Usuario (oculto en móvil) -->
                 <div id="user-name-display" class="text-sm font-semibold text-gray-700 hidden sm:block"></div>
@@ -64,6 +65,11 @@
                     <span id="user-coin-balance" class="font-bold text-lg">0</span>
                 </div>
 
+                <!-- Botón de Perfil (solo icono en móvil) -->
+                <button id="profile-btn" class="flex items-center gap-2 px-2 py-2 sm:px-4 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition-colors">
+                    <i data-lucide="user"></i>
+                    <span class="hidden sm:inline">Perfil</span>
+                </button>
                 <!-- Botón de Inicio (solo icono en móvil) -->
                 <button id="home-btn" class="flex items-center gap-2 px-2 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors">
                     <i data-lucide="home"></i>
@@ -75,6 +81,7 @@
                     <span class="hidden sm:inline">Salir</span>
                 </button>
             </div>
+            <!-- **** FIN DEL CAMBIO **** -->
         </header>
 
         <main>
@@ -140,13 +147,12 @@
                         </button>
                     </div>
                 </div>
-                <!-- **** ¡CAMBIO AQUÍ! (Filtro "Mis Quizzes") **** -->
                 <div class="mb-4">
                     <label for="category-filter" class="block text-sm font-medium text-gray-700">Filtrar por Categoría</label>
                     <select id="category-filter" name="category-filter" class="mt-1 block w-full sm:w-1/2 md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 bg-white">
                         <option value="all">Todas las Categorías (excepto Otros)</option>
                         <option value="recent">Recientes (Últimas 24h)</option>
-                        <option value="mine">Mis Quizzes Creados</option> <!-- AÑADIDO -->
+                        <option value="mine">Mis Quizzes Creados</option>
                         <option>Mates</option>
                         <option>Lengua</option>
                         <option>Geografía</option>
@@ -156,7 +162,6 @@
                         <option>Otros</option>
                     </select>
                 </div>
-                <!-- **** FIN DEL CAMBIO **** -->
                 <div id="quiz-list-container" class="space-y-4">
                     <p class="text-gray-500">Cargando quizzes...</p>
                 </div>
@@ -361,6 +366,58 @@
                 </div>
             </section>
 
+            <!-- **** ¡NUEVA VISTA! (Perfil de Usuario) **** -->
+            <section id="view-profile" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="profile-username" class="text-3xl font-bold text-indigo-600">Mi Perfil</h2>
+                        <button id="profile-back-btn" class="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg shadow hover:bg-slate-600 transition-colors">
+                            <i data-lucide="arrow-left"></i>
+                            <span>Volver</span>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- Goldens -->
+                        <div class="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <img src="golden.gif" alt="Golden" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                            <i data-lucide="award" class="w-12 h-12 text-yellow-600" style="display:none;"></i>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-700">Goldens Completados</p>
+                                <p id="profile-goldens" class="text-2xl font-bold text-yellow-900">0 / 0</p>
+                            </div>
+                        </div>
+                        <!-- Diamonds -->
+                        <div class="flex items-center gap-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <img src="diamond.gif" alt="Diamond" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                            <i data-lucide="gem" class="w-12 h-12 text-indigo-600" style="display:none;"></i>
+                            <div>
+                                <p class="text-sm font-medium text-indigo-700">Diamantes Completados</p>
+                                <p id="profile-diamonds" class="text-2xl font-bold text-indigo-900">0</p>
+                            </div>
+                        </div>
+                        <!-- Quizzes Completados -->
+                        <div class="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <i data-lucide="check-circle-2" class="w-12 h-12 text-green-600"></i>
+                            <div>
+                                <p class="text-sm font-medium text-green-700">Quizzes Completados (Totales)</p>
+                                <p id="profile-completed" class="text-2xl font-bold text-green-900">0</p>
+                            </div>
+                        </div>
+                        <!-- Precisión -->
+                        <div class="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <i data-lucide="target" class="w-12 h-12 text-blue-600"></i>
+                            <div>
+                                <p class="text-sm font-medium text-blue-700">Precisión General</p>
+                                <p id="profile-accuracy" class="text-2xl font-bold text-blue-900">0.0%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+            <!-- **** FIN DE LA NUEVA VISTA **** -->
+
             <!-- Vista: Cargando -->
             <section id="view-loading" class="view">
                 <div class="bg-white p-12 rounded-lg shadow-xl text-center flex flex-col items-center gap-4">
@@ -413,7 +470,7 @@
             orderByChild 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-        // IDs de las Vistas
+        // **** ¡CAMBIO AQUÍ! (Añadida vista de Perfil) ****
         const VIEWS = {
             AUTH: 'view-auth', 
             HOME: 'view-home',
@@ -421,6 +478,7 @@
             PLAY: 'view-play',
             LEADERBOARD: 'view-leaderboard',
             GENERAL_LEADERBOARD: 'view-general-leaderboard', 
+            PROFILE: 'view-profile', // AÑADIDO
             LOADING: 'view-loading'
         };
 
@@ -455,6 +513,7 @@
             play: document.getElementById(VIEWS.PLAY),
             leaderboard: document.getElementById(VIEWS.LEADERBOARD),
             generalLeaderboard: document.getElementById(VIEWS.GENERAL_LEADERBOARD),
+            profile: document.getElementById(VIEWS.PROFILE), // AÑADIDO
             loading: document.getElementById(VIEWS.LOADING),
         };
         const quizListContainer = document.getElementById('quiz-list-container');
@@ -588,7 +647,6 @@
 
         /** Renderiza la lista de quizzes - MODIFICADO: Filtro "Mis Quizzes" y Play Count */
         function renderQuizList() {
-            // **** ¡CAMBIO AQUÍ! (Lógica de filtro "Mis Quizzes") ****
             const filter = document.getElementById('category-filter').value;
             const now = new Date();
             const twentyFourHoursAgo = now.getTime() - (24 * 60 * 60 * 1000);
@@ -605,13 +663,12 @@
                     return createdAt > twentyFourHoursAgo;
                 }
 
-                if (filter === 'mine') { // <-- AÑADIDO ESTE BLOQUE
+                if (filter === 'mine') {
                     return quiz.ownerUsername === loggedInUser;
                 }
                 
                 return category === filter;
             });
-            // **** FIN DEL CAMBIO ****
 
             if (filteredQuizzes.length === 0) {
                 quizListContainer.innerHTML = `<p class="text-gray-500">No hay quizzes que coincidan con tu filtro.</p>`;
@@ -625,7 +682,7 @@
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
                 const category = quiz.category || 'Otros';
-                const playCount = quiz.playCount || 0; // <-- AÑADIDO
+                const playCount = quiz.playCount || 0; // AÑADIDO
 
                 let recordHtml = '<p class="text-sm text-gray-400">Aún no hay récord</p>';
                 if (quiz.recordHolder) {
@@ -638,7 +695,6 @@
                     `;
                 }
                 
-                // **** ¡CAMBIO AQUÍ! (Añadido playCount) ****
                 quizCard.innerHTML = `
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
@@ -668,7 +724,6 @@
                         </div>
                     </div>
                 `;
-                // **** FIN DEL CAMBIO ****
                 quizListContainer.appendChild(quizCard);
             });
             lucide.createIcons(); 
@@ -772,6 +827,47 @@
                 list.innerHTML = `<li class="text-red-500">Error al cargar el ranking.</li>`;
             }
         }
+
+        // **** ¡NUEVA FUNCIÓN! (Renderizar Perfil) ****
+        /** Muestra la vista de perfil del usuario */
+        async function renderProfile() {
+            if (!loggedInUser) {
+                showView(VIEWS.AUTH);
+                return;
+            }
+            
+            document.getElementById('profile-username').textContent = `Perfil de ${loggedInUser}`;
+            showView(VIEWS.PROFILE);
+
+            const profileRef = ref(db, `${dbPath}/userProfiles/${loggedInUser}`);
+            
+            try {
+                const snapshot = await get(profileRef);
+                const data = snapshot.val() || {};
+                
+                const totalQuizzesAvailable = quizzes.length;
+                const goldens = data.goldensCompleted || 0;
+                const diamonds = data.diamondsCompleted || 0;
+                const completed = data.totalQuizzesCompleted || 0;
+                
+                const attempted = data.totalQuestionsAttempted || 0;
+                const correct = data.totalQuestionsCorrect || 0;
+                let accuracy = 0.0;
+                if (attempted > 0) {
+                    accuracy = (correct / attempted) * 100;
+                }
+                
+                document.getElementById('profile-goldens').textContent = `${goldens} / ${totalQuizzesAvailable}`;
+                document.getElementById('profile-diamonds').textContent = diamonds;
+                document.getElementById('profile-completed').textContent = completed;
+                document.getElementById('profile-accuracy').textContent = `${accuracy.toFixed(1)}%`;
+                
+            } catch (error) {
+                console.error("Error al cargar el perfil:", error);
+                showErrorModal("No se pudo cargar tu perfil.");
+            }
+        }
+        // **** FIN DE LA NUEVA FUNCIÓN ****
 
 
         // --- Lógica de Creación de Quiz (IA) ---
@@ -938,7 +1034,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     quizType: quizType, 
                     price: price,
                     recordHolder: null,
-                    playCount: 0 // <-- AÑADIDO: Inicializar play count
+                    playCount: 0
                 };
                 
                 const quizzesRef = ref(db, `${dbPath}/quizzes`);
@@ -963,7 +1059,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
         // --- Lógica de Juego (RTDB) ---
 
-        // **** ¡NUEVA FUNCIÓN! (Incrementar Play Count) ****
         async function incrementPlayCount(quizId) {
             if (!dbPath) return;
             const playCountRef = ref(db, `${dbPath}/quizzes/${quizId}/playCount`);
@@ -973,14 +1068,12 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 });
             } catch (error) {
                 console.warn("Error al incrementar el contador de jugadas:", error);
-                // No es un error crítico, no molestar al usuario
             }
         }
 
         /** Intercepta el clic de "Jugar" */
         async function handlePlayQuizClick(quizId) {
-            // **** ¡CAMBIO AQUÍ! (Incrementar Play Count) ****
-            await incrementPlayCount(quizId); // Incrementar al hacer clic
+            await incrementPlayCount(quizId); 
 
             const quiz = quizzes.find(q => q.id === quizId);
             if (!quiz) return;
@@ -1186,6 +1279,45 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             }
         }
 
+        // **** ¡NUEVA FUNCIÓN! (Actualizar Perfil en DB) ****
+        /** Actualiza las estadísticas persistentes del perfil del usuario (se llama en endQuiz) */
+        async function updateUserProfileStats(score, totalQuestions, isGolden, isDiamond, isPerfectScore) {
+            if (!loggedInUser) return;
+            
+            const profileRef = ref(db, `${dbPath}/userProfiles/${loggedInUser}`);
+            
+            try {
+                await runTransaction(profileRef, (data) => {
+                    const profileData = data || {
+                        totalQuizzesCompleted: 0,
+                        totalQuestionsAttempted: 0,
+                        totalQuestionsCorrect: 0,
+                        goldensCompleted: 0,
+                        diamondsCompleted: 0
+                    };
+                    
+                    profileData.totalQuizzesCompleted = (profileData.totalQuizzesCompleted || 0) + 1;
+                    profileData.totalQuestionsAttempted = (profileData.totalQuestionsAttempted || 0) + totalQuestions;
+                    profileData.totalQuestionsCorrect = (profileData.totalQuestionsCorrect || 0) + score;
+                    
+                    if (isPerfectScore) {
+                        if (isGolden) {
+                            profileData.goldensCompleted = (profileData.goldensCompleted || 0) + 1;
+                        }
+                        if (isDiamond) {
+                            profileData.diamondsCompleted = (profileData.diamondsCompleted || 0) + 1;
+                        }
+                    }
+                    
+                    return profileData;
+                });
+            } catch (error) {
+                console.warn("No se pudo actualizar el perfil de estadísticas:", error);
+                // No es crítico, no mostrar modal
+            }
+        }
+        // **** FIN DE LA NUEVA FUNCIÓN ****
+
         /** Finaliza el quiz */
         async function endQuiz() { 
             clearInterval(quizTimerInterval); 
@@ -1198,10 +1330,17 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             const finalTimeText = document.getElementById('final-time-text');
             const finalCoinText = document.getElementById('final-coin-text');
             
-            finalScoreText.textContent = `Tu puntaje final es ${score} de ${currentQuizIsDiamond ? 40 : currentQuiz.questions.length}.`;
+            const totalQuestions = currentQuizIsDiamond ? 40 : currentQuiz.questions.length;
+            const isPerfectScore = (score === totalQuestions);
+
+            finalScoreText.textContent = `Tu puntaje final es ${score} de ${totalQuestions}.`;
             finalTimeText.textContent = `Tiempo total: ${timeElapsed.toFixed(2)} segundos.`;
             
             document.getElementById('progress-bar').style.width = '100%';
+
+            // **** ¡CAMBIO AQUÍ! (Actualizar estadísticas del perfil) ****
+            await updateUserProfileStats(score, totalQuestions, currentQuizIsGolden, currentQuizIsDiamond, isPerfectScore);
+            // **** FIN DEL CAMBIO ****
 
             const today = getTodayDateString();
             const activityRef = ref(db, `${dbPath}/userActivity/${loggedInUser}`);
@@ -1210,8 +1349,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             let rewardCoins = 0;
             let coinMessage = "";
             
-            const isPerfectScore = (score === (currentQuizIsDiamond ? 40 : currentQuiz.questions.length));
-
             const goldenPrompt = document.getElementById('golden-mode-prompt');
             const diamondPrompt = document.getElementById('diamond-mode-prompt');
             const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
@@ -1709,6 +1846,11 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
             document.getElementById('show-general-leaderboard-btn').addEventListener('click', renderGeneralLeaderboard);
             document.getElementById('general-leaderboard-back-btn').addEventListener('click', () => { showView(VIEWS.HOME); });
 
+            // **** ¡CAMBIO AQUÍ! (Listeners de Perfil) ****
+            document.getElementById('profile-btn').addEventListener('click', renderProfile);
+            document.getElementById('profile-back-btn').addEventListener('click', () => { showView(VIEWS.HOME); });
+            // **** FIN DEL CAMBIO ****
+
             // Formularios
             createQuizForm.addEventListener('submit', handleCreateQuiz);
             leaderboardForm.addEventListener('submit', handleSaveScore); 
@@ -1767,7 +1909,6 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
             // Modal de error
             closeModalBtn.addEventListener('click', hideErrorModal);
 
-            // **** ¡CAMBIO AQUÍ! (Listener de filtro) ****
             document.getElementById('category-filter').addEventListener('change', renderQuizList);
         }
 
