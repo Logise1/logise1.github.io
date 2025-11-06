@@ -50,7 +50,6 @@
     <div class="container mx-auto p-4 max-w-3xl">
 
         <!-- Encabezado -->
-        <!-- **** ¡CAMBIO AQUÍ! (Quitada altura mínima) **** -->
         <header class="shadow-md rounded-lg p-6 mb-6 flex flex-wrap justify-end items-center gap-4 sticky top-4 z-10 bg-gray-100" 
                 style="background-image: url('banner.png'); background-size: contain; background-position: center; background-repeat: no-repeat;">
             <!-- <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Quizzer</h1> --> <!-- Texto Quizzer eliminado -->
@@ -76,7 +75,6 @@
                     <span class="hidden sm:inline">Salir</span>
                 </button>
             </div>
-            <!-- **** FIN DEL CAMBIO **** -->
         </header>
 
         <main>
@@ -142,17 +140,19 @@
                         </button>
                     </div>
                 </div>
-                <!-- **** ¡CAMBIO AQUÍ! (Filtro de Categoría) **** -->
+                <!-- **** ¡CAMBIO AQUÍ! (Filtro "Mis Quizzes") **** -->
                 <div class="mb-4">
                     <label for="category-filter" class="block text-sm font-medium text-gray-700">Filtrar por Categoría</label>
                     <select id="category-filter" name="category-filter" class="mt-1 block w-full sm:w-1/2 md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 bg-white">
-                        <option value="all">Todas las Categorías</option>
+                        <option value="all">Todas las Categorías (excepto Otros)</option>
+                        <option value="recent">Recientes (Últimas 24h)</option>
+                        <option value="mine">Mis Quizzes Creados</option> <!-- AÑADIDO -->
                         <option>Mates</option>
                         <option>Lengua</option>
                         <option>Geografía</option>
                         <option>Física y Química</option>
                         <option>Inglés</option>
-                        <option>Tecnología</option> <!-- AÑADIDO -->
+                        <option>Tecnología</option>
                         <option>Otros</option>
                     </select>
                 </div>
@@ -175,7 +175,6 @@
                             <label for="quiz-topic" class="block text-sm font-medium text-gray-700">Tema del Quiz (para la IA)</label>
                             <input type="text" id="quiz-topic" name="quiz-topic" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300" placeholder="Ej: Historia de Roma, Capitales del Mundo">
                         </div>
-                        <!-- **** ¡CAMBIO AQUÍ! (Selector de Categoría) **** -->
                         <div>
                             <label for="quiz-category" class="block text-sm font-medium text-gray-700">Categoría</label>
                             <select id="quiz-category" name="quiz-category" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 bg-white">
@@ -184,11 +183,10 @@
                                 <option>Geografía</option>
                                 <option>Física y Química</option>
                                 <option>Inglés</option>
-                                <option>Tecnología</option> <!-- AÑADIDO -->
+                                <option>Tecnología</option>
                                 <option selected>Otros</option>
                             </select>
                         </div>
-                        <!-- **** FIN DEL CAMBIO **** -->
                         <div>
                             <label for="quiz-level" class="block text-sm font-medium text-gray-700">Nivel Educativo</label>
                             <select id="quiz-level" name="quiz-level" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300 bg-white">
@@ -276,12 +274,10 @@
                         </div>
                     </div>
 
-                    <!-- **** ¡CAMBIO AQUÍ! (Spinner de carga Diamante) **** -->
                     <div id="next-question-loader" class="hidden text-center p-8">
                         <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500 mx-auto"></div>
                         <p class="text-lg font-semibold text-gray-700 mt-4">Generando siguientes preguntas...</p>
                     </div>
-                    <!-- **** FIN DEL CAMBIO **** -->
 
 
                     <div id="end-quiz-container" class="hidden text-center">
@@ -299,12 +295,10 @@
                             </button>
                         </form>
 
-                        <!-- **** ¡CAMBIO AQUÍ! (Botón "Ver Clasificación") **** -->
                         <button id="view-leaderboard-btn" class="hidden mt-4 flex justify-center items-center gap-2 w-full max-w-xs mx-auto px-4 py-2 bg-slate-500 text-white rounded-lg shadow hover:bg-slate-600 transition-colors">
                             <i data-lucide="bar-chart-3"></i>
                             <span>Ver Clasificación</span>
                         </button>
-                        <!-- **** FIN DEL CAMBIO **** -->
                         
                         <!-- Sección Modo Golden -->
                         <div id="golden-mode-prompt" class="mt-8 border-t border-gray-200 pt-6">
@@ -319,7 +313,6 @@
                             </button>
                         </div>
 
-                        <!-- **** ¡CAMBIO AQUÍ! (Sección Modo Diamante) **** -->
                         <div id="diamond-mode-prompt" class="hidden mt-8 border-t-2 border-indigo-300 pt-6">
                              <h4 class="text-xl font-semibold text-indigo-500 flex items-center justify-center gap-2">
                                 <img src="diamond.gif" alt="Diamante" class="w-10 h-10 animate-pulse object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
@@ -327,12 +320,11 @@
                                 ¡MODO DIAMANTE DESBLOQUEADO!
                             </h4>
                             <p class="text-gray-600 my-2">¡Has superado el Modo Golden! ¿Aceptas el desafío final?</p>
-                            <p class="text-sm text-gray-500 mb-3">(40 preguntas nuevas, dificultad experto).</p> <!-- MODIFICADO -->
+                            <p class="text-sm text-gray-500 mb-3">(40 preguntas nuevas, dificultad experto).</p>
                             <button id="start-diamond-mode-btn" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg shadow font-bold hover:bg-indigo-700 transition-colors">
                                 ¡Probar Modo Diamante!
                             </button>
                         </div>
-                        <!-- **** FIN DEL CAMBIO **** -->
                     </div>
                 </div>
             </section>
@@ -347,7 +339,6 @@
                             <span>Volver</span>
                         </button>
                     </div>
-                    <!-- CORREGIDO: Quitado list-decimal y list-inside -->
                     <ol id="leaderboard-list" class="list-none space-y-2">
                         <li class="text-gray-500">Cargando leaderboard...</li>
                     </ol>
@@ -364,7 +355,6 @@
                             <span>Volver</span>
                         </button>
                     </div>
-                    <!-- CORREGIDO: Quitado list-decimal y list-inside -->
                     <ol id="general-leaderboard-list" class="list-none space-y-2">
                         <li class="text-gray-500">Cargando ranking...</li>
                     </ol>
@@ -448,10 +438,8 @@
         let currentQuizIsGolden = false; 
         let currentQuizIsDiamond = false; 
 
-        // **** ¡CAMBIO AQUÍ! (Nuevos estados para Diamante) ****
         let isGeneratingMoreQuestions = false; // Flag para evitar llamadas duplicadas
         let generatedQuestionText = []; // Array de strings de preguntas ya generadas
-        // **** FIN DEL CAMBIO ****
 
         // Variables de Firebase
         let db, appId, dbPath; 
@@ -497,7 +485,6 @@
             return path.replace(/[.#$[\]]/g, '_');
         }
 
-        // NUEVA FUNCIÓN: Obtiene la fecha de hoy en formato YYYY-MM-DD
         function getTodayDateString() {
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -570,22 +557,19 @@
             });
         }
 
-        /** Escucha el monedero del usuario (RTDB) - CORREGIDO */
+        /** Escucha el monedero del usuario (RTDB) */
         function setupUserWalletListener(username) {
             if (!dbPath) return;
             if (userWalletListener) {
                 userWalletListener(); 
             }
             
-            // 1. Escuchar el OBJETO de wallet, no solo las monedas
             userWalletRef = ref(db, `${dbPath}/wallets/${username}`); 
             
             userWalletListener = onValue(userWalletRef, (snapshot) => {
                 if (snapshot.exists()) {
-                    // 2. Leer las monedas desde el objeto
                     userCoinBalance = snapshot.val().coins || 0;
                 } else {
-                    // 3. Si el monedero NO existe, crearlo correctamente
                     userCoinBalance = 10; 
                     set(userWalletRef, { 
                         coins: userCoinBalance,
@@ -602,13 +586,30 @@
 
         // --- Renderizado ---
 
-        /** Renderiza la lista de quizzes - MODIFICADO: Filtro y Categoría */
+        /** Renderiza la lista de quizzes - MODIFICADO: Filtro "Mis Quizzes" y Play Count */
         function renderQuizList() {
-            // **** ¡CAMBIO AQUÍ! (Lógica de filtro) ****
+            // **** ¡CAMBIO AQUÍ! (Lógica de filtro "Mis Quizzes") ****
             const filter = document.getElementById('category-filter').value;
+            const now = new Date();
+            const twentyFourHoursAgo = now.getTime() - (24 * 60 * 60 * 1000);
+
             const filteredQuizzes = quizzes.filter(quiz => {
-                const category = quiz.category || 'Otros'; // Asignar 'Otros' si no tiene categoría
-                return filter === 'all' || category === filter;
+                const category = quiz.category || 'Otros';
+                const createdAt = new Date(quiz.createdAt).getTime();
+
+                if (filter === 'all') {
+                    return category !== 'Otros';
+                }
+                
+                if (filter === 'recent') {
+                    return createdAt > twentyFourHoursAgo;
+                }
+
+                if (filter === 'mine') { // <-- AÑADIDO ESTE BLOQUE
+                    return quiz.ownerUsername === loggedInUser;
+                }
+                
+                return category === filter;
             });
             // **** FIN DEL CAMBIO ****
 
@@ -618,13 +619,13 @@
             }
             quizListContainer.innerHTML = '';
             
-            // Usar filteredQuizzes en lugar de quizzes
             filteredQuizzes.forEach(quiz => {
                 const quizCard = document.createElement('div');
                 quizCard.className = 'bg-white p-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
                 const quizPrice = quiz.price || 0;
                 const quizType = quiz.quizType || 'free';
-                const category = quiz.category || 'Otros'; // **** ¡CAMBIO AQUÍ! ****
+                const category = quiz.category || 'Otros';
+                const playCount = quiz.playCount || 0; // <-- AÑADIDO
 
                 let recordHtml = '<p class="text-sm text-gray-400">Aún no hay récord</p>';
                 if (quiz.recordHolder) {
@@ -637,12 +638,15 @@
                     `;
                 }
                 
-                // **** ¡CORRECCIÓN DE TYPO! (class_= por class=) ****
+                // **** ¡CAMBIO AQUÍ! (Añadido playCount) ****
                 quizCard.innerHTML = `
                     <div class="flex-grow">
                         <h3 class="text-xl font-semibold">${quiz.title}</h3>
                         <p class="text-sm text-gray-600">${quiz.questions.length} preguntas / Nivel: ${quiz.level || 'General'} / <span class="font-medium text-indigo-500">${category}</span></p>
-                        <p class="text-sm text-gray-500 mb-2">Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span></p>
+                        <p class="text-sm text-gray-500 mb-2">
+                            Autor: <span class="font-semibold text-indigo-600">${quiz.ownerUsername || 'Anónimo'}</span> 
+                            / Jugado: <span class="font-semibold text-blue-500">${playCount} veces</span>
+                        </p>
                         <div class="border-t border-gray-100 pt-2">
                             ${recordHtml}
                         </div>
@@ -664,6 +668,7 @@
                         </div>
                     </div>
                 `;
+                // **** FIN DEL CAMBIO ****
                 quizListContainer.appendChild(quizCard);
             });
             lucide.createIcons(); 
@@ -699,14 +704,12 @@
                     });
                     
                     list.innerHTML = entries.slice(0, 10).map((entry, index) => {
-                        // **** ¡CAMBIO AQUÍ! (Icono Golden y Diamante) ****
                         const diamondIcon = entry.isDiamond 
                             ? `<img src="diamond.gif" alt="Diamante" class="w-4 h-4 object-contain inline-block ml-1" onerror="this.style.display='none';">`
                             : '';
-                        const goldenIcon = !entry.isDiamond && entry.isGolden // Solo mostrar golden si NO es diamante
+                        const goldenIcon = !entry.isDiamond && entry.isGolden
                             ? `<img src="golden.gif" alt="Golden" class="w-4 h-4 object-contain inline-block ml-1" onerror="this.style.display='none';">` 
                             : '';
-                        // **** FIN DEL CAMBIO ****
 
                         return `
                         <li class="flex justify-between items-center p-2 rounded ${index === 0 ? 'bg-yellow-100 font-bold' : ''} ${index === 1 ? 'bg-gray-100' : ''} ${index === 2 ? 'bg-orange-100' : ''}">
@@ -775,7 +778,6 @@
 
         /** Llama a la API de IA */
         async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
-            // (Función sin cambios)
             try {
                 const response = await fetch(url, options);
                 if (response.status === 429) {
@@ -838,7 +840,6 @@
             const title = document.getElementById('quiz-title').value;
             const level = document.getElementById('quiz-level').value;
             const topic = document.getElementById('quiz-topic').value;
-            // **** ¡CAMBIO AQUÍ! (Leer categoría) ****
             const category = document.getElementById('quiz-category').value;
             const numQuestions = document.getElementById('quiz-num-questions').value;
             const quizType = document.querySelector('input[name="quiz-type"]:checked').value;
@@ -852,7 +853,6 @@
             loadingText.textContent = "Generando tu quiz con IA...";
             showView(VIEWS.LOADING);
             
-            // Lógica de Mistral API
             const mistralApiKey = "evxly62Xv91b752fbnHA2I3HD988C5RT";
             const mistralApiUrl = "https://api.mistral.ai/v1/chat/completions";
             const schemaDefinition = `
@@ -930,14 +930,15 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 const newQuiz = { 
                     topic: topic, 
                     level: level, 
-                    category: category, // **** ¡CAMBIO AQUÍ! (Guardar categoría) ****
+                    category: category,
                     title: title, 
                     questions: newQuizData.questions, 
                     ownerUsername: loggedInUser, 
-                    createdAt: new Date().toISOString(), 
+                    createdAt: new Date().toISOString(),
                     quizType: quizType, 
                     price: price,
-                    recordHolder: null
+                    recordHolder: null,
+                    playCount: 0 // <-- AÑADIDO: Inicializar play count
                 };
                 
                 const quizzesRef = ref(db, `${dbPath}/quizzes`);
@@ -962,13 +963,30 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
         // --- Lógica de Juego (RTDB) ---
 
+        // **** ¡NUEVA FUNCIÓN! (Incrementar Play Count) ****
+        async function incrementPlayCount(quizId) {
+            if (!dbPath) return;
+            const playCountRef = ref(db, `${dbPath}/quizzes/${quizId}/playCount`);
+            try {
+                await runTransaction(playCountRef, (currentCount) => {
+                    return (currentCount || 0) + 1;
+                });
+            } catch (error) {
+                console.warn("Error al incrementar el contador de jugadas:", error);
+                // No es un error crítico, no molestar al usuario
+            }
+        }
+
         /** Intercepta el clic de "Jugar" */
         async function handlePlayQuizClick(quizId) {
+            // **** ¡CAMBIO AQUÍ! (Incrementar Play Count) ****
+            await incrementPlayCount(quizId); // Incrementar al hacer clic
+
             const quiz = quizzes.find(q => q.id === quizId);
             if (!quiz) return;
             
             if (quiz.ownerUsername === loggedInUser) { 
-                startQuiz(quiz, false); // **** ¡CAMBIO AQUÍ! (Pasar objeto) ****
+                startQuiz(quiz, false);
                 return; 
             }
             
@@ -987,7 +1005,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     async () => { 
                         try {
                             await transferCoins(quiz.ownerUsername, loggedInUser, price);
-                            startQuiz(quiz, false); // **** ¡CAMBIO AQUÍ! (Pasar objeto) ****
+                            startQuiz(quiz, false);
                         } catch (error) { 
                             console.error("Error en la transacción de pago (RTDB):", error);
                             showErrorModal(`Falló la transacción: ${error.message}`); 
@@ -995,7 +1013,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     }
                 );
             } else {
-                startQuiz(quiz, false); // **** ¡CAMBIO AQUÍ! (Pasar objeto) ****
+                startQuiz(quiz, false);
             }
         }
 
@@ -1033,9 +1051,8 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
         /** Inicia un quiz */
         function startQuiz(quizObject, isGolden = false, isDiamond = false) {
-            currentQuiz = {...quizObject}; // ¡MUY IMPORTANTE! Clonar el objeto
+            currentQuiz = {...quizObject};
             
-            // **** ¡CAMBIO AQUÍ! (Heredar ID de DB para Diamante) ****
             currentQuizDocId = quizObject.id; 
             
             currentQuestionIndex = 0;
@@ -1045,17 +1062,14 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             currentQuizIsGolden = isGolden;
             currentQuizIsDiamond = isDiamond;
             
-            // Limpiar timer anterior
             if (quizTimerInterval) clearInterval(quizTimerInterval);
             
-            // Iniciar nuevo timer
             const timerDisplay = document.getElementById('timer-display').querySelector('span');
             quizTimerInterval = setInterval(() => {
                 timeElapsed = (Date.now() - quizStartTime) / 1000;
                 timerDisplay.textContent = `${timeElapsed.toFixed(1)}s`;
             }, 100); 
 
-            // Modificar título si es Modo Golden o Diamante
             const titleEl = document.getElementById('play-quiz-title');
             titleEl.textContent = currentQuiz.title;
             titleEl.classList.remove('text-yellow-500', 'text-indigo-500', 'font-bold');
@@ -1075,7 +1089,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             document.getElementById('player-name').value = loggedInUser; 
             document.getElementById('progress-bar').style.width = '0%'; 
             
-            // Resetear visibilidad de botones de modo
             document.getElementById('golden-mode-prompt').style.display = 'none';
             document.getElementById('diamond-mode-prompt').style.display = 'none';
             document.getElementById('view-leaderboard-btn').style.display = 'none';
@@ -1088,20 +1101,15 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
         /** Muestra la pregunta actual */
         function displayQuestion() {
-            // **** ¡CAMBIO AQUÍ! (Lógica de pre-carga Diamante) ****
             if (currentQuizIsDiamond && !isGeneratingMoreQuestions && currentQuiz.questions.length < 40 && currentQuestionIndex >= currentQuiz.questions.length - 5) {
-                // Si estamos en Diamante, no estamos ya cargando, nos faltan preguntas,
-                // y estamos a 5 preguntas del final... ¡pedir el siguiente lote!
-                fetchMoreDiamondQuestions(); // No se usa await, se ejecuta en segundo plano
+                fetchMoreDiamondQuestions();
             }
-            // **** FIN DEL CAMBIO ****
 
             const question = currentQuiz.questions[currentQuestionIndex];
             document.getElementById('question-text').textContent = question.question;
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
             
-            // **** ¡CAMBIO AQUÍ! (Barra de progreso Diamante) ****
             const totalQuestions = currentQuizIsDiamond ? 40 : currentQuiz.questions.length;
             const progress = (currentQuestionIndex / totalQuestions) * 100;
             document.getElementById('progress-bar').style.width = `${progress}%`;
@@ -1135,56 +1143,44 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 document.getElementById('score-display').textContent = `Puntaje: ${score}`;
                 playCorrectSound();
                 
-                // Avanzar
                 currentQuestionIndex++;
                 setTimeout(async () => {
-                    // **** ¡CAMBIO AQUÍ! (Lógica de espera Diamante) ****
                     if (currentQuestionIndex < currentQuiz.questions.length) { 
-                        displayQuestion(); // Siguiente pregunta normal
+                        displayQuestion();
                     } 
                     else if (currentQuizIsDiamond && currentQuiz.questions.length < 40) {
-                        // Se acabó el lote, pero faltan más. Esperar al siguiente.
                         await waitForNextBatch();
                     }
                     else { 
-                        await endQuiz(); // Fin del quiz (Normal, Golden, o Diamante 40/40)
+                        await endQuiz();
                     }
-                    // **** FIN DEL CAMBIO ****
                 }, 1200);
 
             } else {
-                // RESPUESTA INCORRECTA
                 playIncorrectSound();
                 
                 if (currentQuizIsGolden) {
-                    // Fallar en Modo Golden
                     showErrorModal("¡Has fallado! Reiniciando el Modo Golden...");
                     setTimeout(() => {
                         hideErrorModal();
-                        startQuiz(quizzes.find(q => q.id === currentQuizDocId), true); // Reiniciar desde el principio
+                        startQuiz(quizzes.find(q => q.id === currentQuizDocId), true);
                     }, 2000);
                 } else if (currentQuizIsDiamond) {
-                    // Fallar en Modo Diamante (termina el quiz)
                     setTimeout(async () => { 
                         await endQuiz(); 
                     }, 1200);
                 } else {
-                    // Modo Normal: avanzar
                     currentQuestionIndex++;
                     setTimeout(async () => { 
-                        // **** ¡CAMBIO AQUÍ! (Lógica de espera Diamante) ****
                         if (currentQuestionIndex < currentQuiz.questions.length) { 
                             displayQuestion(); 
                         }
                         else if (currentQuizIsDiamond && currentQuiz.questions.length < 40) {
-                             // Esto no debería pasar (se falla antes de acabar lote)
-                             // Pero por si acaso, esperamos.
                             await waitForNextBatch();
                         }
                         else { 
                             await endQuiz(); 
                         }
-                        // **** FIN DEL CAMBIO ****
                     }, 1200);
                 }
             }
@@ -1196,7 +1192,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             quizTimerInterval = null;
             
             document.getElementById('question-container').classList.add('hidden');
-            document.getElementById('next-question-loader').classList.add('hidden'); // Ocultar spinner
+            document.getElementById('next-question-loader').classList.add('hidden');
             const endContainer = document.getElementById('end-quiz-container');
             const finalScoreText = document.getElementById('final-score-text');
             const finalTimeText = document.getElementById('final-time-text');
@@ -1220,7 +1216,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             const diamondPrompt = document.getElementById('diamond-mode-prompt');
             const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
 
-            // Resetear botones
             leaderboardForm.style.display = 'none';
             viewLeaderboardBtn.style.display = 'none';
             goldenPrompt.style.display = 'none';
@@ -1228,34 +1223,29 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
 
 
             if (currentQuizIsDiamond) {
-                // Si estaba en Diamante
                 if (isPerfectScore) {
                     coinMessage = "¡INCREÍBLE! ¡Superaste el Modo Diamante!";
-                    leaderboardForm.style.display = 'flex'; // Mostrar para guardar
+                    leaderboardForm.style.display = 'flex';
                 } else {
                     coinMessage = "¡Buen intento! El Modo Diamante es muy difícil.";
-                    leaderboardForm.style.display = 'none'; // No guardar si falla
+                    leaderboardForm.style.display = 'none';
                 }
 
             } else if (currentQuizIsGolden) {
-                // Si estaba en Golden
                 if (isPerfectScore) {
                     coinMessage = "¡Completaste el Modo Golden!";
-                    leaderboardForm.style.display = 'flex'; // Mostrar para guardar
-                    diamondPrompt.style.display = 'block'; // ¡MOSTRAR "probar diamante"!
+                    leaderboardForm.style.display = 'flex';
+                    diamondPrompt.style.display = 'block';
                 } else {
-                    // Falló Golden (esto no debería pasar, se reinicia antes)
                     coinMessage = "¡Fallaste el Modo Golden!";
                     leaderboardForm.style.display = 'none';
-                    goldenPrompt.style.display = 'block'; // Mostrar "probar golden"
+                    goldenPrompt.style.display = 'block';
                 }
             
             } else {
-                // Si estaba en modo Normal
-                leaderboardForm.style.display = 'flex'; // Mostrar para guardar
-                goldenPrompt.style.display = 'block'; // Mostrar "probar golden"
+                leaderboardForm.style.display = 'flex';
+                goldenPrompt.style.display = 'block';
 
-                // Lógica de Recompensa (solo para modo Normal)
                 try {
                     const transactionResult = await runTransaction(activityRef, (currentData) => {
                         const data = currentData || { 
@@ -1275,9 +1265,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     });
 
                     if (transactionResult.committed) {
-                        // Era su primer quiz del día.
                         if (isPerfectScore) {
-                            // ¡Y fue perfecto!
                             const timeTaken = timeElapsed;
                             const maxTime = currentQuiz.questions.length * 20; 
                             bonusCoins = Math.max(0, Math.floor(5 * (1 - timeTaken / maxTime)));
@@ -1298,11 +1286,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                                 coinMessage = "¡Puntaje Perfecto! (Recompensa diaria reclamada)";
                             }
                         } else {
-                            // Fue su primer quiz, pero no fue perfecto.
                             coinMessage = "¡Quiz completado! (Necesitas un 100% para la recompensa diaria)";
                         }
                     } else {
-                        // Ya había jugado hoy
                         coinMessage = "Ya has recibido la recompensa diaria por completar un quiz hoy.";
                     }
 
@@ -1317,11 +1303,10 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             endContainer.classList.remove('hidden');
         }
 
-        /** Guarda el puntaje - MODIFICADO: Acepta Golden/Diamante, no navega */
+        /** Guarda el puntaje */
         async function handleSaveScore(e) {
-            e.preventDefault(); // Prevenir recarga de página
+            e.preventDefault();
             
-            // **** ¡CAMBIO AQUÍ! (Aceptar Diamante) ****
             if (!currentQuizDocId) {
                 showErrorModal("Error: No se puede guardar el puntaje, ID de quiz desconocido.");
                 return;
@@ -1330,7 +1315,6 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             const playerName = document.getElementById('player-name').value;
             if (!playerName.trim()) { showErrorModal("Por favor, ingresa un nombre."); return; }
             
-            // **** ¡CAMBIO AQUÍ! (Puntaje perfecto Golden/Diamante) ****
             const totalQuestions = currentQuizIsDiamond ? 40 : currentQuiz.questions.length;
             if ( (currentQuizIsGolden || currentQuizIsDiamond) && score !== totalQuestions) {
                 showErrorModal("Solo los puntajes perfectos (100%) de los Modos Golden y Diamante se guardan.");
@@ -1344,10 +1328,10 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                 name: playerName, 
                 score: score, 
                 time: finalTime, 
-                username: loggedInUser, // El identificador único
+                username: loggedInUser,
                 createdAt: new Date().toISOString(),
                 isGolden: currentQuizIsGolden,
-                isDiamond: currentQuizIsDiamond // **** ¡CAMBIO AQUÍ! ****
+                isDiamond: currentQuizIsDiamond
             };
             
             try {
@@ -1359,18 +1343,16 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     else if (typeof data === 'object' && data !== null) { entries = Object.values(data); }
                 }
 
-                // NUEVA LÓGICA: Filtrar para entrada única POR MODO (Golden, Diamante, Normal)
                 let existingEntryIndex = -1;
                 if (entries.length > 0) {
                     existingEntryIndex = entries.findIndex(entry => 
                         entry.username === newEntry.username && 
                         !!entry.isGolden === newEntry.isGolden &&
-                        !!entry.isDiamond === newEntry.isDiamond // **** ¡CAMBIO AQUÍ! ****
+                        !!entry.isDiamond === newEntry.isDiamond
                     );
                 }
 
                 if (existingEntryIndex !== -1) {
-                    // El usuario ya existe en este modo, comprobar si el nuevo puntaje es mejor
                     const existingEntry = entries[existingEntryIndex];
                     let isNewScoreBetter = false;
 
@@ -1381,10 +1363,9 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     }
 
                     if (isNewScoreBetter) {
-                        entries[existingEntryIndex] = newEntry; // Reemplazar el puntaje antiguo
+                        entries[existingEntryIndex] = newEntry;
                     }
                 } else {
-                    // Es un usuario nuevo en este leaderboard O un modo nuevo
                     entries.push(newEntry);
                 }
                 
@@ -1393,31 +1374,24 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
                     return (a.time || 999) - (b.time || 999);
                 });
                 
-                const finalEntries = entries.slice(0, 10); // Guardar solo el Top 10
+                const finalEntries = entries.slice(0, 10);
                 await set(leaderboardRef, finalEntries); 
                 
-                // Actualizar el recordHolder del quiz (solo si el mejor es Normal)
-                const bestEntry = finalEntries.find(entry => !entry.isGolden && !entry.isDiamond); // Buscar el mejor "Normal"
+                const bestEntry = finalEntries.find(entry => !entry.isGolden && !entry.isDiamond);
                 const quizRecordRef = ref(db, `${dbPath}/quizzes/${currentQuizDocId}/recordHolder`);
                 
                 if (bestEntry) {
-                    // Si hay una entrada "Normal" en el leaderboard, se vuelve el record
                     await set(quizRecordRef, {
                         name: bestEntry.name,
                         score: bestEntry.score,
                         time: bestEntry.time
                     });
                 } else if (finalEntries.length === 0) {
-                     await set(quizRecordRef, null); // Limpiar si está vacío
+                     await set(quizRecordRef, null);
                 }
-                // Si el mejor es Golden o Diamante, no sobrescribimos el record "normal"
                 
-                
-                // **** ¡CAMBIO AQUÍ! (No navegar, solo cambiar botones) ****
                 leaderboardForm.style.display = 'none';
                 document.getElementById('view-leaderboard-btn').style.display = 'flex';
-                // La línea `renderLeaderboard(currentQuizDocId);` ha sido eliminada.
-                // **** FIN DEL CAMBIO ****
 
             } catch (error) {
                 console.error("Error al guardar puntaje (RTDB): ", error);
@@ -1546,7 +1520,7 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
         
         function showConfirmModal(title, message, onConfirm) {
             confirmTitle.textContent = title;
-            confirmMessage.innerHTML = message; // Cambiado a innerHTML para el GIF
+            confirmMessage.innerHTML = message;
             
             const newOkBtn = confirmOkBtn.cloneNode(true);
             confirmOkBtn.parentNode.replaceChild(newOkBtn, confirmOkBtn);
@@ -1565,12 +1539,8 @@ El array 'options' debe tener exactamente 4 strings. No incluyas nada más en tu
             confirmModal.classList.remove('hidden');
         }
 
-        // **** ¡NUEVAS FUNCIONES! (Lógica Diamante Progresivo) ****
+        // --- Lógica Diamante Progresivo ---
 
-        /**
-         * Función reutilizable para pedir N preguntas de Diamante a la IA,
-         * evitando una lista de preguntas ya hechas.
-         */
         async function fetchDiamondQuestions(count, avoidList = []) {
             const topic = currentQuiz.topic;
             const category = currentQuiz.category || 'Otros';
@@ -1604,7 +1574,6 @@ ${schemaDefinition}
 \`\`\`
 El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
             
-            // Añadir la lista de preguntas a evitar
             let avoidPrompt = "";
             if (avoidList.length > 0) {
                 avoidPrompt = `\n\nIMPORTANTE: NO repitas NINGUNA de estas preguntas, ya han sido generadas: "${avoidList.join('; ')}"`;
@@ -1641,10 +1610,9 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
             return newQuizData.questions;
         }
 
-        /** Pide el siguiente lote de 10 preguntas Diamante en segundo plano */
         async function fetchMoreDiamondQuestions() {
             if (isGeneratingMoreQuestions || !currentQuizIsDiamond || currentQuiz.questions.length >= 40) {
-                return; // Ya está cargando, no es diamante, o ya tiene 40
+                return;
             }
 
             isGeneratingMoreQuestions = true;
@@ -1654,85 +1622,74 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
                 const count = Math.min(10, 40 - currentQuiz.questions.length);
                 const newQuestions = await fetchDiamondQuestions(count, generatedQuestionText);
 
-                // Añadir al quiz y a la lista de "evitar"
                 currentQuiz.questions.push(...newQuestions);
                 generatedQuestionText.push(...newQuestions.map(q => q.question));
                 console.log(`Preguntas cargadas. Total ahora: ${currentQuiz.questions.length}`);
                 
             } catch (error) {
                 console.error("Error al generar lote de Diamante en segundo plano:", error);
-                // No mostrar modal, solo loguear. Se reintentará si el jugador llega al final.
             }
 
             isGeneratingMoreQuestions = false;
         }
 
-        /** Muestra un spinner y espera a que el siguiente lote de preguntas llegue */
         async function waitForNextBatch() {
             document.getElementById('question-container').classList.add('hidden');
             document.getElementById('next-question-loader').classList.remove('hidden');
 
             while (currentQuestionIndex >= currentQuiz.questions.length) {
                 if (!isGeneratingMoreQuestions) {
-                    // La carga falló o se atascó. Reintentar.
                     if (currentQuiz.questions.length < 40) {
                         console.warn('Reintentando carga de lote (el jugador está esperando)...');
-                        await fetchMoreDiamondQuestions(); // Await para que el flag se ponga a true
+                        await fetchMoreDiamondQuestions();
                     } else {
-                        break; // Ya tenemos las 40
+                        break;
                     }
                 }
-                await new Promise(res => setTimeout(res, 500)); // Esperar 500ms
+                await new Promise(res => setTimeout(res, 500));
             }
 
-            // ¡Llegaron las preguntas!
             document.getElementById('question-container').classList.remove('hidden');
             document.getElementById('next-question-loader').classList.add('hidden');
 
             if (currentQuestionIndex < currentQuiz.questions.length) {
                 displayQuestion();
             } else {
-                // Se completaron las 40 justo mientras esperábamos
                 await endQuiz();
             }
         }
         
-        /** Inicia la generación de las PRIMERAS 10 preguntas Diamante */
         async function generateDiamondQuestions() {
             if (!currentQuiz) return;
             
             loadingText.textContent = "Generando primeras 10 de 40 preguntas...";
             showView(VIEWS.LOADING);
             
-            generatedQuestionText = []; // Resetear lista de "evitar"
-            isGeneratingMoreQuestions = true; // Flag inicial
+            generatedQuestionText = [];
+            isGeneratingMoreQuestions = true;
 
             try {
                 const newQuestions = await fetchDiamondQuestions(10, []);
                 
-                // Guardar las primeras preguntas
                 generatedQuestionText.push(...newQuestions.map(q => q.question));
 
-                // Crear el objeto quiz temporal (clonado)
                 const diamondQuiz = {
                     ...currentQuiz,
-                    title: currentQuiz.title, // El título se setea en startQuiz
-                    questions: newQuestions, // Solo las primeras 10
+                    title: currentQuiz.title,
+                    questions: newQuestions,
                     id: currentQuiz.id 
                 };
                 
-                isGeneratingMoreQuestions = false; // Bajar el flag antes de iniciar
+                isGeneratingMoreQuestions = false;
                 
-                // Iniciar el quiz
                 startQuiz(diamondQuiz, false, true);
                 
-                // Inmediatamente pedir el siguiente lote (11-20) en segundo plano
                 fetchMoreDiamondQuestions();
 
             } catch (error) {
                 console.error("Error al generar el quiz Diamante (inicial):", error);
                 showErrorModal(`No se pudo generar el quiz Diamante. ${error.message}`);
-                showView(VIEWS.PLAY); // Volver a la pantalla de fin de quiz
+                showView(VIEWS.PLAY);
                 isGeneratingMoreQuestions = false;
             }
         }
@@ -1830,11 +1787,9 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
                 ? JSON.parse(__firebase_config) 
                 : firebaseConfigFallback;
 
-            // Forzar la ruta base a "everyquiz-app-test"
             appId = 'everyquiz-app-test';
             dbPath = sanitizeRtdbPath(appId); 
 
-            // Asignar elementos del modal de confirmación
             confirmModal = document.getElementById('confirm-modal');
             confirmTitle = document.getElementById('confirm-title');
             confirmMessage = document.getElementById('confirm-message');
@@ -1847,7 +1802,6 @@ El array 'options' debe tener exactamente 4 strings. Solo el JSON.`;
                 
                 initAppListeners();
 
-                // --- Manejo de sesión (localStorage) ---
                 const savedUser = localStorage.getItem('quizAppUser');
                 if (savedUser) {
                     loggedInUser = savedUser;
