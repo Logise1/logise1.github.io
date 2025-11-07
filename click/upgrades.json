@@ -1,0 +1,290 @@
+{
+  "cursor": {
+    "name": "Cursor Mejorado",
+    "baseCost": 15,
+    "power": 1,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+1 por clic"
+  },
+  "guante": {
+    "name": "Guante de Poder",
+    "baseCost": 120,
+    "power": 8,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+8 por clic"
+  },
+  "taladro": {
+    "name": "Taladro de Clics",
+    "baseCost": 1000,
+    "power": 40,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+40 por clic"
+  },
+  "martillo": {
+    "name": "Martillo Neumático",
+    "baseCost": 8000,
+    "power": 100,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+100 por clic"
+  },
+  "multi": {
+    "name": "Multi-Puntero",
+    "baseCost": 40000,
+    "power": 250,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+250 por clic"
+  },
+  "brazo": {
+    "name": "Brazo Robótico",
+    "baseCost": 250000,
+    "power": 1000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+1K por clic"
+  },
+  "turbo": {
+    "name": "Modo Turbo",
+    "baseCost": 1400000,
+    "power": 5000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+5K por clic"
+  },
+  "laser": {
+    "name": "Puntero Láser",
+    "baseCost": 9000000,
+    "power": 20000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+20K por clic"
+  },
+  "satelite": {
+    "name": "Satélite de Clics",
+    "baseCost": 50000000,
+    "power": 100000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+100K por clic"
+  },
+  "cuantico": {
+    "name": "Clic Cuántico",
+    "baseCost": 300000000,
+    "power": 500000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+500K por clic"
+  },
+  "plasma": {
+    "name": "Toque de Plasma",
+    "baseCost": 2500000000,
+    "power": 2000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+2M por clic"
+  },
+  "nanobots": {
+    "name": "Enjambre de Nanobots",
+    "baseCost": 18000000000,
+    "power": 10000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+10M por clic"
+  },
+  "singularidad": {
+    "name": "Singularidad de Clics",
+    "baseCost": 100000000000,
+    "power": 50000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+50M por clic"
+  },
+  "divino": {
+    "name": "Bendición Divina",
+    "baseCost": 750000000000,
+    "power": 250000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+250M por clic"
+  },
+  "infinito": {
+    "name": "Clic Infinito",
+    "baseCost": 6000000000000,
+    "power": 1000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+1B por clic"
+  },
+  "omnipotencia": {
+    "name": "Omnipotencia Clicker",
+    "baseCost": 50000000000000,
+    "power": 10000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+10B por clic"
+  },
+  "crunch": {
+    "name": "Big Crunch Personal",
+    "baseCost": 400000000000000,
+    "power": 100000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+100B por clic"
+  },
+  "creador": {
+    "name": "Toque del Creador",
+    "baseCost": 3000000000000000,
+    "power": 1000000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+1T por clic"
+  },
+  "ayudante": {
+    "name": "Ayudante",
+    "baseCost": 20,
+    "pps": 1,
+    "power": 0,
+    "type": "pps",
+    "description": "+1 pps"
+  },
+  "abuela": {
+    "name": "Abuela",
+    "baseCost": 150,
+    "pps": 5,
+    "power": 0,
+    "type": "pps",
+    "description": "+5 pps"
+  },
+  "granja": {
+    "name": "Granja de Clics",
+    "baseCost": 1200,
+    "pps": 20,
+    "power": 0,
+    "type": "pps",
+    "description": "+20 pps"
+  },
+  "pueblo": {
+    "name": "Pueblo Pequeño",
+    "baseCost": 9000,
+    "pps": 50,
+    "power": 0,
+    "type": "pps",
+    "description": "+50 pps"
+  },
+  "fabrica": {
+    "name": "Fábrica",
+    "baseCost": 50000,
+    "pps": 150,
+    "power": 0,
+    "type": "pps",
+    "description": "+150 pps"
+  },
+  "mina": {
+    "name": "Mina de Puntos",
+    "baseCost": 300000,
+    "pps": 500,
+    "power": 0,
+    "type": "pps",
+    "description": "+500 pps"
+  },
+  "plataforma": {
+    "name": "Plataforma Petrolífera",
+    "baseCost": 1800000,
+    "pps": 2000,
+    "power": 0,
+    "type": "pps",
+    "description": "+2K pps"
+  },
+  "banco": {
+    "name": "Banco",
+    "baseCost": 10000000,
+    "pps": 7500,
+    "power": 0,
+    "type": "pps",
+    "description": "+7.5K pps"
+  },
+  "templo": {
+    "name": "Templo",
+    "baseCost": 60000000,
+    "pps": 30000,
+    "power": 0,
+    "type": "pps",
+    "description": "+30K pps"
+  },
+  "ciudad": {
+    "name": "Ciudad Flotante",
+    "baseCost": 400000000,
+    "pps": 120000,
+    "power": 0,
+    "type": "pps",
+    "description": "+120K pps"
+  },
+  "portal": {
+    "name": "Portal Mágico",
+    "baseCost": 3000000000,
+    "pps": 500000,
+    "power": 0,
+    "type": "pps",
+    "description": "+500K pps"
+  },
+  "alquimia": {
+    "name": "Laboratorio",
+    "baseCost": 22000000000,
+    "pps": 2000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+2M pps"
+  },
+  "viaje": {
+    "name": "Viaje en el Tiempo",
+    "baseCost": 150000000000,
+    "pps": 10000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+10M pps"
+  },
+  "colonia": {
+    "name": "Colonia Espacial",
+    "baseCost": 1000000000000,
+    "pps": 50000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+50M pps"
+  },
+  "motor": {
+    "name": "Motor de Galaxias",
+    "baseCost": 8000000000000,
+    "pps": 250000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+250M pps"
+  },
+  "deseos": {
+    "name": "Fuente de Deseos",
+    "baseCost": 60000000000000,
+    "pps": 1000000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+1B pps"
+  },
+  "multiverso": {
+    "name": "Fábrica de Universos",
+    "baseCost": 400000000000000,
+    "pps": 10000000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+10B pps"
+  },
+  "realidad": {
+    "name": "El Multiverso",
+    "baseCost": 3000000000000000,
+    "pps": 100000000000,
+    "power": 0,
+    "type": "pps",
+    "description": "+100B pps"
+  }
+}
