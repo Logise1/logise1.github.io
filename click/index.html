@@ -202,7 +202,6 @@
             display: block; 
         }
         
-        /* --- ESTILOS DE SUB-PESTAÑAS (NUEVO) --- */
         .sub-tab-buttons {
             display: flex;
             background-color: #f0f2f5;
@@ -233,7 +232,6 @@
         .sub-tab-content.active {
             display: block;
         }
-        /* --- FIN ESTILOS SUB-PESTAÑAS --- */
 
 
         .store-item {
@@ -741,7 +739,6 @@
                 overflow-y: auto;
             }
             
-            /* Ajuste para sub-pestañas en móvil */
             .sub-tab-buttons {
                 margin-bottom: 10px;
             }
@@ -820,25 +817,19 @@
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
             </div>
 
-            <!-- Contenido de Pestaña: Mejoras (AHORA CON SUB-PESTAÑAS) -->
             <div id="store" class="tab-content active no-scrollbar">
-                <!-- Sub-pestañas para Mejoras -->
                 <div class="sub-tab-buttons">
                     <button class="sub-tab-btn active" data-subtab="store-cpc">Clics</button>
                     <button class="sub-tab-btn" data-subtab="store-pps">Segundos</button>
                 </div>
                 
-                <!-- Contenedor para Mejoras de Clic -->
                 <div id="store-cpc" class="sub-tab-content active">
                     <div id="store-cpc-container" class="no-scrollbar">
-                        <!-- Items de Clic generados aquí -->
                     </div>
                 </div>
                 
-                <!-- Contenedor para Mejoras de PPS -->
                 <div id="store-pps" class="sub-tab-content">
                     <div id="store-pps-container" class="no-scrollbar">
-                        <!-- Items de PPS generados aquí -->
                     </div>
                 </div>
             </div>
@@ -951,64 +942,65 @@
         let currentUsername = null; 
         let autoSaveInterval = null; 
 
-        const costIncrease = 1.25; // Aumentado ligeramente para la nueva escala
+        // --- (NUEVO) BALANCE DE PRECIOS ---
+        const costIncrease = 1.22; // Multiplicador de coste por nivel
 
-        // --- (NUEVA) CONFIGURACIÓN DE MEJORAS (REBALANCEADA Y EXPANDIDA) ---
         const UPGRADES_CONFIG = {
             // --- Mejoras de Clic (CPC) ---
-            cursor:     { name: 'Cursor Mejorado',      baseCost: 10,       power: 1,    pps: 0, type: 'cpc', description: '+1 por clic' },
-            guante:     { name: 'Guante de Poder',      baseCost: 80,       power: 8,    pps: 0, type: 'cpc', description: '+8 por clic' },
-            taladro:    { name: 'Taladro de Clics',     baseCost: 500,      power: 40,   pps: 0, type: 'cpc', description: '+40 por clic' },
-            martillo:   { name: 'Martillo Neumático',   baseCost: 3000,     power: 100,  pps: 0, type: 'cpc', description: '+100 por clic' },
-            multi:      { name: 'Multi-Puntero',        baseCost: 10000,    power: 250,  pps: 0, type: 'cpc', description: '+250 por clic' },
-            brazo:      { name: 'Brazo Robótico',       baseCost: 40000,    power: 1000, pps: 0, type: 'cpc', description: '+1K por clic' },
-            turbo:      { name: 'Modo Turbo',           baseCost: 150000,   power: 5000, pps: 0, type: 'cpc', description: '+5K por clic' },
-            laser:      { name: 'Puntero Láser',        baseCost: 700000,   power: 20000, pps: 0, type: 'cpc', description: '+20K por clic' },
-            satelite:   { name: 'Satélite de Clics',    baseCost: 3000000,  power: 100000, pps: 0, type: 'cpc', description: '+100K por clic' },
-            cuantico:   { name: 'Clic Cuántico',        baseCost: 12000000, power: 500000, pps: 0, type: 'cpc', description: '+500K por clic' },
-            plasma:     { name: 'Toque de Plasma',      baseCost: 50000000, power: 2000000, pps: 0, type: 'cpc', description: '+2M por clic' },
-            nanobots:   { name: 'Enjambre de Nanobots', baseCost: 200000000,power: 10000000, pps: 0, type: 'cpc', description: '+10M por clic' },
-            singularidad: { name: 'Singularidad de Clics',baseCost: 1000000000, power: 50000000, pps: 0, type: 'cpc', description: '+50M por clic' },
-            divino:     { name: 'Bendición Divina',     baseCost: 7000000000, power: 250000000, pps: 0, type: 'cpc', description: '+250M por clic' },
-            infinito:   { name: 'Clic Infinito',        baseCost: 50000000000, power: 1000000000, pps: 0, type: 'cpc', description: '+1B por clic' },
-            omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 300000000000, power: 10000000000, pps: 0, type: 'cpc', description: '+10B por clic' },
-            crunch:     { name: 'Big Crunch Personal',  baseCost: 2000000000000, power: 100000000000, pps: 0, type: 'cpc', description: '+100B por clic' },
-            creador:    { name: 'Toque del Creador',    baseCost: 15000000000000, power: 1000000000000, pps: 0, type: 'cpc', description: '+1T por clic' },
+            cursor:     { name: 'Cursor Mejorado',      baseCost: 15,           power: 1,    pps: 0, type: 'cpc', description: '+1 por clic' },
+            guante:     { name: 'Guante de Poder',      baseCost: 120,          power: 8,    pps: 0, type: 'cpc', description: '+8 por clic' },
+            taladro:    { name: 'Taladro de Clics',     baseCost: 1000,         power: 40,   pps: 0, type: 'cpc', description: '+40 por clic' },
+            martillo:   { name: 'Martillo Neumático',   baseCost: 8000,         power: 100,  pps: 0, type: 'cpc', description: '+100 por clic' },
+            multi:      { name: 'Multi-Puntero',        baseCost: 40000,        power: 250,  pps: 0, type: 'cpc', description: '+250 por clic' },
+            brazo:      { name: 'Brazo Robótico',       baseCost: 250000,       power: 1000, pps: 0, type: 'cpc', description: '+1K por clic' },
+            turbo:      { name: 'Modo Turbo',           baseCost: 1400000,      power: 5000, pps: 0, type: 'cpc', description: '+5K por clic' },
+            laser:      { name: 'Puntero Láser',        baseCost: 9000000,      power: 20000, pps: 0, type: 'cpc', description: '+20K por clic' },
+            satelite:   { name: 'Satélite de Clics',    baseCost: 50000000,     power: 100000, pps: 0, type: 'cpc', description: '+100K por clic' },
+            cuantico:   { name: 'Clic Cuántico',        baseCost: 300000000,    power: 500000, pps: 0, type: 'cpc', description: '+500K por clic' },
+            plasma:     { name: 'Toque de Plasma',      baseCost: 2500000000,   power: 2000000, pps: 0, type: 'cpc', description: '+2M por clic' },
+            nanobots:   { name: 'Enjambre de Nanobots', baseCost: 18000000000,  power: 10000000, pps: 0, type: 'cpc', description: '+10M por clic' },
+            singularidad: { name: 'Singularidad de Clics',baseCost: 100000000000, power: 50000000, pps: 0, type: 'cpc', description: '+50M por clic' },
+            divino:     { name: 'Bendición Divina',     baseCost: 750000000000, power: 250000000, pps: 0, type: 'cpc', description: '+250M por clic' },
+            infinito:   { name: 'Clic Infinito',        baseCost: 6000000000000, power: 1000000000, pps: 0, type: 'cpc', description: '+1B por clic' },
+            omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 50000000000000, power: 10000000000, pps: 0, type: 'cpc', description: '+10B por clic' },
+            crunch:     { name: 'Big Crunch Personal',  baseCost: 400000000000000, power: 100000000000, pps: 0, type: 'cpc', description: '+100B por clic' },
+            creador:    { name: 'Toque del Creador',    baseCost: 3000000000000000, power: 1000000000000, pps: 0, type: 'cpc', description: '+1T por clic' },
 
             // --- Mejoras de Puntos por Segundo (PPS) ---
-            ayudante:   { name: 'Ayudante',         baseCost: 15,       pps: 1,    power: 0, type: 'pps', description: '+1 pps' },
-            abuela:     { name: 'Abuela',           baseCost: 60,       pps: 5,    power: 0, type: 'pps', description: '+5 pps' },
-            granja:     { name: 'Granja de Clics',  baseCost: 300,      pps: 20,   power: 0, type: 'pps', description: '+20 pps' },
-            pueblo:     { name: 'Pueblo Pequeño',   baseCost: 1200,     pps: 50,   power: 0, type: 'pps', description: '+50 pps' },
-            fabrica:    { name: 'Fábrica',          baseCost: 5000,     pps: 150,  power: 0, type: 'pps', description: '+150 pps' },
-            mina:       { name: 'Mina de Puntos',   baseCost: 20000,    pps: 500,  power: 0, type: 'pps', description: '+500 pps' },
-            plataforma: { name: 'Plataforma Petrolífera', baseCost: 80000,  pps: 2000, power: 0, type: 'pps', description: '+2K pps' },
-            banco:      { name: 'Banco',            baseCost: 300000,   pps: 7500, power: 0, type: 'pps', description: '+7.5K pps' },
-            templo:     { name: 'Templo',           baseCost: 1200000,  pps: 30000, power: 0, type: 'pps', description: '+30K pps' },
-            ciudad:     { name: 'Ciudad Flotante',  baseCost: 5000000,  pps: 120000, power: 0, type: 'pps', description: '+120K pps' },
-            portal:     { name: 'Portal Mágico',    baseCost: 20000000, pps: 500000, power: 0, type: 'pps', description: '+500K pps' },
-            alquimia:   { name: 'Laboratorio',      baseCost: 80000000, pps: 2000000, power: 0, type: 'pps', description: '+2M pps' },
-            viaje:      { name: 'Viaje en el Tiempo', baseCost: 350000000, pps: 10000000, power: 0, type: 'pps', description: '+10M pps' },
-            colonia:    { name: 'Colonia Espacial', baseCost: 1500000000, pps: 50000000, power: 0, type: 'pps', description: '+50M pps' },
-            motor:      { name: 'Motor de Galaxias',baseCost: 8000000000, pps: 250000000, power: 0, type: 'pps', description: '+250M pps' },
-            deseos:     { name: 'Fuente de Deseos', baseCost: 60000000000, pps: 1000000000, power: 0, type: 'pps', description: '+1B pps' },
-            multiverso:  { name: 'Fábrica de Universos', baseCost: 400000000000, pps: 10000000000, power: 0, type: 'pps', description: '+10B pps' },
-            realidad:   { name: 'El Multiverso',     baseCost: 3000000000000, pps: 100000000000, power: 0, type: 'pps', description: '+100B pps' },
+            ayudante:   { name: 'Ayudante',         baseCost: 20,           pps: 1,    power: 0, type: 'pps', description: '+1 pps' },
+            abuela:     { name: 'Abuela',           baseCost: 150,          pps: 5,    power: 0, type: 'pps', description: '+5 pps' },
+            granja:     { name: 'Granja de Clics',  baseCost: 1200,         pps: 20,   power: 0, type: 'pps', description: '+20 pps' },
+            pueblo:     { name: 'Pueblo Pequeño',   baseCost: 9000,         pps: 50,   power: 0, type: 'pps', description: '+50 pps' },
+            fabrica:    { name: 'Fábrica',          baseCost: 50000,        pps: 150,  power: 0, type: 'pps', description: '+150 pps' },
+            mina:       { name: 'Mina de Puntos',   baseCost: 300000,       pps: 500,  power: 0, type: 'pps', description: '+500 pps' },
+            plataforma: { name: 'Plataforma Petrolífera', baseCost: 1800000,    pps: 2000, power: 0, type: 'pps', description: '+2K pps' },
+            banco:      { name: 'Banco',            baseCost: 10000000,     pps: 7500, power: 0, type: 'pps', description: '+7.5K pps' },
+            templo:     { name: 'Templo',           baseCost: 60000000,     pps: 30000, power: 0, type: 'pps', description: '+30K pps' },
+            ciudad:     { name: 'Ciudad Flotante',  baseCost: 400000000,    pps: 120000, power: 0, type: 'pps', description: '+120K pps' },
+            portal:     { name: 'Portal Mágico',    baseCost: 3000000000,   pps: 500000, power: 0, type: 'pps', description: '+500K pps' },
+            alquimia:   { name: 'Laboratorio',      baseCost: 22000000000,  pps: 2000000, power: 0, type: 'pps', description: '+2M pps' },
+            viaje:      { name: 'Viaje en el Tiempo', baseCost: 150000000000, pps: 10000000, power: 0, type: 'pps', description: '+10M pps' },
+            colonia:    { name: 'Colonia Espacial', baseCost: 1000000000000, pps: 50000000, power: 0, type: 'pps', description: '+50M pps' },
+            motor:      { name: 'Motor de Galaxias',baseCost: 8000000000000, pps: 250000000, power: 0, type: 'pps', description: '+250M pps' },
+            deseos:     { name: 'Fuente de Deseos', baseCost: 60000000000000, pps: 1000000000, power: 0, type: 'pps', description: '+1B pps' },
+            multiverso:  { name: 'Fábrica de Universos', baseCost: 400000000000000, pps: 10000000000, power: 0, type: 'pps', description: '+10B pps' },
+            realidad:   { name: 'El Multiverso',     baseCost: 3000000000000000, pps: 100000000000, power: 0, type: 'pps', description: '+100B pps' },
         };
 
+        // --- (NUEVO) PRECIOS DE SKINS AUMENTADOS ---
         const SKINS_CONFIG = {
             default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
-            smile: { name: "Feliz", emoji: "😊", cost: 50000, unlocked: false, owned: false },
-            heart: { name: "Corazón", emoji: "❤️", cost: 100000, unlocked: false, owned: false },
-            star: { name: "Estrella", emoji: "⭐", cost: 250000, unlocked: false, owned: false },
-            fire: { name: "Fuego", emoji: "🔥", cost: 500000, unlocked: false, owned: false },
-            diamond: { name: "Diamante", emoji: "💎", cost: 1000000, unlocked: false, owned: false },
-            ghost: { name: "Fantasma", emoji: "👻", cost: 2000000, unlocked: false, owned: false },
-            rocket: { name: "Cohete", emoji: "🚀", cost: 5000000, unlocked: false, owned: false },
-            crown: { name: "Corona", emoji: "👑", cost: 10000000, unlocked: false, owned: false },
-            skull: { name: "Calavera", emoji: "💀", cost: 25000000, unlocked: false, owned: false },
-            alien: { name: "Alienígena", emoji: "👽", cost: 50000000, unlocked: false, owned: false },
-            robot: { name: "Robot", emoji: "🤖", cost: 100000000, unlocked: false, owned: false }
+            smile: { name: "Feliz", emoji: "😊", cost: 100000, unlocked: false, owned: false },
+            heart: { name: "Corazón", emoji: "❤️", cost: 300000, unlocked: false, owned: false },
+            star: { name: "Estrella", emoji: "⭐", cost: 750000, unlocked: false, owned: false },
+            fire: { name: "Fuego", emoji: "🔥", cost: 2000000, unlocked: false, owned: false },
+            diamond: { name: "Diamante", emoji: "💎", cost: 5000000, unlocked: false, owned: false },
+            ghost: { name: "Fantasma", emoji: "👻", cost: 10000000, unlocked: false, owned: false },
+            rocket: { name: "Cohete", emoji: "🚀", cost: 25000000, unlocked: false, owned: false },
+            crown: { name: "Corona", emoji: "👑", cost: 75000000, unlocked: false, owned: false },
+            skull: { name: "Calavera", emoji: "💀", cost: 200000000, unlocked: false, owned: false },
+            alien: { name: "Alienígena", emoji: "👽", cost: 500000000, unlocked: false, owned: false },
+            robot: { name: "Robot", emoji: "🤖", cost: 1000000000, unlocked: false, owned: false }
         };
 
         let score = 0;
@@ -1094,8 +1086,7 @@
         const cpcDisplay = document.getElementById('cpc');
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
-        //const storeContainer = document.getElementById('store-items-container'); // Ya no se usa
-
+        
         const levelDisplay = document.getElementById('level-display');
         const xpBar = document.getElementById('xp-bar');
         const tabButtons = document.querySelectorAll('.tab-btn');
@@ -1261,9 +1252,6 @@
             coinsDisplay.textContent = formatNumber(coins);
         }
 
-        /**
-         * (MODIFICADO) Genera los items de la tienda en sus contenedores correctos (CPC y PPS)
-         */
         function initializeStore() {
             const cpcContainer = document.getElementById('store-cpc-container');
             const ppsContainer = document.getElementById('store-pps-container');
@@ -1298,7 +1286,6 @@
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
                 
-                // AÑADIR AL CONTENEDOR CORRECTO
                 if (config.type === 'cpc') {
                     cpcContainer.appendChild(itemDiv);
                 } else if (config.type === 'pps') {
@@ -1383,7 +1370,7 @@
         }
 
         function updateSkinsUI() {
-            Object.keys(skinsState).forEach(skinId => {
+            Object.keys(SKINS_CONFIG).forEach(skinId => {
                 const skin = skinsState[skinId];
                 const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
 
@@ -1505,7 +1492,6 @@
                         if (savedState.upgrades && savedState.upgrades[key]) {
                             gameState.upgrades[key] = savedState.upgrades[key];
                         } else {
-                            // Si la mejora no existe en el guardado (porque es nueva), inicializarla
                             if (UPGRADES_CONFIG[key]) {
                                 gameState.upgrades[key] = {
                                     level: 0,
@@ -1515,7 +1501,6 @@
                         }
                     });
 
-                    // Limpiar mejoras guardadas que ya no existan en config
                     Object.keys(gameState.upgrades).forEach(key => {
                         if (!UPGRADES_CONFIG[key]) {
                             delete gameState.upgrades[key];
@@ -1814,7 +1799,6 @@
             handleManualClick(event);
         });
 
-        // (MODIFICADO) Delegación de eventos para botones de la tienda
         const storeContent = document.getElementById('store');
         storeContent.addEventListener('click', (event) => {
             const button = event.target.closest('button[data-key]');
@@ -1830,7 +1814,6 @@
             });
         });
 
-        // --- (NUEVO) Eventos para Sub-Pestañas de Mejoras ---
         const subTabButtons = document.querySelectorAll('.sub-tab-btn');
         const subTabContents = document.querySelectorAll('.sub-tab-content');
 
@@ -1840,11 +1823,10 @@
                 subTabContents.forEach(content => content.classList.remove('active'));
                 
                 button.classList.add('active');
-                const subTabId = button.dataset.subtab; // e.g., "store-cpc"
+                const subTabId = button.dataset.subtab; 
                 document.getElementById(subTabId).classList.add('active');
             });
         });
-        // --- FIN Eventos Sub-Pestañas ---
 
         registerBtn.addEventListener('click', handleRegister);
         loginBtn.addEventListener('click', handleLogin);
