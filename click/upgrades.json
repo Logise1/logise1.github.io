@@ -9,7 +9,7 @@
   },
   "guante": {
     "name": "Guante de Poder",
-    "baseCost": 120,
+    "baseCost": 100,
     "power": 8,
     "pps": 0,
     "type": "cpc",
@@ -17,7 +17,7 @@
   },
   "taladro": {
     "name": "Taladro de Clics",
-    "baseCost": 1000,
+    "baseCost": 1100,
     "power": 40,
     "pps": 0,
     "type": "cpc",
@@ -25,7 +25,7 @@
   },
   "martillo": {
     "name": "Martillo Neumático",
-    "baseCost": 8000,
+    "baseCost": 12000,
     "power": 100,
     "pps": 0,
     "type": "cpc",
@@ -33,7 +33,7 @@
   },
   "multi": {
     "name": "Multi-Puntero",
-    "baseCost": 40000,
+    "baseCost": 130000,
     "power": 250,
     "pps": 0,
     "type": "cpc",
@@ -41,7 +41,7 @@
   },
   "brazo": {
     "name": "Brazo Robótico",
-    "baseCost": 250000,
+    "baseCost": 1400000,
     "power": 1000,
     "pps": 0,
     "type": "cpc",
@@ -49,7 +49,7 @@
   },
   "turbo": {
     "name": "Modo Turbo",
-    "baseCost": 1400000,
+    "baseCost": 20000000,
     "power": 5000,
     "pps": 0,
     "type": "cpc",
@@ -57,7 +57,7 @@
   },
   "laser": {
     "name": "Puntero Láser",
-    "baseCost": 9000000,
+    "baseCost": 330000000,
     "power": 20000,
     "pps": 0,
     "type": "cpc",
@@ -65,7 +65,7 @@
   },
   "satelite": {
     "name": "Satélite de Clics",
-    "baseCost": 50000000,
+    "baseCost": 5100000000,
     "power": 100000,
     "pps": 0,
     "type": "cpc",
@@ -73,7 +73,7 @@
   },
   "cuantico": {
     "name": "Clic Cuántico",
-    "baseCost": 300000000,
+    "baseCost": 75000000000,
     "power": 500000,
     "pps": 0,
     "type": "cpc",
@@ -81,7 +81,7 @@
   },
   "plasma": {
     "name": "Toque de Plasma",
-    "baseCost": 2500000000,
+    "baseCost": 1000000000000,
     "power": 2000000,
     "pps": 0,
     "type": "cpc",
@@ -89,7 +89,7 @@
   },
   "nanobots": {
     "name": "Enjambre de Nanobots",
-    "baseCost": 18000000000,
+    "baseCost": 14000000000000,
     "power": 10000000,
     "pps": 0,
     "type": "cpc",
@@ -97,7 +97,7 @@
   },
   "singularidad": {
     "name": "Singularidad de Clics",
-    "baseCost": 100000000000,
+    "baseCost": 170000000000000,
     "power": 50000000,
     "pps": 0,
     "type": "cpc",
@@ -105,7 +105,7 @@
   },
   "divino": {
     "name": "Bendición Divina",
-    "baseCost": 750000000000,
+    "baseCost": 2100000000000000,
     "power": 250000000,
     "pps": 0,
     "type": "cpc",
@@ -113,7 +113,7 @@
   },
   "infinito": {
     "name": "Clic Infinito",
-    "baseCost": 6000000000000,
+    "baseCost": 26000000000000000,
     "power": 1000000000,
     "pps": 0,
     "type": "cpc",
@@ -121,7 +121,7 @@
   },
   "omnipotencia": {
     "name": "Omnipotencia Clicker",
-    "baseCost": 50000000000000,
+    "baseCost": 320000000000000000,
     "power": 10000000000,
     "pps": 0,
     "type": "cpc",
@@ -129,7 +129,7 @@
   },
   "crunch": {
     "name": "Big Crunch Personal",
-    "baseCost": 400000000000000,
+    "baseCost": 4000000000000000000,
     "power": 100000000000,
     "pps": 0,
     "type": "cpc",
@@ -137,7 +137,7 @@
   },
   "creador": {
     "name": "Toque del Creador",
-    "baseCost": 3000000000000000,
+    "baseCost": 50000000000000000000,
     "power": 1000000000000,
     "pps": 0,
     "type": "cpc",
@@ -145,7 +145,7 @@
   },
   "ayudante": {
     "name": "Ayudante",
-    "baseCost": 20,
+    "baseCost": 25,
     "pps": 1,
     "power": 0,
     "type": "pps",
@@ -161,7 +161,7 @@
   },
   "granja": {
     "name": "Granja de Clics",
-    "baseCost": 1200,
+    "baseCost": 1700,
     "pps": 20,
     "power": 0,
     "type": "pps",
@@ -169,7 +169,7 @@
   },
   "pueblo": {
     "name": "Pueblo Pequeño",
-    "baseCost": 9000,
+    "baseCost": 15000,
     "pps": 50,
     "power": 0,
     "type": "pps",
@@ -177,7 +177,7 @@
   },
   "fabrica": {
     "name": "Fábrica",
-    "baseCost": 50000,
+    "baseCost": 100000,
     "pps": 150,
     "power": 0,
     "type": "pps",
@@ -185,7 +185,7 @@
   },
   "mina": {
     "name": "Mina de Puntos",
-    "baseCost": 300000,
+    "baseCost": 800000,
     "pps": 500,
     "power": 0,
     "type": "pps",
@@ -193,7 +193,7 @@
   },
   "plataforma": {
     "name": "Plataforma Petrolífera",
-    "baseCost": 1800000,
+    "baseCost": 5000000,
     "pps": 2000,
     "power": 0,
     "type": "pps",
@@ -201,7 +201,7 @@
   },
   "banco": {
     "name": "Banco",
-    "baseCost": 10000000,
+    "baseCost": 40000000,
     "pps": 7500,
     "power": 0,
     "type": "pps",
@@ -209,7 +209,7 @@
   },
   "templo": {
     "name": "Templo",
-    "baseCost": 60000000,
+    "baseCost": 450000000,
     "pps": 30000,
     "power": 0,
     "type": "pps",
@@ -217,7 +217,7 @@
   },
   "ciudad": {
     "name": "Ciudad Flotante",
-    "baseCost": 400000000,
+    "baseCost": 6000000000,
     "pps": 120000,
     "power": 0,
     "type": "pps",
@@ -225,7 +225,7 @@
   },
   "portal": {
     "name": "Portal Mágico",
-    "baseCost": 3000000000,
+    "baseCost": 80000000000,
     "pps": 500000,
     "power": 0,
     "type": "pps",
@@ -233,7 +233,7 @@
   },
   "alquimia": {
     "name": "Laboratorio",
-    "baseCost": 22000000000,
+    "baseCost": 950000000000,
     "pps": 2000000,
     "power": 0,
     "type": "pps",
@@ -241,16 +241,15 @@
   },
   "viaje": {
     "name": "Viaje en el Tiempo",
-    "baseCost": 150000000000,
+    "baseCost": 11000000000000,
     "pps": 10000000,
     "power": 0,
     "type": "pps",
     "description": "+10M pps"
-
   },
   "colonia": {
     "name": "Colonia Espacial",
-    "baseCost": 1000000000000,
+    "baseCost": 130000000000000,
     "pps": 50000000,
     "power": 0,
     "type": "pps",
@@ -258,7 +257,7 @@
   },
   "motor": {
     "name": "Motor de Galaxias",
-    "baseCost": 8000000000000,
+    "baseCost": 1600000000000000,
     "pps": 250000000,
     "power": 0,
     "type": "pps",
@@ -266,7 +265,7 @@
   },
   "deseos": {
     "name": "Fuente de Deseos",
-    "baseCost": 60000000000000,
+    "baseCost": 20000000000000000,
     "pps": 1000000000,
     "power": 0,
     "type": "pps",
@@ -274,7 +273,7 @@
   },
   "multiverso": {
     "name": "Fábrica de Universos",
-    "baseCost": 400000000000000,
+    "baseCost": 250000000000000000,
     "pps": 10000000000,
     "power": 0,
     "type": "pps",
@@ -282,7 +281,7 @@
   },
   "realidad": {
     "name": "El Multiverso",
-    "baseCost": 3000000000000000,
+    "baseCost": 3000000000000000000,
     "pps": 100000000000,
     "power": 0,
     "type": "pps",
