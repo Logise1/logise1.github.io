@@ -33,7 +33,7 @@
   },
   "multi": {
     "name": "Multi-Puntero",
-    "baseCost": 130000,
+    "baseCost": 80000,
     "power": 250,
     "pps": 0,
     "type": "cpc",
@@ -41,7 +41,7 @@
   },
   "brazo": {
     "name": "Brazo Robótico",
-    "baseCost": 1400000,
+    "baseCost": 750000,
     "power": 1000,
     "pps": 0,
     "type": "cpc",
@@ -177,7 +177,7 @@
   },
   "fabrica": {
     "name": "Fábrica",
-    "baseCost": 100000,
+    "baseCost": 65000,
     "pps": 150,
     "power": 0,
     "type": "pps",
