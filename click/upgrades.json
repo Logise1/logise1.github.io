@@ -246,6 +246,7 @@
     "power": 0,
     "type": "pps",
     "description": "+10M pps"
+
   },
   "colonia": {
     "name": "Colonia Espacial",
