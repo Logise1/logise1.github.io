@@ -2,16 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Aventura de Clics (Online)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --mobile-tab-height: 60px;
+            --tab-bar-height: 60px;
         }
-
         body {
             font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background-color: #f4f7f6;
@@ -23,7 +22,7 @@
             align-items: center;
             min-height: 100vh;
             user-select: none;
-            overflow: hidden; 
+            overflow: hidden;
             font-weight: 500;
         }
 
@@ -33,11 +32,11 @@
         }
 
         .no-scrollbar::-webkit-scrollbar {
-            display: none; 
+            display: none;
         }
         .no-scrollbar {
-            -ms-overflow-style: none;  
-            scrollbar-width: none;  
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         .game-container {
@@ -138,6 +137,7 @@
             animation: pulse 2.5s infinite ease-in-out;
             position: relative;
             overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
         @keyframes pulse {
@@ -159,6 +159,13 @@
             align-items: center;
             pointer-events: none;
         }
+        
+        #click-button-text {
+            position: absolute;
+            bottom: 10%;
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
 
         .store-panel {
             flex-basis: 45%;
@@ -170,7 +177,6 @@
         .tab-buttons {
             display: flex;
             border-bottom: 1px solid #eef2f1;
-            flex-shrink: 0;
         }
         .tab-btn {
             flex: 1;
@@ -182,57 +188,58 @@
             cursor: pointer;
             color: #777;
             transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
         }
-        .tab-btn:first-child { border-right: 1px solid #eef2f1; }
-        .tab-btn:nth-child(2) { border-right: 1px solid #eef2f1; }
+        .tab-btn:not(:last-child) { border-right: 1px solid #eef2f1; }
         .tab-btn.active {
             background-color: #ffffff;
             color: #007bff;
             border-bottom: 2px solid #007bff;
-            margin-bottom: -1px; 
+            margin-bottom: -1px;
         }
 
         .tab-content {
-            display: none; 
+            display: none;
             flex-grow: 1;
             overflow-y: auto;
             padding: 15px;
         }
         .tab-content.active {
-            display: block; 
+            display: block;
         }
         
         .sub-tab-buttons {
             display: flex;
-            background-color: #f0f2f5;
-            border-radius: 10px;
-            padding: 4px;
             margin-bottom: 15px;
+            background-color: #f4f7f6;
+            border-radius: 10px;
+            padding: 5px;
         }
         .sub-tab-btn {
             flex: 1;
-            padding: 10px 5px;
+            padding: 10px;
             font-size: 1rem;
             font-weight: 700;
             background-color: transparent;
             border: none;
+            border-radius: 8px;
             cursor: pointer;
             color: #555;
             transition: all 0.2s ease;
-            border-radius: 8px;
+            -webkit-tap-highlight-color: transparent;
         }
         .sub-tab-btn.active {
             background-color: #ffffff;
             color: #007bff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
+        
         .sub-tab-content {
             display: none;
         }
         .sub-tab-content.active {
             display: block;
         }
-
 
         .store-item {
             display: flex;
@@ -263,6 +270,7 @@
             transition: all 0.2s ease;
             flex-shrink: 0;
             min-width: 110px;
+            -webkit-tap-highlight-color: transparent;
         }
         .store-item button:hover {
             background-color: #218838;
@@ -319,9 +327,9 @@
         }
 
         #leaderboard-list-container {
-            flex-grow: 1; 
-            overflow-y: auto; 
-            min-height: 150px; 
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 150px;
         }
         #leaderboard-list {
             list-style: none;
@@ -397,7 +405,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            flex-shrink: 0; 
+            flex-shrink: 0;
         }
         .leaderboard-actions input {
             padding: 12px;
@@ -416,6 +424,7 @@
             font-weight: 700;
             font-size: 1rem;
             transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
         }
         .leaderboard-actions button:hover { background-color: #0069d9; }
 
@@ -444,6 +453,7 @@
             font-weight: 700;
             color: #333;
             margin-bottom: 10px;
+            word-wrap: break-word;
         }
         #logout-btn {
             background-color: #6c757d;
@@ -514,6 +524,7 @@
             font-size: 1rem;
             transition: all 0.2s ease;
             flex: 1;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #modal-btn-later {
@@ -531,47 +542,10 @@
         #modal-btn-go:hover {
             background-color: #0069d9;
         }
-        
-        .ban-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(220, 53, 69, 0.9); 
-            display: none; 
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            animation: fadeIn 0.3s ease forwards;
-        }
-        .ban-message h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0 0 15px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .ban-message p {
-            font-size: 1.2rem;
-            margin: 10px 0;
-        }
-        #ban-timer {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-top: 20px;
-            font-family: 'Courier New', Courier, monospace;
-            background-color: rgba(0,0,0,0.2);
-            padding: 10px 20px;
-            border-radius: 10px;
-        }
 
         .skins-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             gap: 12px;
             margin-top: 10px;
         }
@@ -643,153 +617,164 @@
             color: #007bff;
         }
         
+        #ban-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(220, 50, 50, 0.95);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+        }
         
-        @media (max-width: 900px) {
+        #ban-overlay h2 {
+            margin: 0 0 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        #ban-overlay p {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+        
+        #ban-timer {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 15px;
+        }
+        
+        .mobile-tab-bar {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
             body {
-                overflow: hidden; 
-                box-sizing: border-box; 
+                overflow: auto;
+                height: 100vh;
+                -webkit-text-size-adjust: 100%;
             }
-            
             .game-container {
                 flex-direction: column;
-                width: 100vw;
-                height: 100vh; 
+                width: 100%;
+                height: 100%;
                 max-height: none;
                 border-radius: 0;
                 box-shadow: none;
             }
             
             .left-panel {
-                flex-basis: 50%; 
+                flex-basis: auto;
                 border-right: none;
-                border-bottom: 2px solid #eef2f1;
-                min-height: 0; 
-            }
-            
-            .store-panel {
-                flex-basis: 50%; 
-                min-height: 0; 
-                padding-bottom: var(--mobile-tab-height);
-                box-sizing: border-box;
-                overflow: hidden; 
-                display: flex; 
-                flex-direction: column;
             }
             
             .stats {
-                padding: 10px 15px; 
+                padding: 10px 15px;
             }
-            
             #score {
                 font-size: 2.5rem;
             }
-            
             #pps, #cpc, #level-display {
-                font-size: 0.85rem;
-                margin: 4px 0 0;
+                font-size: 0.9rem;
             }
-
-            .xp-bar-container {
-                margin-top: 6px;
+            
+            .clicker-area {
+                flex-grow: 1;
+                min-height: 280px;
             }
             
             #click-button {
-                width: 180px; 
-                height: 180px;
-                font-size: 1.6rem;
+                width: 200px;
+                height: 200px;
+                font-size: 1.8rem;
             }
             
             .click-button-face {
                 font-size: 3rem;
             }
-            
-            .click-visual {
-                font-size: 2rem;
+            #click-button-text {
+                font-size: 1rem;
             }
 
+            .store-panel {
+                flex-basis: auto;
+                flex-grow: 1;
+                min-height: 0;
+                overflow: hidden;
+                padding-bottom: var(--tab-bar-height);
+            }
+            
             .tab-buttons {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: var(--mobile-tab-height);
-                background-color: #ffffff;
-                border-top: 1px solid #eef2f1;
-                z-index: 100;
-                box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
-                border-bottom: none; 
-            }
-            .tab-btn {
-                font-size: 0.9rem;
-                padding: 10px 5px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-right: none !important; 
-            }
-            .tab-btn.active {
-                border-bottom: 3px solid #007bff;
-                margin-bottom: 0; 
-                background-color: #fdfdfd;
+                display: none;
             }
             
             .tab-content {
-                flex-grow: 1; 
                 padding: 10px;
-                overflow-y: auto;
+                height: 100%;
+                box-sizing: border-box;
+            }
+
+            .mobile-tab-bar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: var(--tab-bar-height);
+                background-color: #ffffff;
+                border-top: 1px solid #e0e0e0;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+                z-index: 50;
+            }
+            .mobile-tab-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: none;
+                border: none;
+                padding: 5px 0;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #888;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
             
-            .sub-tab-buttons {
-                margin-bottom: 10px;
-            }
-            .sub-tab-btn {
-                font-size: 0.9rem;
-                padding: 8px 5px;
+            .mobile-tab-btn.active {
+                color: #007bff;
             }
             
-            .store-item {
-                padding: 10px;
-                margin-bottom: 8px;
-            }
-            
-            .store-item button {
-                padding: 8px 10px;
-                font-size: 0.8rem;
-                min-width: 80px;
-            }
-            
-            .item-info strong { font-size: 0.9rem; }
-            .item-info span { font-size: 0.75rem; }
-            
-            .skins-grid {
-                grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
-                gap: 8px;
-            }
-            
-            .skin-preview {
-                width: 45px;
-                height: 45px;
-                font-size: 1.4rem;
-            }
-            .skin-name { font-size: 0.7rem; }
-            .skin-cost { font-size: 0.65rem; }
-            
-            .modal-box {
-                width: 90%;
+            .mobile-tab-btn svg {
+                width: 24px;
+                height: 24px;
+                margin-bottom: 2px;
+                fill: currentColor;
             }
             
             .leaderboard-actions input {
                 padding: 10px;
             }
             .leaderboard-actions button {
-                padding: 10px 15px;
+                padding: 10px 12px;
+                font-size: 0.9rem;
             }
-
-            .ban-message h2 { font-size: 2rem; }
-            .ban-message p { font-size: 1rem; }
-            #ban-timer { font-size: 2.2rem; }
+            
+            #ban-overlay {
+                width: 100vw;
+                height: 100vh;
+            }
         }
-        
+
     </style>
 </head>
 <body>
@@ -806,7 +791,7 @@
                 <p id="pps">0 Puntos por segundo</p>
             </div>
             <div class="clicker-area" id="clicker-zone">
-                <button id="click-button" oncontextmenu="return false">¡Clic!</button>
+                <button id="click-button" oncontextmenu="return false"></button>
             </div>
         </div>
 
@@ -823,13 +808,13 @@
                     <button class="sub-tab-btn" data-subtab="store-pps">Segundos</button>
                 </div>
                 
-                <div id="store-cpc" class="sub-tab-content active">
-                    <div id="store-cpc-container" class="no-scrollbar">
+                <div id="store-cpc" class="sub-tab-content active no-scrollbar">
+                    <div id="store-items-cpc-container">
                     </div>
                 </div>
                 
-                <div id="store-pps" class="sub-tab-content">
-                    <div id="store-pps-container" class="no-scrollbar">
+                <div id="store-pps" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-pps-container">
                     </div>
                 </div>
             </div>
@@ -845,9 +830,7 @@
 
             <div id="leaderboard" class="tab-content no-scrollbar">
                 <div id="leaderboard-content">
-
                     <h2>Clasificación Mundial</h2>
-
                     <div id="leaderboard-list-container" class="no-scrollbar">
                         <div id="leaderboard-status">
                             <div class="spinner"></div>
@@ -867,14 +850,12 @@
                             </div>
                             <p id="auth-status"></p>
                         </div>
-
                         <div id="score-section" style="display: none;">
                             <p id="logged-in-as">Logueado como: </p>
                             <button id="save-score-btn">Guardar Puntuación Manual</button>
                             <button id="logout-btn">Cerrar Sesión</button>
                             <p id="save-status"></p>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -893,18 +874,23 @@
         </div>
     </div>
     
-    <div id="ban-overlay" class="ban-overlay">
-        <div class="ban-message">
-            <h2>¡Trampas Detectadas!</h2>
-            <p>Has sido baneado por clics demasiado consistentes.</p>
-            <p>Podrás volver a jugar en:</p>
-            <h3 id="ban-timer">01:00:00</h3>
-        </div>
+    <div class="mobile-tab-bar">
+        <button class="mobile-tab-btn active" data-tab="store">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2l5.5 9h-11zM12 21.213L4 10h16z"/></svg>
+            <span>Mejoras</span>
+        </button>
+        <button class="mobile-tab-btn" data-tab="skins">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5 4.5c2.336 0 4.31 1.454 5.116 3.5H6.884c.806-2.046 2.78-3.5 5.116-3.5z"/></svg>
+            <span>Skins</span>
+        </button>
+        <button class="mobile-tab-btn" data-tab="leaderboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 1l9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V5l9-4zm0 2.69L5 7.7v3.3c0 3.5 2.5 7.6 7 9.3 4.5-1.7 7-5.8 7-9.3V7.7L12 3.69zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 8c-2.3 0-4.3-.9-5.9-2.4.4-1.3 2.1-2.1 5.9-2.1s5.5.8 5.9 2.1C16.3 17.1 14.3 18 12 18z"/></svg>
+            <span>Clasificación</span>
+        </button>
     </div>
 
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import {
             getAuth,
             onAuthStateChanged,
@@ -922,48 +908,47 @@
             onValue,
             get
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-
+        
         const firebaseConfig = {
             apiKey: "AIzaSyB_y8OqwksVYbzKZgjSFmzgD2AOg32CsI4",
             authDomain: "shittyclicker.firebaseapp.com",
-            databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedatabase.app",
+            databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedate.app",
             projectId: "shittyclicker",
             storageBucket: "shittyclicker.firebasestorage.app",
             messagingSenderId: "585004353396",
             appId: "1:585004353396:web:fcabf12ba0d695ed0ece21",
             measurementId: "G-XRYBFXCYPG"
         };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        
+        let app, auth, db;
+        try {
+            app = getApp();
+        } catch (e) {
+            app = initializeApp(firebaseConfig);
+        }
+        auth = getAuth(app);
+        db = getDatabase(app);
 
         let userId = null;
         let currentUsername = null; 
         let autoSaveInterval = null; 
 
-        // --- (NUEVO) CONFIGURACIÓN DE MEJORAS (REBALANCEADA Y EXPANDIDA) ---
-        
-        // ELIMINADO: const UPGRADES_CONFIG = { ... };
-        
-        // AÑADIDO: Variable global para almacenar la config cargada
         let UPGRADES_CONFIG = {};
-
-        const costIncrease = 1.22; 
+        const costIncrease = 1.15;
 
         const SKINS_CONFIG = {
             default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
-            smile: { name: "Feliz", emoji: "😊", cost: 100000, unlocked: false, owned: false },
-            heart: { name: "Corazón", emoji: "❤️", cost: 300000, unlocked: false, owned: false },
-            star: { name: "Estrella", emoji: "⭐", cost: 750000, unlocked: false, owned: false },
-            fire: { name: "Fuego", emoji: "🔥", cost: 2000000, unlocked: false, owned: false },
-            diamond: { name: "Diamante", emoji: "💎", cost: 5000000, unlocked: false, owned: false },
+            smile: { name: "Feliz", emoji: "😊", cost: 5000, unlocked: false, owned: false },
+            heart: { name: "Corazón", emoji: "❤️", cost: 25000, unlocked: false, owned: false },
+            star: { name: "Estrella", emoji: "⭐", cost: 100000, unlocked: false, owned: false },
+            fire: { name: "Fuego", emoji: "🔥", cost: 500000, unlocked: false, owned: false },
+            diamond: { name: "Diamante", emoji: "💎", cost: 2500000, unlocked: false, owned: false },
             ghost: { name: "Fantasma", emoji: "👻", cost: 10000000, unlocked: false, owned: false },
-            rocket: { name: "Cohete", emoji: "🚀", cost: 25000000, unlocked: false, owned: false },
-            crown: { name: "Corona", emoji: "👑", cost: 75000000, unlocked: false, owned: false },
-            skull: { name: "Calavera", emoji: "💀", cost: 200000000, unlocked: false, owned: false },
-            alien: { name: "Alienígena", emoji: "👽", cost: 500000000, unlocked: false, owned: false },
-            robot: { name: "Robot", emoji: "🤖", cost: 1000000000, unlocked: false, owned: false }
+            rocket: { name: "Cohete", emoji: "🚀", cost: 50000000, unlocked: false, owned: false },
+            crown: { name: "Corona", emoji: "👑", cost: 250000000, unlocked: false, owned: false },
+            skull: { name: "Calavera", emoji: "💀", cost: 1000000000, unlocked: false, owned: false },
+            alien: { name: "Alienígena", emoji: "👽", cost: 7500000000, unlocked: false, owned: false },
+            robot: { name: "Robot", emoji: "🤖", cost: 50000000000, unlocked: false, owned: false }
         };
 
         let score = 0;
@@ -986,16 +971,19 @@
         
         let isBanned = false;
         let banExpiresAt = 0;
-        let banCountdownInterval = null;
+        let banCheckInterval = null;
 
-        let isFirstMobileClick = true; 
-
-        let clickIntervals = [];
-        let lastClickTimestamp = 0;
-        const CONSISTENCY_THRESHOLD = 5; 
-        const SAMPLES_NEEDED = 20; 
-
+        const _DateNow = Date.now;
+        const _MathSqrt = Math.sqrt;
+        const _MathPow = Math.pow;
+        const _MathCeil = Math.ceil;
+        const _MathRandom = Math.random;
+        const _MathFloor = Math.floor;
+        const _MathAbs = Math.abs;
+        
         function formatNumber(num) {
+            num = _MathFloor(num);
+            if (num < 1000) return num.toString();
             if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y';
             if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z';
             if (num >= 1e18) return (num / 1e18).toFixed(num % 1e18 === 0 ? 0 : 2).replace(/\./g, ',') + 'E';
@@ -1004,15 +992,15 @@
             if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B';
             if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M';
             if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K';
-            return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
-
+        
         function getStandardDeviation(array) {
             if (array.length < 2) return 0;
             const n = array.length;
             const mean = array.reduce((a, b) => a + b) / n;
-            const variance = array.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
-            return Math.sqrt(variance);
+            const variance = array.reduce((a, b) => a + _MathPow(b - mean, 2), 0) / n;
+            return _MathSqrt(variance);
         }
 
         function resetGameState() {
@@ -1024,26 +1012,26 @@
             modalShown = false;
             coins = 0;
             currentSkin = 'default';
-            isFirstMobileClick = true; 
-            
-            hideBanScreen();
+            isBanned = false;
+            banExpiresAt = 0;
+            clickIntervals = [];
 
-            // Esta función AHORA DEPENDE de que UPGRADES_CONFIG esté cargado
-            Object.keys(UPGRADES_CONFIG).forEach(key => {
-                gameState.upgrades[key] = {
-                    level: 0,
-                    cost: UPGRADES_CONFIG[key].baseCost
-                };
-            });
+            if (Object.keys(UPGRADES_CONFIG).length > 0) {
+                Object.keys(UPGRADES_CONFIG).forEach(key => {
+                    gameState.upgrades[key] = {
+                        level: 0,
+                        cost: UPGRADES_CONFIG[key].baseCost
+                    };
+                });
+            }
 
             skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
-            
-            // Estas llamadas son seguras si resetGameState se llama después de cargar config
+
             recalculateStats(); 
             recalculateLevelStats(); 
             updateUI(); 
             updateSkinsUI(); 
-            updateClickButtonSkin();
+            checkBanStatus();
         }
 
         const scoreDisplay = document.getElementById('score');
@@ -1051,11 +1039,16 @@
         const cpcDisplay = document.getElementById('cpc');
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
-        
+        const storeCpcContainer = document.getElementById('store-items-cpc-container');
+        const storePpsContainer = document.getElementById('store-items-pps-container');
+
         const levelDisplay = document.getElementById('level-display');
         const xpBar = document.getElementById('xp-bar');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
+        const subTabButtons = document.querySelectorAll('.sub-tab-btn');
+        const subTabContents = document.querySelectorAll('.sub-tab-content');
+        const mobileTabButtons = document.querySelectorAll('.mobile-tab-btn');
 
         const leaderboardList = document.getElementById('leaderboard-list');
         const leaderboardStatus = document.getElementById('leaderboard-status');
@@ -1076,17 +1069,37 @@
         const loginModalOverlay = document.getElementById('login-modal-overlay');
         const modalBtnLater = document.getElementById('modal-btn-later');
         const modalBtnGo = document.getElementById('modal-btn-go');
-        
-        const banOverlay = document.getElementById('ban-overlay');
-        const banTimer = document.getElementById('ban-timer');
 
         const coinsDisplay = document.getElementById('coins-amount');
         const skinsGrid = document.getElementById('skins-grid');
+        
+        let firstClick = true;
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+        function requestFullscreen() {
+            if (isMobile && firstClick) {
+                firstClick = false;
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(err => console.log(err));
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen().catch(err => console.log(err));
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen().catch(err => console.log(err));
+                }
+            }
+        }
 
         function handleManualClick(event) {
             if (isBanned) return;
             if (event.button === 2) return;
+            
+            requestFullscreen();
+
+            if (checkClickConsistency()) {
+                triggerBan(3600);
+                return;
+            }
 
             const baseGain = clickPower;
             const earnedScore = baseGain * levelMultiplier;
@@ -1094,16 +1107,14 @@
             score += earnedScore;
             gainXP(baseGain);
 
-            if (Math.random() < 0.1) {
-                coins += 1;
-                updateCoinsDisplay();
-            }
+            coins += 1;
+            updateCoinsDisplay();
 
             showClickVisual(event, earnedScore);
             updateUI();
 
             totalClicks++;
-            if (totalClicks === 2000 && !modalShown) {
+            if (totalClicks === 2000 && !modalShown && !userId) {
                 showLoginModal();
                 modalShown = true;
             }
@@ -1116,12 +1127,12 @@
             while (xp >= xpToNextLevel) {
                 xp -= xpToNextLevel;
                 level++;
-                recalculateLevelStats(); 
+                recalculateLevelStats();
             }
         }
 
         function recalculateLevelStats() {
-            xpToNextLevel = 100 * Math.pow(5, level - 1);
+            xpToNextLevel = 100 * _MathPow(5, level - 1);
             levelMultiplier = 1 + (level - 1) * 0.05;
         }
 
@@ -1145,15 +1156,14 @@
         }
 
         function buyUpgrade(key) {
-            if (isBanned) return; 
-            
+            if (isBanned) return;
             const state = gameState.upgrades[key];
             const config = UPGRADES_CONFIG[key];
 
             if (score >= state.cost) {
                 score -= state.cost;
                 state.level++;
-                state.cost = Math.ceil(config.baseCost * Math.pow(costIncrease, state.level));
+                state.cost = _MathCeil(config.baseCost * _MathPow(costIncrease, state.level));
 
                 recalculateStats();
                 updateUI();
@@ -1165,17 +1175,10 @@
             let newClickPower = 1;
 
             Object.keys(UPGRADES_CONFIG).forEach(key => {
-                // Asegurarse de que el estado de la mejora exista (importante al cargar)
-                if (!gameState.upgrades[key]) {
-                    gameState.upgrades[key] = {
-                        level: 0,
-                        cost: UPGRADES_CONFIG[key].baseCost
-                    };
-                }
-                
                 const config = UPGRADES_CONFIG[key];
                 const state = gameState.upgrades[key];
-
+                
+                if (!state) return;
 
                 if (config.pps > 0) newPPS += state.level * config.pps;
                 if (config.power > 0) newClickPower += state.level * config.power;
@@ -1186,7 +1189,7 @@
         }
 
         function gameLoop() {
-            if (isBanned) return; 
+            if (isBanned) return;
             
             const baseGain = pps;
             const earnedScore = baseGain * levelMultiplier;
@@ -1209,16 +1212,14 @@
             xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
 
             Object.keys(UPGRADES_CONFIG).forEach(key => {
-                const config = UPGRADES_CONFIG[key];
-                const state = gameState.upgrades[key]; // Asumimos que existe por resetGameState/loadGameState
-                
-                if (!config || !state) return; // Seguridad por si acaso
+                const state = gameState.upgrades[key];
+                if (!state) return;
 
                 const statsEl = document.getElementById(`stats-${key}`);
                 const buttonEl = document.getElementById(`buy-${key}`);
 
                 if (statsEl && buttonEl) {
-                    statsEl.textContent = `${config.description} | Nivel: ${state.level}`;
+                    statsEl.textContent = `${UPGRADES_CONFIG[key].description} | Nivel: ${state.level}`;
                     buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
                     buttonEl.disabled = score < state.cost;
                 }
@@ -1230,11 +1231,8 @@
         }
 
         function initializeStore() {
-            const cpcContainer = document.getElementById('store-cpc-container');
-            const ppsContainer = document.getElementById('store-pps-container');
-            
-            cpcContainer.innerHTML = '';
-            ppsContainer.innerHTML = '';
+            storeCpcContainer.innerHTML = '';
+            storePpsContainer.innerHTML = '';
 
             Object.keys(UPGRADES_CONFIG).forEach(key => {
                 const config = UPGRADES_CONFIG[key];
@@ -1264,13 +1262,12 @@
                 itemDiv.appendChild(button);
                 
                 if (config.type === 'cpc') {
-                    cpcContainer.appendChild(itemDiv);
+                    storeCpcContainer.appendChild(itemDiv);
                 } else if (config.type === 'pps') {
-                    ppsContainer.appendChild(itemDiv);
+                    storePpsContainer.appendChild(itemDiv);
                 }
             });
         }
-
 
         function initializeSkins() {
             Object.keys(SKINS_CONFIG).forEach(skinId => {
@@ -1303,8 +1300,7 @@
             });
 
             skinsGrid.addEventListener('click', (event) => {
-                if (isBanned) return; 
-                
+                if (isBanned) return;
                 const skinItem = event.target.closest('.skin-item');
                 if (!skinItem) return;
 
@@ -1338,73 +1334,44 @@
                 clickButton.appendChild(face);
 
                 const clickText = document.createElement('span');
+                clickText.id = 'click-button-text';
                 clickText.textContent = "¡Clic!";
-                clickText.style.position = 'absolute';
-                clickText.style.bottom = '10%';
-                clickText.style.fontSize = '1.2rem';
                 clickButton.appendChild(clickText);
             }
         }
 
         function updateSkinsUI() {
-            Object.keys(SKINS_CONFIG).forEach(skinId => {
+            Object.keys(skinsState).forEach(skinId => {
                 const skin = skinsState[skinId];
                 const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
 
                 if (skinElement) {
-                    skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped', 'skin-selected'); 
+                    skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped');
+                    
+                    const costEl = skinElement.querySelector('.skin-cost');
+
+                    if (!skin.owned && skin.cost > 0) {
+                        skinElement.classList.add('skin-locked');
+                        costEl.textContent = `${formatNumber(skin.cost)} monedas`;
+                    } else if (skin.owned) {
+                        skinElement.classList.add('skin-owned');
+                        costEl.textContent = "Comprado";
+                        costEl.style.color = "#28a745";
+                    }
 
                     if (currentSkin === skinId) {
-                        skinElement.classList.add('skin-equipped'); 
-                        skinElement.classList.add('skin-selected'); 
-                    }
-                    
-                    if (skin.owned) {
-                        skinElement.classList.add('skin-owned');
-                        const costEl = skinElement.querySelector('.skin-cost');
-                        if (costEl) costEl.textContent = "Adquirido";
-                    } else if (!skin.unlocked && skin.cost > 0) {
-                        skinElement.classList.add('skin-locked');
+                        skinElement.classList.add('skin-equipped');
+                        costEl.textContent = "Equipado";
+                        costEl.style.color = "#007bff";
+                    } else if (skin.owned) {
+                         costEl.textContent = "Comprado";
+                         costEl.style.color = "#28a745";
                     }
                 }
             });
         }
 
-        function updateBanTimer() {
-            const now = Date.now();
-            const timeLeft = banExpiresAt - now;
-
-            if (timeLeft <= 0) {
-                hideBanScreen();
-                return;
-            }
-
-            const hours = Math.floor(timeLeft / 3600000);
-            const minutes = Math.floor((timeLeft % 3600000) / 60000);
-            const seconds = Math.floor((timeLeft % 60000) / 1000);
-
-            banTimer.textContent = 
-                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }
-
-        function showBanScreen() {
-            isBanned = true;
-            banOverlay.style.display = 'flex';
-            
-            if (banCountdownInterval) clearInterval(banCountdownInterval);
-            updateBanTimer(); 
-            banCountdownInterval = setInterval(updateBanTimer, 1000);
-        }
-
-        function hideBanScreen() {
-            isBanned = false;
-            banExpiresAt = 0;
-            banOverlay.style.display = 'none';
-            if (banCountdownInterval) clearInterval(banCountdownInterval);
-            banCountdownInterval = null;
-        }
-
-        function initializeFirebase() {
+        async function initializeFirebase() {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
@@ -1438,8 +1405,10 @@
         }
 
         async function loadGameState() {
-            if (!userId) return;
-
+            if (!userId) {
+                resetGameState();
+                return;
+            }
             const stateRef = ref(db, `userState/${userId}`);
 
             try {
@@ -1456,34 +1425,18 @@
                     modalShown = savedState.modalShown || false;
                     coins = savedState.coins || 0;
                     currentSkin = savedState.currentSkin || 'default';
-                    
                     banExpiresAt = savedState.banExpiresAt || 0;
-                    if (banExpiresAt > Date.now()) {
-                        isBanned = true;
-                    } else {
-                        isBanned = false;
-                        banExpiresAt = 0;
-                    }
 
                     Object.keys(UPGRADES_CONFIG).forEach(key => {
                         if (savedState.upgrades && savedState.upgrades[key]) {
                             gameState.upgrades[key] = savedState.upgrades[key];
                         } else {
-                            if (UPGRADES_CONFIG[key]) {
-                                gameState.upgrades[key] = {
-                                    level: 0,
-                                    cost: UPGRADES_CONFIG[key].baseCost
-                                };
-                            }
+                            gameState.upgrades[key] = {
+                                level: 0,
+                                cost: UPGRADES_CONFIG[key].baseCost
+                            };
                         }
                     });
-
-                    Object.keys(gameState.upgrades).forEach(key => {
-                        if (!UPGRADES_CONFIG[key]) {
-                            delete gameState.upgrades[key];
-                        }
-                    });
-
 
                     if (savedState.skins) {
                         skinsState = savedState.skins;
@@ -1506,10 +1459,7 @@
             updateClickButtonSkin();
             updateSkinsUI();
             updateCoinsDisplay();
-            
-            if (isBanned) {
-                showBanScreen();
-            }
+            checkBanStatus();
         }
 
         function loadLeaderboard() {
@@ -1571,7 +1521,7 @@
                 return;
             }
 
-            const scoreToSave = Math.floor(totalScore);
+            const scoreToSave = _MathFloor(totalScore);
 
             const stateToSave = {
                 score: score,
@@ -1584,7 +1534,6 @@
                 currentSkin: currentSkin,
                 upgrades: gameState.upgrades,
                 skins: skinsState,
-                isBanned: isBanned,
                 banExpiresAt: banExpiresAt
             };
 
@@ -1618,30 +1567,29 @@
             loginModalOverlay.style.display = 'none';
         }
 
-        function showLeaderboardTab() {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-
-            const leaderboardBtn = document.querySelector('.tab-btn[data-tab="leaderboard"]');
-            const leaderboardContent = document.getElementById('leaderboard');
-
-            if (leaderboardBtn && leaderboardContent) {
-                leaderboardBtn.classList.add('active');
-                leaderboardContent.classList.add('active');
-            }
-        }
-
         function showTab(tabId) {
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
+            mobileTabButtons.forEach(btn => btn.classList.remove('active'));
 
             const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+            const activeMobileBtn = document.querySelector(`.mobile-tab-btn[data-tab="${tabId}"]`);
             const activeContent = document.getElementById(tabId);
 
-            if (activeBtn && activeContent) {
-                activeBtn.classList.add('active');
-                activeContent.classList.add('active');
-            }
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activeMobileBtn) activeMobileBtn.classList.add('active');
+            if (activeContent) activeContent.classList.add('active');
+        }
+
+        function showSubTab(subTabId) {
+            subTabButtons.forEach(btn => btn.classList.remove('active'));
+            subTabContents.forEach(content => content.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.sub-tab-btn[data-subtab="${subTabId}"]`);
+            const activeContent = document.getElementById(subTabId);
+
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activeContent) activeContent.classList.add('active');
         }
 
         function handleRegister() {
@@ -1709,113 +1657,161 @@
             });
         }
 
-        function requestAppFullscreen() {
-            const el = document.documentElement;
-            if (el.requestFullscreen) {
-                el.requestFullscreen().catch(err => console.error(`Error al intentar fullscreen: ${err.message}`));
-            } else if (el.webkitRequestFullscreen) { /* Safari */
-                el.webkitRequestFullscreen().catch(err => console.error(`Error al intentar fullscreen (webkit): ${err.message}`));
-            } else if (el.msRequestFullscreen) { /* IE11 */
-                el.msRequestFullscreen().catch(err => console.error(`Error al intentar fullscreen (ms): ${err.message}`));
-            }
-        }
+        let lastClickTimestamp = 0;
+        let clickIntervals = [];
+        const consistencyThreshold = 1.0; 
+        const consistencyWindow = 20;
 
         function checkClickConsistency() {
-            if (isBanned) return true;
-            
-            const now = Date.now();
-            if (lastClickTimestamp === 0) { 
+            const now = _DateNow();
+            if (lastClickTimestamp === 0) {
                 lastClickTimestamp = now;
                 return false;
             }
 
             const interval = now - lastClickTimestamp;
             lastClickTimestamp = now;
-
-            if (interval < 15) return false; 
             
+            if (interval < 10) { 
+                return false;
+            }
+
             clickIntervals.push(interval);
-
-            if (clickIntervals.length > SAMPLES_NEEDED) {
-                clickIntervals.shift(); 
+            if (clickIntervals.length > consistencyWindow) {
+                clickIntervals.shift();
             }
 
-            if (clickIntervals.length === SAMPLES_NEEDED) {
-                const sd = getStandardDeviation(clickIntervals);
-                
-                if (sd < CONSISTENCY_THRESHOLD) {
-                    console.warn(`¡Detección de consistencia! SD: ${sd}. Baneando...`);
-                    banExpiresAt = Date.now() + 3600000; // 1 hora
-                    showBanScreen();
-                    clickIntervals = []; 
-                    return true; 
-                }
+            if (clickIntervals.length < consistencyWindow) {
+                return false;
+            }
+
+            const stdDev = getStandardDeviation(clickIntervals);
+
+            if (stdDev < consistencyThreshold && stdDev !== 0) {
+                console.warn(`Detección de Autoclicker: Desviación estándar muy baja: ${stdDev}`);
+                clickIntervals = []; 
+                return true;
             }
             
-            return false; 
+            return false;
+        }
+        
+        function triggerBan(seconds) {
+            if (isBanned) return; 
+            
+            const durationMs = seconds * 1000;
+            banExpiresAt = _DateNow() + durationMs;
+            isBanned = true;
+            
+            console.error(`USUARIO BANEADO por ${seconds} segundos.`);
+            
+            saveScore(false); 
+            checkBanStatus();
         }
 
-        // --- (NUEVO) FUNCIÓN PRINCIPAL DE INICIO ---
-        async function initializeGame() {
-            try {
-                // 1. Mostrar carga
-                scoreDisplay.textContent = "Cargando...";
+        function checkBanStatus() {
+            if (banCheckInterval) clearInterval(banCheckInterval);
 
-                // 2. Cargar configuración de mejoras desde la URL
+            const now = _DateNow();
+            if (banExpiresAt > now) {
+                isBanned = true;
+                showBanScreen();
+                
+                banCheckInterval = setInterval(updateBanTimer, 1000);
+            } else {
+                isBanned = false;
+                hideBanScreen();
+            }
+        }
+        
+        function showBanScreen() {
+            let overlay = document.getElementById('ban-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'ban-overlay';
+                
+                const title = document.createElement('h2');
+                title.textContent = '¡BANEADO!';
+                
+                const message = document.createElement('p');
+                message.textContent = 'Actividad sospechosa detectada (clics demasiado consistentes).';
+                
+                const timer = document.createElement('p');
+                timer.id = 'ban-timer';
+                
+                overlay.appendChild(title);
+                overlay.appendChild(message);
+                overlay.appendChild(timer);
+                
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'flex';
+            updateBanTimer();
+        }
+        
+        function updateBanTimer() {
+            const now = _DateNow();
+            const timeLeft = banExpiresAt - now;
+            
+            if (timeLeft <= 0) {
+                isBanned = false;
+                hideBanScreen();
+                if (banCheckInterval) clearInterval(banCheckInterval);
+            } else {
+                const hours = _MathFloor(timeLeft / (1000 * 60 * 60));
+                const minutes = _MathFloor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = _MathFloor((timeLeft % (1000 * 60)) / 1000);
+                
+                const timerEl = document.getElementById('ban-timer');
+                if (timerEl) {
+                    timerEl.textContent = 
+                        `${hours.toString().padStart(2, '0')}:` +
+                        `${minutes.toString().padStart(2, '0')}:` +
+                        `${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+        }
+        
+        function hideBanScreen() {
+            const overlay = document.getElementById('ban-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        async function loadGameConfigAndStart() {
+            try {
                 const response = await fetch('https://logise1.github.io/click/upgrades.json');
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                    throw new Error(`Error al cargar upgrades.json: ${response.statusText}`);
                 }
                 UPGRADES_CONFIG = await response.json();
                 
-                // 3. Inicializar el juego (funciones que DEPENDEN de UPGRADES_CONFIG)
                 resetGameState();
                 initializeStore();
                 initializeSkins();
-                initializeFirebase(); // Esto llamará a loadGameState, que también usa UPGRADES_CONFIG
+                initializeFirebase();
 
-                // 4. Asignar todos los listeners
-                clickButton.addEventListener('mousedown', (event) => {
-                    if (event.button !== 0) return; 
+                clickButton.addEventListener('mousedown', handleManualClick);
 
-                    const isMobile = window.innerWidth <= 900;
-                    if (isMobile && isFirstMobileClick) {
-                        requestAppFullscreen();
-                        isFirstMobileClick = false; 
-                    }
-
-                    if (checkClickConsistency()) {
-                        return; 
-                    }
-                    
-                    handleManualClick(event);
-                });
-
-                const storeContent = document.getElementById('store');
-                storeContent.addEventListener('click', (event) => {
+                storeCpcContainer.addEventListener('click', (event) => {
                     const button = event.target.closest('button[data-key]');
-                    if (button) {
-                        buyUpgrade(button.dataset.key);
-                    }
+                    if (button) buyUpgrade(button.dataset.key);
+                });
+                storePpsContainer.addEventListener('click', (event) => {
+                    const button = event.target.closest('button[data-key]');
+                    if (button) buyUpgrade(button.dataset.key);
                 });
 
                 tabButtons.forEach(button => {
-                    button.addEventListener('click', () => {
-                        showTab(button.dataset.tab);
-                    });
+                    button.addEventListener('click', () => showTab(button.dataset.tab));
                 });
-
-                const subTabButtons = document.querySelectorAll('.sub-tab-btn');
-                const subTabContents = document.querySelectorAll('.sub-tab-content');
+                mobileTabButtons.forEach(button => {
+                    button.addEventListener('click', () => showTab(button.dataset.tab));
+                });
+                
                 subTabButtons.forEach(button => {
-                    button.addEventListener('click', () => {
-                        subTabButtons.forEach(btn => btn.classList.remove('active'));
-                        subTabContents.forEach(content => content.classList.remove('active'));
-                        
-                        button.classList.add('active');
-                        const subTabId = button.dataset.subtab; 
-                        document.getElementById(subTabId).classList.add('active');
-                    });
+                    button.addEventListener('click', () => showSubTab(button.dataset.subtab));
                 });
 
                 registerBtn.addEventListener('click', handleRegister);
@@ -1826,26 +1822,21 @@
                 modalBtnLater.addEventListener('click', hideLoginModal);
                 modalBtnGo.addEventListener('click', () => {
                     hideLoginModal();
-                    showTab('leaderboard'); 
+                    showTab('leaderboard');
                 });
 
-                // 5. Iniciar el bucle del juego
                 setInterval(gameLoop, 1000);
 
-                // 6. Actualizar la UI inicial (resetGameState ya lo hace, pero por si acaso)
                 updateUI();
                 updateClickButtonSkin();
-
+                
             } catch (error) {
-                console.error("No se pudo inicializar el juego:", error);
-                scoreDisplay.textContent = "ERROR";
-                document.getElementById('cpc').textContent = "No se pudieron cargar las mejoras.";
-                document.getElementById('pps').textContent = "Recarga la página para reintentar.";
+                console.error("Error fatal al iniciar el juego:", error);
+                document.body.innerHTML = "<h1>Error al cargar la configuración del juego. Inténtalo de nuevo más tarde.</h1>";
             }
         }
-        
-        // --- (NUEVO) INICIO ---
-        initializeGame();
+
+        loadGameConfigAndStart();
         
     </script>
 </body>
