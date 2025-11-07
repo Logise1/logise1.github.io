@@ -201,6 +201,40 @@
         .tab-content.active {
             display: block; 
         }
+        
+        /* --- ESTILOS DE SUB-PESTAÑAS (NUEVO) --- */
+        .sub-tab-buttons {
+            display: flex;
+            background-color: #f0f2f5;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+        .sub-tab-btn {
+            flex: 1;
+            padding: 10px 5px;
+            font-size: 1rem;
+            font-weight: 700;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+        .sub-tab-btn.active {
+            background-color: #ffffff;
+            color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .sub-tab-content {
+            display: none;
+        }
+        .sub-tab-content.active {
+            display: block;
+        }
+        /* --- FIN ESTILOS SUB-PESTAÑAS --- */
+
 
         .store-item {
             display: flex;
@@ -615,7 +649,6 @@
         @media (max-width: 900px) {
             body {
                 overflow: hidden; 
-                /* padding-bottom: var(--mobile-tab-height); <-- ELIMINADO de aquí */
                 box-sizing: border-box; 
             }
             
@@ -638,12 +671,10 @@
             .store-panel {
                 flex-basis: 50%; 
                 min-height: 0; 
-                /* AÑADIDO: Padding para dejar espacio para la barra de tabs fija */
                 padding-bottom: var(--mobile-tab-height);
                 box-sizing: border-box;
-                /* Asegura que el panel pueda scrollear si el contenido es muy alto */
                 overflow: hidden; 
-                display: flex; /* Re-aseguramos flex-direction column */
+                display: flex; 
                 flex-direction: column;
             }
             
@@ -707,8 +738,16 @@
             .tab-content {
                 flex-grow: 1; 
                 padding: 10px;
-                /* Asegura que el contenido sea scrolleable dentro del panel */
                 overflow-y: auto;
+            }
+            
+            /* Ajuste para sub-pestañas en móvil */
+            .sub-tab-buttons {
+                margin-bottom: 10px;
+            }
+            .sub-tab-btn {
+                font-size: 0.9rem;
+                padding: 8px 5px;
             }
             
             .store-item {
@@ -781,8 +820,26 @@
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
             </div>
 
+            <!-- Contenido de Pestaña: Mejoras (AHORA CON SUB-PESTAÑAS) -->
             <div id="store" class="tab-content active no-scrollbar">
-                <div id="store-items-container">
+                <!-- Sub-pestañas para Mejoras -->
+                <div class="sub-tab-buttons">
+                    <button class="sub-tab-btn active" data-subtab="store-cpc">Clics</button>
+                    <button class="sub-tab-btn" data-subtab="store-pps">Segundos</button>
+                </div>
+                
+                <!-- Contenedor para Mejoras de Clic -->
+                <div id="store-cpc" class="sub-tab-content active">
+                    <div id="store-cpc-container" class="no-scrollbar">
+                        <!-- Items de Clic generados aquí -->
+                    </div>
+                </div>
+                
+                <!-- Contenedor para Mejoras de PPS -->
+                <div id="store-pps" class="sub-tab-content">
+                    <div id="store-pps-container" class="no-scrollbar">
+                        <!-- Items de PPS generados aquí -->
+                    </div>
                 </div>
             </div>
 
@@ -894,30 +951,49 @@
         let currentUsername = null; 
         let autoSaveInterval = null; 
 
-        const costIncrease = 1.2;
+        const costIncrease = 1.25; // Aumentado ligeramente para la nueva escala
 
+        // --- (NUEVA) CONFIGURACIÓN DE MEJORAS (REBALANCEADA Y EXPANDIDA) ---
         const UPGRADES_CONFIG = {
-            cursor:     { name: 'Cursor Mejorado',      baseCost: 10,    pps: 0, power: 1,    description: '+1 por clic' },
-            guante:     { name: 'Guante de Poder',      baseCost: 100,   pps: 0, power: 5,    description: '+5 por clic' },
-            taladro:    { name: 'Taladro de Clics',     baseCost: 800,   pps: 0, power: 25,   description: '+25 por clic' },
-            multi:      { name: 'Multi-Puntero',        baseCost: 6000,  pps: 0, power: 150,  description: '+150 por clic' },
-            turbo:      { name: 'Modo Turbo',           baseCost: 30000, pps: 0, power: 500,  description: '+500 por clic' },
-            laser:      { name: 'Puntero Láser',        baseCost: 150000,pps: 0, power: 2000, description: '+2000 por clic' },
-            cuantico:   { name: 'Clic Cuántico',        baseCost: 1000000,pps:0, power: 10000,description: '+10K por clic' },
-            plasma:     { name: 'Toque de Plasma',      baseCost: 5000000,pps:0, power: 50000, description: '+50K por clic' },
-            singularidad: { name: 'Singularidad de Clics', baseCost: 30000000, pps: 0, power: 250000, description: '+250K por clic' },
-            divino:     { name: 'Bendición Divina',     baseCost: 150000000, pps: 0, power: 1500000, description: '+1.5M por clic' }, 
-            infinito:   { name: 'Clic Infinito',        baseCost: 1000000000, pps: 0, power: 10000000, description: '+10M por clic' },
-            omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 10000000000, pps: 0, power: 100000000, description: '+100M por clic' },
-            ayudante:   { name: 'Ayudante',         baseCost: 15,    pps: 1, power: 0,    description: '+1 pps' },
-            abuela:     { name: 'Abuela',           baseCost: 75,    pps: 3, power: 0,    description: '+3 pps' },
-            granja:     { name: 'Granja',           baseCost: 400,   pps: 10, power: 0,   description: '+10 pps' },
-            fabrica:    { name: 'Fábrica',          baseCost: 2000,  pps: 40, power: 0,   description: '+40 pps' },
-            mina:       { name: 'Mina',             baseCost: 10000, pps: 150, power: 0,  description: '+150 pps' },
-            banco:      { name: 'Banco',            baseCost: 65000, pps: 600, power: 0,  description: '+600 pps' },
-            templo:     { name: 'Templo',           baseCost: 450000,pps: 3000, power: 0, description: '+3000 pps' },
-            portal:     { name: 'Portal Mágico',    baseCost: 3500000,pps: 20000,power: 0,description: '+20k pps' },
-            alquimia:   { name: 'Laboratorio',      baseCost: 25000000,pps: 120000,power:0,description: '+120k pps'}
+            // --- Mejoras de Clic (CPC) ---
+            cursor:     { name: 'Cursor Mejorado',      baseCost: 10,       power: 1,    pps: 0, type: 'cpc', description: '+1 por clic' },
+            guante:     { name: 'Guante de Poder',      baseCost: 80,       power: 8,    pps: 0, type: 'cpc', description: '+8 por clic' },
+            taladro:    { name: 'Taladro de Clics',     baseCost: 500,      power: 40,   pps: 0, type: 'cpc', description: '+40 por clic' },
+            martillo:   { name: 'Martillo Neumático',   baseCost: 3000,     power: 100,  pps: 0, type: 'cpc', description: '+100 por clic' },
+            multi:      { name: 'Multi-Puntero',        baseCost: 10000,    power: 250,  pps: 0, type: 'cpc', description: '+250 por clic' },
+            brazo:      { name: 'Brazo Robótico',       baseCost: 40000,    power: 1000, pps: 0, type: 'cpc', description: '+1K por clic' },
+            turbo:      { name: 'Modo Turbo',           baseCost: 150000,   power: 5000, pps: 0, type: 'cpc', description: '+5K por clic' },
+            laser:      { name: 'Puntero Láser',        baseCost: 700000,   power: 20000, pps: 0, type: 'cpc', description: '+20K por clic' },
+            satelite:   { name: 'Satélite de Clics',    baseCost: 3000000,  power: 100000, pps: 0, type: 'cpc', description: '+100K por clic' },
+            cuantico:   { name: 'Clic Cuántico',        baseCost: 12000000, power: 500000, pps: 0, type: 'cpc', description: '+500K por clic' },
+            plasma:     { name: 'Toque de Plasma',      baseCost: 50000000, power: 2000000, pps: 0, type: 'cpc', description: '+2M por clic' },
+            nanobots:   { name: 'Enjambre de Nanobots', baseCost: 200000000,power: 10000000, pps: 0, type: 'cpc', description: '+10M por clic' },
+            singularidad: { name: 'Singularidad de Clics',baseCost: 1000000000, power: 50000000, pps: 0, type: 'cpc', description: '+50M por clic' },
+            divino:     { name: 'Bendición Divina',     baseCost: 7000000000, power: 250000000, pps: 0, type: 'cpc', description: '+250M por clic' },
+            infinito:   { name: 'Clic Infinito',        baseCost: 50000000000, power: 1000000000, pps: 0, type: 'cpc', description: '+1B por clic' },
+            omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 300000000000, power: 10000000000, pps: 0, type: 'cpc', description: '+10B por clic' },
+            crunch:     { name: 'Big Crunch Personal',  baseCost: 2000000000000, power: 100000000000, pps: 0, type: 'cpc', description: '+100B por clic' },
+            creador:    { name: 'Toque del Creador',    baseCost: 15000000000000, power: 1000000000000, pps: 0, type: 'cpc', description: '+1T por clic' },
+
+            // --- Mejoras de Puntos por Segundo (PPS) ---
+            ayudante:   { name: 'Ayudante',         baseCost: 15,       pps: 1,    power: 0, type: 'pps', description: '+1 pps' },
+            abuela:     { name: 'Abuela',           baseCost: 60,       pps: 5,    power: 0, type: 'pps', description: '+5 pps' },
+            granja:     { name: 'Granja de Clics',  baseCost: 300,      pps: 20,   power: 0, type: 'pps', description: '+20 pps' },
+            pueblo:     { name: 'Pueblo Pequeño',   baseCost: 1200,     pps: 50,   power: 0, type: 'pps', description: '+50 pps' },
+            fabrica:    { name: 'Fábrica',          baseCost: 5000,     pps: 150,  power: 0, type: 'pps', description: '+150 pps' },
+            mina:       { name: 'Mina de Puntos',   baseCost: 20000,    pps: 500,  power: 0, type: 'pps', description: '+500 pps' },
+            plataforma: { name: 'Plataforma Petrolífera', baseCost: 80000,  pps: 2000, power: 0, type: 'pps', description: '+2K pps' },
+            banco:      { name: 'Banco',            baseCost: 300000,   pps: 7500, power: 0, type: 'pps', description: '+7.5K pps' },
+            templo:     { name: 'Templo',           baseCost: 1200000,  pps: 30000, power: 0, type: 'pps', description: '+30K pps' },
+            ciudad:     { name: 'Ciudad Flotante',  baseCost: 5000000,  pps: 120000, power: 0, type: 'pps', description: '+120K pps' },
+            portal:     { name: 'Portal Mágico',    baseCost: 20000000, pps: 500000, power: 0, type: 'pps', description: '+500K pps' },
+            alquimia:   { name: 'Laboratorio',      baseCost: 80000000, pps: 2000000, power: 0, type: 'pps', description: '+2M pps' },
+            viaje:      { name: 'Viaje en el Tiempo', baseCost: 350000000, pps: 10000000, power: 0, type: 'pps', description: '+10M pps' },
+            colonia:    { name: 'Colonia Espacial', baseCost: 1500000000, pps: 50000000, power: 0, type: 'pps', description: '+50M pps' },
+            motor:      { name: 'Motor de Galaxias',baseCost: 8000000000, pps: 250000000, power: 0, type: 'pps', description: '+250M pps' },
+            deseos:     { name: 'Fuente de Deseos', baseCost: 60000000000, pps: 1000000000, power: 0, type: 'pps', description: '+1B pps' },
+            multiverso:  { name: 'Fábrica de Universos', baseCost: 400000000000, pps: 10000000000, power: 0, type: 'pps', description: '+10B pps' },
+            realidad:   { name: 'El Multiverso',     baseCost: 3000000000000, pps: 100000000000, power: 0, type: 'pps', description: '+100B pps' },
         };
 
         const SKINS_CONFIG = {
@@ -957,7 +1033,7 @@
         let banExpiresAt = 0;
         let banCountdownInterval = null;
 
-        let isFirstMobileClick = true; // Flag para el primer clic en móvil
+        let isFirstMobileClick = true; 
 
         let clickIntervals = [];
         let lastClickTimestamp = 0;
@@ -993,7 +1069,7 @@
             modalShown = false;
             coins = 0;
             currentSkin = 'default';
-            isFirstMobileClick = true; // Resetear flag de fullscreen
+            isFirstMobileClick = true; 
             
             hideBanScreen();
 
@@ -1018,7 +1094,7 @@
         const cpcDisplay = document.getElementById('cpc');
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
-        const storeContainer = document.getElementById('store-items-container');
+        //const storeContainer = document.getElementById('store-items-container'); // Ya no se usa
 
         const levelDisplay = document.getElementById('level-display');
         const xpBar = document.getElementById('xp-bar');
@@ -1185,7 +1261,16 @@
             coinsDisplay.textContent = formatNumber(coins);
         }
 
+        /**
+         * (MODIFICADO) Genera los items de la tienda en sus contenedores correctos (CPC y PPS)
+         */
         function initializeStore() {
+            const cpcContainer = document.getElementById('store-cpc-container');
+            const ppsContainer = document.getElementById('store-pps-container');
+            
+            cpcContainer.innerHTML = '';
+            ppsContainer.innerHTML = '';
+
             Object.keys(UPGRADES_CONFIG).forEach(key => {
                 const config = UPGRADES_CONFIG[key];
 
@@ -1212,9 +1297,16 @@
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
-                storeContainer.appendChild(itemDiv);
+                
+                // AÑADIR AL CONTENEDOR CORRECTO
+                if (config.type === 'cpc') {
+                    cpcContainer.appendChild(itemDiv);
+                } else if (config.type === 'pps') {
+                    ppsContainer.appendChild(itemDiv);
+                }
             });
         }
+
 
         function initializeSkins() {
             Object.keys(SKINS_CONFIG).forEach(skinId => {
@@ -1413,12 +1505,23 @@
                         if (savedState.upgrades && savedState.upgrades[key]) {
                             gameState.upgrades[key] = savedState.upgrades[key];
                         } else {
-                            gameState.upgrades[key] = {
-                                level: 0,
-                                cost: UPGRADES_CONFIG[key].baseCost
-                            };
+                            // Si la mejora no existe en el guardado (porque es nueva), inicializarla
+                            if (UPGRADES_CONFIG[key]) {
+                                gameState.upgrades[key] = {
+                                    level: 0,
+                                    cost: UPGRADES_CONFIG[key].baseCost
+                                };
+                            }
                         }
                     });
+
+                    // Limpiar mejoras guardadas que ya no existan en config
+                    Object.keys(gameState.upgrades).forEach(key => {
+                        if (!UPGRADES_CONFIG[key]) {
+                            delete gameState.upgrades[key];
+                        }
+                    });
+
 
                     if (savedState.skins) {
                         skinsState = savedState.skins;
@@ -1644,9 +1747,6 @@
             });
         }
 
-        /**
-         * Solicita el modo de pantalla completa
-         */
         function requestAppFullscreen() {
             const el = document.documentElement;
             if (el.requestFullscreen) {
@@ -1701,13 +1801,11 @@
         clickButton.addEventListener('mousedown', (event) => {
             if (event.button !== 0) return; 
 
-            // --- LÓGICA DE FULLSCREEN ---
             const isMobile = window.innerWidth <= 900;
             if (isMobile && isFirstMobileClick) {
                 requestAppFullscreen();
-                isFirstMobileClick = false; // Solo hacerlo una vez
+                isFirstMobileClick = false; 
             }
-            // --- FIN LÓGICA FULLSCREEN ---
 
             if (checkClickConsistency()) {
                 return; 
@@ -1716,18 +1814,37 @@
             handleManualClick(event);
         });
 
-        storeContainer.addEventListener('click', (event) => {
+        // (MODIFICADO) Delegación de eventos para botones de la tienda
+        const storeContent = document.getElementById('store');
+        storeContent.addEventListener('click', (event) => {
             const button = event.target.closest('button[data-key]');
             if (button) {
                 buyUpgrade(button.dataset.key);
             }
         });
 
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 showTab(button.dataset.tab);
             });
         });
+
+        // --- (NUEVO) Eventos para Sub-Pestañas de Mejoras ---
+        const subTabButtons = document.querySelectorAll('.sub-tab-btn');
+        const subTabContents = document.querySelectorAll('.sub-tab-content');
+
+        subTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                subTabButtons.forEach(btn => btn.classList.remove('active'));
+                subTabContents.forEach(content => content.classList.remove('active'));
+                
+                button.classList.add('active');
+                const subTabId = button.dataset.subtab; // e.g., "store-cpc"
+                document.getElementById(subTabId).classList.add('active');
+            });
+        });
+        // --- FIN Eventos Sub-Pestañas ---
 
         registerBtn.addEventListener('click', handleRegister);
         loginBtn.addEventListener('click', handleLogin);
