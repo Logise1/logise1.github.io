@@ -1,10 +1,1595 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Click</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventura de Clics (Online)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos generales - MODO CLARO, MINIMALISTA, QUICKSAND */
+        body {
+            font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            overflow: hidden;
+            font-weight: 500;
+        }
+
+        button {
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Ocultar scrollbar pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE y Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Contenedor principal del juego */
+        .game-container {
+            display: flex;
+            flex-direction: row;
+            width: 90vw;
+            max-width: 1400px;
+            height: 85vh;
+            max-height: 800px;
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            animation: fade-in-up 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Panel izquierdo (Estadísticas y Clic) */
+        .left-panel {
+            flex-basis: 55%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #eef2f1;
+        }
+
+        /* Área de estadísticas (Puntos) */
+        .stats {
+            background-color: #ffffff;
+            padding: 20px 25px;
+            text-align: center;
+            border-bottom: 1px solid #eef2f1;
+            transition: background-color 0.3s ease;
+        }
+        #score {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: #1a1a1a;
+            transition: color 0.3s ease;
+        }
+
+        #level-display {
+            font-size: 1rem;
+            margin: 8px 0 0;
+            color: #007bff;
+            font-weight: 700;
+        }
+        .xp-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        #xp-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            border-radius: 4px;
+            transition: width 0.3s ease-out;
+        }
+        #pps, #cpc {
+            font-size: 1.1rem;
+            margin: 5px 0 0;
+            color: #777;
+        }
+
+        /* Área principal para hacer clic */
+        .clicker-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            padding: 20px;
+            position: relative;
+            background-color: #fafafa;
+        }
+
+        /* El botón principal */
+        #click-button {
+            width: 250px;
+            height: 250px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 50%;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            box-shadow: none;
+            transition: transform 0.1s cubic-bezier(0.215, 0.610, 0.355, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: none;
+            animation: pulse 2.5s infinite ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        #click-button:hover { background-color: #0069d9; }
+        #click-button:active { transform: scale(0.94); box-shadow: none; }
+
+        /* Estilos para skins del botón */
+        .click-button-face {
+            font-size: 4rem;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        /* Panel derecho (Tienda) */
+        .store-panel {
+            flex-basis: 45%;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #eef2f1;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background-color: #fafafa;
+            border: none;
+            cursor: pointer;
+            color: #777;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:first-child { border-right: 1px solid #eef2f1; }
+        .tab-btn:nth-child(2) { border-right: 1px solid #eef2f1; }
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: -1px; /* Solapamiento */
+        }
+
+        .tab-content {
+            display: none; /* Oculto por defecto */
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .tab-content.active {
+            display: block; /* Visible */
+        }
+
+        .store-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #eef2f1;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .store-item:hover {
+            background-color: #ffffff;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .store-item button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            min-width: 110px;
+        }
+        .store-item button:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+        .store-item button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+        }
+        .store-item button.selected {
+            background-color: #dc3545;
+        }
+        .store-item button.selected:hover {
+            background-color: #c82333;
+        }
+        .item-info {
+            flex-grow: 1;
+            margin-right: 15px;
+        }
+        .item-info strong { font-size: 1.1rem; color: #343a40; font-weight: 700; }
+        .item-info span { font-size: 0.9rem; color: #6c757d; display: block; }
+
+        /* Para los números que flotan al hacer clic */
+        .click-visual {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            opacity: 1;
+            animation: float-up-fast 1s ease-out forwards;
+            pointer-events: none;
+            text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes float-up-fast {
+            0% { opacity: 1; transform: translateY(0) scale(0.5); }
+            30% { transform: translateY(-30px) scale(1); }
+            100% { opacity: 0; transform: translateY(-70px) scale(1); }
+        }
+
+        /* --- Estilos de Clasificación (Leaderboard) --- */
+        #leaderboard-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 15px;
+        }
+
+        #leaderboard-content h2 {
+            text-align: center;
+            margin: 5px 0 10px;
+            color: #333;
+        }
+
+        #leaderboard-list-container {
+            flex-grow: 1; /* Ocupa el espacio disponible */
+            overflow-y: auto; /* Scroll solo para la lista */
+            min-height: 150px; /* Altura mínima por si acaso */
+        }
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 1px solid #eef2f1;
+            font-size: 1.1rem;
+        }
+        /* Estilos para los 3 primeros */
+        #leaderboard-list li:nth-child(1) .rank { background-color: #d4af37; color: white; }
+        #leaderboard-list li:nth-child(2) .rank { background-color: #c0c0c0; color: white; }
+        #leaderboard-list li:nth-child(3) .rank { background-color: #cd7f32; color: white; }
+
+        /* Resaltar al jugador actual */
+        #leaderboard-list li.current-user {
+            background-color: #e6f7ff;
+            border-left: 3px solid #007bff;
+        }
+
+        #leaderboard-list .rank {
+            font-weight: 700;
+            color: #555;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        #leaderboard-list .player-name {
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60%;
+            flex-grow: 1;
+        }
+        #leaderboard-list .player-score {
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* Spinner de carga */
+        #leaderboard-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            flex-direction: column;
+            gap: 10px;
+            color: #777;
+        }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .leaderboard-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0; /* No se encoge */
+        }
+        .leaderboard-actions input {
+            padding: 12px;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+        }
+        .leaderboard-actions button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .leaderboard-actions button:hover { background-color: #0069d9; }
+
+        /* --- Estilos para contenedores Auth/Score --- */
+        #auth-section, #score-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .auth-buttons button {
+            flex: 1;
+        }
+        #auth-status, #save-status {
+            text-align: center;
+            margin: 5px 0 0;
+            font-weight: 700;
+        }
+        #auth-status.error, #save-status.error { color: #dc3545; }
+        #auth-status.success, #save-status.success { color: #28a745; }
+
+        #logged-in-as {
+            text-align: center;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        #logout-btn {
+            background-color: #6c757d;
+        }
+        #logout-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* --- Estilos del Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .modal-box {
+            background-color: #ffffff;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            transform: scale(0.9);
+            animation: zoomIn 0.3s 0.1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            to { transform: scale(1); }
+        }
+
+        .modal-box h2 {
+            margin: 0 0 10px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .modal-box p {
+            margin: 5px 0 20px;
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-buttons button {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+
+        #modal-btn-later {
+            background-color: #6c757d;
+            color: white;
+        }
+        #modal-btn-later:hover {
+            background-color: #5a6268;
+        }
+
+        #modal-btn-go {
+            background-color: #007bff;
+            color: white;
+        }
+        #modal-btn-go:hover {
+            background-color: #0069d9;
+        }
+
+        /* Estilos para la pestaña de skins */
+        .skins-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .skin-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #eef2f1;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .skin-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .skin-preview {
+            width: 60px;
+            height: 60px;
+            background-color: #007bff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 2rem;
+            color: white;
+            border: 2px solid #eef2f1;
+        }
+
+        .skin-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+        }
+
+        .skin-selected {
+            border: 2px solid #007bff;
+            background-color: #f0f8ff;
+        }
+
+        .skin-locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .skin-locked .skin-preview {
+            background-color: #adb5bd;
+        }
+
+        .skin-cost {
+            font-size: 0.7rem;
+            color: #28a745;
+            margin-top: 3px;
+            font-weight: 600;
+        }
+
+        .skin-owned {
+            color: #28a745;
+        }
+
+        .skin-equipped {
+            color: #007bff;
+        }
+    </style>
 </head>
 <body>
-  <h1>Hola, hugo!</h1>
-  <p>(He puesto esto para que no hagas cosas raras con el autoclicker. espera 5min y subo otra)</p>
+
+    <div class="game-container">
+        <!-- Panel Izquierdo (Clic) -->
+        <div class="left-panel">
+            <div class="stats">
+                <h1 id="score">0</h1>
+                <p id="level-display">Nivel 1 (x1.00)</p>
+                <div class="xp-bar-container">
+                    <div id="xp-bar"></div>
+                </div>
+                <p id="cpc">1 Puntos por clic</p>
+                <p id="pps">0 Puntos por segundo</p>
+            </div>
+            <div class="clicker-area" id="clicker-zone">
+                <button id="click-button" oncontextmenu="return false">¡Clic!</button>
+            </div>
+        </div>
+
+        <!-- Panel Derecho (Tienda) -->
+        <div class="store-panel">
+            <!-- Pestañas -->
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="store">Mejoras</button>
+                <button class="tab-btn" data-tab="skins">Skins</button>
+                <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
+            </div>
+
+            <!-- Contenido de Pestaña: Mejoras -->
+            <div id="store" class="tab-content active no-scrollbar">
+                <div id="store-items-container">
+                    <!-- Los items se generarán aquí dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Contenido de Pestaña: Skins -->
+            <div id="skins" class="tab-content no-scrollbar">
+                <div id="skins-content">
+                    <h2>Personaliza tu Clic</h2>
+                    <p id="coins-display">Monedas: <span id="coins-amount">0</span></p>
+                    <div class="skins-grid" id="skins-grid">
+                        <!-- Las skins se generarán aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenido de Pestaña: Clasificación -->
+            <div id="leaderboard" class="tab-content no-scrollbar">
+                <div id="leaderboard-content">
+
+                    <h2>Clasificación Mundial</h2>
+
+                    <!-- Contenedor de la Lista (para scroll) -->
+                    <div id="leaderboard-list-container" class="no-scrollbar">
+                        <!-- Estado de carga -->
+                        <div id="leaderboard-status">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <ol id="leaderboard-list" style="display: none;">
+                            <!-- La lista se genera con JS -->
+                        </ol>
+                    </div>
+
+                    <!-- Contenedor de Acciones (Login/Guardar) -->
+                    <div class="leaderboard-actions">
+
+                        <!-- Sección de Autenticación (Oculta si estás logueado) -->
+                        <div id="auth-section">
+                            <input type="text" id="username-input" placeholder="Tu nombre de usuario..." maxlength="20">
+                            <input type="password" id="password-input" placeholder="Contraseña...">
+                            <div class="auth-buttons">
+                                <button id="login-btn">Iniciar Sesión</button>
+                                <button id="register-btn">Registrarse</button>
+                            </div>
+                            <p id="auth-status"></p>
+                        </div>
+
+                        <!-- Sección de Puntuación (Oculta si NO estás logueado) -->
+                        <div id="score-section" style="display: none;">
+                            <p id="logged-in-as">Logueado como: </p>
+                            <button id="save-score-btn">Guardar Puntuación Manual</button>
+                            <button id="logout-btn">Cerrar Sesión</button>
+                            <p id="save-status"></p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Iniciar Sesión -->
+    <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¡Únete a la Clasificación!</h2>
+            <p>¡Has alcanzado los 2,000 clics!</p>
+            <p>Para guardar tu puntuación y competir, inicia sesión o regístrate en la pestaña "Clasificación".</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-later">Más Tarde</button>
+                <button id="modal-btn-go">Ir Ahora</button>
+            </div>
+        </div>
+    </div>
+
+    <!--
+      Importar Firebase (SDK v9 modular)
+      Usamos type="module" para poder usar 'import'
+    -->
+    <script type="module">
+        // Importar funciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import {
+            getDatabase,
+            ref,
+            set,
+            query,
+            orderByChild,
+            limitToLast,
+            onValue,
+            get // NUEVO: Importar 'get' para leer datos una vez
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // Configuración de Firebase (Suministrada por el usuario)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB_y8OqwksVYbzKZgjSFmzgD2AOg32CsI4",
+            authDomain: "shittyclicker.firebaseapp.com",
+            databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shittyclicker",
+            storageBucket: "shittyclicker.firebasestorage.app",
+            messagingSenderId: "585004353396",
+            appId: "1:585004353396:web:fcabf12ba0d695ed0ece21",
+            measurementId: "G-XRYBFXCYPG"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let userId = null;
+        let currentUsername = null; // Guardará el nombre de usuario
+        let autoSaveInterval = null; // Para el intervalo de auto-guardado
+
+        // --- CONFIGURACIÓN DE MEJORAS ---
+        const costIncrease = 1.2;
+
+        const UPGRADES_CONFIG = {
+            // Mejoras de Clic
+            cursor:    { name: 'Cursor Mejorado',      baseCost: 10,     pps: 0, power: 1,    description: '+1 por clic' },
+            guante:    { name: 'Guante de Poder',      baseCost: 100,   pps: 0, power: 5,    description: '+5 por clic' },
+            taladro:   { name: 'Taladro de Clics',     baseCost: 800,   pps: 0, power: 25,   description: '+25 por clic' },
+            multi:     { name: 'Multi-Puntero',        baseCost: 6000,  pps: 0, power: 150,  description: '+150 por clic' },
+            turbo:     { name: 'Modo Turbo',           baseCost: 30000, pps: 0, power: 500,  description: '+500 por clic' },
+            laser:     { name: 'Puntero Láser',        baseCost: 150000,pps: 0, power: 2000, description: '+2000 por clic' },
+            cuantico:  { name: 'Clic Cuántico',        baseCost: 1000000,pps:0, power: 10000,description: '+10K por clic' },
+            plasma:    { name: 'Toque de Plasma',      baseCost: 5000000,pps:0, power: 50000, description: '+50K por clic' },
+            singularidad: { name: 'Singularidad de Clics', baseCost: 30000000, pps: 0, power: 250000, description: '+250K por clic' },
+            divino:    { name: 'Bendición Divina',     baseCost: 150000000, pps: 0, power: 1500000, description: '+1.5M por clic' },
+            infinito:  { name: 'Clic Infinito',        baseCost: 1000000000, pps: 0, power: 10000000, description: '+10M por clic' },
+            omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 10000000000, pps: 0, power: 100000000, description: '+100M por clic' },
+
+            // Mejoras de PPS (Puntos por Segundo)
+            ayudante:  { name: 'Ayudante',        baseCost: 15,    pps: 1, power: 0,   description: '+1 pps' },
+            abuela:    { name: 'Abuela',          baseCost: 75,   pps: 3, power: 0,   description: '+3 pps' },
+            granja:    { name: 'Granja',          baseCost: 400,   pps: 10, power: 0,  description: '+10 pps' },
+            fabrica:   { name: 'Fábrica',         baseCost: 2000,  pps: 40, power: 0,  description: '+40 pps' },
+            mina:      { name: 'Mina',            baseCost: 10000, pps: 150, power: 0, description: '+150 pps' },
+            banco:     { name: 'Banco',           baseCost: 65000, pps: 600, power: 0, description: '+600 pps' },
+            templo:    { name: 'Templo',          baseCost: 450000,pps: 3000, power: 0,description: '+3000 pps' },
+            portal:    { name: 'Portal Mágico',   baseCost: 3500000,pps: 20000,power: 0,description: '+20k pps' },
+            alquimia:  { name: 'Laboratorio',     baseCost: 25000000,pps: 120000,power:0,description: '+120k pps'}
+        };
+
+        // --- CONFIGURACIÓN DE SKINS ---
+        const SKINS_CONFIG = {
+            default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
+            smile: { name: "Feliz", emoji: "😊", cost: 50000, unlocked: false, owned: false },
+            heart: { name: "Corazón", emoji: "❤️", cost: 100000, unlocked: false, owned: false },
+            star: { name: "Estrella", emoji: "⭐", cost: 250000, unlocked: false, owned: false },
+            fire: { name: "Fuego", emoji: "🔥", cost: 500000, unlocked: false, owned: false },
+            diamond: { name: "Diamante", emoji: "💎", cost: 1000000, unlocked: false, owned: false },
+            ghost: { name: "Fantasma", emoji: "👻", cost: 2000000, unlocked: false, owned: false },
+            rocket: { name: "Cohete", emoji: "🚀", cost: 5000000, unlocked: false, owned: false },
+            crown: { name: "Corona", emoji: "👑", cost: 10000000, unlocked: false, owned: false },
+            skull: { name: "Calaavera", emoji: "💀", cost: 25000000, unlocked: false, owned: false },
+            alien: { name: "Alienígena", emoji: "👽", cost: 50000000, unlocked: false, owned: false },
+            robot: { name: "Robot", emoji: "🤖", cost: 100000000, unlocked: false, owned: false }
+        };
+
+        // --- ESTADO DEL JUEGO ---
+        let score = 0;
+        let clickPower = 1;
+        let pps = 0;
+        const gameState = { upgrades: {} };
+
+        // Estado de Nivel
+        let level = 1;
+        let xp = 0;
+        let xpToNextLevel = 100;
+        let levelMultiplier = 1.0;
+        let totalScore = 0;
+
+        // Contador de Clics
+        let totalClicks = 0;
+        let modalShown = false;
+
+        // Estado de Skins
+        let coins = 0;
+        let currentSkin = 'default';
+        let skinsState = {};
+
+        // Inicializar el estado de las mejoras (función de reseteo)
+        function resetGameState() {
+            score = 0;
+            totalScore = 0;
+            level = 1;
+            xp = 0;
+            totalClicks = 0;
+            modalShown = false;
+            coins = 0;
+            currentSkin = 'default';
+
+            // Reiniciar el estado de las mejoras
+            Object.keys(UPGRADES_CONFIG).forEach(key => {
+                gameState.upgrades[key] = {
+                    level: 0,
+                    cost: UPGRADES_CONFIG[key].baseCost
+                };
+            });
+
+            // Reiniciar el estado de las skins
+            skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+
+            recalculateStats(); // Recalcula pps y clickPower
+            recalculateLevelStats(); // Recalcula stats de nivel
+            updateUI(); // Actualiza la UI
+            updateSkinsUI(); // Actualiza la UI de skins
+        }
+
+        // --- REFERENCIAS DEL DOM ---
+        const scoreDisplay = document.getElementById('score');
+        const ppsDisplay = document.getElementById('pps');
+        const cpcDisplay = document.getElementById('cpc');
+        const clickButton = document.getElementById('click-button');
+        const clickerZone = document.getElementById('clicker-zone');
+        const storeContainer = document.getElementById('store-items-container');
+
+        const levelDisplay = document.getElementById('level-display');
+        const xpBar = document.getElementById('xp-bar');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const leaderboardStatus = document.getElementById('leaderboard-status');
+
+        const authSection = document.getElementById('auth-section');
+        const scoreSection = document.getElementById('score-section');
+        const usernameInput = document.getElementById('username-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const authStatus = document.getElementById('auth-status');
+
+        const loggedInAs = document.getElementById('logged-in-as');
+        const saveScoreBtn = document.getElementById('save-score-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const saveStatus = document.getElementById('save-status');
+
+        const loginModalOverlay = document.getElementById('login-modal-overlay');
+        const modalBtnLater = document.getElementById('modal-btn-later');
+        const modalBtnGo = document.getElementById('modal-btn-go');
+
+        // Referencias para skins
+        const coinsDisplay = document.getElementById('coins-amount');
+        const skinsGrid = document.getElementById('skins-grid');
+
+        // --- FUNCIONES DEL JUEGO ---
+
+        /**
+         * Se ejecuta al hacer clic en el botón principal.
+         */
+        function handleManualClick(event) {
+            // Prevenir clic derecho
+            if (event.button === 2) return;
+
+            const baseGain = clickPower;
+            const earnedScore = baseGain * levelMultiplier;
+
+            score += earnedScore;
+            gainXP(baseGain);
+
+            // Ganar monedas aleatoriamente (10% de probabilidad)
+            if (Math.random() < 0.1) {
+                coins += 1;
+                updateCoinsDisplay();
+            }
+
+            showClickVisual(event, earnedScore);
+            updateUI();
+
+            totalClicks++;
+            if (totalClicks === 2000 && !modalShown) {
+                showLoginModal();
+                modalShown = true;
+            }
+        }
+
+        /**
+         * Añade XP y comprueba si se sube de nivel.
+         */
+        function gainXP(amount) {
+            xp += amount;
+            totalScore += amount * levelMultiplier;
+
+            while (xp >= xpToNextLevel) {
+                xp -= xpToNextLevel;
+                level++;
+                recalculateLevelStats(); // Recalcular en lugar de duplicar lógica
+            }
+        }
+
+        /**
+         * Recalcula los stats de nivel (XP para el sig. y multiplicador)
+         */
+        function recalculateLevelStats() {
+            xpToNextLevel = 100 * Math.pow(5, level - 1);
+            levelMultiplier = 1 + (level - 1) * 0.05;
+        }
+
+        /**
+         * Muestra un número flotante en la posición del clic.
+         */
+        function showClickVisual(event, amount) {
+            const visual = document.createElement('div');
+            visual.textContent = `+${Math.floor(amount)}`;
+            visual.classList.add('click-visual');
+
+            const rect = clickerZone.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            visual.style.left = `${x}px`;
+            visual.style.top = `${y}px`;
+
+            clickerZone.appendChild(visual);
+
+            setTimeout(() => {
+                visual.remove();
+            }, 1000);
+        }
+
+        /**
+         * Intenta comprar una mejora.
+         */
+        function buyUpgrade(key) {
+            const state = gameState.upgrades[key];
+            const config = UPGRADES_CONFIG[key];
+
+            if (score >= state.cost) {
+                score -= state.cost;
+                state.level++;
+                state.cost = Math.ceil(config.baseCost * Math.pow(costIncrease, state.level));
+
+                recalculateStats();
+                updateUI();
+            }
+        }
+
+        /**
+         * Recalcula el total de PPS y Poder de Clic (base).
+         */
+        function recalculateStats() {
+            let newPPS = 0;
+            let newClickPower = 1;
+
+            Object.keys(UPGRADES_CONFIG).forEach(key => {
+                const config = UPGRADES_CONFIG[key];
+                const state = gameState.upgrades[key];
+
+                if (config.pps > 0) newPPS += state.level * config.pps;
+                if (config.power > 0) newClickPower += state.level * config.power;
+            });
+
+            pps = newPPS;
+            clickPower = newClickPower;
+        }
+
+        /**
+         * El bucle principal del juego, se ejecuta cada segundo.
+         */
+        function gameLoop() {
+            const baseGain = pps;
+            const earnedScore = baseGain * levelMultiplier;
+
+            score += earnedScore;
+
+            if (baseGain > 0) {
+                gainXP(baseGain);
+            }
+
+            updateUI();
+        }
+
+        /**
+         * Actualiza todos los elementos de la interfaz de usuario.
+         */
+        function updateUI() {
+            scoreDisplay.textContent = Math.floor(score);
+            ppsDisplay.textContent = `${(pps * levelMultiplier).toFixed(1)} Puntos por segundo`;
+            cpcDisplay.textContent = `${(clickPower * levelMultiplier).toFixed(1)} Puntos por clic`;
+
+            levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
+            xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
+
+            Object.keys(UPGRADES_CONFIG).forEach(key => {
+                const state = gameState.upgrades[key];
+
+                const statsEl = document.getElementById(`stats-${key}`);
+                const buttonEl = document.getElementById(`buy-${key}`);
+
+                if (statsEl && buttonEl) {
+                    statsEl.textContent = `${UPGRADES_CONFIG[key].description} | Nivel: ${state.level}`;
+                    buttonEl.textContent = `Costo: ${state.cost}`;
+                    buttonEl.disabled = score < state.cost;
+                }
+            });
+        }
+
+        /**
+         * Actualiza el display de monedas
+         */
+        function updateCoinsDisplay() {
+            coinsDisplay.textContent = coins;
+        }
+
+        /**
+         * Genera dinámicamente los items de la tienda al cargar la página.
+         */
+        function initializeStore() {
+            Object.keys(UPGRADES_CONFIG).forEach(key => {
+                const config = UPGRADES_CONFIG[key];
+
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('store-item');
+
+                const infoDiv = document.createElement('div');
+                infoDiv.classList.add('item-info');
+
+                const nameStrong = document.createElement('strong');
+                nameStrong.textContent = config.name;
+
+                const statsSpan = document.createElement('span');
+                statsSpan.id = `stats-${key}`;
+                statsSpan.textContent = `${config.description} | Nivel: 0`;
+
+                infoDiv.appendChild(nameStrong);
+                infoDiv.appendChild(statsSpan);
+
+                const button = document.createElement('button');
+                button.id = `buy-${key}`;
+                button.dataset.key = key;
+                button.textContent = `Costo: ${config.baseCost}`;
+
+                itemDiv.appendChild(infoDiv);
+                itemDiv.appendChild(button);
+                storeContainer.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * Inicializa la interfaz de skins
+         */
+        function initializeSkins() {
+            Object.keys(SKINS_CONFIG).forEach(skinId => {
+                const skin = SKINS_CONFIG[skinId];
+
+                const skinItem = document.createElement('div');
+                skinItem.classList.add('skin-item');
+                skinItem.dataset.skinId = skinId;
+
+                const preview = document.createElement('div');
+                preview.classList.add('skin-preview');
+                preview.textContent = skin.emoji;
+
+                const name = document.createElement('div');
+                name.classList.add('skin-name');
+                name.textContent = skin.name;
+
+                const cost = document.createElement('div');
+                cost.classList.add('skin-cost');
+                if (skin.cost === 0) {
+                    cost.textContent = "Gratis";
+                } else {
+                    cost.textContent = `${skin.cost} monedas`;
+                }
+
+                skinItem.appendChild(preview);
+                skinItem.appendChild(name);
+                skinItem.appendChild(cost);
+                skinsGrid.appendChild(skinItem);
+            });
+
+            // Añadir evento de clic a las skins
+            skinsGrid.addEventListener('click', (event) => {
+                const skinItem = event.target.closest('.skin-item');
+                if (!skinItem) return;
+
+                const skinId = skinItem.dataset.skinId;
+                const skin = skinsState[skinId];
+
+                if (skin.owned) {
+                    // Equipar la skin
+                    currentSkin = skinId;
+                    updateClickButtonSkin();
+                    updateSkinsUI();
+                } else if (coins >= skin.cost) {
+                    // Comprar la skin
+                    coins -= skin.cost;
+                    skin.owned = true;
+                    skin.unlocked = true;
+                    currentSkin = skinId;
+                    updateClickButtonSkin();
+                    updateCoinsDisplay();
+                    updateSkinsUI();
+                }
+            });
+        }
+
+        /**
+         * Actualiza la apariencia del botón de clic según la skin actual
+         */
+        function updateClickButtonSkin() {
+            const skin = skinsState[currentSkin];
+            clickButton.innerHTML = '';
+
+            if (skin) {
+                const face = document.createElement('div');
+                face.classList.add('click-button-face');
+                face.textContent = skin.emoji;
+                clickButton.appendChild(face);
+
+                // Añadir el texto "¡Clic!" debajo de la skin
+                const clickText = document.createElement('span');
+                clickText.textContent = "¡Clic!";
+                clickText.style.position = 'absolute';
+                clickText.style.bottom = '10%';
+                clickText.style.fontSize = '1.2rem';
+                clickButton.appendChild(clickText);
+            }
+        }
+
+        /**
+         * Actualiza la UI de las skins (bloqueadas/desbloqueadas, equipadas)
+         */
+        function updateSkinsUI() {
+            Object.keys(skinsState).forEach(skinId => {
+                const skin = skinsState[skinId];
+                const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
+
+                if (skinElement) {
+                    // Resetear clases
+                    skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped');
+
+                    if (!skin.unlocked && skin.cost > 0) {
+                        skinElement.classList.add('skin-locked');
+                    } else if (skin.owned) {
+                        skinElement.classList.add('skin-owned');
+                    }
+
+                    if (currentSkin === skinId) {
+                        skinElement.classList.add('skin-equipped');
+                    }
+                }
+            });
+        }
+
+        // --- FUNCIONES DE FIREBASE Y CLASIFICACIÓN ---
+
+        /**
+         * Inicia Firebase, maneja el estado de Auth y carga la clasificación.
+         */
+        function initializeFirebase() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    // Usuario está logueado
+                    userId = user.uid;
+                    currentUsername = user.email.split('@')[0];
+
+                    authSection.style.display = 'none';
+                    scoreSection.style.display = 'flex';
+                    loggedInAs.textContent = `Logueado como: ${currentUsername}`;
+
+                    // Cargar estado del juego
+                    await loadGameState();
+
+                    // Iniciar auto-guardado
+                    if (autoSaveInterval) clearInterval(autoSaveInterval);
+                    autoSaveInterval = setInterval(() => saveScore(false), 15000);
+
+                } else {
+                    // Usuario no está logueado
+                    userId = null;
+                    currentUsername = null;
+
+                    authSection.style.display = 'flex';
+                    scoreSection.style.display = 'none';
+                    loggedInAs.textContent = '';
+
+                    // Parar auto-guardado
+                    if (autoSaveInterval) clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+
+                    // Resetear el juego a cero
+                    resetGameState();
+                }
+            });
+
+            // Cargamos la clasificación (esto es público)
+            loadLeaderboard();
+        }
+
+        /**
+         * Carga el estado completo del juego del usuario
+         */
+        async function loadGameState() {
+            if (!userId) return;
+
+            const stateRef = ref(db, `userState/${userId}`);
+
+            try {
+                const snapshot = await get(stateRef);
+
+                if (snapshot.exists()) {
+                    const savedState = snapshot.val();
+
+                    // Cargar estado básico
+                    score = savedState.score || 0;
+                    totalScore = savedState.totalScore || 0;
+                    level = savedState.level || 1;
+                    xp = savedState.xp || 0;
+                    totalClicks = savedState.totalClicks || 0;
+                    modalShown = savedState.modalShown || false;
+                    coins = savedState.coins || 0;
+                    currentSkin = savedState.currentSkin || 'default';
+
+                    // Cargar mejoras
+                    Object.keys(UPGRADES_CONFIG).forEach(key => {
+                        if (savedState.upgrades && savedState.upgrades[key]) {
+                            gameState.upgrades[key] = savedState.upgrades[key];
+                        } else {
+                            gameState.upgrades[key] = {
+                                level: 0,
+                                cost: UPGRADES_CONFIG[key].baseCost
+                            };
+                        }
+                    });
+
+                    // Cargar skins
+                    if (savedState.skins) {
+                        skinsState = savedState.skins;
+                    } else {
+                        // Si no hay skins guardadas, usar el estado por defecto
+                        skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+                    }
+
+                } else {
+                    // No hay estado guardado
+                    console.log("No saved state found. Starting fresh.");
+                    resetGameState();
+                }
+            } catch (error) {
+                console.error("Error loading game state:", error);
+                resetGameState();
+            }
+
+            // Recalcular stats derivados
+            recalculateStats();
+            recalculateLevelStats();
+            // Actualizar la UI
+            updateUI();
+            updateClickButtonSkin();
+            updateSkinsUI();
+            updateCoinsDisplay();
+        }
+
+        /**
+         * Carga y muestra la clasificación desde Firebase.
+         */
+        function loadLeaderboard() {
+            if (!db) return;
+            const leaderboardRef = ref(db, 'leaderboard');
+            const leaderboardQuery = query(leaderboardRef, orderByChild('score'), limitToLast(100));
+
+            leaderboardStatus.style.display = 'flex';
+            leaderboardList.style.display = 'none';
+
+            onValue(leaderboardQuery, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const scores = Object.values(data);
+                    scores.sort((a, b) => b.score - a.score);
+
+                    leaderboardList.innerHTML = '';
+                    scores.forEach((entry, index) => {
+                        const li = document.createElement('li');
+
+                        if (currentUsername && entry.username === currentUsername) {
+                            li.classList.add('current-user');
+                        }
+
+                        const rank = document.createElement('span');
+                        rank.textContent = `#${index + 1}`;
+                        rank.classList.add('rank');
+
+                        const name = document.createElement('span');
+                        name.textContent = entry.username || "Anónimo";
+                        name.classList.add('player-name');
+
+                        const scoreVal = document.createElement('span');
+                        scoreVal.textContent = Math.floor(entry.score);
+                        scoreVal.classList.add('player-score');
+
+                        li.appendChild(rank);
+                        li.appendChild(name);
+                        li.appendChild(scoreVal);
+                        leaderboardList.appendChild(li);
+                    });
+
+                    leaderboardStatus.style.display = 'none';
+                    leaderboardList.style.display = 'block';
+
+                } else {
+                    leaderboardStatus.innerHTML = '<span>¡Sé el primero en la clasificación!</span>';
+                    leaderboardList.style.display = 'none';
+                }
+            });
+        }
+
+        /**
+         * Guarda la puntuación del jugador en Firebase.
+         * @param {boolean} manual - True si fue un clic manual (para mostrar mensaje)
+         */
+        function saveScore(manual = false) {
+            if (!userId || !db || !currentUsername) {
+                if (manual) {
+                    saveStatus.textContent = "Error: Debes iniciar sesión.";
+                    saveStatus.className = 'error';
+                }
+                return;
+            }
+
+            const scoreToSave = Math.floor(totalScore);
+
+            // Guardar estado completo del juego
+            const stateToSave = {
+                score: score,
+                totalScore: totalScore,
+                level: level,
+                xp: xp,
+                totalClicks: totalClicks,
+                modalShown: modalShown,
+                coins: coins,
+                currentSkin: currentSkin,
+                upgrades: gameState.upgrades,
+                skins: skinsState
+            };
+
+            set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
+                console.error("Error saving game state:", error);
+            });
+
+            // Actualizar la clasificación pública
+            set(ref(db, `leaderboard/${userId}`), {
+                username: currentUsername,
+                score: scoreToSave
+            }).then(() => {
+                if (manual) {
+                    saveStatus.textContent = "¡Puntuación guardada!";
+                    saveStatus.className = 'success';
+                    setTimeout(() => { saveStatus.textContent = ""; }, 2000);
+                }
+            }).catch((error) => {
+                if (manual) {
+                    saveStatus.textContent = "Error al guardar.";
+                    saveStatus.className = 'error';
+                }
+                console.error("Error al guardar puntuación:", error);
+            });
+        }
+
+        /**
+         * Muestra el modal de inicio de sesión.
+         */
+        function showLoginModal() {
+            loginModalOverlay.style.display = 'flex';
+        }
+
+        /**
+         * Oculta el modal de inicio de sesión.
+         */
+        function hideLoginModal() {
+            loginModalOverlay.style.display = 'none';
+        }
+
+        /**
+         * Cambia a la pestaña de clasificación.
+         */
+        function showLeaderboardTab() {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            const leaderboardBtn = document.querySelector('.tab-btn[data-tab="leaderboard"]');
+            const leaderboardContent = document.getElementById('leaderboard');
+
+            if (leaderboardBtn && leaderboardContent) {
+                leaderboardBtn.classList.add('active');
+                leaderboardContent.classList.add('active');
+            }
+        }
+
+        /**
+         * Cambia a la pestaña especificada
+         */
+        function showTab(tabId) {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+            const activeContent = document.getElementById(tabId);
+
+            if (activeBtn && activeContent) {
+                activeBtn.classList.add('active');
+                activeContent.classList.add('active');
+            }
+        }
+
+        /**
+         * Maneja el registro de usuario.
+         */
+        function handleRegister() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (username.length < 3 || password.length < 6) {
+                authStatus.textContent = "Usuario (3+) y contraseña (6+)";
+                authStatus.className = 'error';
+                return;
+            }
+            const email = username + '@click.com';
+
+            authStatus.textContent = "Registrando...";
+            authStatus.className = '';
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    authStatus.textContent = "¡Registrado con éxito!";
+                    authStatus.className = 'success';
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/email-already-in-use') {
+                        authStatus.textContent = "Ese nombre de usuario ya existe.";
+                    } else {
+                        authStatus.textContent = "Error al registrar.";
+                    }
+                    authStatus.className = 'error';
+                });
+        }
+
+        /**
+         * Maneja el inicio de sesión.
+         */
+        function handleLogin() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                authStatus.textContent = "Rellena ambos campos.";
+                authStatus.className = 'error';
+                return;
+            }
+            const email = username + '@click.com';
+
+            authStatus.textContent = "Iniciando sesión...";
+            authStatus.className = '';
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    authStatus.textContent = "¡Bienvenido de vuelta!";
+                    authStatus.className = 'success';
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        authStatus.textContent = "Usuario o contraseña incorrectos.";
+                    } else {
+                        authStatus.textContent = "Error al iniciar sesión.";
+                    }
+                    authStatus.className = 'error';
+                });
+        }
+
+        /**
+         * Maneja el cierre de sesión.
+         */
+        function handleLogout() {
+            saveScore(false);
+            signOut(auth).catch((error) => {
+                console.error("Error al cerrar sesión:", error);
+            });
+        }
+
+        // --- DETECCIÓN DE AUTOCLICKER ---
+        let lastClickTime = 0;
+        let clickCount = 0;
+        const clickThreshold = 20; // Umbral de clics en 1 segundo
+        const timeWindow = 1000; // Ventana de tiempo en ms
+
+        function detectAutoClicker() {
+            const now = Date.now();
+
+            if (now - lastClickTime < timeWindow) {
+                clickCount++;
+
+                if (clickCount > clickThreshold) {
+                    // Se detectó posible autoclicker
+                    alert("¡Se ha detectado actividad sospechosa! Por favor, juega sin usar autoclickers.");
+                    clickCount = 0;
+                    lastClickTime = now;
+                    return true;
+                }
+            } else {
+                clickCount = 1;
+                lastClickTime = now;
+            }
+
+            return false;
+        }
+
+        // --- INICIALIZACIÓN ---
+
+        // Poner el juego en estado 'cero' al inicio
+        resetGameState();
+
+        // Generar la tienda
+        initializeStore();
+
+        // Inicializar skins
+        initializeSkins();
+
+        // Iniciar Firebase
+        initializeFirebase();
+
+        // Asignar evento de clic principal con detección de autoclicker
+        clickButton.addEventListener('mousedown', (event) => {
+            if (event.button !== 0) return; // Solo botón izquierdo
+
+            if (!detectAutoClicker()) {
+                handleManualClick(event);
+            }
+        });
+
+        // Delegación de eventos para botones de la tienda
+        storeContainer.addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-key]');
+            if (button) {
+                buyUpgrade(button.dataset.key);
+            }
+        });
+
+        // Eventos para Pestañas
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                showTab(button.dataset.tab);
+            });
+        });
+
+        // Eventos de Auth
+        registerBtn.addEventListener('click', handleRegister);
+        loginBtn.addEventListener('click', handleLogin);
+        logoutBtn.addEventListener('click', handleLogout);
+        saveScoreBtn.addEventListener('click', () => saveScore(true));
+
+        // Eventos de Modal
+        modalBtnLater.addEventListener('click', hideLoginModal);
+        modalBtnGo.addEventListener('click', () => {
+            hideLoginModal();
+            showLeaderboardTab();
+        });
+
+        // Iniciar el bucle del juego (1 vez por segundo)
+        setInterval(gameLoop, 1000);
+
+        // Actualizar la UI una vez al cargar
+        updateUI();
+        updateClickButtonSkin();
+    </script>
 </body>
 </html>
