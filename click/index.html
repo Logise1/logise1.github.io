@@ -614,35 +614,41 @@
         
         @media (max-width: 900px) {
             body {
-                overflow: hidden; /* Ocultar scroll, ya que el layout es 100vh */
-                /* AÑADIDO: Espacio para la barra de tabs fija */
-                padding-bottom: var(--mobile-tab-height);
+                overflow: hidden; 
+                /* padding-bottom: var(--mobile-tab-height); <-- ELIMINADO de aquí */
                 box-sizing: border-box; 
             }
             
             .game-container {
                 flex-direction: column;
                 width: 100vw;
-                height: 100vh; /* Ocupa toda la altura (menos el padding del body) */
+                height: 100vh; 
                 max-height: none;
                 border-radius: 0;
                 box-shadow: none;
             }
             
             .left-panel {
-                flex-basis: 50%; /* 50% de la altura */
+                flex-basis: 50%; 
                 border-right: none;
                 border-bottom: 2px solid #eef2f1;
-                min-height: 0; /* Quitar min-height */
+                min-height: 0; 
             }
             
             .store-panel {
-                flex-basis: 50%; /* 50% de la altura */
-                min-height: 0; /* Quitar min-height */
+                flex-basis: 50%; 
+                min-height: 0; 
+                /* AÑADIDO: Padding para dejar espacio para la barra de tabs fija */
+                padding-bottom: var(--mobile-tab-height);
+                box-sizing: border-box;
+                /* Asegura que el panel pueda scrollear si el contenido es muy alto */
+                overflow: hidden; 
+                display: flex; /* Re-aseguramos flex-direction column */
+                flex-direction: column;
             }
             
             .stats {
-                padding: 10px 15px; /* Más compacto */
+                padding: 10px 15px; 
             }
             
             #score {
@@ -659,7 +665,7 @@
             }
             
             #click-button {
-                width: 180px; /* Más pequeño */
+                width: 180px; 
                 height: 180px;
                 font-size: 1.6rem;
             }
@@ -672,7 +678,6 @@
                 font-size: 2rem;
             }
 
-            /* --- ESTILOS DE TABS FIJAS EN MÓVIL --- */
             .tab-buttons {
                 position: fixed;
                 bottom: 0;
@@ -683,7 +688,7 @@
                 border-top: 1px solid #eef2f1;
                 z-index: 100;
                 box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
-                border-bottom: none; /* Quitar borde de escritorio */
+                border-bottom: none; 
             }
             .tab-btn {
                 font-size: 0.9rem;
@@ -691,20 +696,20 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                border-right: none !important; /* Quitar bordes derechos */
+                border-right: none !important; 
             }
             .tab-btn.active {
                 border-bottom: 3px solid #007bff;
-                margin-bottom: 0; /* Ya no se solapa */
+                margin-bottom: 0; 
                 background-color: #fdfdfd;
             }
             
             .tab-content {
-                flex-grow: 1; /* El contenido de la tab ocupa el espacio */
+                flex-grow: 1; 
                 padding: 10px;
+                /* Asegura que el contenido sea scrolleable dentro del panel */
+                overflow-y: auto;
             }
-            /* --- FIN DE ESTILOS DE TABS --- */
-
             
             .store-item {
                 padding: 10px;
@@ -952,11 +957,12 @@
         let banExpiresAt = 0;
         let banCountdownInterval = null;
 
-        // --- NUEVA DETECCIÓN DE AUTOCLICKER (POR CONSISTENCIA) ---
+        let isFirstMobileClick = true; // Flag para el primer clic en móvil
+
         let clickIntervals = [];
         let lastClickTimestamp = 0;
-        const CONSISTENCY_THRESHOLD = 5; // Desviación estándar en ms. Humano ~15-30+. Bot < 5.
-        const SAMPLES_NEEDED = 20; // Número de clics a analizar.
+        const CONSISTENCY_THRESHOLD = 5; 
+        const SAMPLES_NEEDED = 20; 
 
         function formatNumber(num) {
             if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y';
@@ -970,9 +976,6 @@
             return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
-        /**
-         * Calcula la desviación estándar de un array de números.
-         */
         function getStandardDeviation(array) {
             if (array.length < 2) return 0;
             const n = array.length;
@@ -990,6 +993,7 @@
             modalShown = false;
             coins = 0;
             currentSkin = 'default';
+            isFirstMobileClick = true; // Resetear flag de fullscreen
             
             hideBanScreen();
 
@@ -1641,14 +1645,24 @@
         }
 
         /**
-         * NUEVA LÓGICA: Revisa la consistencia de los clics.
-         * Devuelve 'true' si el clic debe ser bloqueado (baneado), 'false' si es válido.
+         * Solicita el modo de pantalla completa
          */
+        function requestAppFullscreen() {
+            const el = document.documentElement;
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(err => console.error(`Error al intentar fullscreen: ${err.message}`));
+            } else if (el.webkitRequestFullscreen) { /* Safari */
+                el.webkitRequestFullscreen().catch(err => console.error(`Error al intentar fullscreen (webkit): ${err.message}`));
+            } else if (el.msRequestFullscreen) { /* IE11 */
+                el.msRequestFullscreen().catch(err => console.error(`Error al intentar fullscreen (ms): ${err.message}`));
+            }
+        }
+
         function checkClickConsistency() {
             if (isBanned) return true;
             
             const now = Date.now();
-            if (lastClickTimestamp === 0) { // Primer clic
+            if (lastClickTimestamp === 0) { 
                 lastClickTimestamp = now;
                 return false;
             }
@@ -1656,35 +1670,28 @@
             const interval = now - lastClickTimestamp;
             lastClickTimestamp = now;
 
-            // Ignorar clics dobles accidentales o demasiado rápidos
             if (interval < 15) return false; 
             
             clickIntervals.push(interval);
 
-            // Mantener solo las últimas N muestras
             if (clickIntervals.length > SAMPLES_NEEDED) {
-                clickIntervals.shift(); // Quitar el más antiguo
+                clickIntervals.shift(); 
             }
 
-            // Analizar si tenemos suficientes muestras
             if (clickIntervals.length === SAMPLES_NEEDED) {
                 const sd = getStandardDeviation(clickIntervals);
                 
-                // console.log("Desviación Estándar del Clic:", sd); // Para depuración
-
-                // Si la desviación estándar es MUY baja, es un bot.
                 if (sd < CONSISTENCY_THRESHOLD) {
                     console.warn(`¡Detección de consistencia! SD: ${sd}. Baneando...`);
                     banExpiresAt = Date.now() + 3600000; // 1 hora
                     showBanScreen();
-                    clickIntervals = []; // Resetear detección
-                    return true; // Bloquear este clic
+                    clickIntervals = []; 
+                    return true; 
                 }
             }
             
-            return false; // Clic permitido
+            return false; 
         }
-
 
         resetGameState();
         initializeStore();
@@ -1694,9 +1701,16 @@
         clickButton.addEventListener('mousedown', (event) => {
             if (event.button !== 0) return; 
 
-            // Reemplazamos la antigua detección por la nueva
+            // --- LÓGICA DE FULLSCREEN ---
+            const isMobile = window.innerWidth <= 900;
+            if (isMobile && isFirstMobileClick) {
+                requestAppFullscreen();
+                isFirstMobileClick = false; // Solo hacerlo una vez
+            }
+            // --- FIN LÓGICA FULLSCREEN ---
+
             if (checkClickConsistency()) {
-                return; // Clic bloqueado (baneado)
+                return; 
             }
             
             handleManualClick(event);
@@ -1723,7 +1737,7 @@
         modalBtnLater.addEventListener('click', hideLoginModal);
         modalBtnGo.addEventListener('click', () => {
             hideLoginModal();
-            showTab('leaderboard'); // Ir a la pestaña correcta
+            showTab('leaderboard'); 
         });
 
         setInterval(gameLoop, 1000);
