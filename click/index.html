@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clicker</title>
+    <title>Aventura de Clics (Online)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -752,7 +752,7 @@
             cuantico:  { name: 'Clic Cuántico',        baseCost: 1000000,pps:0, power: 10000,description: '+10K por clic' },
             plasma:    { name: 'Toque de Plasma',      baseCost: 5000000,pps:0, power: 50000, description: '+50K por clic' },
             singularidad: { name: 'Singularidad de Clics', baseCost: 30000000, pps: 0, power: 250000, description: '+250K por clic' },
-            divino:    { name: 'Bendición Divina',     baseCost: 150000000, pps: 0, power: 1500000, description: '+1.5M por clic' },
+            divino:    { name: 'Bendición Divina',     baseCost: 150000000, pps: 0, power: 150, description: '+1.5M por clic' },
             infinito:  { name: 'Clic Infinito',        baseCost: 1000000000, pps: 0, power: 10000000, description: '+10M por clic' },
             omnipotencia: { name: 'Omnipotencia Clicker', baseCost: 10000000000, pps: 0, power: 100000000, description: '+100M por clic' },
 
@@ -805,6 +805,21 @@
         let coins = 0;
         let currentSkin = 'default';
         let skinsState = {};
+
+        /**
+         * Formatea un número para mostrarlo de forma legible (ej: 1.029M, 50K)
+         */
+        function formatNumber(num) {
+            if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y';
+            if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z';
+            if (num >= 1e18) return (num / 1e18).toFixed(num % 1e18 === 0 ? 0 : 2).replace(/\./g, ',') + 'E';
+            if (num >= 1e15) return (num / 1e15).toFixed(num % 1e15 === 0 ? 0 : 2).replace(/\./g, ',') + 'P';
+            if (num >= 1e12) return (num / 1e12).toFixed(num % 1e12 === 0 ? 0 : 2).replace(/\./g, ',') + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
 
         // Inicializar el estado de las mejoras (función de reseteo)
         function resetGameState() {
@@ -929,7 +944,7 @@
          */
         function showClickVisual(event, amount) {
             const visual = document.createElement('div');
-            visual.textContent = `+${Math.floor(amount)}`;
+            visual.textContent = `+${formatNumber(amount)}`;
             visual.classList.add('click-visual');
 
             const rect = clickerZone.getBoundingClientRect();
@@ -1002,9 +1017,9 @@
          * Actualiza todos los elementos de la interfaz de usuario.
          */
         function updateUI() {
-            scoreDisplay.textContent = Math.floor(score);
-            ppsDisplay.textContent = `${(pps * levelMultiplier).toFixed(1)} Puntos por segundo`;
-            cpcDisplay.textContent = `${(clickPower * levelMultiplier).toFixed(1)} Puntos por clic`;
+            scoreDisplay.textContent = formatNumber(score);
+            ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
+            cpcDisplay.textContent = `${formatNumber(clickPower * levelMultiplier)} Puntos por clic`;
 
             levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
             xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
@@ -1017,7 +1032,7 @@
 
                 if (statsEl && buttonEl) {
                     statsEl.textContent = `${UPGRADES_CONFIG[key].description} | Nivel: ${state.level}`;
-                    buttonEl.textContent = `Costo: ${state.cost}`;
+                    buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
                     buttonEl.disabled = score < state.cost;
                 }
             });
@@ -1027,7 +1042,7 @@
          * Actualiza el display de monedas
          */
         function updateCoinsDisplay() {
-            coinsDisplay.textContent = coins;
+            coinsDisplay.textContent = formatNumber(coins);
         }
 
         /**
@@ -1056,7 +1071,7 @@
                 const button = document.createElement('button');
                 button.id = `buy-${key}`;
                 button.dataset.key = key;
-                button.textContent = `Costo: ${config.baseCost}`;
+                button.textContent = `Costo: ${formatNumber(config.baseCost)}`;
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
@@ -1088,7 +1103,7 @@
                 if (skin.cost === 0) {
                     cost.textContent = "Gratis";
                 } else {
-                    cost.textContent = `${skin.cost} monedas`;
+                    cost.textContent = `${formatNumber(skin.cost)} monedas`;
                 }
 
                 skinItem.appendChild(preview);
@@ -1314,7 +1329,7 @@
                         name.classList.add('player-name');
 
                         const scoreVal = document.createElement('span');
-                        scoreVal.textContent = Math.floor(entry.score);
+                        scoreVal.textContent = formatNumber(entry.score);
                         scoreVal.classList.add('player-score');
 
                         li.appendChild(rank);
