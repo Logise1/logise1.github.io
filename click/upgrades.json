@@ -1,5 +1,4 @@
-{
-  "cursor": {
+"cursor": {
     "name": "Cursor Mejorado",
     "baseCost": 15,
     "power": 1,
@@ -57,91 +56,91 @@
   },
   "laser": {
     "name": "Puntero Láser",
-    "baseCost": 330000000,
-    "power": 20000,
+    "baseCost": 220000000,
+    "power": 45000,
     "pps": 0,
     "type": "cpc",
-    "description": "+20K por clic"
+    "description": "+45K por clic"
   },
   "satelite": {
     "name": "Satélite de Clics",
-    "baseCost": 5100000000,
-    "power": 100000,
+    "baseCost": 2500000000,
+    "power": 350000,
     "pps": 0,
     "type": "cpc",
-    "description": "+100K por clic"
+    "description": "+350K por clic"
   },
   "cuantico": {
     "name": "Clic Cuántico",
-    "baseCost": 75000000000,
-    "power": 500000,
+    "baseCost": 30000000000,
+    "power": 2700000,
     "pps": 0,
     "type": "cpc",
-    "description": "+500K por clic"
+    "description": "+2.7M por clic"
   },
   "plasma": {
     "name": "Toque de Plasma",
-    "baseCost": 1000000000000,
-    "power": 2000000,
+    "baseCost": 350000000000,
+    "power": 22000000,
     "pps": 0,
     "type": "cpc",
-    "description": "+2M por clic"
+    "description": "+22M por clic"
   },
   "nanobots": {
     "name": "Enjambre de Nanobots",
-    "baseCost": 14000000000000,
-    "power": 10000000,
+    "baseCost": 4000000000000,
+    "power": 180000000,
     "pps": 0,
     "type": "cpc",
-    "description": "+10M por clic"
+    "description": "+180M por clic"
   },
   "singularidad": {
     "name": "Singularidad de Clics",
-    "baseCost": 170000000000000,
-    "power": 50000000,
+    "baseCost": 50000000000000,
+    "power": 1500000000,
     "pps": 0,
     "type": "cpc",
-    "description": "+50M por clic"
+    "description": "+1.5B por clic"
   },
   "divino": {
     "name": "Bendición Divina",
-    "baseCost": 2100000000000000,
-    "power": 250000000,
+    "baseCost": 650000000000000,
+    "power": 12000000000,
     "pps": 0,
     "type": "cpc",
-    "description": "+250M por clic"
+    "description": "+12B por clic"
   },
   "infinito": {
     "name": "Clic Infinito",
-    "baseCost": 26000000000000000,
-    "power": 1000000000,
-    "pps": 0,
-    "type": "cpc",
-    "description": "+1B por clic"
-  },
-  "omnipotencia": {
-    "name": "Omnipotencia Clicker",
-    "baseCost": 320000000000000000,
-    "power": 10000000000,
-    "pps": 0,
-    "type": "cpc",
-    "description": "+10B por clic"
-  },
-  "crunch": {
-    "name": "Big Crunch Personal",
-    "baseCost": 4000000000000000000,
+    "baseCost": 8000000000000000,
     "power": 100000000000,
     "pps": 0,
     "type": "cpc",
     "description": "+100B por clic"
   },
-  "creador": {
-    "name": "Toque del Creador",
-    "baseCost": 50000000000000000000,
-    "power": 1000000000000,
+  "omnipotencia": {
+    "name": "Omnipotencia Clicker",
+    "baseCost": 110000000000000000,
+    "power": 800000000000,
     "pps": 0,
     "type": "cpc",
-    "description": "+1T por clic"
+    "description": "+800B por clic"
+  },
+  "crunch": {
+    "name": "Big Crunch Personal",
+    "baseCost": 1600000000000000000,
+    "power": 6500000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+6.5T por clic"
+  },
+  "creador": {
+    "name": "Toque del Creador",
+    "baseCost": 25000000000000000000,
+    "power": 50000000000000,
+    "pps": 0,
+    "type": "cpc",
+    "description": "+50T por clic"
   },
   "ayudante": {
     "name": "Ayudante",
@@ -209,82 +208,82 @@
   },
   "templo": {
     "name": "Templo",
-    "baseCost": 450000000,
-    "pps": 30000,
+    "baseCost": 380000000,
+    "pps": 55000,
     "power": 0,
     "type": "pps",
-    "description": "+30K pps"
+    "description": "+55K pps"
   },
   "ciudad": {
     "name": "Ciudad Flotante",
-    "baseCost": 6000000000,
-    "pps": 120000,
+    "baseCost": 4000000000,
+    "pps": 400000,
     "power": 0,
     "type": "pps",
-    "description": "+120K pps"
+    "description": "+400K pps"
   },
   "portal": {
     "name": "Portal Mágico",
-    "baseCost": 80000000000,
-    "pps": 500000,
+    "baseCost": 42000000000,
+    "pps": 3000000,
     "power": 0,
     "type": "pps",
-    "description": "+500K pps"
+    "description": "+3M pps"
   },
   "alquimia": {
     "name": "Laboratorio",
-    "baseCost": 950000000000,
-    "pps": 2000000,
+    "baseCost": 480000000000,
+    "pps": 24000000,
     "power": 0,
     "type": "pps",
-    "description": "+2M pps"
+    "description": "+24M pps"
   },
   "viaje": {
     "name": "Viaje en el Tiempo",
-    "baseCost": 11000000000000,
-    "pps": 10000000,
+    "baseCost": 5500000000000,
+    "pps": 170000000,
     "power": 0,
     "type": "pps",
-    "description": "+10M pps"
+    "description": "+170M pps"
   },
   "colonia": {
     "name": "Colonia Espacial",
-    "baseCost": 130000000000000,
-    "pps": 50000000,
+    "baseCost": 70000000000000,
+    "pps": 1200000000,
     "power": 0,
     "type": "pps",
-    "description": "+50M pps"
+    "description": "+1.2B pps"
   },
   "motor": {
     "name": "Motor de Galaxias",
-    "baseCost": 1600000000000000,
-    "pps": 250000000,
+    "baseCost": 900000000000000,
+    "pps": 8500000000,
     "power": 0,
     "type": "pps",
-    "description": "+250M pps"
+    "description": "+8.5B pps"
   },
   "deseos": {
     "name": "Fuente de Deseos",
-    "baseCost": 20000000000000000,
-    "pps": 1000000000,
+    "baseCost": 11000000000000000,
+    "pps": 60000000000,
     "power": 0,
     "type": "pps",
-    "description": "+1B pps"
+    "description": "+60B pps"
   },
   "multiverso": {
     "name": "Fábrica de Universos",
-    "baseCost": 250000000000000000,
-    "pps": 10000000000,
+    "baseCost": 150000000000000000,
+    "pps": 450000000000,
     "power": 0,
     "type": "pps",
-    "description": "+10B pps"
+    "description": "+450B pps"
   },
   "realidad": {
     "name": "El Multiverso",
-    "baseCost": 3000000000000000000,
-    "pps": 100000000000,
+    "baseCost": 2200000000000000000,
+    "pps": 3200000000000,
     "power": 0,
     "type": "pps",
-    "description": "+100B pps"
+    "description": "+3.2T pps"
   }
 }
