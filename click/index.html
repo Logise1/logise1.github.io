@@ -13,7 +13,8 @@
         }
         body {
             font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f4f7f6;
+            background-color: #ffffff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='%2343bfff' fill-opacity='0.4'%3E%3Cpath d='M12 0h18v6h6v6h6v18h-6v6h-6v6H12v-6H6v-6H0V12h6V6h6V0zm12 6h-6v6h-6v6H6v6h6v6h6v6h6v-6h6v-6h6v-6h-6v-6h-6V6zm-6 12h6v6h-6v-6zm24 24h6v6h-6v-6z'%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
             color: #333;
             margin: 0;
             padding: 0;
@@ -908,7 +909,7 @@
                         </div>
                         <div id="score-section" style="display: none;">
                             <p id="logged-in-as">Logueado como: </p>
-                            <button id="save-score-btn">Guardar Puntuación Manual</button>
+                            <button id="save-score-btn">Guardar</button>
                             <button id="logout-btn">Cerrar Sesión</button>
                             <p id="save-status"></p>
                         </div>
@@ -1003,21 +1004,21 @@
         let autoSaveInterval = null; 
 
         let UPGRADES_CONFIG = {};
-        const costIncrease = 1.15;
+        const costIncrease = 1.14;
 
         const SKINS_CONFIG = {
             default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
-            smile: { name: "Feliz", emoji: "😊", cost: 5000, unlocked: false, owned: false },
-            heart: { name: "Corazón", emoji: "❤️", cost: 25000, unlocked: false, owned: false },
-            star: { name: "Estrella", emoji: "⭐", cost: 100000, unlocked: false, owned: false },
-            fire: { name: "Fuego", emoji: "🔥", cost: 500000, unlocked: false, owned: false },
-            diamond: { name: "Diamante", emoji: "💎", cost: 2500000, unlocked: false, owned: false },
-            ghost: { name: "Fantasma", emoji: "👻", cost: 10000000, unlocked: false, owned: false },
-            rocket: { name: "Cohete", emoji: "🚀", cost: 50000000, unlocked: false, owned: false },
-            crown: { name: "Corona", emoji: "👑", cost: 250000000, unlocked: false, owned: false },
-            skull: { name: "Calavera", emoji: "💀", cost: 1000000000, unlocked: false, owned: false },
-            alien: { name: "Alienígena", emoji: "👽", cost: 7500000000, unlocked: false, owned: false },
-            robot: { name: "Robot", emoji: "🤖", cost: 50000000000, unlocked: false, owned: false }
+            smile: { name: "Feliz", emoji: "😊", cost: 5, unlocked: false, owned: false },
+            heart: { name: "Corazón", emoji: "❤️", cost: 25, unlocked: false, owned: false },
+            star: { name: "Estrella", emoji: "⭐", cost: 100, unlocked: false, owned: false },
+            fire: { name: "Fuego", emoji: "🔥", cost: 500, unlocked: false, owned: false },
+            diamond: { name: "Diamante", emoji: "💎", cost: 2500, unlocked: false, owned: false },
+            ghost: { name: "Fantasma", emoji: "👻", cost: 10000, unlocked: false, owned: false },
+            rocket: { name: "Cohete", emoji: "🚀", cost: 50000, unlocked: false, owned: false },
+            crown: { name: "Corona", emoji: "👑", cost: 250000, unlocked: false, owned: false },
+            skull: { name: "Calavera", emoji: "💀", cost: 1000000, unlocked: false, owned: false },
+            alien: { name: "Alienígena", emoji: "👽", cost: 7500000, unlocked: false, owned: false },
+            robot: { name: "Robot", emoji: "🤖", cost: 50000000, unlocked: false, owned: false }
         };
 
         let score = 0;
@@ -1698,13 +1699,13 @@
             });
         }
 
-        function saveScore(manual = false) {
+        async function saveScore(manual = false) {
             if (!userId || !db || !currentUsername) {
                 if (manual) {
                     saveStatus.textContent = "Error: Debes iniciar sesión.";
                     saveStatus.className = 'error';
                 }
-                return;
+                return Promise.resolve();
             }
 
             const scoreToSave = _MathFloor(totalScore);
@@ -1726,11 +1727,11 @@
                 lastSeen: now
             };
 
-            set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
+            const p1 = set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
                 console.error("Error saving game state:", error);
             });
 
-            set(ref(db, `leaderboard/${userId}`), {
+            const p2 = set(ref(db, `leaderboard/${userId}`), {
                 username: currentUsername,
                 score: scoreToSave,
                 pps: currentPPS,
@@ -1748,6 +1749,8 @@
                 }
                 console.error("Error al guardar puntuación:", error);
             });
+            
+            return Promise.all([p1, p2]);
         }
 
         function showLoginModal() {
@@ -1845,11 +1848,13 @@
                 });
         }
 
-        function handleLogout() {
+        async function handleLogout() {
             if (userId) {
-                set(ref(db, `presence/${userId}`), null);
+                const presenceRef = ref(db, `presence/${userId}`);
+                await saveScore(false); 
+                await set(presenceRef, null);
             }
-            saveScore(false);
+            
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
             });
