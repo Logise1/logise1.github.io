@@ -326,6 +326,18 @@
             color: #333;
         }
 
+        #leaderboard-my-score {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 10px;
+            background-color: #e6f7ff;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #0056b3;
+            display: none;
+        }
+
         #leaderboard-list-container {
             flex-grow: 1;
             overflow-y: auto;
@@ -366,14 +378,33 @@
             margin-right: 10px;
         }
 
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #999;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.online {
+            background-color: #28a745;
+        }
+
         #leaderboard-list .player-name {
             font-weight: 700;
+            max-width: 60%;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+        #leaderboard-list .player-name span {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 60%;
-            flex-grow: 1;
         }
+
         #leaderboard-list .player-score {
             font-weight: 500;
             color: #333;
@@ -508,6 +539,18 @@
             color: #555;
             line-height: 1.5;
         }
+        
+        #offline-earnings {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #28a745;
+            margin: 15px 0 5px;
+        }
+        #offline-time {
+            font-size: 1rem;
+            color: #777;
+            margin-bottom: 20px;
+        }
 
         .modal-buttons {
             display: flex;
@@ -525,6 +568,14 @@
             transition: all 0.2s ease;
             flex: 1;
             -webkit-tap-highlight-color: transparent;
+        }
+        
+        #modal-btn-close {
+            background-color: #007bff;
+            color: white;
+        }
+        #modal-btn-close:hover {
+            background-color: #0069d9;
         }
 
         #modal-btn-later {
@@ -831,6 +882,11 @@
             <div id="leaderboard" class="tab-content no-scrollbar">
                 <div id="leaderboard-content">
                     <h2>Clasificación Mundial</h2>
+                    
+                    <div id="leaderboard-my-score">
+                        Tu Puntuación (en vivo): <span id="my-live-score-span">0</span>
+                    </div>
+
                     <div id="leaderboard-list-container" class="no-scrollbar">
                         <div id="leaderboard-status">
                             <div class="spinner"></div>
@@ -874,6 +930,18 @@
         </div>
     </div>
     
+    <div id="offline-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¡Bienvenido de vuelta!</h2>
+            <p>Mientras estabas fuera, has ganado:</p>
+            <p id="offline-earnings">+0</p>
+            <p id="offline-time">(durante 00:00:00)</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-close">¡Genial!</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="mobile-tab-bar">
         <button class="mobile-tab-btn active" data-tab="store">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2l5.5 9h-11zM12 21.213L4 10h16z"/></svg>
@@ -906,7 +974,8 @@
             orderByChild,
             limitToLast,
             onValue,
-            get
+            get,
+            onDisconnect
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
         
         const firebaseConfig = {
@@ -972,6 +1041,8 @@
         let isBanned = false;
         let banExpiresAt = 0;
         let banCheckInterval = null;
+        
+        let globalPresence = {};
 
         const _DateNow = Date.now;
         const _MathSqrt = Math.sqrt;
@@ -980,6 +1051,7 @@
         const _MathRandom = Math.random;
         const _MathFloor = Math.floor;
         const _MathAbs = Math.abs;
+        const _MathMin = Math.min;
         
         function formatNumber(num) {
             num = _MathFloor(num);
@@ -993,6 +1065,14 @@
             if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M';
             if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K';
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+        
+        function formatTime(totalSeconds) {
+            totalSeconds = _MathFloor(totalSeconds);
+            const hours = _MathFloor(totalSeconds / 3600);
+            const minutes = _MathFloor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
         function getStandardDeviation(array) {
@@ -1052,6 +1132,8 @@
 
         const leaderboardList = document.getElementById('leaderboard-list');
         const leaderboardStatus = document.getElementById('leaderboard-status');
+        const myLiveScoreSpan = document.getElementById('my-live-score-span');
+        const myLiveScoreBox = document.getElementById('leaderboard-my-score');
 
         const authSection = document.getElementById('auth-section');
         const scoreSection = document.getElementById('score-section');
@@ -1069,6 +1151,11 @@
         const loginModalOverlay = document.getElementById('login-modal-overlay');
         const modalBtnLater = document.getElementById('modal-btn-later');
         const modalBtnGo = document.getElementById('modal-btn-go');
+        
+        const offlineModalOverlay = document.getElementById('offline-modal-overlay');
+        const offlineEarningsEl = document.getElementById('offline-earnings');
+        const offlineTimeEl = document.getElementById('offline-time');
+        const modalBtnClose = document.getElementById('modal-btn-close');
 
         const coinsDisplay = document.getElementById('coins-amount');
         const skinsGrid = document.getElementById('skins-grid');
@@ -1201,6 +1288,10 @@
             }
 
             updateUI();
+            
+            if (myLiveScoreSpan) {
+                myLiveScoreSpan.textContent = formatNumber(totalScore);
+            }
         }
 
         function updateUI() {
@@ -1381,6 +1472,10 @@
                     scoreSection.style.display = 'flex';
                     loggedInAs.textContent = `Logueado como: ${currentUsername}`;
 
+                    const presenceRef = ref(db, `presence/${userId}`);
+                    set(presenceRef, true);
+                    onDisconnect(presenceRef).remove();
+
                     await loadGameState();
 
                     if (autoSaveInterval) clearInterval(autoSaveInterval);
@@ -1402,6 +1497,12 @@
             });
 
             loadLeaderboard();
+            
+            const allPresenceRef = ref(db, 'presence');
+            onValue(allPresenceRef, (snapshot) => {
+                globalPresence = snapshot.val() || {};
+                updateLeaderboardPresenceStatus();
+            });
         }
 
         async function loadGameState() {
@@ -1416,6 +1517,8 @@
 
                 if (snapshot.exists()) {
                     const savedState = snapshot.val();
+                    
+                    const lastSeen = savedState.lastSeen || _DateNow();
 
                     score = savedState.score || 0;
                     totalScore = savedState.totalScore || 0;
@@ -1443,6 +1546,24 @@
                     } else {
                         skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
                     }
+                    
+                    recalculateStats();
+                    recalculateLevelStats();
+                    
+                    const now = _DateNow();
+                    let timeOfflineInSeconds = (now - lastSeen) / 1000;
+                    const maxOfflineTimeInSeconds = 10 * 60 * 60; // 10 horas
+                    const effectiveOfflineTime = _MathMin(timeOfflineInSeconds, maxOfflineTimeInSeconds);
+
+                    if (effectiveOfflineTime > 60) { // Solo mostrar si estuvo offline > 1 min
+                        const offlinePPS = pps * 0.05; // 5% de PPS
+                        const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
+                        
+                        score += earnedOfflineScore;
+                        totalScore += earnedOfflineScore;
+                        
+                        showOfflineEarningsModal(earnedOfflineScore, effectiveOfflineTime);
+                    }
 
                 } else {
                     console.log("No saved state found. Starting fresh.");
@@ -1453,13 +1574,17 @@
                 resetGameState();
             }
 
-            recalculateStats();
-            recalculateLevelStats();
             updateUI();
             updateClickButtonSkin();
             updateSkinsUI();
             updateCoinsDisplay();
             checkBanStatus();
+        }
+        
+        function showOfflineEarningsModal(earnings, time) {
+            offlineEarningsEl.textContent = `+${formatNumber(earnings)}`;
+            offlineTimeEl.textContent = `(durante ${formatTime(time)})`;
+            offlineModalOverlay.style.display = 'flex';
         }
 
         function loadLeaderboard() {
@@ -1473,12 +1598,19 @@
             onValue(leaderboardQuery, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    const scores = Object.values(data);
+                    const scores = Object.entries(data).map(([uid, data]) => ({
+                        uid, ...data
+                    }));
+                    
                     scores.sort((a, b) => b.score - a.score);
 
                     leaderboardList.innerHTML = '';
                     scores.forEach((entry, index) => {
                         const li = document.createElement('li');
+                        li.dataset.userId = entry.uid;
+                        li.dataset.baseScore = entry.score;
+                        li.dataset.pps = entry.pps || 0;
+                        li.dataset.lastSeen = entry.lastSeen || _DateNow();
 
                         if (currentUsername && entry.username === currentUsername) {
                             li.classList.add('current-user');
@@ -1489,8 +1621,17 @@
                         rank.classList.add('rank');
 
                         const name = document.createElement('span');
-                        name.textContent = entry.username || "Anónimo";
                         name.classList.add('player-name');
+                        
+                        const statusDot = document.createElement('span');
+                        statusDot.classList.add('status-dot');
+                        
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = entry.username || "Anónimo";
+                        
+                        name.appendChild(statusDot);
+                        name.appendChild(nameSpan);
+
 
                         const scoreVal = document.createElement('span');
                         scoreVal.textContent = formatNumber(entry.score);
@@ -1504,10 +1645,55 @@
 
                     leaderboardStatus.style.display = 'none';
                     leaderboardList.style.display = 'block';
+                    updateLeaderboardPresenceStatus();
 
                 } else {
                     leaderboardStatus.innerHTML = '<span>¡Sé el primero en la clasificación!</span>';
                     leaderboardList.style.display = 'none';
+                }
+            });
+        }
+        
+        function updateLeaderboardPresenceStatus() {
+            const lis = leaderboardList.querySelectorAll('li[data-user-id]');
+            lis.forEach(li => {
+                const uid = li.dataset.userId;
+                const dot = li.querySelector('.status-dot');
+                if (dot) {
+                    if (globalPresence[uid]) {
+                        dot.classList.add('online');
+                    } else {
+                        dot.classList.remove('online');
+                    }
+                }
+            });
+        }
+        
+        function updateLeaderboardVisualTicking() {
+            const now = _DateNow();
+            const maxOfflineTimeMs = 10 * 60 * 60 * 1000;
+            
+            leaderboardList.querySelectorAll('li[data-user-id]').forEach(li => {
+                const dot = li.querySelector('.status-dot');
+                const scoreEl = li.querySelector('.player-score');
+                const baseScore = parseFloat(li.dataset.baseScore);
+                
+                if (dot && !dot.classList.contains('online')) {
+                    const pps = parseFloat(li.dataset.pps);
+                    const lastSeen = parseFloat(li.dataset.lastSeen);
+                    
+                    const timeOfflineMs = now - lastSeen;
+                    const effectiveTimeMs = _MathMin(timeOfflineMs, maxOfflineTimeMs);
+                    
+                    if (effectiveTimeMs > 0) {
+                        const offlineGain = (pps * 0.05) * (effectiveTimeMs / 1000);
+                        const currentScore = baseScore + offlineGain;
+                        scoreEl.textContent = formatNumber(currentScore);
+                    } else {
+                        scoreEl.textContent = formatNumber(baseScore);
+                    }
+                } else {
+                    scoreEl.textContent = formatNumber(baseScore);
                 }
             });
         }
@@ -1522,6 +1708,8 @@
             }
 
             const scoreToSave = _MathFloor(totalScore);
+            const now = _DateNow();
+            const currentPPS = pps * levelMultiplier;
 
             const stateToSave = {
                 score: score,
@@ -1534,7 +1722,8 @@
                 currentSkin: currentSkin,
                 upgrades: gameState.upgrades,
                 skins: skinsState,
-                banExpiresAt: banExpiresAt
+                banExpiresAt: banExpiresAt,
+                lastSeen: now
             };
 
             set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
@@ -1543,7 +1732,9 @@
 
             set(ref(db, `leaderboard/${userId}`), {
                 username: currentUsername,
-                score: scoreToSave
+                score: scoreToSave,
+                pps: currentPPS,
+                lastSeen: now
             }).then(() => {
                 if (manual) {
                     saveStatus.textContent = "¡Puntuación guardada!";
@@ -1579,6 +1770,10 @@
             if (activeBtn) activeBtn.classList.add('active');
             if (activeMobileBtn) activeMobileBtn.classList.add('active');
             if (activeContent) activeContent.classList.add('active');
+            
+            if (myLiveScoreBox) {
+                myLiveScoreBox.style.display = (tabId === 'leaderboard' && userId) ? 'block' : 'none';
+            }
         }
 
         function showSubTab(subTabId) {
@@ -1651,6 +1846,9 @@
         }
 
         function handleLogout() {
+            if (userId) {
+                set(ref(db, `presence/${userId}`), null);
+            }
             saveScore(false);
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
@@ -1778,6 +1976,12 @@
                 overlay.style.display = 'none';
             }
         }
+        
+        window.onbeforeunload = () => {
+            if (userId) {
+                saveScore(false);
+            }
+        };
 
         async function loadGameConfigAndStart() {
             try {
@@ -1824,8 +2028,13 @@
                     hideLoginModal();
                     showTab('leaderboard');
                 });
+                
+                modalBtnClose.addEventListener('click', () => {
+                    offlineModalOverlay.style.display = 'none';
+                });
 
                 setInterval(gameLoop, 1000);
+                setInterval(updateLeaderboardVisualTicking, 1000);
 
                 updateUI();
                 updateClickButtonSkin();
