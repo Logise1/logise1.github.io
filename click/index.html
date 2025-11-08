@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aventura de Clics (Online)</title>
+    <title>Click</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -1182,8 +1182,10 @@
         };
 
         let score = 0;
-        let clickPower = 1; // Stat base (antes de multiplicadores de nivel)
-        let pps = 0; // Stat base (antes de multiplicadores de nivel)
+        let clickPower = 1;
+        let pps = 0;
+        // REFACTOR: gameState ya no es necesario, se usa 'upgradeLevels'
+        // const gameState = { upgrades: {} }; 
 
         let level = 1;
         let xp = 0;
@@ -1204,6 +1206,17 @@
         
         let globalPresence = {};
 
+        // --- INICIO: Variables Anti-Cheat ---
+        let _lct = 0; // lastClickTimestamp
+        let _cIntvls = []; // clickIntervals
+        const _cThresh = 1.0; // consistencyThreshold
+        const _cWnd = 20; // consistencyWindow
+        
+        let _clkTmstmps = []; // clickTimestamps
+        const _maxCPS = 30; // Máximos clics por segundo permitidos
+        const _cpsWnd = 1000; // 1 segundo (ventana de CPS)
+        // --- FIN: Variables Anti-Cheat ---
+
         const _DateNow = Date.now;
         const _MathSqrt = Math.sqrt;
         const _MathPow = Math.pow;
@@ -1212,9 +1225,9 @@
         const _MathFloor = Math.floor;
         const _MathAbs = Math.abs;
         const _MathMin = Math.min;
+        const _MathPI = Math.PI;
         const _MathSin = Math.sin;
         const _MathCos = Math.cos;
-        const _MathPI = Math.PI;
         
         function formatNumber(num) {
             num = _MathFloor(num);
@@ -1246,7 +1259,7 @@
             return _MathSqrt(variance);
         }
 
-        // REFACTOR: Inicializa el estado de las mejoras
+        // REFACTOR: Inicializa el estado con la nueva config
         function resetGameState() {
             score = 0;
             totalScore = 0;
@@ -1258,18 +1271,23 @@
             currentSkin = 'default';
             isBanned = false;
             banExpiresAt = 0;
-            clickIntervals = [];
+            _lct = 0;
+            _cIntvls = [];
+            _clkTmstmps = [];
 
-            // Inicializa el objeto de niveles
+            // REFACTOR: Inicializa upgradeLevels
             upgradeLevels = {};
-            UPGRADES_CONFIG.forEach(upg => {
-                upgradeLevels[upg.id] = 0;
+            UPGRADES_CONFIG.forEach(upgrade => {
+                upgradeLevels[upgrade.id] = {
+                    level: 0,
+                    cost: upgrade.initialCost
+                };
             });
 
             skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
 
-            recalculateLevelStats(); // Recalcula stats de nivel primero
-            recalculateStats(); // Recalcula stats de mejoras
+            recalculateStats(); 
+            recalculateLevelStats(); 
             updateUI(); 
             updateSkinsUI(); 
             checkBanStatus();
@@ -1281,7 +1299,7 @@
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
         
-        // REFACTOR: Contenedores de la tienda
+        // REFACTOR: Contenedores de tienda actualizados
         const storeCpcContainer = document.getElementById('store-items-cpc-container');
         const storePpsContainer = document.getElementById('store-items-pps-container');
         const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
@@ -1352,24 +1370,28 @@
             
             requestFullscreen();
 
-            if (checkClickConsistency()) {
-                triggerBan(3600);
+            // --- INICIO: Lógica Anti-Cheat ---
+            const now = _DateNow();
+            if (_valClkRt(now) || _valClkRglrty(now)) {
+                triggerBan(3600); // Baneo de 1 Hora
                 return;
             }
-            
+            // --- FIN: Lógica Anti-Cheat ---
+
             // REFACTOR: El clickPower base (calculado) se multiplica por el nivel
             const baseGain = clickPower;
             const earnedScore = baseGain * levelMultiplier;
 
             score += earnedScore;
-            gainXP(baseGain); // XP se gana basado en el poder base, no el multiplicado por nivel
+            gainXP(baseGain);
 
             coins += 1;
             updateCoinsDisplay();
 
+            // REFACTOR: Pasa el evento al visual
             showClickVisual(event, earnedScore);
-            createClickParticles(event);
-            updateUI(); // updateUI ahora actualiza los botones 'affordable'
+            createClickParticles(event); // NUEVO: Partículas
+            updateUI();
 
             totalClicks++;
             if (totalClicks === 2000 && !modalShown && !userId) {
@@ -1380,13 +1402,12 @@
 
         function gainXP(amount) {
             xp += amount;
-            totalScore += amount * levelMultiplier; // Total score sí incluye el multiplicador
+            totalScore += amount; // REFACTOR: XP se basa en ganancia base, totalScore también
 
             while (xp >= xpToNextLevel) {
                 xp -= xpToNextLevel;
                 level++;
                 recalculateLevelStats();
-                recalculateStats(); // RECALCULAR: Los bonus de nivel cambian
             }
         }
 
@@ -1401,11 +1422,12 @@
             visual.classList.add('click-visual');
 
             const rect = clickerZone.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
+            // REFACTOR: Usa pageX/pageY si está disponible (mejor para móvil), si no clientX/Y
+            const clickX = (event.touches ? event.touches[0].pageX : event.pageX) - rect.left;
+            const clickY = (event.touches ? event.touches[0].pageY : event.pageY) - rect.top;
 
-            visual.style.left = `${x}px`;
-            visual.style.top = `${y}px`;
+            visual.style.left = `${clickX}px`;
+            visual.style.top = `${clickY}px`;
 
             clickerZone.appendChild(visual);
 
@@ -1414,10 +1436,11 @@
             }, 1000);
         }
 
+        // --- INICIO: Efectos Visuales (Engagement) ---
         function createClickParticles(event) {
             const rect = clickerZone.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
+            const clickX = (event.touches ? event.touches[0].pageX : event.pageX) - rect.left;
+            const clickY = (event.touches ? event.touches[0].pageY : event.pageY) - rect.top;
 
             for (let i = 0; i < 5; i++) {
                 const particle = document.createElement('div');
@@ -1425,186 +1448,192 @@
                 clickerZone.appendChild(particle);
 
                 const angle = _MathRandom() * _MathPI * 2;
-                const distance = _MathRandom() * 40 + 30;
-                const translateX = _MathCos(angle) * distance;
-                const translateY = _MathSin(angle) * distance;
+                const distance = _MathRandom() * 30 + 20;
+                const duration = _MathRandom() * 400 + 400;
 
-                particle.style.left = `${x}px`;
-                particle.style.top = `${y}px`;
-
-                particle.animate([
-                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 0.7 },
-                    { transform: `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(0)`, opacity: 0 }
-                ], {
-                    duration: 600 + _MathRandom() * 300,
-                    easing: 'cubic-bezier(0.1, 0.7, 0.3, 1)'
-                });
-
-                setTimeout(() => {
-                    particle.remove();
-                }, 900);
+                particle.style.transform = `translate(${clickX}px, ${clickY}px) scale(0)`;
+                
+                // Animar con JS
+                let startTime = null;
+                function animateParticle(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = timestamp - startTime;
+                    
+                    if (progress < duration) {
+                        const t = progress / duration;
+                        const scale = 1 - _MathPow(1 - t, 3); // easeOutCubic
+                        const currentX = clickX + _MathSin(angle) * distance * t;
+                        const currentY = clickY + _MathCos(angle) * distance * t;
+                        const opacity = 1 - t;
+                        
+                        particle.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+                        particle.style.opacity = opacity;
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        particle.remove();
+                    }
+                }
+                requestAnimationFrame(animateParticle);
             }
         }
         
-        let ppsVisualActive = false;
-        function showPPSVisual(amount) {
-            if (ppsVisualActive) return;
-            ppsVisualActive = true;
+        let ppsVisualTimer = null;
+        let ppsVisualElement = null;
+        function showPpsVisual(amount) {
+            if (amount <= 0) return;
             
-            const visual = document.createElement('div');
-            visual.textContent = `+${formatNumber(amount)}`;
-            visual.classList.add('pps-visual');
+            if (!ppsVisualElement) {
+                ppsVisualElement = document.createElement('div');
+                ppsVisualElement.classList.add('pps-visual');
+                document.querySelector('.stats').appendChild(ppsVisualElement);
+            }
             
-            const statsEl = document.querySelector('.stats');
-            statsEl.appendChild(visual);
+            ppsVisualElement.textContent = `+${formatNumber(amount)}`;
+            ppsVisualElement.style.animation = 'none';
+            // Forzar reflow
+            ppsVisualElement.offsetHeight; 
+            ppsVisualElement.style.animation = 'float-up-pps 1.5s ease-out forwards';
 
-            setTimeout(() => {
-                visual.remove();
-                ppsVisualActive = false;
-            }, 1450);
+            if (ppsVisualTimer) clearTimeout(ppsVisualTimer);
+            ppsVisualTimer = setTimeout(() => {
+                if (ppsVisualElement) {
+                    ppsVisualElement.style.animation = 'none'; // Detener la animación al final
+                }
+            }, 1500);
         }
+        // --- FIN: Efectos Visuales (Engagement) ---
 
-        // --- NUEVA FUNCIÓN HELPER ---
-        function calculateUpgradeCost(config, currentLevel) {
-            // Nota: costReduction se podría aplicar aquí
-            return _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
-        }
 
-        // --- REFACTOR: Función de compra ---
+        // REFACTOR: Lógica de compra con el nuevo sistema
         function buyUpgrade(key) {
             if (isBanned) return;
             
-            const config = UPGRADES_CONFIG.find(upg => upg.id === key);
+            const config = UPGRADES_CONFIG.find(u => u.id === key);
             if (!config) return;
-
-            const currentLevel = upgradeLevels[key] || 0;
             
-            // Comprobar Nivel Máximo
-            if (config.maxLevel && currentLevel >= config.maxLevel) {
-                return;
+            const state = upgradeLevels[key];
+            if (!state) return;
+
+            // Comprobar si ya está en maxLevel
+            if (config.maxLevel && state.level >= config.maxLevel) {
+                return; // Ya no se puede comprar
             }
 
-            const cost = calculateUpgradeCost(config, currentLevel);
-
-            if (score >= cost) {
-                score -= cost;
-                upgradeLevels[key]++; // Incrementar el nivel en el estado
-
-                recalculateStats(); // Recalcular stats globales
-                updateUI(); // Actualizar toda la UI
+            if (score >= state.cost) {
+                score -= state.cost;
+                state.level++;
                 
-                const buttonEl = document.getElementById(`buy-${key}`);
-                if (buttonEl) {
-                    const itemEl = buttonEl.closest('.store-item');
-                    if (itemEl) {
-                        itemEl.classList.add('purchased');
-                        itemEl.addEventListener('animationend', () => {
-                            itemEl.classList.remove('purchased');
-                        }, { once: true });
-                    }
+                // Actualizar coste solo si no ha alcanzado maxLevel
+                if (!config.maxLevel || state.level < config.maxLevel) {
+                    state.cost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, state.level));
+                } else {
+                    state.cost = Infinity; // Coste infinito si se alcanza el max
+                }
+
+                recalculateStats();
+                updateUI();
+                
+                // Animación de compra
+                const itemEl = document.getElementById(`item-${key}`);
+                if (itemEl) {
+                    itemEl.classList.add('purchased');
+                    setTimeout(() => itemEl.classList.remove('purchased'), 400);
                 }
             }
         }
 
-        // --- REFACTOR: Cálculo de estadísticas ---
+        // REFACTOR: Lógica de recálculo completa
         function recalculateStats() {
-            let newClickPower = 1; // El clic base siempre es 1
             let newPPS = 0;
+            let newClickPower = 1; // El clic base siempre da 1
+            let clickMultiplier = 1;
+            let autoMultiplier = 1;
+            let synergyClickBonus = 0;
+            let synergyAutoBonus = 0;
+            let levelClickBonus = 0;
+            let levelAutoBonus = 0;
 
-            let clickMulti = 1;
-            let autoMulti = 1;
-
-            let levelBonusClick = 1;
-            let levelBonusPPS = 1;
-            
-            let synergyBonusClick = 1;
-            let synergyBonusPPS = 1;
-
-            // 1. Sumar valores base (clickValue, autoClickValue)
+            // 1. Calcular Sinergias y Bonos de Nivel
             UPGRADES_CONFIG.forEach(config => {
-                const level = upgradeLevels[config.id] || 0;
-                if (level === 0) return;
+                const state = upgradeLevels[config.id];
+                if (!state || state.level === 0) return;
+
+                if (config.type === 'synergy') {
+                    const targetState = upgradeLevels[config.targetUpgrade];
+                    if (!targetState) return;
+                    
+                    const bonus = config.value * targetState.level * state.level;
+                    if (config.targetStat === 'clickValue') {
+                        synergyClickBonus += bonus;
+                    } else if (config.targetStat === 'autoClickValue') {
+                        synergyAutoBonus += bonus;
+                    }
+                }
+                
+                if (config.type === 'levelBonus') {
+                     const bonus = config.value * level * state.level;
+                     if (config.targetStat === 'clickValue') {
+                        levelClickBonus += bonus;
+                    } else if (config.targetStat === 'autoClickValue') {
+                        levelAutoBonus += bonus;
+                    }
+                }
+            });
+
+            // 2. Calcular valores Base y Multiplicadores
+            UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state || state.level === 0) return;
 
                 switch (config.type) {
                     case 'clickValue':
-                        newClickPower += config.value * level;
+                        newClickPower += config.value * state.level;
                         break;
                     case 'autoClickValue':
-                        newPPS += config.value * level;
+                        newPPS += config.value * state.level;
                         break;
-                }
-            });
-
-            // 2. Calcular multiplicadores (clickMultiplier, autoMultiplier)
-            UPGRADES_CONFIG.forEach(config => {
-                const level = upgradeLevels[config.id] || 0;
-                if (level === 0) return;
-
-                switch (config.type) {
                     case 'clickMultiplier':
-                        clickMulti *= config.value;
+                        clickMultiplier *= _MathPow(config.value, state.level);
                         break;
                     case 'autoMultiplier':
-                        autoMulti *= config.value;
+                        autoMultiplier *= _MathPow(config.value, state.level);
                         break;
                 }
             });
             
-            // 3. Calcular Bonos de Nivel (levelBonus)
-            UPGRADES_CONFIG.forEach(config => {
-                const level = upgradeLevels[config.id] || 0;
-                if (level === 0) return;
-
-                if (config.type === 'levelBonus') {
-                    const bonus = (window.level - 1) * config.value * level; // window.level es el nivel global del jugador
-                    if (config.targetStat === 'clickValue') levelBonusClick += bonus;
-                    if (config.targetStat === 'autoClickValue') levelBonusPPS += bonus;
-                }
-            });
+            // 3. Aplicar todos los multiplicadores
+            // Fórmula: (Base + Sinergias) * Multiplicadores * Bonus_Nivel * Multiplicador_Nivel_Juego
             
-            // 4. Calcular Sinergias (synergy)
-            UPGRADES_CONFIG.forEach(config => {
-                const level = upgradeLevels[config.id] || 0;
-                if (level === 0) return;
+            // Clics
+            let finalClickPower = (newClickPower + (newClickPower * synergyClickBonus));
+            finalClickPower *= clickMultiplier;
+            finalClickPower *= (1 + levelClickBonus);
+            
+            // PPS
+            let finalPPS = (newPPS + (newPPS * synergyAutoBonus));
+            finalPPS *= autoMultiplier;
+            finalPPS *= (1 + levelAutoBonus);
 
-                if (config.type === 'synergy') {
-                    const targetLevel = upgradeLevels[config.targetUpgrade] || 0;
-                    const bonus = targetLevel * config.value * level;
-                    if (config.targetStat === 'clickValue') synergyBonusClick += bonus;
-                    if (config.targetStat === 'autoClickValue') synergyBonusPPS += bonus;
-                }
-            });
-
-
-            // 5. Aplicar todos los multiplicadores en orden
-            newClickPower = newClickPower * synergyBonusClick * levelBonusClick * clickMulti;
-            newPPS = newPPS * synergyBonusPPS * levelBonusPPS * autoMulti;
-
-            // Asignar a las variables globales base
-            // El levelMultiplier (del nivel de jugador) se aplica en gameLoop y updateUI
-            clickPower = newClickPower;
-            pps = newPPS;
+            // Asignar valores finales
+            pps = finalPPS;
+            clickPower = finalClickPower;
         }
+
 
         function gameLoop() {
             if (isBanned) return;
             
-            // pps ya está calculado con multiplicadores
+            // REFACTOR: El PPS base (calculado) se multiplica por el nivel
             const baseGain = pps;
-            const earnedScore = baseGain * levelMultiplier;
+            const earnedScore = (baseGain * levelMultiplier) / 10; // Dividido en 10 para un loop de 100ms
 
             score += earnedScore;
 
             if (baseGain > 0) {
-                gainXP(baseGain); // XP se basa en el pps base
-                
-                if (earnedScore >= 1) {
-                    showPPSVisual(earnedScore);
-                }
+                gainXP(baseGain / 10); // El XP también se divide
+                showPpsVisual(earnedScore); // Mostrar el PPS visual
             }
 
-            // Actualizar la UI de forma menos frecuente que el gameLoop
-            // Lo movemos a un Ticker separado si es necesario
             updateUI();
             
             if (myLiveScoreSpan) {
@@ -1612,9 +1641,8 @@
             }
         }
 
-        // --- REFACTOR: Actualización de UI ---
+        // REFACTOR: Lógica de UI con el nuevo sistema
         function updateUI() {
-            // Actualizar stats principales
             scoreDisplay.textContent = formatNumber(score);
             ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
             cpcDisplay.textContent = `${formatNumber(clickPower * levelMultiplier)} Puntos por clic`;
@@ -1622,31 +1650,37 @@
             levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
             xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
 
-            // Actualizar botones de la tienda
             UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state) return;
+
                 const statsEl = document.getElementById(`stats-${config.id}`);
                 const buttonEl = document.getElementById(`buy-${config.id}`);
-                if (!statsEl || !buttonEl) return; // Si el elemento no está en el DOM (ej. otra pestaña)
+                const itemEl = document.getElementById(`item-${config.id}`);
 
-                const itemEl = buttonEl.closest('.store-item');
-                if (!itemEl) return;
-
-                const currentLevel = upgradeLevels[config.id] || 0;
-                statsEl.textContent = `${config.description} | Nivel: ${currentLevel}`;
-
-                // Manejar Nivel Máximo
-                if (config.maxLevel && currentLevel >= config.maxLevel) {
-                    buttonEl.textContent = "MAX";
-                    buttonEl.disabled = true;
-                    itemEl.classList.remove('affordable');
-                } else {
-                    const cost = calculateUpgradeCost(config, currentLevel);
-                    buttonEl.textContent = `Costo: ${formatNumber(cost)}`;
+                if (statsEl && buttonEl && itemEl) {
                     
-                    const canAfford = score >= cost;
-                    buttonEl.disabled = !canAfford;
+                    // Actualizar descripción y nivel
+                    let levelText = `Nivel: ${state.level}`;
+                    if (config.maxLevel) {
+                        levelText = `Nivel: ${state.level} / ${config.maxLevel}`;
+                    }
+                    if (config.maxLevel && state.level >= config.maxLevel) {
+                        levelText = "¡MAX!";
+                    }
+                    statsEl.textContent = `${config.description} | ${levelText}`;
 
-                    if (canAfford) {
+                    // Actualizar coste y estado del botón
+                    if (state.cost === Infinity) {
+                        buttonEl.textContent = `Comprado`;
+                        buttonEl.disabled = true;
+                    } else {
+                        buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
+                        buttonEl.disabled = score < state.cost;
+                    }
+                    
+                    // Actualizar animación de "asequible"
+                    if (score >= state.cost && state.cost !== Infinity) {
                         itemEl.classList.add('affordable');
                     } else {
                         itemEl.classList.remove('affordable');
@@ -1659,44 +1693,52 @@
             coinsDisplay.textContent = formatNumber(coins);
         }
 
-        // --- REFACTOR: Inicialización de la Tienda ---
+        // REFACTOR: Lógica de tienda con el nuevo sistema
         function initializeStore() {
             // Limpiar contenedores
-            storeCpcContainer.innerHTML = '';
-            storePpsContainer.innerHTML = '';
-            storeClickMultContainer.innerHTML = '';
-            storeAutoMultContainer.innerHTML = '';
-            storeSynergyContainer.innerHTML = '';
-            storeBonusContainer.innerHTML = '';
-            storeOtherContainer.innerHTML = '';
+            storeCpcContainer.innerHTML = '<h3>Mejoras de Clic</h3>';
+            storePpsContainer.innerHTML = '<h3>Mejoras de PPS</h3>';
+            storeClickMultContainer.innerHTML = '<h3>Multiplicadores de Clic</h3>';
+            storeAutoMultContainer.innerHTML = '<h3>Multiplicadores de PPS</h3>';
+            storeSynergyContainer.innerHTML = '<h3>Sinergias</h3>';
+            storeBonusContainer.innerHTML = '<h3>Bonus de Nivel</h3>';
+            storeOtherContainer.innerHTML = '<h3>Otros</h3>';
 
-            // Iterar sobre el array de configuración
             UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state) return;
+
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('store-item');
+                itemDiv.id = `item-${config.id}`; // ID para el div principal
 
                 const infoDiv = document.createElement('div');
                 infoDiv.classList.add('item-info');
 
                 const nameStrong = document.createElement('strong');
-                nameStrong.textContent = `${config.name} ${config.emoji || ''}`;
+                nameStrong.textContent = `${config.emoji} ${config.name}`;
 
                 const statsSpan = document.createElement('span');
                 statsSpan.id = `stats-${config.id}`;
-                statsSpan.textContent = `${config.description} | Nivel: 0`;
+                
+                let levelText = `Nivel: ${state.level}`;
+                if (config.maxLevel) {
+                    levelText = `Nivel: ${state.level} / ${config.maxLevel}`;
+                }
+                statsSpan.textContent = `${config.description} | ${levelText}`;
 
                 infoDiv.appendChild(nameStrong);
                 infoDiv.appendChild(statsSpan);
 
                 const button = document.createElement('button');
                 button.id = `buy-${config.id}`;
-                button.dataset.key = config.id; // Data-key sigue siendo el ID
-                button.textContent = `Costo: ${formatNumber(config.initialCost)}`;
+                button.dataset.key = config.id;
+                button.textContent = `Costo: ${formatNumber(state.cost)}`;
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
                 
-                // Clasificar en el contenedor correcto
+                // Asignar al contenedor correcto
                 switch (config.type) {
                     case 'clickValue':
                         storeCpcContainer.appendChild(itemDiv);
@@ -1721,34 +1763,24 @@
                         break;
                 }
             });
-
-            // Añadir event listeners a los contenedores padres
-            document.getElementById('store-prod').addEventListener('click', (event) => {
-                const button = event.target.closest('button[data-key]');
-                if (button) buyUpgrade(button.dataset.key);
-            });
-            document.getElementById('store-mult').addEventListener('click', (event) => {
-                const button = event.target.closest('button[data-key]');
-                if (button) buyUpgrade(button.dataset.key);
-            });
-            document.getElementById('store-spec').addEventListener('click', (event) => {
-                const button = event.target.closest('button[data-key]');
-                if (button) buyUpgrade(button.dataset.key);
-            });
         }
 
         function initializeSkins() {
             Object.keys(SKINS_CONFIG).forEach(skinId => {
                 const skin = SKINS_CONFIG[skinId];
+
                 const skinItem = document.createElement('div');
                 skinItem.classList.add('skin-item');
                 skinItem.dataset.skinId = skinId;
+
                 const preview = document.createElement('div');
                 preview.classList.add('skin-preview');
                 preview.textContent = skin.emoji;
+
                 const name = document.createElement('div');
                 name.classList.add('skin-name');
                 name.textContent = skin.name;
+
                 const cost = document.createElement('div');
                 cost.classList.add('skin-cost');
                 if (skin.cost === 0) {
@@ -1756,6 +1788,7 @@
                 } else {
                     cost.textContent = `${formatNumber(skin.cost)} monedas`;
                 }
+
                 skinItem.appendChild(preview);
                 skinItem.appendChild(name);
                 skinItem.appendChild(cost);
@@ -1766,8 +1799,10 @@
                 if (isBanned) return;
                 const skinItem = event.target.closest('.skin-item');
                 if (!skinItem) return;
+
                 const skinId = skinItem.dataset.skinId;
                 const skin = skinsState[skinId];
+
                 if (skin.owned) {
                     currentSkin = skinId;
                     updateClickButtonSkin();
@@ -1787,11 +1822,13 @@
         function updateClickButtonSkin() {
             const skin = skinsState[currentSkin];
             clickButton.innerHTML = '';
+
             if (skin) {
                 const face = document.createElement('div');
                 face.classList.add('click-button-face');
                 face.textContent = skin.emoji;
                 clickButton.appendChild(face);
+
                 const clickText = document.createElement('span');
                 clickText.id = 'click-button-text';
                 clickText.textContent = "¡Clic!";
@@ -1803,9 +1840,12 @@
             Object.keys(skinsState).forEach(skinId => {
                 const skin = skinsState[skinId];
                 const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
+
                 if (skinElement) {
                     skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped');
+                    
                     const costEl = skinElement.querySelector('.skin-cost');
+
                     if (!skin.owned && skin.cost > 0) {
                         skinElement.classList.add('skin-locked');
                         costEl.textContent = `${formatNumber(skin.cost)} monedas`;
@@ -1814,6 +1854,7 @@
                         costEl.textContent = "Comprado";
                         costEl.style.color = "#28a745";
                     }
+
                     if (currentSkin === skinId) {
                         skinElement.classList.add('skin-equipped');
                         costEl.textContent = "Equipado";
@@ -1831,27 +1872,37 @@
                 if (user) {
                     userId = user.uid;
                     currentUsername = user.email.split('@')[0];
+
                     authSection.style.display = 'none';
                     scoreSection.style.display = 'flex';
                     loggedInAs.textContent = `Logueado como: ${currentUsername}`;
+
                     const presenceRef = ref(db, `presence/${userId}`);
                     set(presenceRef, true);
                     onDisconnect(presenceRef).remove();
+
                     await loadGameState();
+
                     if (autoSaveInterval) clearInterval(autoSaveInterval);
                     autoSaveInterval = setInterval(() => saveScore(false), 15000);
+
                 } else {
                     userId = null;
                     currentUsername = null;
+
                     authSection.style.display = 'flex';
                     scoreSection.style.display = 'none';
                     loggedInAs.textContent = '';
+
                     if (autoSaveInterval) clearInterval(autoSaveInterval);
                     autoSaveInterval = null;
+
                     resetGameState();
                 }
             });
+
             loadLeaderboard();
+            
             const allPresenceRef = ref(db, 'presence');
             onValue(allPresenceRef, (snapshot) => {
                 globalPresence = snapshot.val() || {};
@@ -1859,7 +1910,7 @@
             });
         }
 
-        // --- REFACTOR: Carga de estado ---
+        // REFACTOR: Carga de estado con el nuevo sistema
         async function loadGameState() {
             if (!userId) {
                 resetGameState();
@@ -1869,8 +1920,10 @@
 
             try {
                 const snapshot = await get(stateRef);
+
                 if (snapshot.exists()) {
                     const savedState = snapshot.val();
+                    
                     const lastSeen = savedState.lastSeen || _DateNow();
 
                     score = savedState.score || 0;
@@ -1883,13 +1936,27 @@
                     currentSkin = savedState.currentSkin || 'default';
                     banExpiresAt = savedState.banExpiresAt || 0;
 
-                    // NUEVA LÓGICA DE CARGA DE MEJORAS
-                    const loadedLevels = savedState.upgradeLevels || {};
-                    upgradeLevels = {};
-                    UPGRADES_CONFIG.forEach(upg => {
-                        upgradeLevels[upg.id] = loadedLevels[upg.id] || 0;
-                    });
-                    // FIN NUEVA LÓGICA
+                    // REFACTOR: Cargar upgradeLevels
+                    if (savedState.upgradeLevels) {
+                        upgradeLevels = savedState.upgradeLevels;
+                        // Asegurarse de que cualquier nueva mejora en config tenga una entrada
+                        UPGRADES_CONFIG.forEach(config => {
+                            if (!upgradeLevels[config.id]) {
+                                upgradeLevels[config.id] = {
+                                    level: 0,
+                                    cost: config.initialCost
+                                };
+                            }
+                        });
+                    } else {
+                        // Si no hay estado guardado de upgrades, inicializarlo
+                        UPGRADES_CONFIG.forEach(config => {
+                            upgradeLevels[config.id] = {
+                                level: 0,
+                                cost: config.initialCost
+                            };
+                        });
+                    }
 
                     if (savedState.skins) {
                         skinsState = savedState.skins;
@@ -1897,16 +1964,16 @@
                         skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
                     }
                     
-                    recalculateLevelStats(); // Calcular stats de nivel
-                    recalculateStats(); // Calcular stats de mejoras (depende de nivel para bonus)
+                    recalculateStats();
+                    recalculateLevelStats();
                     
                     const now = _DateNow();
                     let timeOfflineInSeconds = (now - lastSeen) / 1000;
                     const maxOfflineTimeInSeconds = 10 * 60 * 60; // 10 horas
                     const effectiveOfflineTime = _MathMin(timeOfflineInSeconds, maxOfflineTimeInSeconds);
 
-                    if (effectiveOfflineTime > 60) {
-                        const offlinePPS = pps * 0.05; // pps ya está calculado
+                    if (effectiveOfflineTime > 60) { // Solo mostrar si estuvo offline > 1 min
+                        const offlinePPS = pps * 0.05; // 5% de PPS
                         const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
                         
                         score += earnedOfflineScore;
@@ -1961,23 +2028,32 @@
                         li.dataset.baseScore = entry.score;
                         li.dataset.pps = entry.pps || 0;
                         li.dataset.lastSeen = entry.lastSeen || _DateNow();
+
                         if (currentUsername && entry.username === currentUsername) {
                             li.classList.add('current-user');
                         }
+
                         const rank = document.createElement('span');
                         rank.textContent = `#${index + 1}`;
                         rank.classList.add('rank');
+
                         const name = document.createElement('span');
                         name.classList.add('player-name');
+                        
                         const statusDot = document.createElement('span');
                         statusDot.classList.add('status-dot');
+                        
                         const nameSpan = document.createElement('span');
                         nameSpan.textContent = entry.username || "Anónimo";
+                        
                         name.appendChild(statusDot);
                         name.appendChild(nameSpan);
+
+
                         const scoreVal = document.createElement('span');
                         scoreVal.textContent = formatNumber(entry.score);
                         scoreVal.classList.add('player-score');
+
                         li.appendChild(rank);
                         li.appendChild(name);
                         li.appendChild(scoreVal);
@@ -2022,8 +2098,10 @@
                 if (dot && !dot.classList.contains('online')) {
                     const pps = parseFloat(li.dataset.pps);
                     const lastSeen = parseFloat(li.dataset.lastSeen);
+                    
                     const timeOfflineMs = now - lastSeen;
                     const effectiveTimeMs = _MathMin(timeOfflineMs, maxOfflineTimeMs);
+                    
                     if (effectiveTimeMs > 0) {
                         const offlineGain = (pps * 0.05) * (effectiveTimeMs / 1000);
                         const currentScore = baseScore + offlineGain;
@@ -2031,13 +2109,14 @@
                     } else {
                         scoreEl.textContent = formatNumber(baseScore);
                     }
-                } else {
-                    scoreEl.textContent = formatNumber(baseScore);
+                } else if (dot && dot.classList.contains('online')) {
+                     // Si está online, mostramos la puntuación base (que se actualiza con onValue)
+                     scoreEl.textContent = formatNumber(baseScore);
                 }
             });
         }
 
-        // --- REFACTOR: Guardado de estado ---
+        // REFACTOR: Guardado de estado con el nuevo sistema
         async function saveScore(manual = false) {
             if (!userId || !db || !currentUsername) {
                 if (manual) {
@@ -2049,7 +2128,7 @@
 
             const scoreToSave = _MathFloor(totalScore);
             const now = _DateNow();
-            const currentPPS = pps * levelMultiplier; // Guardar el PPS final
+            const currentPPS = pps * levelMultiplier;
 
             const stateToSave = {
                 score: score,
@@ -2060,7 +2139,7 @@
                 modalShown: modalShown,
                 coins: coins,
                 currentSkin: currentSkin,
-                upgradeLevels: upgradeLevels, // NUEVO ESTADO DE MEJORAS
+                upgradeLevels: upgradeLevels, // REFACTOR: Guardar upgradeLevels
                 skins: skinsState,
                 banExpiresAt: banExpiresAt,
                 lastSeen: now
@@ -2132,14 +2211,17 @@
         function handleRegister() {
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
+
             if (username.length < 3 || password.length < 6) {
                 authStatus.textContent = "Usuario (3+) y contraseña (6+)";
                 authStatus.className = 'error';
                 return;
             }
             const email = username + '@click.com';
+
             authStatus.textContent = "Registrando...";
             authStatus.className = '';
+
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     authStatus.textContent = "¡Registrado con éxito!";
@@ -2158,14 +2240,17 @@
         function handleLogin() {
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
+
             if (!username || !password) {
                 authStatus.textContent = "Rellena ambos campos.";
                 authStatus.className = 'error';
                 return;
             }
             const email = username + '@click.com';
+
             authStatus.textContent = "Iniciando sesión...";
             authStatus.className = '';
+
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     authStatus.textContent = "¡Bienvenido de vuelta!";
@@ -2187,59 +2272,84 @@
                 await saveScore(false); 
                 await set(presenceRef, null);
             }
+            
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
             });
         }
 
-        let lastClickTimestamp = 0;
-        let clickIntervals = [];
-        const consistencyThreshold = 1.0; 
-        const consistencyWindow = 20;
-
-        function checkClickConsistency() {
-            const now = _DateNow();
-            if (lastClickTimestamp === 0) {
-                lastClickTimestamp = now;
-                return false;
-            }
-            const interval = now - lastClickTimestamp;
-            lastClickTimestamp = now;
-            if (interval < 10) { 
-                return false;
-            }
-            clickIntervals.push(interval);
-            if (clickIntervals.length > consistencyWindow) {
-                clickIntervals.shift();
-            }
-            if (clickIntervals.length < consistencyWindow) {
-                return false;
-            }
-            const stdDev = getStandardDeviation(clickIntervals);
-            if (stdDev < consistencyThreshold && stdDev !== 0) {
-                console.warn(`Detección de Autoclicker: Desviación estándar muy baja: ${stdDev}`);
-                clickIntervals = []; 
-                return true;
+        // --- INICIO: Funciones Anti-Cheat ---
+        
+        // Valida la TASA de clics (CPS)
+        function _valClkRt(now) {
+            _clkTmstmps.push(now);
+            // Filtra los timestamps que ya son más viejos que la ventana (1s)
+            _clkTmstmps = _clkTmstmps.filter(timestamp => now - timestamp < _cpsWnd);
+            
+            // Si hay más clics en la ventana que el máximo permitido
+            if (_clkTmstmps.length > _maxCPS) {
+                console.warn(`Detección de Tasa de Clics: ${_clkTmstmps.length} CPS detectados.`);
+                return true; // ¡Baneado!
             }
             return false;
         }
+
+        // Valida la CONSISTENCIA (ritmo)
+        function _valClkRglrty(now) {
+            if (_lct === 0) {
+                _lct = now;
+                return false;
+            }
+
+            const interval = now - _lct;
+            _lct = now;
+            
+            if (interval < 10) { // Ignora clics inhumanamente rápidos (ya cubiertos por _valClkRt)
+                return false;
+            }
+
+            _cIntvls.push(interval);
+            if (_cIntvls.length > _cWnd) {
+                _cIntvls.shift();
+            }
+
+            if (_cIntvls.length < _cWnd) {
+                return false;
+            }
+
+            const stdDev = getStandardDeviation(_cIntvls);
+
+            if (stdDev < _cThresh && stdDev !== 0) {
+                console.warn(`Detección de Consistencia: Desviación estándar muy baja: ${stdDev}`);
+                _cIntvls = []; 
+                return true; // ¡Baneado!
+            }
+            
+            return false;
+        }
+        // --- FIN: Funciones Anti-Cheat ---
         
         function triggerBan(seconds) {
             if (isBanned) return; 
+            
             const durationMs = seconds * 1000;
             banExpiresAt = _DateNow() + durationMs;
             isBanned = true;
+            
             console.error(`USUARIO BANEADO por ${seconds} segundos.`);
+            
             saveScore(false); 
             checkBanStatus();
         }
-
+        
         function checkBanStatus() {
             if (banCheckInterval) clearInterval(banCheckInterval);
+
             const now = _DateNow();
             if (banExpiresAt > now) {
                 isBanned = true;
                 showBanScreen();
+                
                 banCheckInterval = setInterval(updateBanTimer, 1000);
             } else {
                 isBanned = false;
@@ -2252,15 +2362,20 @@
             if (!overlay) {
                 overlay = document.createElement('div');
                 overlay.id = 'ban-overlay';
+                
                 const title = document.createElement('h2');
                 title.textContent = '¡BANEADO!';
+                
                 const message = document.createElement('p');
                 message.textContent = 'Actividad sospechosa detectada (clics demasiado consistentes).';
+                
                 const timer = document.createElement('p');
                 timer.id = 'ban-timer';
+                
                 overlay.appendChild(title);
                 overlay.appendChild(message);
                 overlay.appendChild(timer);
+                
                 document.body.appendChild(overlay);
             }
             overlay.style.display = 'flex';
@@ -2270,6 +2385,7 @@
         function updateBanTimer() {
             const now = _DateNow();
             const timeLeft = banExpiresAt - now;
+            
             if (timeLeft <= 0) {
                 isBanned = false;
                 hideBanScreen();
@@ -2278,6 +2394,7 @@
                 const hours = _MathFloor(timeLeft / (1000 * 60 * 60));
                 const minutes = _MathFloor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = _MathFloor((timeLeft % (1000 * 60)) / 1000);
+                
                 const timerEl = document.getElementById('ban-timer');
                 if (timerEl) {
                     timerEl.textContent = 
@@ -2301,19 +2418,23 @@
             }
         };
 
-        // --- REFACTOR: Inicio del juego ---
         async function loadGameConfigAndStart() {
             try {
-                // Ya no hay fetch, la config está arriba
+                // REFACTOR: No se usa fetch, la config está arriba
                 
-                resetGameState(); // Inicializa el estado con la nueva config
-                initializeStore(); // Inicializa la tienda con la nueva config
+                resetGameState();
+                initializeStore();
                 initializeSkins();
-                initializeFirebase(); // Carga el estado guardado (compatible con el nuevo)
+                initializeFirebase();
 
                 clickButton.addEventListener('mousedown', handleManualClick);
                 
-                // NOTA: Los listeners de la tienda se añadieron en initializeStore()
+                // REFACTOR: Listener de clics para la tienda
+                document.getElementById('store').addEventListener('click', (event) => {
+                    const button = event.target.closest('button[data-key]');
+                    if (button) buyUpgrade(button.dataset.key);
+                });
+
 
                 tabButtons.forEach(button => {
                     button.addEventListener('click', () => showTab(button.dataset.tab));
@@ -2341,7 +2462,7 @@
                     offlineModalOverlay.style.display = 'none';
                 });
 
-                setInterval(gameLoop, 1000);
+                setInterval(gameLoop, 100); // REFACTOR: Loop más rápido (10x por seg)
                 setInterval(updateLeaderboardVisualTicking, 1000);
 
                 updateUI();
@@ -2353,9 +2474,6 @@
             }
         }
 
-        // Hacer la variable 'level' global para las sinergias
-        window.level = level;
-        
         loadGameConfigAndStart();
         
     </script>
