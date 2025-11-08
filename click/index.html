@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Click</title>
+    <title>Aventura de Clics (Online)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
@@ -293,8 +293,8 @@
         .store-item button.selected:hover {
             background-color: #c82333;
         }
-
-        /* --- NUEVO: Animaciones de Engagement --- */
+        
+        /* --- Animaciones de Engagement --- */
         @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
@@ -346,7 +346,7 @@
             100% { opacity: 0; transform: translateY(-70px) scale(1); }
         }
 
-        /* --- NUEVO: Partículas de Clic --- */
+        /* --- Partículas de Clic --- */
         .click-particle {
             position: absolute;
             width: 10px;
@@ -360,7 +360,7 @@
         }
         /* --- FIN: Partículas de Clic --- */
         
-        /* --- NUEVO: Visual de PPS --- */
+        /* --- Visual de PPS --- */
         .pps-visual {
             position: absolute;
             font-size: 1.5rem;
@@ -925,18 +925,40 @@
             </div>
 
             <div id="store" class="tab-content active no-scrollbar">
+                <!-- PESTAÑAS DE TIENDA REESTRUCTURADAS -->
                 <div class="sub-tab-buttons">
-                    <button class="sub-tab-btn active" data-subtab="store-cpc">Clics</button>
-                    <button class="sub-tab-btn" data-subtab="store-pps">Segundos</button>
+                    <button class="sub-tab-btn active" data-subtab="store-prod">Producción</button>
+                    <button class="sub-tab-btn" data-subtab="store-mult">Multiplicadores</button>
+                    <button class="sub-tab-btn" data-subtab="store-spec">Especiales</button>
                 </div>
                 
-                <div id="store-cpc" class="sub-tab-content active no-scrollbar">
+                <div id="store-prod" class="sub-tab-content active no-scrollbar">
                     <div id="store-items-cpc-container">
+                        <!-- Se llenará con clickValue -->
+                    </div>
+                    <div id="store-items-pps-container">
+                        <!-- Se llenará con autoClickValue -->
                     </div>
                 </div>
                 
-                <div id="store-pps" class="sub-tab-content no-scrollbar">
-                    <div id="store-items-pps-container">
+                <div id="store-mult" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-click-mult-container">
+                        <!-- Se llenará con clickMultiplier -->
+                    </div>
+                    <div id="store-items-auto-mult-container">
+                        <!-- Se llenará con autoMultiplier -->
+                    </div>
+                </div>
+                
+                <div id="store-spec" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-synergy-container">
+                        <!-- Se llenará con synergy -->
+                    </div>
+                    <div id="store-items-bonus-container">
+                        <!-- Se llenará con levelBonus, etc. -->
+                    </div>
+                     <div id="store-items-other-container">
+                        <!-- Se llenará con el resto -->
                     </div>
                 </div>
             </div>
@@ -1069,12 +1091,80 @@
         auth = getAuth(app);
         db = getDatabase(app);
 
+        // --- INICIO DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
+        // (upgrades.json ya no se usa, usamos este array)
+        const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"]; // Necesario para 'fruit_variety'
+        const upgradesConfig = [
+            // Clics (Producción)
+            { id: 'click_1', name: 'Dedos Ágiles', emoji: '👆', description: '+2 por clic', initialCost: 14, costMultiplier: 1.08, type: 'clickValue', value: 2 },
+            { id: 'click_2', name: 'Muñeca Entrenada', emoji: '💪', description: '+10 por clic', initialCost: 70, costMultiplier: 1.15, type: 'clickValue', value: 10 },
+            { id: 'click_3', name: 'Clic Potente', emoji: '💥', description: '+50 por clic', initialCost: 350, costMultiplier: 1.20, type: 'clickValue', value: 50 },
+            { id: 'click_4', name: 'Super Clic', emoji: '🚀', description: '+200 por clic', initialCost: 1400, costMultiplier: 1.25, type: 'clickValue', value: 200 },
+            { id: 'click_5', name: 'Clic Divino', emoji: '✨', description: '+1k por clic', initialCost: 7000, costMultiplier: 1.30, type: 'clickValue', value: 1000 },
+            { id: 'click_6', name: 'Mega Clic', emoji: '🌠', description: '+5k por clic', initialCost: 35000, costMultiplier: 1.35, type: 'clickValue', value: 5000 },
+            { id: 'click_7', name: 'Giga Clic', emoji: '🌌', description: '+25k por clic', initialCost: 175000, costMultiplier: 1.40, type: 'clickValue', value: 25000 },
+            { id: 'click_8', name: 'Tera Clic', emoji: '⚡', description: '+125k por clic', initialCost: 875000, costMultiplier: 1.45, type: 'clickValue', value: 125000 },
+            { id: 'click_9', name: 'Peta Clic', emoji: '👑', description: '+600k por clic', initialCost: 4200000, costMultiplier: 1.50, type: 'clickValue', value: 600000 },
+            { id: 'click_10', name: 'Exa Clic', emoji: '💎', description: '+3M por clic', initialCost: 21000000, costMultiplier: 1.55, type: 'clickValue', value: 3000000 },
+            { id: 'click_11', name: 'Zetta Clic', emoji: '👽', description: '+15M por clic', initialCost: 1e9, costMultiplier: 1.60, type: 'clickValue', value: 1.5e7 },
+            { id: 'click_12', name: 'Yotta Clic', emoji: '🤖', description: '+75M por clic', initialCost: 5e9, costMultiplier: 1.65, type: 'clickValue', value: 7.5e7 },
+            { id: 'click_13', name: 'Clic Infinito', emoji: '♾️', description: '+350M por clic', initialCost: 2e10, costMultiplier: 1.70, type: 'clickValue', value: 3.5e8 },
+
+            // Auto (Producción)
+            { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
+            { id: 'auto_2', name: 'Abuela Ayudante', emoji: '👵', description: '+8 pps', initialCost: 56, costMultiplier: 1.20, type: 'autoClickValue', value: 8 },
+            { id: 'auto_3', name: 'Granja de Clics', emoji: '🧑‍🌾', description: '+40 pps', initialCost: 280, costMultiplier: 1.25, type: 'autoClickValue', value: 40 },
+            { id: 'auto_4', name: 'Fábrica Frutal', emoji: '🏭', description: '+200 pps', initialCost: 1400, costMultiplier: 1.30, type: 'autoClickValue', value: 200 },
+            { id: 'auto_5', name: 'Mina de Puntos', emoji: '⛏️', description: '+1k pps', initialCost: 7000, costMultiplier: 1.35, type: 'autoClickValue', value: 1000 },
+            { id: 'auto_6', name: 'Banco de Clics', emoji: '🏦', description: '+5k pps', initialCost: 35000, costMultiplier: 1.40, type: 'autoClickValue', value: 5000 },
+            { id: 'auto_7', name: 'Templo del Clic', emoji: '🏛️', description: '+25k pps', initialCost: 175000, costMultiplier: 1.45, type: 'autoClickValue', value: 25000 },
+            { id: 'auto_8', name: 'Alquimia Frutal', emoji: '⚗️', description: '+120k pps', initialCost: 840000, costMultiplier: 1.50, type: 'autoClickValue', value: 120000 },
+            { id: 'auto_9', name: 'Portal Interdimensional', emoji: '🌀', description: '+600k pps', initialCost: 4200000, costMultiplier: 1.55, type: 'autoClickValue', value: 600000 },
+            { id: 'auto_10', name: 'Máquina del Tiempo', emoji: '⏳', description: '+3M pps', initialCost: 21000000, costMultiplier: 1.60, type: 'autoClickValue', value: 3000000 },
+            { id: 'auto_11', name: 'Generador Singularidad', emoji: '👾', description: '+15M pps', initialCost: 7e9, costMultiplier: 1.65, type: 'autoClickValue', value: 1.5e7 },
+            { id: 'auto_12', name: 'Agujero Negro Puntos', emoji: '🕳️', description: '+70M pps', initialCost: 4e10, costMultiplier: 1.70, type: 'autoClickValue', value: 7e7 },
+            { id: 'auto_13', name: 'Realidad Alternativa', emoji: '❓', description: '+300M pps', initialCost: 2e11, costMultiplier: 1.75, type: 'autoClickValue', value: 3e8 },
+
+            // Multiplicadores de Clic
+            { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },
+            { id: 'click_mult_2', name: 'Energía Cósmica', emoji: '🪐', description: 'Clics x1.2', initialCost: 50000, costMultiplier: 2.5, type: 'clickMultiplier', value: 1.2, maxLevel: 1 },
+            { id: 'click_mult_3', name: 'Bendición Frutal', emoji: '🙏', description: 'Clics x1.5', initialCost: 1000000, costMultiplier: 3.0, type: 'clickMultiplier', value: 1.5, maxLevel: 1 },
+            { id: 'click_mult_4', name: 'Furia del Clicker', emoji: '😠', description: 'Clics x2', initialCost: 50000000, costMultiplier: 3.5, type: 'clickMultiplier', value: 2.0, maxLevel: 1 },
+            { id: 'click_mult_5', name: 'Singularidad', emoji: '⚫', description: 'Clics x3', initialCost: 1000000000, costMultiplier: 4.0, type: 'clickMultiplier', value: 3.0, maxLevel: 1 },
+            { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
+            { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
+
+            // Multiplicadores de Auto
+            { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
+            { id: 'auto_mult_2', name: 'Flujo Constante', emoji: '💧', description: 'PPS x1.2', initialCost: 100000, costMultiplier: 2.5, type: 'autoMultiplier', value: 1.2, maxLevel: 1 },
+            { id: 'auto_mult_3', name: 'Corriente Infinita', emoji: '🌊', description: 'PPS x1.5', initialCost: 2000000, costMultiplier: 3.0, type: 'autoMultiplier', value: 1.5, maxLevel: 1 },
+            { id: 'auto_mult_4', name: 'Motor Cuántico', emoji: '⚛️', description: 'PPS x2', initialCost: 100000000, costMultiplier: 3.5, type: 'autoMultiplier', value: 2.0, maxLevel: 1 },
+            { id: 'auto_mult_5', name: 'Eco Temporal', emoji: '💫', description: 'PPS x3', initialCost: 2000000000, costMultiplier: 4.0, type: 'autoMultiplier', value: 3.0, maxLevel: 1 },
+            { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
+            { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
+
+            // Sinergias (Especiales)
+            { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.01, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
+            { id: 'synergy_2', name: 'Eco del Cursor', emoji: '🔊', description: '+1% Clic por nivel de Cursor Tímido', initialCost: 10000, costMultiplier: 1.6, type: 'synergy', value: 0.01, targetUpgrade: 'auto_1', targetStat: 'clickValue' },
+            { id: 'synergy_3', name: 'Conexión Profunda', emoji: '🧠', description: '+0.5% PPS por nivel Clic Potente', initialCost: 1e6, costMultiplier: 1.7, type: 'synergy', value: 0.005, targetUpgrade: 'click_3', targetStat: 'autoClickValue' },
+            { id: 'synergy_4', name: 'Resonancia Automática', emoji: '🦾', description: '+0.5% Clic por nivel Fábrica Frutal', initialCost: 2.5e6, costMultiplier: 1.8, type: 'synergy', value: 0.005, targetUpgrade: 'auto_4', targetStat: 'clickValue' },
+            { id: 'synergy_5', name: 'Fusión Cuántica', emoji: '🌌', description: '+0.1% PPS por nivel Giga Clic', initialCost: 1e10, costMultiplier: 1.9, type: 'synergy', value: 0.001, targetUpgrade: 'click_7', targetStat: 'autoClickValue' },
+            
+            // Bonos de Nivel (Especiales)
+            { id: 'level_boost_1', name: 'Bono de Nivel', emoji: '📈', description: '+5% PPS por Nivel', initialCost: 25000, costMultiplier: 1.8, type: 'levelBonus', value: 0.05, targetStat: 'autoClickValue' },
+            { id: 'level_boost_2', name: 'Maestría de Nivel', emoji: '🎓', description: '+2% Clic por Nivel', initialCost: 50000, costMultiplier: 1.9, type: 'levelBonus', value: 0.02, targetStat: 'clickValue' },
+            
+            // Otros (Especiales)
+            { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
+        ];
+        // --- FIN DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
+
+        let UPGRADES_CONFIG = upgradesConfig; // Asignación global
+        let upgradeLevels = {}; // NUEVO: Estado de niveles de mejoras
+
         let userId = null;
         let currentUsername = null; 
         let autoSaveInterval = null; 
-
-        let UPGRADES_CONFIG = {};
-        const costIncrease = 1.14;
 
         const SKINS_CONFIG = {
             default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
@@ -1092,9 +1182,8 @@
         };
 
         let score = 0;
-        let clickPower = 1;
-        let pps = 0;
-        const gameState = { upgrades: {} };
+        let clickPower = 1; // Stat base (antes de multiplicadores de nivel)
+        let pps = 0; // Stat base (antes de multiplicadores de nivel)
 
         let level = 1;
         let xp = 0;
@@ -1123,7 +1212,6 @@
         const _MathFloor = Math.floor;
         const _MathAbs = Math.abs;
         const _MathMin = Math.min;
-        // NUEVO: Math.sin y Math.cos cacheados
         const _MathSin = Math.sin;
         const _MathCos = Math.cos;
         const _MathPI = Math.PI;
@@ -1158,6 +1246,7 @@
             return _MathSqrt(variance);
         }
 
+        // REFACTOR: Inicializa el estado de las mejoras
         function resetGameState() {
             score = 0;
             totalScore = 0;
@@ -1171,19 +1260,16 @@
             banExpiresAt = 0;
             clickIntervals = [];
 
-            if (Object.keys(UPGRADES_CONFIG).length > 0) {
-                Object.keys(UPGRADES_CONFIG).forEach(key => {
-                    gameState.upgrades[key] = {
-                        level: 0,
-                        cost: UPGRADES_CONFIG[key].baseCost
-                    };
-                });
-            }
+            // Inicializa el objeto de niveles
+            upgradeLevels = {};
+            UPGRADES_CONFIG.forEach(upg => {
+                upgradeLevels[upg.id] = 0;
+            });
 
             skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
 
-            recalculateStats(); 
-            recalculateLevelStats(); 
+            recalculateLevelStats(); // Recalcula stats de nivel primero
+            recalculateStats(); // Recalcula stats de mejoras
             updateUI(); 
             updateSkinsUI(); 
             checkBanStatus();
@@ -1194,8 +1280,16 @@
         const cpcDisplay = document.getElementById('cpc');
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
+        
+        // REFACTOR: Contenedores de la tienda
         const storeCpcContainer = document.getElementById('store-items-cpc-container');
         const storePpsContainer = document.getElementById('store-items-pps-container');
+        const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
+        const storeAutoMultContainer = document.getElementById('store-items-auto-mult-container');
+        const storeSynergyContainer = document.getElementById('store-items-synergy-container');
+        const storeBonusContainer = document.getElementById('store-items-bonus-container');
+        const storeOtherContainer = document.getElementById('store-items-other-container');
+
 
         const levelDisplay = document.getElementById('level-display');
         const xpBar = document.getElementById('xp-bar');
@@ -1262,19 +1356,20 @@
                 triggerBan(3600);
                 return;
             }
-
+            
+            // REFACTOR: El clickPower base (calculado) se multiplica por el nivel
             const baseGain = clickPower;
             const earnedScore = baseGain * levelMultiplier;
 
             score += earnedScore;
-            gainXP(baseGain);
+            gainXP(baseGain); // XP se gana basado en el poder base, no el multiplicado por nivel
 
             coins += 1;
             updateCoinsDisplay();
 
             showClickVisual(event, earnedScore);
-            createClickParticles(event); // NUEVO: Llamada a las partículas
-            updateUI();
+            createClickParticles(event);
+            updateUI(); // updateUI ahora actualiza los botones 'affordable'
 
             totalClicks++;
             if (totalClicks === 2000 && !modalShown && !userId) {
@@ -1285,12 +1380,13 @@
 
         function gainXP(amount) {
             xp += amount;
-            totalScore += amount * levelMultiplier;
+            totalScore += amount * levelMultiplier; // Total score sí incluye el multiplicador
 
             while (xp >= xpToNextLevel) {
                 xp -= xpToNextLevel;
                 level++;
                 recalculateLevelStats();
+                recalculateStats(); // RECALCULAR: Los bonus de nivel cambian
             }
         }
 
@@ -1318,46 +1414,40 @@
             }, 1000);
         }
 
-        // --- NUEVO: Función para crear partículas ---
         function createClickParticles(event) {
             const rect = clickerZone.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
 
-            for (let i = 0; i < 5; i++) { // 5 partículas
+            for (let i = 0; i < 5; i++) {
                 const particle = document.createElement('div');
                 particle.classList.add('click-particle');
                 clickerZone.appendChild(particle);
 
                 const angle = _MathRandom() * _MathPI * 2;
-                const distance = _MathRandom() * 40 + 30; // Más dispersión
+                const distance = _MathRandom() * 40 + 30;
                 const translateX = _MathCos(angle) * distance;
                 const translateY = _MathSin(angle) * distance;
 
                 particle.style.left = `${x}px`;
                 particle.style.top = `${y}px`;
 
-                // Animar usando Web Animations API
                 particle.animate([
                     { transform: 'translate(-50%, -50%) scale(1)', opacity: 0.7 },
                     { transform: `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(0)`, opacity: 0 }
                 ], {
                     duration: 600 + _MathRandom() * 300,
-                    easing: 'cubic-bezier(0.1, 0.7, 0.3, 1)' // Curva suave
+                    easing: 'cubic-bezier(0.1, 0.7, 0.3, 1)'
                 });
 
-                // Auto-eliminar la partícula
                 setTimeout(() => {
                     particle.remove();
                 }, 900);
             }
         }
-        // --- FIN: Función de partículas ---
-
-        // --- NUEVO: Función para visual de PPS ---
+        
         let ppsVisualActive = false;
         function showPPSVisual(amount) {
-            // Previene spam de elementos
             if (ppsVisualActive) return;
             ppsVisualActive = true;
             
@@ -1371,24 +1461,38 @@
             setTimeout(() => {
                 visual.remove();
                 ppsVisualActive = false;
-            }, 1450); // Un poco menos que la animación para liberar el throttle
+            }, 1450);
         }
-        // --- FIN: Función de visual de PPS ---
 
+        // --- NUEVA FUNCIÓN HELPER ---
+        function calculateUpgradeCost(config, currentLevel) {
+            // Nota: costReduction se podría aplicar aquí
+            return _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
+        }
+
+        // --- REFACTOR: Función de compra ---
         function buyUpgrade(key) {
             if (isBanned) return;
-            const state = gameState.upgrades[key];
-            const config = UPGRADES_CONFIG[key];
+            
+            const config = UPGRADES_CONFIG.find(upg => upg.id === key);
+            if (!config) return;
 
-            if (score >= state.cost) {
-                score -= state.cost;
-                state.level++;
-                state.cost = _MathCeil(config.baseCost * _MathPow(costIncrease, state.level));
+            const currentLevel = upgradeLevels[key] || 0;
+            
+            // Comprobar Nivel Máximo
+            if (config.maxLevel && currentLevel >= config.maxLevel) {
+                return;
+            }
 
-                recalculateStats();
-                updateUI();
+            const cost = calculateUpgradeCost(config, currentLevel);
+
+            if (score >= cost) {
+                score -= cost;
+                upgradeLevels[key]++; // Incrementar el nivel en el estado
+
+                recalculateStats(); // Recalcular stats globales
+                updateUI(); // Actualizar toda la UI
                 
-                // --- NUEVO: Animación de compra ---
                 const buttonEl = document.getElementById(`buy-${key}`);
                 if (buttonEl) {
                     const itemEl = buttonEl.closest('.store-item');
@@ -1399,47 +1503,108 @@
                         }, { once: true });
                     }
                 }
-                // --- FIN: Animación de compra ---
             }
         }
 
+        // --- REFACTOR: Cálculo de estadísticas ---
         function recalculateStats() {
+            let newClickPower = 1; // El clic base siempre es 1
             let newPPS = 0;
-            let newClickPower = 1;
 
-            Object.keys(UPGRADES_CONFIG).forEach(key => {
-                const config = UPGRADES_CONFIG[key];
-                const state = gameState.upgrades[key];
-                
-                if (!state) return;
+            let clickMulti = 1;
+            let autoMulti = 1;
 
-                if (config.pps > 0) newPPS += state.level * config.pps;
-                if (config.power > 0) newClickPower += state.level * config.power;
+            let levelBonusClick = 1;
+            let levelBonusPPS = 1;
+            
+            let synergyBonusClick = 1;
+            let synergyBonusPPS = 1;
+
+            // 1. Sumar valores base (clickValue, autoClickValue)
+            UPGRADES_CONFIG.forEach(config => {
+                const level = upgradeLevels[config.id] || 0;
+                if (level === 0) return;
+
+                switch (config.type) {
+                    case 'clickValue':
+                        newClickPower += config.value * level;
+                        break;
+                    case 'autoClickValue':
+                        newPPS += config.value * level;
+                        break;
+                }
             });
 
-            pps = newPPS;
+            // 2. Calcular multiplicadores (clickMultiplier, autoMultiplier)
+            UPGRADES_CONFIG.forEach(config => {
+                const level = upgradeLevels[config.id] || 0;
+                if (level === 0) return;
+
+                switch (config.type) {
+                    case 'clickMultiplier':
+                        clickMulti *= config.value;
+                        break;
+                    case 'autoMultiplier':
+                        autoMulti *= config.value;
+                        break;
+                }
+            });
+            
+            // 3. Calcular Bonos de Nivel (levelBonus)
+            UPGRADES_CONFIG.forEach(config => {
+                const level = upgradeLevels[config.id] || 0;
+                if (level === 0) return;
+
+                if (config.type === 'levelBonus') {
+                    const bonus = (window.level - 1) * config.value * level; // window.level es el nivel global del jugador
+                    if (config.targetStat === 'clickValue') levelBonusClick += bonus;
+                    if (config.targetStat === 'autoClickValue') levelBonusPPS += bonus;
+                }
+            });
+            
+            // 4. Calcular Sinergias (synergy)
+            UPGRADES_CONFIG.forEach(config => {
+                const level = upgradeLevels[config.id] || 0;
+                if (level === 0) return;
+
+                if (config.type === 'synergy') {
+                    const targetLevel = upgradeLevels[config.targetUpgrade] || 0;
+                    const bonus = targetLevel * config.value * level;
+                    if (config.targetStat === 'clickValue') synergyBonusClick += bonus;
+                    if (config.targetStat === 'autoClickValue') synergyBonusPPS += bonus;
+                }
+            });
+
+
+            // 5. Aplicar todos los multiplicadores en orden
+            newClickPower = newClickPower * synergyBonusClick * levelBonusClick * clickMulti;
+            newPPS = newPPS * synergyBonusPPS * levelBonusPPS * autoMulti;
+
+            // Asignar a las variables globales base
+            // El levelMultiplier (del nivel de jugador) se aplica en gameLoop y updateUI
             clickPower = newClickPower;
+            pps = newPPS;
         }
 
         function gameLoop() {
             if (isBanned) return;
             
+            // pps ya está calculado con multiplicadores
             const baseGain = pps;
             const earnedScore = baseGain * levelMultiplier;
 
             score += earnedScore;
 
             if (baseGain > 0) {
-                gainXP(baseGain);
+                gainXP(baseGain); // XP se basa en el pps base
                 
-                // --- NUEVO: Llamada al visual de PPS ---
-                // Solo mostrar si ganamos al menos 1 punto y el throttle está libre
                 if (earnedScore >= 1) {
                     showPPSVisual(earnedScore);
                 }
-                // --- FIN: Llamada al visual de PPS ---
             }
 
+            // Actualizar la UI de forma menos frecuente que el gameLoop
+            // Lo movemos a un Ticker separado si es necesario
             updateUI();
             
             if (myLiveScoreSpan) {
@@ -1447,7 +1612,9 @@
             }
         }
 
+        // --- REFACTOR: Actualización de UI ---
         function updateUI() {
+            // Actualizar stats principales
             scoreDisplay.textContent = formatNumber(score);
             ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
             cpcDisplay.textContent = `${formatNumber(clickPower * levelMultiplier)} Puntos por clic`;
@@ -1455,29 +1622,35 @@
             levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
             xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
 
-            Object.keys(UPGRADES_CONFIG).forEach(key => {
-                const state = gameState.upgrades[key];
-                if (!state) return;
+            // Actualizar botones de la tienda
+            UPGRADES_CONFIG.forEach(config => {
+                const statsEl = document.getElementById(`stats-${config.id}`);
+                const buttonEl = document.getElementById(`buy-${config.id}`);
+                if (!statsEl || !buttonEl) return; // Si el elemento no está en el DOM (ej. otra pestaña)
 
-                const statsEl = document.getElementById(`stats-${key}`);
-                const buttonEl = document.getElementById(`buy-${key}`);
-                // --- NUEVO: Obtener el .store-item padre ---
-                const itemEl = buttonEl?.closest('.store-item');
+                const itemEl = buttonEl.closest('.store-item');
+                if (!itemEl) return;
 
-                if (statsEl && buttonEl && itemEl) { // Comprobar que los 3 existen
-                    statsEl.textContent = `${UPGRADES_CONFIG[key].description} | Nivel: ${state.level}`;
-                    buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
+                const currentLevel = upgradeLevels[config.id] || 0;
+                statsEl.textContent = `${config.description} | Nivel: ${currentLevel}`;
+
+                // Manejar Nivel Máximo
+                if (config.maxLevel && currentLevel >= config.maxLevel) {
+                    buttonEl.textContent = "MAX";
+                    buttonEl.disabled = true;
+                    itemEl.classList.remove('affordable');
+                } else {
+                    const cost = calculateUpgradeCost(config, currentLevel);
+                    buttonEl.textContent = `Costo: ${formatNumber(cost)}`;
                     
-                    const canAfford = score >= state.cost;
+                    const canAfford = score >= cost;
                     buttonEl.disabled = !canAfford;
 
-                    // --- NUEVO: Lógica para clase 'affordable' ---
                     if (canAfford) {
                         itemEl.classList.add('affordable');
                     } else {
                         itemEl.classList.remove('affordable');
                     }
-                    // --- FIN: Lógica 'affordable' ---
                 }
             });
         }
@@ -1486,13 +1659,19 @@
             coinsDisplay.textContent = formatNumber(coins);
         }
 
+        // --- REFACTOR: Inicialización de la Tienda ---
         function initializeStore() {
+            // Limpiar contenedores
             storeCpcContainer.innerHTML = '';
             storePpsContainer.innerHTML = '';
+            storeClickMultContainer.innerHTML = '';
+            storeAutoMultContainer.innerHTML = '';
+            storeSynergyContainer.innerHTML = '';
+            storeBonusContainer.innerHTML = '';
+            storeOtherContainer.innerHTML = '';
 
-            Object.keys(UPGRADES_CONFIG).forEach(key => {
-                const config = UPGRADES_CONFIG[key];
-
+            // Iterar sobre el array de configuración
+            UPGRADES_CONFIG.forEach(config => {
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('store-item');
 
@@ -1500,47 +1679,76 @@
                 infoDiv.classList.add('item-info');
 
                 const nameStrong = document.createElement('strong');
-                nameStrong.textContent = config.name;
+                nameStrong.textContent = `${config.name} ${config.emoji || ''}`;
 
                 const statsSpan = document.createElement('span');
-                statsSpan.id = `stats-${key}`;
+                statsSpan.id = `stats-${config.id}`;
                 statsSpan.textContent = `${config.description} | Nivel: 0`;
 
                 infoDiv.appendChild(nameStrong);
                 infoDiv.appendChild(statsSpan);
 
                 const button = document.createElement('button');
-                button.id = `buy-${key}`;
-                button.dataset.key = key;
-                button.textContent = `Costo: ${formatNumber(config.baseCost)}`;
+                button.id = `buy-${config.id}`;
+                button.dataset.key = config.id; // Data-key sigue siendo el ID
+                button.textContent = `Costo: ${formatNumber(config.initialCost)}`;
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
                 
-                if (config.type === 'cpc') {
-                    storeCpcContainer.appendChild(itemDiv);
-                } else if (config.type === 'pps') {
-                    storePpsContainer.appendChild(itemDiv);
+                // Clasificar en el contenedor correcto
+                switch (config.type) {
+                    case 'clickValue':
+                        storeCpcContainer.appendChild(itemDiv);
+                        break;
+                    case 'autoClickValue':
+                        storePpsContainer.appendChild(itemDiv);
+                        break;
+                    case 'clickMultiplier':
+                        storeClickMultContainer.appendChild(itemDiv);
+                        break;
+                    case 'autoMultiplier':
+                        storeAutoMultContainer.appendChild(itemDiv);
+                        break;
+                    case 'synergy':
+                        storeSynergyContainer.appendChild(itemDiv);
+                        break;
+                    case 'levelBonus':
+                        storeBonusContainer.appendChild(itemDiv);
+                        break;
+                    default:
+                        storeOtherContainer.appendChild(itemDiv);
+                        break;
                 }
+            });
+
+            // Añadir event listeners a los contenedores padres
+            document.getElementById('store-prod').addEventListener('click', (event) => {
+                const button = event.target.closest('button[data-key]');
+                if (button) buyUpgrade(button.dataset.key);
+            });
+            document.getElementById('store-mult').addEventListener('click', (event) => {
+                const button = event.target.closest('button[data-key]');
+                if (button) buyUpgrade(button.dataset.key);
+            });
+            document.getElementById('store-spec').addEventListener('click', (event) => {
+                const button = event.target.closest('button[data-key]');
+                if (button) buyUpgrade(button.dataset.key);
             });
         }
 
         function initializeSkins() {
             Object.keys(SKINS_CONFIG).forEach(skinId => {
                 const skin = SKINS_CONFIG[skinId];
-
                 const skinItem = document.createElement('div');
                 skinItem.classList.add('skin-item');
                 skinItem.dataset.skinId = skinId;
-
                 const preview = document.createElement('div');
                 preview.classList.add('skin-preview');
                 preview.textContent = skin.emoji;
-
                 const name = document.createElement('div');
                 name.classList.add('skin-name');
                 name.textContent = skin.name;
-
                 const cost = document.createElement('div');
                 cost.classList.add('skin-cost');
                 if (skin.cost === 0) {
@@ -1548,7 +1756,6 @@
                 } else {
                     cost.textContent = `${formatNumber(skin.cost)} monedas`;
                 }
-
                 skinItem.appendChild(preview);
                 skinItem.appendChild(name);
                 skinItem.appendChild(cost);
@@ -1559,10 +1766,8 @@
                 if (isBanned) return;
                 const skinItem = event.target.closest('.skin-item');
                 if (!skinItem) return;
-
                 const skinId = skinItem.dataset.skinId;
                 const skin = skinsState[skinId];
-
                 if (skin.owned) {
                     currentSkin = skinId;
                     updateClickButtonSkin();
@@ -1582,13 +1787,11 @@
         function updateClickButtonSkin() {
             const skin = skinsState[currentSkin];
             clickButton.innerHTML = '';
-
             if (skin) {
                 const face = document.createElement('div');
                 face.classList.add('click-button-face');
                 face.textContent = skin.emoji;
                 clickButton.appendChild(face);
-
                 const clickText = document.createElement('span');
                 clickText.id = 'click-button-text';
                 clickText.textContent = "¡Clic!";
@@ -1600,12 +1803,9 @@
             Object.keys(skinsState).forEach(skinId => {
                 const skin = skinsState[skinId];
                 const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
-
                 if (skinElement) {
                     skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped');
-                    
                     const costEl = skinElement.querySelector('.skin-cost');
-
                     if (!skin.owned && skin.cost > 0) {
                         skinElement.classList.add('skin-locked');
                         costEl.textContent = `${formatNumber(skin.cost)} monedas`;
@@ -1614,7 +1814,6 @@
                         costEl.textContent = "Comprado";
                         costEl.style.color = "#28a745";
                     }
-
                     if (currentSkin === skinId) {
                         skinElement.classList.add('skin-equipped');
                         costEl.textContent = "Equipado";
@@ -1632,37 +1831,27 @@
                 if (user) {
                     userId = user.uid;
                     currentUsername = user.email.split('@')[0];
-
                     authSection.style.display = 'none';
                     scoreSection.style.display = 'flex';
                     loggedInAs.textContent = `Logueado como: ${currentUsername}`;
-
                     const presenceRef = ref(db, `presence/${userId}`);
                     set(presenceRef, true);
                     onDisconnect(presenceRef).remove();
-
                     await loadGameState();
-
                     if (autoSaveInterval) clearInterval(autoSaveInterval);
                     autoSaveInterval = setInterval(() => saveScore(false), 15000);
-
                 } else {
                     userId = null;
                     currentUsername = null;
-
                     authSection.style.display = 'flex';
                     scoreSection.style.display = 'none';
                     loggedInAs.textContent = '';
-
                     if (autoSaveInterval) clearInterval(autoSaveInterval);
                     autoSaveInterval = null;
-
                     resetGameState();
                 }
             });
-
             loadLeaderboard();
-            
             const allPresenceRef = ref(db, 'presence');
             onValue(allPresenceRef, (snapshot) => {
                 globalPresence = snapshot.val() || {};
@@ -1670,6 +1859,7 @@
             });
         }
 
+        // --- REFACTOR: Carga de estado ---
         async function loadGameState() {
             if (!userId) {
                 resetGameState();
@@ -1679,10 +1869,8 @@
 
             try {
                 const snapshot = await get(stateRef);
-
                 if (snapshot.exists()) {
                     const savedState = snapshot.val();
-                    
                     const lastSeen = savedState.lastSeen || _DateNow();
 
                     score = savedState.score || 0;
@@ -1695,27 +1883,13 @@
                     currentSkin = savedState.currentSkin || 'default';
                     banExpiresAt = savedState.banExpiresAt || 0;
 
-                    Object.keys(UPGRADES_CONFIG).forEach(key => {
-                        if (savedState.upgrades && savedState.upgrades[key]) {
-                            gameState.upgrades[key] = savedState.upgrades[key];
-                        } else {
-                            // Asegurarse de que incluso las nuevas mejoras del JSON se inicializan
-                            if(UPGRADES_CONFIG[key]) {
-                                gameState.upgrades[key] = {
-                                    level: 0,
-                                    cost: UPGRADES_CONFIG[key].baseCost
-                                };
-                            }
-                        }
+                    // NUEVA LÓGICA DE CARGA DE MEJORAS
+                    const loadedLevels = savedState.upgradeLevels || {};
+                    upgradeLevels = {};
+                    UPGRADES_CONFIG.forEach(upg => {
+                        upgradeLevels[upg.id] = loadedLevels[upg.id] || 0;
                     });
-                    
-                    // Asegurarse de que las mejoras que ya no existen en el JSON se eliminen
-                    Object.keys(gameState.upgrades).forEach(key => {
-                        if (!UPGRADES_CONFIG[key]) {
-                            delete gameState.upgrades[key];
-                        }
-                    });
-
+                    // FIN NUEVA LÓGICA
 
                     if (savedState.skins) {
                         skinsState = savedState.skins;
@@ -1723,16 +1897,16 @@
                         skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
                     }
                     
-                    recalculateStats();
-                    recalculateLevelStats();
+                    recalculateLevelStats(); // Calcular stats de nivel
+                    recalculateStats(); // Calcular stats de mejoras (depende de nivel para bonus)
                     
                     const now = _DateNow();
                     let timeOfflineInSeconds = (now - lastSeen) / 1000;
                     const maxOfflineTimeInSeconds = 10 * 60 * 60; // 10 horas
                     const effectiveOfflineTime = _MathMin(timeOfflineInSeconds, maxOfflineTimeInSeconds);
 
-                    if (effectiveOfflineTime > 60) { // Solo mostrar si estuvo offline > 1 min
-                        const offlinePPS = pps * 0.05; // 5% de PPS
+                    if (effectiveOfflineTime > 60) {
+                        const offlinePPS = pps * 0.05; // pps ya está calculado
                         const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
                         
                         score += earnedOfflineScore;
@@ -1787,32 +1961,23 @@
                         li.dataset.baseScore = entry.score;
                         li.dataset.pps = entry.pps || 0;
                         li.dataset.lastSeen = entry.lastSeen || _DateNow();
-
                         if (currentUsername && entry.username === currentUsername) {
                             li.classList.add('current-user');
                         }
-
                         const rank = document.createElement('span');
                         rank.textContent = `#${index + 1}`;
                         rank.classList.add('rank');
-
                         const name = document.createElement('span');
                         name.classList.add('player-name');
-                        
                         const statusDot = document.createElement('span');
                         statusDot.classList.add('status-dot');
-                        
                         const nameSpan = document.createElement('span');
                         nameSpan.textContent = entry.username || "Anónimo";
-                        
                         name.appendChild(statusDot);
                         name.appendChild(nameSpan);
-
-
                         const scoreVal = document.createElement('span');
                         scoreVal.textContent = formatNumber(entry.score);
                         scoreVal.classList.add('player-score');
-
                         li.appendChild(rank);
                         li.appendChild(name);
                         li.appendChild(scoreVal);
@@ -1857,10 +2022,8 @@
                 if (dot && !dot.classList.contains('online')) {
                     const pps = parseFloat(li.dataset.pps);
                     const lastSeen = parseFloat(li.dataset.lastSeen);
-                    
                     const timeOfflineMs = now - lastSeen;
                     const effectiveTimeMs = _MathMin(timeOfflineMs, maxOfflineTimeMs);
-                    
                     if (effectiveTimeMs > 0) {
                         const offlineGain = (pps * 0.05) * (effectiveTimeMs / 1000);
                         const currentScore = baseScore + offlineGain;
@@ -1874,6 +2037,7 @@
             });
         }
 
+        // --- REFACTOR: Guardado de estado ---
         async function saveScore(manual = false) {
             if (!userId || !db || !currentUsername) {
                 if (manual) {
@@ -1885,7 +2049,7 @@
 
             const scoreToSave = _MathFloor(totalScore);
             const now = _DateNow();
-            const currentPPS = pps * levelMultiplier;
+            const currentPPS = pps * levelMultiplier; // Guardar el PPS final
 
             const stateToSave = {
                 score: score,
@@ -1896,7 +2060,7 @@
                 modalShown: modalShown,
                 coins: coins,
                 currentSkin: currentSkin,
-                upgrades: gameState.upgrades,
+                upgradeLevels: upgradeLevels, // NUEVO ESTADO DE MEJORAS
                 skins: skinsState,
                 banExpiresAt: banExpiresAt,
                 lastSeen: now
@@ -1968,17 +2132,14 @@
         function handleRegister() {
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
-
             if (username.length < 3 || password.length < 6) {
                 authStatus.textContent = "Usuario (3+) y contraseña (6+)";
                 authStatus.className = 'error';
                 return;
             }
             const email = username + '@click.com';
-
             authStatus.textContent = "Registrando...";
             authStatus.className = '';
-
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     authStatus.textContent = "¡Registrado con éxito!";
@@ -1997,17 +2158,14 @@
         function handleLogin() {
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
-
             if (!username || !password) {
                 authStatus.textContent = "Rellena ambos campos.";
                 authStatus.className = 'error';
                 return;
             }
             const email = username + '@click.com';
-
             authStatus.textContent = "Iniciando sesión...";
             authStatus.className = '';
-
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     authStatus.textContent = "¡Bienvenido de vuelta!";
@@ -2029,7 +2187,6 @@
                 await saveScore(false); 
                 await set(presenceRef, null);
             }
-            
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
             });
@@ -2046,55 +2203,43 @@
                 lastClickTimestamp = now;
                 return false;
             }
-
             const interval = now - lastClickTimestamp;
             lastClickTimestamp = now;
-            
             if (interval < 10) { 
                 return false;
             }
-
             clickIntervals.push(interval);
             if (clickIntervals.length > consistencyWindow) {
                 clickIntervals.shift();
             }
-
             if (clickIntervals.length < consistencyWindow) {
                 return false;
             }
-
             const stdDev = getStandardDeviation(clickIntervals);
-
             if (stdDev < consistencyThreshold && stdDev !== 0) {
                 console.warn(`Detección de Autoclicker: Desviación estándar muy baja: ${stdDev}`);
                 clickIntervals = []; 
                 return true;
             }
-            
             return false;
         }
         
         function triggerBan(seconds) {
             if (isBanned) return; 
-            
             const durationMs = seconds * 1000;
             banExpiresAt = _DateNow() + durationMs;
             isBanned = true;
-            
             console.error(`USUARIO BANEADO por ${seconds} segundos.`);
-            
             saveScore(false); 
             checkBanStatus();
         }
 
         function checkBanStatus() {
             if (banCheckInterval) clearInterval(banCheckInterval);
-
             const now = _DateNow();
             if (banExpiresAt > now) {
                 isBanned = true;
                 showBanScreen();
-                
                 banCheckInterval = setInterval(updateBanTimer, 1000);
             } else {
                 isBanned = false;
@@ -2107,20 +2252,15 @@
             if (!overlay) {
                 overlay = document.createElement('div');
                 overlay.id = 'ban-overlay';
-                
                 const title = document.createElement('h2');
                 title.textContent = '¡BANEADO!';
-                
                 const message = document.createElement('p');
                 message.textContent = 'Actividad sospechosa detectada (clics demasiado consistentes).';
-                
                 const timer = document.createElement('p');
                 timer.id = 'ban-timer';
-                
                 overlay.appendChild(title);
                 overlay.appendChild(message);
                 overlay.appendChild(timer);
-                
                 document.body.appendChild(overlay);
             }
             overlay.style.display = 'flex';
@@ -2130,7 +2270,6 @@
         function updateBanTimer() {
             const now = _DateNow();
             const timeLeft = banExpiresAt - now;
-            
             if (timeLeft <= 0) {
                 isBanned = false;
                 hideBanScreen();
@@ -2139,7 +2278,6 @@
                 const hours = _MathFloor(timeLeft / (1000 * 60 * 60));
                 const minutes = _MathFloor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = _MathFloor((timeLeft % (1000 * 60)) / 1000);
-                
                 const timerEl = document.getElementById('ban-timer');
                 if (timerEl) {
                     timerEl.textContent = 
@@ -2163,37 +2301,19 @@
             }
         };
 
+        // --- REFACTOR: Inicio del juego ---
         async function loadGameConfigAndStart() {
             try {
-                // Modificado para cargar el nuevo JSON
-                const response = await fetch('upgrades.json');
-                if (!response.ok) {
-                    // Fallback al enlace original si el local falla (para pruebas)
-                    console.warn("No se pudo cargar upgrades.json localmente, intentando con el enlace externo.");
-                    const fallbackResponse = await fetch('https://logise1.github.io/click/upgrades.json');
-                    if (!fallbackResponse.ok) {
-                         throw new Error(`Error al cargar upgrades.json: ${fallbackResponse.statusText}`);
-                    }
-                    UPGRADES_CONFIG = await fallbackResponse.json();
-                } else {
-                    UPGRADES_CONFIG = await response.json();
-                }
+                // Ya no hay fetch, la config está arriba
                 
-                resetGameState();
-                initializeStore();
+                resetGameState(); // Inicializa el estado con la nueva config
+                initializeStore(); // Inicializa la tienda con la nueva config
                 initializeSkins();
-                initializeFirebase();
+                initializeFirebase(); // Carga el estado guardado (compatible con el nuevo)
 
                 clickButton.addEventListener('mousedown', handleManualClick);
-
-                storeCpcContainer.addEventListener('click', (event) => {
-                    const button = event.target.closest('button[data-key]');
-                    if (button) buyUpgrade(button.dataset.key);
-                });
-                storePpsContainer.addEventListener('click', (event) => {
-                    const button = event.target.closest('button[data-key]');
-                    if (button) buyUpgrade(button.dataset.key);
-                });
+                
+                // NOTA: Los listeners de la tienda se añadieron en initializeStore()
 
                 tabButtons.forEach(button => {
                     button.addEventListener('click', () => showTab(button.dataset.tab));
@@ -2233,6 +2353,9 @@
             }
         }
 
+        // Hacer la variable 'level' global para las sinergias
+        window.level = level;
+        
         loadGameConfigAndStart();
         
     </script>
