@@ -3,7 +3,7 @@
     "image": "/assets/maincraft.png",
     "alt": "MainCraft",
     "link": "/maincraft",
-    "tags": ["glow","shimmer"]
+    "tags": ["glow", "shimmer"]
   },
   {
     "image": "/assets/wetype.png",
@@ -34,5 +34,10 @@
     "image": "/assets/quizzer.png",
     "alt": "Quizzer",
     "link": "/quizzer"
+  },
+  {
+    "image": "/assets/impostor.png",
+    "alt": "El Impostor",
+    "link": "/impostor"
   }
 ]
