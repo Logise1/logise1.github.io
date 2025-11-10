@@ -1,0 +1,2798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aventura de Clics (Online)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --tab-bar-height: 60px;
+        }
+        body {
+            font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #ffffff;
+            /* El background-image se pondrá con JS */
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            overflow: hidden;
+            font-weight: 500;
+            
+            /* --- NUEVO: Fondo dinámico --- */
+            transition: background-color 0.8s ease;
+            animation: scroll-bg 20s linear infinite;
+        }
+        
+        /* --- NUEVO: Animación de scroll --- */
+        @keyframes scroll-bg {
+            from { background-position: 0 0; }
+            to { background-position: 70px 70px; } /* Usa el tamaño de uno de los patrones */
+        }
+
+
+        button {
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 700;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: row;
+            width: 90vw;
+            max-width: 1400px;
+            height: 85vh;
+            max-height: 800px;
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            animation: fade-in-up 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .left-panel {
+            flex-basis: 55%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #eef2f1;
+        }
+
+        .stats {
+            background-color: #ffffff;
+            padding: 20px 25px;
+            text-align: center;
+            border-bottom: 1px solid #eef2f1;
+            transition: background-color 0.3s ease;
+            position: relative; /* Añadido para el PPS visual y botón BGM */
+            overflow: hidden; /* Añadido para el PPS visual */
+        }
+        #score {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: #1a1a1a;
+            transition: color 0.3s ease;
+        }
+
+        #level-display {
+            font-size: 1rem;
+            margin: 8px 0 0;
+            color: #007bff;
+            font-weight: 700;
+        }
+        .xp-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        #xp-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            border-radius: 4px;
+            transition: width 0.3s ease-out;
+        }
+        #pps, #cpc {
+            font-size: 1.1rem;
+            margin: 5px 0 0;
+            color: #777;
+        }
+
+        /* --- Botón de Música --- */
+        #music-toggle-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background-color: #f0f0f0;
+            color: #333;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #music-toggle-btn:hover {
+            background-color: #e0e0e0;
+            transform: scale(1.1);
+        }
+        #music-toggle-btn.playing {
+            background-color: #007bff;
+            color: white;
+        }
+        /* --- Fin Botón de Música --- */
+
+
+        .clicker-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            padding: 20px;
+            position: relative;
+            background-color: #fafafa;
+            overflow: hidden; /* Añadido para las partículas */
+        }
+
+        #click-button {
+            width: 250px;
+            height: 250px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 50%;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            box-shadow: none;
+            transition: transform 0.1s cubic-bezier(0.215, 0.610, 0.355, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: none;
+            animation: pulse 2.5s infinite ease-in-out;
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        #click-button:hover { background-color: #0069d9; }
+        #click-button:active { transform: scale(0.94); box-shadow: none; }
+
+        .click-button-face {
+            font-size: 4rem;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+        
+        #click-button-text {
+            position: absolute;
+            bottom: 10%;
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        .store-panel {
+            flex-basis: 45%;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #eef2f1;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background-color: #fafafa;
+            border: none;
+            cursor: pointer;
+            color: #777;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .tab-btn:not(:last-child) { border-right: 1px solid #eef2f1; }
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: -1px;
+        }
+
+        .tab-content {
+            display: none;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .sub-tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+            background-color: #f4f7f6;
+            border-radius: 10px;
+            padding: 5px;
+        }
+        .sub-tab-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            background-color: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sub-tab-btn.active {
+            background-color: #ffffff;
+            color: #007bff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .sub-tab-content {
+            display: none;
+        }
+        .sub-tab-content.active {
+            display: block;
+        }
+
+        .store-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #eef2f1;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+        }
+        .store-item:hover {
+            background-color: #ffffff;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .store-item button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            min-width: 110px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .store-item button:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+        .store-item button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            animation: none; /* NUEVO: Asegura que los botones deshabilitados no pulsen */
+        }
+        .store-item button.selected {
+            background-color: #dc3545;
+        }
+        .store-item button.selected:hover {
+            background-color: #c82333;
+        }
+        
+        /* --- Animaciones de Engagement --- */
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+
+        .store-item.affordable button {
+            animation: pulse-green 1.5s infinite;
+        }
+        
+        .store-item.affordable:hover button {
+            animation-play-state: paused; /* Pausa la animación al pasar el ratón */
+        }
+        
+        @keyframes purchase-flash {
+            0% { background-color: #e6f7ff; transform: scale(1); }
+            50% { background-color: #b3e0ff; transform: scale(1.03); }
+            100% { background-color: #ffffff; transform: scale(1); }
+        }
+
+        .store-item.purchased {
+            animation: purchase-flash 0.4s ease-out;
+        }
+        /* --- FIN: Animaciones de Engagement --- */
+
+
+        .item-info {
+            flex-grow: 1;
+            margin-right: 15px;
+        }
+        .item-info strong { font-size: 1.1rem; color: #343a40; font-weight: 700; }
+        .item-info span { font-size: 0.9rem; color: #6c757d; display: block; }
+
+        .click-visual {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            opacity: 1;
+            animation: float-up-fast 1s ease-out forwards;
+            pointer-events: none;
+            text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.2);
+            z-index: 5;
+        }
+
+        @keyframes float-up-fast {
+            0% { opacity: 1; transform: translateY(0) scale(0.5); }
+            30% { transform: translateY(-30px) scale(1); }
+            100% { opacity: 0; transform: translateY(-70px) scale(1); }
+        }
+
+        /* --- Partículas de Clic --- */
+        .click-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ffffff;
+            opacity: 0.7;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 4;
+            transform: scale(0);
+        }
+        /* --- FIN: Partículas de Clic --- */
+        
+        /* --- Visual de PPS --- */
+        .pps-visual {
+            position: absolute;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #28a745; /* Verde para PPS */
+            opacity: 1;
+            animation: float-up-pps 1.5s ease-out forwards;
+            pointer-events: none;
+            text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+            bottom: 15px; /* Empezar cerca del display de PPS */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        @keyframes float-up-pps {
+            0% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -50px); }
+        }
+        /* --- FIN: Visual de PPS --- */
+
+
+        #leaderboard-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 15px;
+        }
+
+        #leaderboard-content h2 {
+            text-align: center;
+            margin: 5px 0 10px;
+            color: #333;
+        }
+
+        #leaderboard-my-score {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 10px;
+            background-color: #e6f7ff;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #0056b3;
+            display: none;
+        }
+
+        #leaderboard-list-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 150px;
+        }
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            border-bottom: 1px solid #eef2f1;
+            font-size: 1.1rem;
+        }
+        #leaderboard-list li:nth-child(1) .rank { background-color: #d4af37; color: white; }
+        #leaderboard-list li:nth-child(2) .rank { background-color: #c0c0c0; color: white; }
+        #leaderboard-list li:nth-child(3) .rank { background-color: #cd7f32; color: white; }
+
+        #leaderboard-list li.current-user {
+            background-color: #e6f7ff;
+            border-left: 3px solid #007bff;
+        }
+
+        #leaderboard-list .rank {
+            font-weight: 700;
+            color: #555;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #999;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.online {
+            background-color: #28a745;
+        }
+
+        #leaderboard-list .player-name {
+            font-weight: 700;
+            max-width: 60%;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+        #leaderboard-list .player-name span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #leaderboard-list .player-score {
+            font-weight: 500;
+            color: #333;
+        }
+
+        #leaderboard-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            flex-direction: column;
+            gap: 10px;
+            color: #777;
+        }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .leaderboard-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .leaderboard-actions input {
+            padding: 12px;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+        }
+        .leaderboard-actions button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .leaderboard-actions button:hover { background-color: #0069d9; }
+
+        #auth-section, #score-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .auth-buttons button {
+            flex: 1;
+        }
+        #auth-status, #save-status {
+            text-align: center;
+            margin: 5px 0 0;
+            font-weight: 700;
+        }
+        #auth-status.error, #save-status.error { color: #dc3545; }
+        #auth-status.success, #save-status.success { color: #28a745; }
+
+        #logged-in-as {
+            text-align: center;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+        #logout-btn {
+            background-color: #6c757d;
+        }
+        #logout-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .modal-box {
+            background-color: #ffffff;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            transform: scale(0.9);
+            animation: zoomIn 0.3s 0.1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            to { transform: scale(1); }
+        }
+
+        .modal-box h2 {
+            margin: 0 0 10px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .modal-box p {
+            margin: 5px 0 20px;
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        #offline-earnings {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #28a745;
+            margin: 15px 0 5px;
+        }
+        #offline-time {
+            font-size: 1rem;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-buttons button {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            flex: 1;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #modal-btn-close {
+            background-color: #007bff;
+            color: white;
+        }
+        #modal-btn-close:hover {
+            background-color: #0069d9;
+        }
+
+        #modal-btn-later {
+            background-color: #6c757d;
+            color: white;
+        }
+        #modal-btn-later:hover {
+            background-color: #5a6268;
+        }
+
+        #modal-btn-go {
+            background-color: #007bff;
+            color: white;
+        }
+        #modal-btn-go:hover {
+            background-color: #0069d9;
+        }
+
+        .skins-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .skin-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #eef2f1;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .skin-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .skin-preview {
+            width: 60px;
+            height: 60px;
+            background-color: #007bff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 2rem;
+            color: white;
+            border: 2px solid #eef2f1;
+        }
+
+        .skin-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+        }
+
+        .skin-selected {
+            border: 2px solid #007bff;
+            background-color: #f0f8ff;
+        }
+
+        .skin-locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .skin-locked .skin-preview {
+            background-color: #adb5bd;
+        }
+
+        .skin-cost {
+            font-size: 0.7rem;
+            color: #28a745;
+            margin-top: 3px;
+            font-weight: 600;
+        }
+
+        .skin-owned {
+            color: #28a745;
+        }
+
+        .skin-equipped {
+            color: #007bff;
+        }
+        
+        #ban-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(220, 50, 50, 0.95);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        #ban-overlay h2 {
+            margin: 0 0 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        #ban-overlay p {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+        
+        #ban-timer {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 15px;
+        }
+        
+        .mobile-tab-bar {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+                height: 100vh;
+                -webkit-text-size-adjust: 100%;
+            }
+            .game-container {
+                flex-direction: column;
+                width: 100%;
+                height: 100%;
+                max-height: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            
+            .left-panel {
+                flex-basis: auto;
+                border-right: none;
+            }
+            
+            .stats {
+                padding: 10px 15px;
+            }
+            #score {
+                font-size: 2.5rem;
+            }
+            #pps, #cpc, #level-display {
+                font-size: 0.9rem;
+            }
+            /* Corregir posición del botón de BGM en móvil */
+            #music-toggle-btn {
+                top: 5px;
+                right: 10px;
+                width: 35px;
+                height: 35px;
+                font-size: 1.2rem;
+            }
+            
+            .clicker-area {
+                flex-grow: 1;
+                min-height: 280px;
+            }
+            
+            #click-button {
+                width: 200px;
+                height: 200px;
+                font-size: 1.8rem;
+            }
+            
+            .click-button-face {
+                font-size: 3rem;
+            }
+            #click-button-text {
+                font-size: 1rem;
+            }
+
+            .store-panel {
+                flex-basis: auto;
+                flex-grow: 1;
+                min-height: 0;
+                overflow: hidden;
+                padding-bottom: var(--tab-bar-height);
+            }
+            
+            .tab-buttons {
+                display: none;
+            }
+            
+            .tab-content {
+                padding: 10px;
+                height: 100%;
+                box-sizing: border-box;
+            }
+
+            .mobile-tab-bar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: var(--tab-bar-height);
+                background-color: #ffffff;
+                border-top: 1px solid #e0e0e0;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+                z-index: 50;
+            }
+            .mobile-tab-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: none;
+                border: none;
+                padding: 5px 0;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #888;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            .mobile-tab-btn.active {
+                color: #007bff;
+            }
+            
+            .mobile-tab-btn svg {
+                width: 24px;
+                height: 24px;
+                margin-bottom: 2px;
+                fill: currentColor;
+            }
+            
+            .leaderboard-actions input {
+                padding: 10px;
+            }
+            .leaderboard-actions button {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+            
+            #ban-overlay {
+                width: 100vw;
+                height: 100vh;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="left-panel">
+            <div class="stats">
+                <h1 id="score">0</h1>
+                <p id="level-display">Nivel 1 (x1.00)</p>
+                <div class="xp-bar-container">
+                    <div id="xp-bar"></div>
+                </div>
+                <p id="cpc">1 Puntos por clic</p>
+                <p id="pps">0 Puntos por segundo</p>
+                
+                <button id="music-toggle-btn">🔇</button>
+            </div>
+            <div class="clicker-area" id="clicker-zone">
+                <button id="click-button" oncontextmenu="return false"></button>
+            </div>
+        </div>
+
+        <div class="store-panel">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="store">Mejoras</button>
+                <button class="tab-btn" data-tab="skins">Skins</button>
+                <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
+            </div>
+
+            <div id="store" class="tab-content active no-scrollbar">
+                <div class="sub-tab-buttons">
+                    <button class="sub-tab-btn active" data-subtab="store-prod">Producción</button>
+                    <button class="sub-tab-btn" data-subtab="store-mult">Multiplicadores</button>
+                    <button class="sub-tab-btn" data-subtab="store-spec">Especiales</button>
+                </div>
+                
+                <div id="store-prod" class="sub-tab-content active no-scrollbar">
+                    <div id="store-items-cpc-container">
+                        </div>
+                    <div id="store-items-pps-container">
+                        </div>
+                </div>
+                
+                <div id="store-mult" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-click-mult-container">
+                        </div>
+                    <div id="store-items-auto-mult-container">
+                        </div>
+                </div>
+                
+                <div id="store-spec" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-synergy-container">
+                        </div>
+                    <div id="store-items-bonus-container">
+                        </div>
+                     <div id="store-items-other-container">
+                        </div>
+                </div>
+            </div>
+
+            <div id="skins" class="tab-content no-scrollbar">
+                <div id="skins-content">
+                    <h2>Personaliza tu Clic</h2>
+                    <p id="coins-display">Monedas: <span id="coins-amount">0</span></p>
+                    <div class="skins-grid" id="skins-grid">
+                    </div>
+                </div>
+            </div>
+
+            <div id="leaderboard" class="tab-content no-scrollbar">
+                <div id="leaderboard-content">
+                    <h2>Clasificación Mundial</h2>
+                    
+                    <div id="leaderboard-my-score">
+                        Tu Puntuación (en vivo): <span id="my-live-score-span">0</span>
+                    </div>
+
+                    <div id="leaderboard-list-container" class="no-scrollbar">
+                        <div id="leaderboard-status">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <ol id="leaderboard-list" style="display: none;">
+                        </ol>
+                    </div>
+
+                    <div class="leaderboard-actions">
+                        <div id="auth-section">
+                            <input type="text" id="username-input" placeholder="Tu nombre de usuario..." maxlength="20">
+                            <input type="password" id="password-input" placeholder="Contraseña...">
+                            <div class="auth-buttons">
+                                <button id="login-btn">Iniciar Sesión</button>
+                                <button id="register-btn">Registrarse</button>
+                            </div>
+                            <p id="auth-status"></p>
+                        </div>
+                        <div id="score-section" style="display: none;">
+                            <p id="logged-in-as">Logueado como: </p>
+                            <button id="save-score-btn">Guardar</button>
+                            <button id="logout-btn">Cerrar Sesión</button>
+                            <p id="save-status"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¡Únete a la Clasificación!</h2>
+            <p>¡Has alcanzado los 2,000 clics!</p>
+            <p>Para guardar tu puntuación y competir, inicia sesión o regístrate en la pestaña "Clasificación".</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-later">Más Tarde</button>
+                <button id="modal-btn-go">Ir Ahora</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="offline-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¡Bienvenido de vuelta!</h2>
+            <p>Mientras estabas fuera, has ganado:</p>
+            <p id="offline-earnings">+0</p>
+            <p id="offline-time">(durante 00:00:00)</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-close">¡Genial!</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mobile-tab-bar">
+        <button class="mobile-tab-btn active" data-tab="store">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2l5.5 9h-11zM12 21.213L4 10h16z"/></svg>
+            <span>Mejoras</span>
+        </button>
+        <button class="mobile-tab-btn" data-tab="skins">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5 4.5c2.336 0 4.31 1.454 5.116 3.5H6.884c.806-2.046 2.78-3.5 5.116-3.5z"/></svg>
+            <span>Skins</span>
+        </button>
+        <button class="mobile-tab-btn" data-tab="leaderboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 1l9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V5l9-4zm0 2.69L5 7.7v3.3c0 3.5 2.5 7.6 7 9.3 4.5-1.7 7-5.8 7-9.3V7.7L12 3.69zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 8c-2.3 0-4.3-.9-5.9-2.4.4-1.3 2.1-2.1 5.9-2.1s5.5.8 5.9 2.1C16.3 17.1 14.3 18 12 18z"/></svg>
+            <span>Clasificación</span>
+        </button>
+    </div>
+
+    <audio id="sfx-buy" src="https://logise1.netlify.app/click/sfx/buy.mp3" preload="auto"></audio>
+    <audio id="sfx-nextlevel" src="https://logise1.netlify.app/click/sfx/nextlevel.mp3" preload="auto"></audio>
+    <audio id="sfx-switchtabs" src="https://logise1.netlify.app/click/sfx/switchtabs.mp3" preload="auto"></audio>
+    <audio id="bgm-music" src="https://logise1.netlify.app/click/bgm.mp3" loop preload="auto"></audio>
+
+
+    <script type="module">
+        import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import {
+            getDatabase,
+            ref,
+            set,
+            query,
+            orderByChild,
+            limitToLast,
+            onValue,
+            get,
+            onDisconnect
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyB_y8OqwksVYbzKZgjSFmzgD2AOg32CsI4",
+            authDomain: "shittyclicker.firebaseapp.com",
+            databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shittyclicker",
+            storageBucket: "shittyclicker.firebasestorage.app",
+            messagingSenderId: "585004353396",
+            appId: "1:585004353396:web:fcabf12ba0d695ed0ece21",
+            measurementId: "G-XRYBFXCYPG"
+        };
+        
+        let app, auth, db;
+        try {
+            app = getApp();
+        } catch (e) {
+            app = initializeApp(firebaseConfig);
+        }
+        auth = getAuth(app);
+        db = getDatabase(app);
+
+        // --- INICIO DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
+        // (upgrades.json ya no se usa, usamos este array)
+        const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"]; // Necesario para 'fruit_variety'
+        const upgradesConfig = [
+            // Clics (Producción)
+            { id: 'click_1', name: 'Dedos Ágiles', emoji: '👆', description: '+2 por clic', initialCost: 14, costMultiplier: 1.08, type: 'clickValue', value: 2 },
+            { id: 'click_2', name: 'Muñeca Entrenada', emoji: '💪', description: '+10 por clic', initialCost: 70, costMultiplier: 1.15, type: 'clickValue', value: 10 },
+            { id: 'click_3', name: 'Clic Potente', emoji: '💥', description: '+50 por clic', initialCost: 350, costMultiplier: 1.20, type: 'clickValue', value: 50 },
+            { id: 'click_4', name: 'Super Clic', emoji: '🚀', description: '+200 por clic', initialCost: 1400, costMultiplier: 1.25, type: 'clickValue', value: 200 },
+            { id: 'click_5', name: 'Clic Divino', emoji: '✨', description: '+1k por clic', initialCost: 7000, costMultiplier: 1.30, type: 'clickValue', value: 1000 },
+            { id: 'click_6', name: 'Mega Clic', emoji: '🌠', description: '+5k por clic', initialCost: 35000, costMultiplier: 1.35, type: 'clickValue', value: 5000 },
+            { id: 'click_7', name: 'Giga Clic', emoji: '🌌', description: '+25k por clic', initialCost: 175000, costMultiplier: 1.40, type: 'clickValue', value: 25000 },
+            { id: 'click_8', name: 'Tera Clic', emoji: '⚡', description: '+125k por clic', initialCost: 875000, costMultiplier: 1.45, type: 'clickValue', value: 125000 },
+            { id: 'click_9', name: 'Peta Clic', emoji: '👑', description: '+600k por clic', initialCost: 4200000, costMultiplier: 1.50, type: 'clickValue', value: 600000 },
+            { id: 'click_10', name: 'Exa Clic', emoji: '💎', description: '+3M por clic', initialCost: 21000000, costMultiplier: 1.55, type: 'clickValue', value: 3000000 },
+            { id: 'click_11', name: 'Zetta Clic', emoji: '👽', description: '+15M por clic', initialCost: 1e9, costMultiplier: 1.60, type: 'clickValue', value: 1.5e7 },
+            { id: 'click_12', name: 'Yotta Clic', emoji: '🤖', description: '+75M por clic', initialCost: 5e9, costMultiplier: 1.65, type: 'clickValue', value: 7.5e7 },
+            { id: 'click_13', name: 'Clic Infinito', emoji: '♾️', description: '+350M por clic', initialCost: 2e10, costMultiplier: 1.70, type: 'clickValue', value: 3.5e8 },
+            // --- NUEVAS MEJORAS DE CLIC ---
+            { id: 'click_14', name: 'Clic Cósmico', emoji: '💫', description: '+1.5B por clic', initialCost: 1e12, costMultiplier: 1.70, type: 'clickValue', value: 1.5e9 },
+            { id: 'click_15', name: 'Pulso Galáctico', emoji: '🌠', description: '+7B por clic', initialCost: 8e12, costMultiplier: 1.72, type: 'clickValue', value: 7e9 },
+            { id: 'click_16', name: 'Toque Universal', emoji: '🪐', description: '+30B por clic', initialCost: 5e13, costMultiplier: 1.74, type: 'clickValue', value: 3e10 },
+            { id: 'click_17', name: 'Fuerza Primordial', emoji: '🔥', description: '+150B por clic', initialCost: 4e14, costMultiplier: 1.76, type: 'clickValue', value: 1.5e11 },
+            { id: 'click_18', name: 'Decreto Divino', emoji: '📜', description: '+700B por clic', initialCost: 3e15, costMultiplier: 1.78, type: 'clickValue', value: 7e11 },
+            { id: 'click_19', name: 'Clic Metafísico', emoji: '🧠', description: '+3T por clic', initialCost: 2e16, costMultiplier: 1.80, type: 'clickValue', value: 3e12 },
+            { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+15T por clic', initialCost: 1.5e18, costMultiplier: 1.82, type: 'clickValue', value: 1.5e13 },
+            { id: 'click_21', name: 'Vórtice de Ideas', emoji: '🌀', description: '+80T por clic', initialCost: 1e20, costMultiplier: 1.84, type: 'clickValue', value: 8e13 },
+            { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+500T por clic', initialCost: 9e21, costMultiplier: 1.86, type: 'clickValue', value: 5e14 }, // Costo: 9 Sextillones
+            { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+3Qa por clic', initialCost: 7e23, costMultiplier: 1.88, type: 'clickValue', value: 3e15 },
+            { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+20Qa por clic', initialCost: 5e25, costMultiplier: 1.90, type: 'clickValue', value: 2e16 }, // Costo: 50 Septillones
+
+            // Auto (Producción)
+            { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
+            { id: 'auto_2', name: 'Abuela Ayudante', emoji: '👵', description: '+8 pps', initialCost: 56, costMultiplier: 1.20, type: 'autoClickValue', value: 8 },
+            { id: 'auto_3', name: 'Granja de Clics', emoji: '🧑‍🌾', description: '+40 pps', initialCost: 280, costMultiplier: 1.25, type: 'autoClickValue', value: 40 },
+            { id: 'auto_4', name: 'Fábrica Frutal', emoji: '🏭', description: '+200 pps', initialCost: 1400, costMultiplier: 1.30, type: 'autoClickValue', value: 200 },
+            { id: 'auto_5', name: 'Mina de Puntos', emoji: '⛏️', description: '+1k pps', initialCost: 7000, costMultiplier: 1.35, type: 'autoClickValue', value: 1000 },
+            { id: 'auto_6', name: 'Banco de Clics', emoji: '🏦', description: '+5k pps', initialCost: 35000, costMultiplier: 1.40, type: 'autoClickValue', value: 5000 },
+            { id: 'auto_7', name: 'Templo del Clic', emoji: '🏛️', description: '+25k pps', initialCost: 175000, costMultiplier: 1.45, type: 'autoClickValue', value: 25000 },
+            { id: 'auto_8', name: 'Alquimia Frutal', emoji: '⚗️', description: '+120k pps', initialCost: 840000, costMultiplier: 1.50, type: 'autoClickValue', value: 120000 },
+            { id: 'auto_9', name: 'Portal Interdimensional', emoji: '🌀', description: '+600k pps', initialCost: 4200000, costMultiplier: 1.55, type: 'autoClickValue', value: 600000 },
+            { id: 'auto_10', name: 'Máquina del Tiempo', emoji: '⏳', description: '+3M pps', initialCost: 21000000, costMultiplier: 1.60, type: 'autoClickValue', value: 3000000 },
+            { id: 'auto_11', name: 'Generador Singularidad', emoji: '👾', description: '+15M pps', initialCost: 7e9, costMultiplier: 1.65, type: 'autoClickValue', value: 1.5e7 },
+            { id: 'auto_12', name: 'Agujero Negro Puntos', emoji: '🕳️', description: '+70M pps', initialCost: 4e10, costMultiplier: 1.70, type: 'autoClickValue', value: 7e7 },
+            { id: 'auto_13', name: 'Realidad Alternativa', emoji: '❓', description: '+300M pps', initialCost: 2e11, costMultiplier: 1.75, type: 'autoClickValue', value: 3e8 },
+            // --- NUEVAS MEJORAS DE AUTO ---
+            { id: 'auto_14', name: 'Extractor del Vacío', emoji: '🔭', description: '+1.2B pps', initialCost: 1.2e12, costMultiplier: 1.75, type: 'autoClickValue', value: 1.2e9 },
+            { id: 'auto_15', name: 'Nebulosa de Puntos', emoji: '✨', description: '+6B pps', initialCost: 9e12, costMultiplier: 1.77, type: 'autoClickValue', value: 6e9 },
+            { id: 'auto_16', name: 'Conciencia Cósmica', emoji: '👁️', description: '+25B pps', initialCost: 6e13, costMultiplier: 1.79, type: 'autoClickValue', value: 2.5e10 },
+            { id: 'auto_17', name: 'Motor de Realidad', emoji: '⚙️', description: '+120B pps', initialCost: 5e14, costMultiplier: 1.81, type: 'autoClickValue', value: 1.2e11 },
+            { id: 'auto_18', name: 'Omnipresencia', emoji: '🌌', description: '+550B pps', initialCost: 4e15, costMultiplier: 1.83, type: 'autoClickValue', value: 5.5e11 },
+            { id: 'auto_19', name: 'Fuente Infinita', emoji: '⛲', description: '+2.5T pps', initialCost: 3e16, costMultiplier: 1.85, type: 'autoClickValue', value: 2.5e12 },
+            { id: 'auto_20', name: 'Fin del Tiempo', emoji: '⌛', description: '+12T pps', initialCost: 2e18, costMultiplier: 1.87, type: 'autoClickValue', value: 1.2e13 },
+            { id: 'auto_21', name: 'Fábrica de ADN', emoji: '🧬', description: '+70T pps', initialCost: 1.5e20, costMultiplier: 1.89, type: 'autoClickValue', value: 7e13 },
+            { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+400T pps', initialCost: 1.1e22, costMultiplier: 1.91, type: 'autoClickValue', value: 4e14 }, // Costo: 11 Sextillones
+            { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+2.2Qa pps', initialCost: 8e23, costMultiplier: 1.93, type: 'autoClickValue', value: 2.2e15 },
+            { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+15Qa pps', initialCost: 6e25, costMultiplier: 1.95, type: 'autoClickValue', value: 1.5e16 }, // Costo: 60 Septillones
+
+            // Multiplicadores de Clic
+            { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },
+            { id: 'click_mult_2', name: 'Energía Cósmica', emoji: '🪐', description: 'Clics x1.2', initialCost: 50000, costMultiplier: 2.5, type: 'clickMultiplier', value: 1.2, maxLevel: 1 },
+            { id: 'click_mult_3', name: 'Bendición Frutal', emoji: '🙏', description: 'Clics x1.5', initialCost: 1000000, costMultiplier: 3.0, type: 'clickMultiplier', value: 1.5, maxLevel: 1 },
+            { id: 'click_mult_4', name: 'Furia del Clicker', emoji: '😠', description: 'Clics x2', initialCost: 50000000, costMultiplier: 3.5, type: 'clickMultiplier', value: 2.0, maxLevel: 1 },
+            { id: 'click_mult_5', name: 'Singularidad', emoji: '⚫', description: 'Clics x3', initialCost: 1000000000, costMultiplier: 4.0, type: 'clickMultiplier', value: 3.0, maxLevel: 1 },
+            { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
+            { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
+            // --- NUEVOS MULTIPLICADORES DE CLIC ---
+            { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e22, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 50 Sextillones
+            { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 1e26, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 100 Septillones
+
+            // Multiplicadores de Auto
+            { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
+            { id: 'auto_mult_2', name: 'Flujo Constante', emoji: '💧', description: 'PPS x1.2', initialCost: 100000, costMultiplier: 2.5, type: 'autoMultiplier', value: 1.2, maxLevel: 1 },
+            { id: 'auto_mult_3', name: 'Corriente Infinita', emoji: '🌊', description: 'PPS x1.5', initialCost: 2000000, costMultiplier: 3.0, type: 'autoMultiplier', value: 1.5, maxLevel: 1 },
+            { id: 'auto_mult_4', name: 'Motor Cuántico', emoji: '⚛️', description: 'PPS x2', initialCost: 100000000, costMultiplier: 3.5, type: 'autoMultiplier', value: 2.0, maxLevel: 1 },
+            { id: 'auto_mult_5', name: 'Eco Temporal', emoji: '💫', description: 'PPS x3', initialCost: 2000000000, costMultiplier: 4.0, type: 'autoMultiplier', value: 3.0, maxLevel: 1 },
+            { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
+            { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
+            // --- NUEVOS MULTIPLICADORES DE AUTO ---
+            { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 8e22, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 80 Sextillones
+            { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 2e26, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 200 Septillones
+
+            // Sinergias (Especiales) - NERFEADAS
+            { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+0.1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.001, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
+            { id: 'synergy_2', name: 'Eco del Cursor', emoji: '🔊', description: '+0.1% Clic por nivel de Cursor Tímido', initialCost: 10000, costMultiplier: 1.6, type: 'synergy', value: 0.001, targetUpgrade: 'auto_1', targetStat: 'clickValue' },
+            { id: 'synergy_3', name: 'Conexión Profunda', emoji: '🧠', description: '+0.05% PPS por nivel Clic Potente', initialCost: 1e6, costMultiplier: 1.7, type: 'synergy', value: 0.0005, targetUpgrade: 'click_3', targetStat: 'autoClickValue' },
+            { id: 'synergy_4', name: 'Resonancia Automática', emoji: '🦾', description: '+0.05% Clic por nivel Fábrica Frutal', initialCost: 2.5e6, costMultiplier: 1.8, type: 'synergy', value: 0.0005, targetUpgrade: 'auto_4', targetStat: 'clickValue' },
+            { id: 'synergy_5', name: 'Fusión Cuántica', emoji: '🌌', description: '+0.01% PPS por nivel Giga Clic', initialCost: 1e10, costMultiplier: 1.9, type: 'synergy', value: 0.0001, targetUpgrade: 'click_7', targetStat: 'autoClickValue' },
+            
+            // Bonos de Nivel (Especiales) - NERFEADOS
+            { id: 'level_boost_1', name: 'Bono de Nivel', emoji: '📈', description: '+1% PPS por Nivel', initialCost: 25000, costMultiplier: 1.8, type: 'levelBonus', value: 0.01, targetStat: 'autoClickValue' },
+            { id: 'level_boost_2', name: 'Maestría de Nivel', emoji: '🎓', description: '+0.5% Clic por Nivel', initialCost: 50000, costMultiplier: 1.9, type: 'levelBonus', value: 0.005, targetStat: 'clickValue' },
+            
+            // Otros (Especiales)
+            { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
+        ];
+        // --- FIN DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
+
+        let UPGRADES_CONFIG = upgradesConfig; // Asignación global
+        let upgradeLevels = {}; // NUEVO: Estado de niveles de mejoras
+
+        let userId = null;
+        let currentUsername = null; 
+        let autoSaveInterval = null; 
+        
+        // --- NUEVO: Barrera de seguridad para el guardado ---
+        let isGameLoaded = false;
+        let isShiftPressed = false; // Para compra x10
+
+        const SKINS_CONFIG = {
+            default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
+            smile: { name: "Feliz", emoji: "😊", cost: 5, unlocked: false, owned: false },
+            heart: { name: "Corazón", emoji: "❤️", cost: 25, unlocked: false, owned: false },
+            star: { name: "Estrella", emoji: "⭐", cost: 100, unlocked: false, owned: false },
+            fire: { name: "Fuego", emoji: "🔥", cost: 500, unlocked: false, owned: false },
+            diamond: { name: "Diamante", emoji: "💎", cost: 2500, unlocked: false, owned: false },
+            ghost: { name: "Fantasma", emoji: "👻", cost: 10000, unlocked: false, owned: false },
+            rocket: { name: "Cohete", emoji: "🚀", cost: 50000, unlocked: false, owned: false },
+            crown: { name: "Corona", emoji: "👑", cost: 250000, unlocked: false, owned: false },
+            skull: { name: "Calavera", emoji: "💀", cost: 1000000, unlocked: false, owned: false },
+            alien: { name: "Alienígena", emoji: "👽", cost: 7500000, unlocked: false, owned: false },
+            robot: { name: "Robot", emoji: "🤖", cost: 50000000, unlocked: false, owned: false }
+        };
+
+        let score = 0;
+        let clickPower = 1;
+        let pps = 0;
+        // REFACTOR: gameState ya no es necesario, se usa 'upgradeLevels'
+        // const gameState = { upgrades: {} }; 
+
+        let level = 1;
+        let xp = 0;
+        let xpToNextLevel = 100;
+        let levelMultiplier = 1.0;
+        let totalScore = 0;
+
+        let totalClicks = 0;
+        let modalShown = false;
+
+        let coins = 0;
+        let currentSkin = 'default';
+        let skinsState = {};
+        
+        let isBanned = false;
+        let banExpiresAt = 0;
+        let banCheckInterval = null;
+        
+        let globalPresence = {};
+
+        // --- INICIO: Variables Anti-Cheat ---
+        let _lct = 0; // lastClickTimestamp
+        let _cIntvls = []; // clickIntervals
+        const _cThresh = 1.0; // consistencyThreshold
+        const _cWnd = 20; // consistencyWindow
+        
+        let _clkTmstmps = []; // clickTimestamps
+        const _maxCPS = 30; // Máximos clics por segundo permitidos
+        const _cpsWnd = 1000; // 1 segundo (ventana de CPS)
+        // --- FIN: Variables Anti-Cheat ---
+
+        const _DateNow = Date.now;
+        const _MathSqrt = Math.sqrt;
+        const _MathPow = Math.pow;
+        const _MathCeil = Math.ceil;
+        const _MathRandom = Math.random;
+        const _MathFloor = Math.floor;
+        const _MathAbs = Math.abs;
+        const _MathMin = Math.min;
+        const _MathPI = Math.PI;
+        const _MathSin = Math.sin;
+        const _MathCos = Math.cos;
+        
+        // --- INICIO: CORRECCIÓN - Definición de plantillas de fondo ---
+        const bgPatternTemplates = [
+            // Patrón 1: Puntos
+            (color) => {
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'>
+                                <rect width='14' height='14' fill='none'/>
+                                <circle cx='7' cy='7' r='1.5' fill='${color}' fill-opacity='0.5'/>
+                             </svg>`;
+                return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+            },
+            // Patrón 2: Líneas diagonales
+            (color) => {
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                                <rect width='20' height='20' fill='none'/>
+                                <path d='M-5,5 l10,-10 M0,20 l20,-20 M15,25 l10,-10' stroke='${color}' stroke-width='1' stroke-opacity='0.3'/>
+                             </svg>`;
+                return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+            },
+            // Patrón 3: Cuadrícula
+            (color) => {
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                                <rect width='20' height='20' fill='none'/>
+                                <path d='M0,10 H20 M10,0 V20' stroke='${color}' stroke-width='1' stroke-opacity='0.2'/>
+                             </svg>`;
+                return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+            },
+            // Patrón 4: Checks sutiles
+            (color) => {
+                const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                                <rect width='20' height='20' fill='none'/>
+                                <rect x='0' y='0' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
+                                <rect x='10' y='10' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
+                             </svg>`;
+                return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+            }
+        ];
+        // --- FIN: CORRECCIÓN ---
+        
+        // --- INICIO: Variables de Sonido ---
+        let isMusicPlaying = false;
+        let sfxBuy, sfxNextLevel, sfxSwitchTabs, bgmMusic, musicToggleBtn;
+        // --- FIN: Variables de Sonido ---
+
+        function formatNumber(num) {
+            num = _MathFloor(num);
+            if (num < 1000) return num.toString();
+            if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y';
+            if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z';
+            if (num >= 1e18) return (num / 1e18).toFixed(num % 1e18 === 0 ? 0 : 2).replace(/\./g, ',') + 'E';
+            if (num >= 1e15) return (num / 1e15).toFixed(num % 1e15 === 0 ? 0 : 2).replace(/\./g, ',') + 'P';
+            if (num >= 1e12) return (num / 1e12).toFixed(num % 1e12 === 0 ? 0 : 2).replace(/\./g, ',') + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+        
+        function formatTime(totalSeconds) {
+            totalSeconds = _MathFloor(totalSeconds);
+            const hours = _MathFloor(totalSeconds / 3600);
+            const minutes = _MathFloor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function getStandardDeviation(array) {
+            if (array.length < 2) return 0;
+            const n = array.length;
+            const mean = array.reduce((a, b) => a + b) / n;
+            const variance = array.reduce((a, b) => a + _MathPow(b - mean, 2), 0) / n;
+            return _MathSqrt(variance);
+        }
+        
+        // --- Función para reproducir Sonido ---
+        function playSound(audioElement) {
+            if (!audioElement) return;
+            // Reinicia el sonido y lo reproduce.
+            audioElement.currentTime = 0;
+            audioElement.play().catch(e => {
+                // El error más común es la interrupción por otro play(), lo cual es normal.
+                // No es necesario loguear cada vez.
+                // console.log("Error de reproducción de SFX:", e);
+            });
+        }
+        // --- Fin Función para reproducir Sonido ---
+
+
+        // REFACTOR: Inicializa el estado con la nueva config
+        function resetGameState(isLoggedIn = false) {
+            score = 0;
+            totalScore = 0;
+            level = 1;
+            xp = 0;
+            totalClicks = 0;
+            modalShown = false;
+            coins = 0;
+            currentSkin = 'default';
+            isBanned = false;
+            banExpiresAt = 0;
+            _lct = 0;
+            _cIntvls = [];
+            _clkTmstmps = [];
+
+            // REFACTOR: Inicializa upgradeLevels
+            upgradeLevels = {};
+            UPGRADES_CONFIG.forEach(upgrade => {
+                upgradeLevels[upgrade.id] = {
+                    level: 0,
+                    cost: upgrade.initialCost
+                };
+            });
+
+            skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+
+            recalculateStats(); 
+            recalculateLevelStats(); // Esto aplica el fondo inicial
+            
+            if (!isLoggedIn) {
+                // Si no estamos logueados, el juego está "cargado" por defecto
+                // (no hay nada que esperar de la DB).
+                isGameLoaded = true; 
+            }
+            
+            updateUI(); 
+            updateSkinsUI(); 
+            checkBanStatus();
+        }
+
+        const scoreDisplay = document.getElementById('score');
+        const ppsDisplay = document.getElementById('pps');
+        const cpcDisplay = document.getElementById('cpc');
+        const clickButton = document.getElementById('click-button');
+        const clickerZone = document.getElementById('clicker-zone');
+        
+        // REFACTOR: Contenedores de tienda actualizados
+        const storeCpcContainer = document.getElementById('store-items-cpc-container');
+        const storePpsContainer = document.getElementById('store-items-pps-container');
+        const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
+        const storeAutoMultContainer = document.getElementById('store-items-auto-mult-container');
+        const storeSynergyContainer = document.getElementById('store-items-synergy-container');
+        const storeBonusContainer = document.getElementById('store-items-bonus-container');
+        const storeOtherContainer = document.getElementById('store-items-other-container');
+
+
+        const levelDisplay = document.getElementById('level-display');
+        const xpBar = document.getElementById('xp-bar');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const subTabButtons = document.querySelectorAll('.sub-tab-btn');
+        const subTabContents = document.querySelectorAll('.sub-tab-content');
+        const mobileTabButtons = document.querySelectorAll('.mobile-tab-btn');
+
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const leaderboardStatus = document.getElementById('leaderboard-status');
+        const myLiveScoreSpan = document.getElementById('my-live-score-span');
+        const myLiveScoreBox = document.getElementById('leaderboard-my-score');
+
+        const authSection = document.getElementById('auth-section');
+        const scoreSection = document.getElementById('score-section');
+        const usernameInput = document.getElementById('username-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const authStatus = document.getElementById('auth-status');
+
+        const loggedInAs = document.getElementById('logged-in-as');
+        const saveScoreBtn = document.getElementById('save-score-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const saveStatus = document.getElementById('save-status');
+
+        const loginModalOverlay = document.getElementById('login-modal-overlay');
+        const modalBtnLater = document.getElementById('modal-btn-later');
+        const modalBtnGo = document.getElementById('modal-btn-go');
+        
+        const offlineModalOverlay = document.getElementById('offline-modal-overlay');
+        const offlineEarningsEl = document.getElementById('offline-earnings');
+        const offlineTimeEl = document.getElementById('offline-time');
+        const modalBtnClose = document.getElementById('modal-btn-close');
+
+        const coinsDisplay = document.getElementById('coins-amount');
+        const skinsGrid = document.getElementById('skins-grid');
+        
+        let firstClick = true;
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        function requestFullscreen() {
+            if (isMobile && firstClick) {
+                firstClick = false;
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(err => console.log(err));
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen().catch(err => console.log(err));
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen().catch(err => console.log(err));
+                }
+            }
+        }
+
+        function handleManualClick(event) {
+            if (isBanned) return;
+            if (event.button === 2) return;
+            
+            requestFullscreen();
+
+            // --- INICIO: Lógica Anti-Cheat ---
+            const now = _DateNow();
+            if (_valClkRt(now) || _valClkRglrty(now)) {
+                triggerBan(3600); // Baneo de 1 Hora
+                return;
+            }
+            // --- FIN: Lógica Anti-Cheat ---
+
+            // REFACTOR: El clickPower base (calculado) se multiplica por el nivel
+            const baseGain = clickPower;
+            const earnedScore = baseGain * levelMultiplier;
+
+            score += earnedScore;
+            gainXP(earnedScore); // <-- CORREGIDO (usa la puntuación final)
+
+            coins += 1;
+            updateCoinsDisplay();
+
+            // REFACTOR: Pasa el evento al visual
+            showClickVisual(event, earnedScore);
+            createClickParticles(event); // NUEVO: Partículas
+            updateUI();
+
+            totalClicks++;
+            if (totalClicks === 2000 && !modalShown && !userId) {
+                showLoginModal();
+                modalShown = true;
+            }
+        }
+
+        function gainXP(amount) {
+            xp += amount;
+            totalScore += amount; // <-- CORREGIDO (usa la misma cantidad que 'score')
+
+            while (xp >= xpToNextLevel) {
+                xp -= xpToNextLevel;
+                level++;
+                recalculateLevelStats(); // ¡Se llama aquí!
+                playSound(sfxNextLevel); // --- SFX ---
+            }
+        }
+
+        function recalculateLevelStats() {
+            xpToNextLevel = 100 * _MathPow(5, level - 1);
+            levelMultiplier = 1 + (level - 1) * 0.05;
+            
+            // --- NUEVO: Lógica de cambio de fondo ---
+            try {
+                const hue = (level * 20) % 360; // Cambia el tinte basado en el nivel
+                
+                // --- INICIO: CORRECCIÓN ---
+                // Un color claro y pastel para el patrón (NO codificado)
+                const patternColor = `hsl(${hue}, 100%, 85%)`;
+                
+                // Un color muy claro para el fondo (no necesita codificación)
+                const bgColor = `hsl(${hue}, 80%, 95%)`; 
+                
+                // Elige un patrón basado en el nivel, rotando
+                const patternIndex = (level - 1) % bgPatternTemplates.length;
+                // La función del template se encarga de codificar
+                const newPattern = bgPatternTemplates[patternIndex](patternColor);
+                // --- FIN: CORRECCIÓN ---
+                
+                // Aplica los nuevos estilos al body
+                document.body.style.backgroundColor = bgColor;
+                document.body.style.backgroundImage = newPattern;
+            } catch (e) {
+                console.error("Error al actualizar el fondo:", e);
+            }
+            // --- FIN: Lógica de cambio de fondo ---
+        }
+
+        function showClickVisual(event, amount) {
+            const visual = document.createElement('div');
+            
+            // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+            // 1. Comprobar el nivel de la mejora 'fruit_variety'
+            const fruitLevel = upgradeLevels['fruit_variety']?.level || 0;
+            
+            // 2. Crear la lista de frutas desbloqueadas (el nivel 0 da 1 fruta, nivel 1 da 2, etc.)
+            const unlockedFruits = fruits.slice(0, fruitLevel + 1);
+            
+            // 3. Elegir una fruta al azar de esa lista
+            const randomFruit = unlockedFruits[_MathFloor(_MathRandom() * unlockedFruits.length)];
+            
+            // 4. Mostrar la fruta + la puntuación
+            visual.textContent = `${randomFruit} +${formatNumber(amount)}`;
+            // --- FIN DE LA CORRECCIÓN ---
+            
+            visual.classList.add('click-visual');
+
+            const rect = clickerZone.getBoundingClientRect();
+            // REFACTOR: Usa pageX/pageY si está disponible (mejor para móvil), si no clientX/Y
+            const clickX = (event.touches ? event.touches[0].pageX : event.pageX) - rect.left;
+            const clickY = (event.touches ? event.touches[0].pageY : event.pageY) - rect.top;
+
+            visual.style.left = `${clickX}px`;
+            visual.style.top = `${clickY}px`;
+
+            clickerZone.appendChild(visual);
+
+            setTimeout(() => {
+                visual.remove();
+            }, 1000);
+        }
+
+        // --- INICIO: Efectos Visuales (Engagement) ---
+        function createClickParticles(event) {
+            const rect = clickerZone.getBoundingClientRect();
+            const clickX = (event.touches ? event.touches[0].pageX : event.pageX) - rect.left;
+            const clickY = (event.touches ? event.touches[0].pageY : event.pageY) - rect.top;
+
+            for (let i = 0; i < 5; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('click-particle');
+                clickerZone.appendChild(particle);
+
+                const angle = _MathRandom() * _MathPI * 2;
+                const distance = _MathRandom() * 30 + 20;
+                const duration = _MathRandom() * 400 + 400;
+
+                particle.style.transform = `translate(${clickX}px, ${clickY}px) scale(0)`;
+                
+                // Animar con JS
+                let startTime = null;
+                function animateParticle(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = timestamp - startTime;
+                    
+                    if (progress < duration) {
+                        const t = progress / duration;
+                        const scale = 1 - _MathPow(1 - t, 3); // easeOutCubic
+                        const currentX = clickX + _MathSin(angle) * distance * t;
+                        const currentY = clickY + _MathCos(angle) * distance * t;
+                        const opacity = 1 - t;
+                        
+                        particle.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+                        particle.style.opacity = opacity;
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        particle.remove();
+                    }
+                }
+                requestAnimationFrame(animateParticle);
+            }
+        }
+        
+        let ppsVisualTimer = null;
+        let ppsVisualElement = null;
+        function showPpsVisual(amount) {
+            if (amount <= 0) return;
+            
+            if (!ppsVisualElement) {
+                ppsVisualElement = document.createElement('div');
+                ppsVisualElement.classList.add('pps-visual');
+                document.querySelector('.stats').appendChild(ppsVisualElement);
+            }
+            
+            ppsVisualElement.textContent = `+${formatNumber(amount)}`;
+            ppsVisualElement.style.animation = 'none';
+            // Forzar reflow
+            ppsVisualElement.offsetHeight; 
+            ppsVisualElement.style.animation = 'float-up-pps 1.5s ease-out forwards';
+
+            if (ppsVisualTimer) clearTimeout(ppsVisualTimer);
+            ppsVisualTimer = setTimeout(() => {
+                if (ppsVisualElement) {
+                    ppsVisualElement.style.animation = 'none'; // Detener la animación al final
+                }
+            }, 1500);
+        }
+        // --- FIN: Efectos Visuales (Engagement) ---
+        
+        // --- NUEVO: Cálculo de coste x10 ---
+        function calculateMultiBuyCost(config, startLevel, amount) {
+            let totalCost = 0;
+            let currentLevel = startLevel;
+            for (let i = 0; i < amount; i++) {
+                if (config.maxLevel && (currentLevel + i) >= config.maxLevel) {
+                    break; // No se puede comprar más allá del nivel máximo
+                }
+                totalCost += _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel + i));
+            }
+            return totalCost;
+        }
+
+        // REFACTOR: Lógica de compra con el nuevo sistema (y x10)
+        function buyUpgrade(key) {
+            if (isBanned) return;
+            
+            const config = UPGRADES_CONFIG.find(u => u.id === key);
+            if (!config) return;
+            
+            const state = upgradeLevels[key];
+            if (!state) return;
+
+            const amountToBuy = isShiftPressed ? 10 : 1;
+            let currentLevel = state.level;
+            
+            // Ajustar cantidad si se excede el maxLevel
+            let finalAmount = amountToBuy;
+            if (config.maxLevel) {
+                const remainingLevels = config.maxLevel - currentLevel;
+                if (remainingLevels <= 0) return; // Ya está al máximo
+                finalAmount = _MathMin(amountToBuy, remainingLevels);
+            }
+            
+            if (finalAmount === 0) return;
+
+            const totalCost = calculateMultiBuyCost(config, currentLevel, finalAmount);
+            
+            if (score >= totalCost) {
+                score -= totalCost;
+                state.level += finalAmount;
+                currentLevel = state.level; // Nivel actualizado
+                
+                // Actualizar coste
+                if (config.maxLevel && currentLevel >= config.maxLevel) {
+                    state.cost = null; // Coste infinito si se alcanza el max
+                } else {
+                    state.cost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
+                }
+                
+                playSound(sfxBuy); // --- SFX ---
+
+                recalculateStats();
+                updateUI();
+                
+                // Animación de compra
+                const itemEl = document.getElementById(`item-${key}`);
+                if (itemEl) {
+                    itemEl.classList.add('purchased');
+                    setTimeout(() => itemEl.classList.remove('purchased'), 400);
+                }
+            }
+        }
+
+        // REFACTOR: Lógica de recálculo completa (CON NERF DE LÓGICA)
+        function recalculateStats() {
+            let newPPS = 0;
+            let newClickPower = 1; // El clic base siempre da 1
+            
+            // --- CAMBIO DE LÓGICA ---
+            // Los multiplicadores ahora son bonus aditivos (ej: +10%, +20%)
+            let clickMultiplierBonus = 0;
+            let autoMultiplierBonus = 0;
+            // --- FIN CAMBIO DE LÓGICA ---
+
+            let synergyClickBonus = 0;
+            let synergyAutoBonus = 0;
+            let levelClickBonus = 0;
+            let levelAutoBonus = 0;
+
+            // 1. Calcular Sinergias y Bonos de Nivel
+            UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state || state.level === 0) return;
+
+                if (config.type === 'synergy') {
+                    const targetState = upgradeLevels[config.targetUpgrade];
+                    if (!targetState) return;
+                    
+                    const bonus = config.value * targetState.level * state.level;
+                    if (config.targetStat === 'clickValue') {
+                        synergyClickBonus += bonus;
+                    } else if (config.targetStat === 'autoClickValue') {
+                        synergyAutoBonus += bonus;
+                    }
+                }
+                
+                if (config.type === 'levelBonus') {
+                     const bonus = config.value * level * state.level;
+                     if (config.targetStat === 'clickValue') {
+                        levelClickBonus += bonus;
+                    } else if (config.targetStat === 'autoClickValue') {
+                        levelAutoBonus += bonus;
+                    }
+                }
+            });
+
+            // 2. Calcular valores Base y Multiplicadores
+            UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state || state.level === 0) return;
+
+                switch (config.type) {
+                    case 'clickValue':
+                        newClickPower += config.value * state.level;
+                        break;
+                    case 'autoClickValue':
+                        newPPS += config.value * state.level;
+                        break;
+                    
+                    // --- CAMBIO DE LÓGICA ---
+                    // Ya no se multiplican entre sí. Se suman como bonus.
+                    // Un multiplicador x2 (valor 2.0) es un bonus de +1.0 (100%)
+                    case 'clickMultiplier':
+                        clickMultiplierBonus += (config.value - 1) * state.level;
+                        break;
+                    case 'autoMultiplier':
+                        autoMultiplierBonus += (config.value - 1) * state.level;
+                        break;
+                    // --- FIN CAMBIO DE LÓGICA ---
+                }
+            });
+            
+            // 3. Aplicar todos los multiplicadores
+            // Fórmula: (Base) * (1 + Bonus_Multiplicadores) * (1 + Bonus_Sinergias) * (1 + Bonus_Nivel) * Multiplicador_Nivel_Juego
+            
+            // Clics
+            let finalClickPower = (newClickPower);
+            finalClickPower *= (1 + clickMultiplierBonus); // Se aplica el bonus aditivo
+            finalClickPower *= (1 + synergyClickBonus);
+            finalClickPower *= (1 + levelClickBonus);
+            
+            // PPS
+            let finalPPS = (newPPS);
+            finalPPS *= (1 + autoMultiplierBonus); // Se aplica el bonus aditivo
+            finalPPS *= (1 + synergyAutoBonus);
+            finalPPS *= (1 + levelAutoBonus);
+
+            // Asignar valores finales
+            pps = finalPPS;
+            clickPower = finalClickPower;
+        }
+
+
+        function gameLoop() {
+            if (isBanned) return;
+            
+            // REFACTOR: El PPS base (calculado) se multiplica por el nivel
+            const baseGain = pps;
+            const earnedScore = (baseGain * levelMultiplier) / 10; // Dividido en 10 para un loop de 100ms
+
+            score += earnedScore;
+
+            if (baseGain > 0) {
+                gainXP(earnedScore); // <-- CORREGIDO (usa la puntuación final)
+                showPpsVisual(earnedScore); // Mostrar el PPS visual
+            }
+
+            updateUI();
+            
+            if (myLiveScoreSpan) {
+                myLiveScoreSpan.textContent = formatNumber(totalScore);
+            }
+        }
+
+        // REFACTOR: Lógica de UI con el nuevo sistema (y x10)
+        function updateUI() {
+            scoreDisplay.textContent = formatNumber(score);
+            ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
+            cpcDisplay.textContent = `${formatNumber(clickPower * levelMultiplier)} Puntos por clic`;
+
+            levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
+            xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
+
+            UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state) return;
+
+                const statsEl = document.getElementById(`stats-${config.id}`);
+                const buttonEl = document.getElementById(`buy-${config.id}`);
+                const itemEl = document.getElementById(`item-${config.id}`);
+
+                if (statsEl && buttonEl && itemEl) {
+                    
+                    const currentLevel = state.level;
+                    const amountToBuy = isShiftPressed ? 10 : 1;
+                    
+                    // Ajustar cantidad si se excede el maxLevel
+                    let finalAmount = amountToBuy;
+                    let isMaxed = false;
+                    if (config.maxLevel) {
+                        const remainingLevels = config.maxLevel - currentLevel;
+                        if (remainingLevels <= 0) {
+                            isMaxed = true;
+                            finalAmount = 0;
+                        } else {
+                            finalAmount = _MathMin(amountToBuy, remainingLevels);
+                        }
+                    }
+
+                    // Actualizar descripción y nivel
+                    let levelText = `Nivel: ${currentLevel}`;
+                    if (config.maxLevel) {
+                        levelText = `Nivel: ${currentLevel} / ${config.maxLevel}`;
+                    }
+                    if (isMaxed) {
+                        levelText = "¡MAX!";
+                    }
+                    statsEl.textContent = `${config.description} | ${levelText}`;
+
+                    // Actualizar coste y estado del botón
+                    if (isMaxed) {
+                        buttonEl.textContent = `Comprado`;
+                        buttonEl.disabled = true;
+                        itemEl.classList.remove('affordable');
+                    } else {
+                        const totalCost = calculateMultiBuyCost(config, currentLevel, finalAmount);
+                        
+                        if (isShiftPressed && finalAmount > 0) {
+                            buttonEl.textContent = `x${finalAmount} Costo: ${formatNumber(totalCost)}`;
+                        } else {
+                            buttonEl.textContent = `Costo: ${formatNumber(totalCost)}`;
+                        }
+                        
+                        const canAfford = score >= totalCost;
+                        buttonEl.disabled = !canAfford;
+
+                        if (canAfford) {
+                            itemEl.classList.add('affordable');
+                        } else {
+                            itemEl.classList.remove('affordable');
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCoinsDisplay() {
+            coinsDisplay.textContent = formatNumber(coins);
+        }
+
+        // REFACTOR: Lógica de tienda con el nuevo sistema
+        function initializeStore() {
+            // Limpiar contenedores
+            storeCpcContainer.innerHTML = '<h3>Mejoras de Clic</h3>';
+            storePpsContainer.innerHTML = '<h3>Mejoras de PPS</h3>';
+            storeClickMultContainer.innerHTML = '<h3>Multiplicadores de Clic</h3>';
+            storeAutoMultContainer.innerHTML = '<h3>Multiplicadores de PPS</h3>';
+            storeSynergyContainer.innerHTML = '<h3>Sinergias</h3>';
+            storeBonusContainer.innerHTML = '<h3>Bonus de Nivel</h3>';
+            storeOtherContainer.innerHTML = '<h3>Otros</h3>';
+
+            UPGRADES_CONFIG.forEach(config => {
+                const state = upgradeLevels[config.id];
+                if (!state) return;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('store-item');
+                itemDiv.id = `item-${config.id}`; // ID para el div principal
+
+                const infoDiv = document.createElement('div');
+                infoDiv.classList.add('item-info');
+
+                const nameStrong = document.createElement('strong');
+                nameStrong.textContent = `${config.emoji} ${config.name}`;
+
+                const statsSpan = document.createElement('span');
+                statsSpan.id = `stats-${config.id}`;
+                
+                let levelText = `Nivel: ${state.level}`;
+                if (config.maxLevel) {
+                    levelText = `Nivel: ${state.level} / ${config.maxLevel}`;
+                }
+                statsSpan.textContent = `${config.description} | ${levelText}`;
+
+                infoDiv.appendChild(nameStrong);
+                infoDiv.appendChild(statsSpan);
+
+                const button = document.createElement('button');
+                button.id = `buy-${config.id}`;
+                button.dataset.key = config.id;
+                button.textContent = `Costo: ${formatNumber(state.cost)}`;
+
+                itemDiv.appendChild(infoDiv);
+                itemDiv.appendChild(button);
+                
+                // Asignar al contenedor correcto
+                switch (config.type) {
+                    case 'clickValue':
+                        storeCpcContainer.appendChild(itemDiv);
+                        break;
+                    case 'autoClickValue':
+                        storePpsContainer.appendChild(itemDiv);
+                        break;
+                    case 'clickMultiplier':
+                        storeClickMultContainer.appendChild(itemDiv);
+                        break;
+                    case 'autoMultiplier':
+                        storeAutoMultContainer.appendChild(itemDiv);
+                        break;
+                    case 'synergy':
+                        storeSynergyContainer.appendChild(itemDiv);
+                        break;
+                    case 'levelBonus':
+                        storeBonusContainer.appendChild(itemDiv);
+                        break;
+                    default:
+                        storeOtherContainer.appendChild(itemDiv);
+                        break;
+                }
+            });
+        }
+
+        function initializeSkins() {
+            Object.keys(SKINS_CONFIG).forEach(skinId => {
+                const skin = SKINS_CONFIG[skinId];
+
+                const skinItem = document.createElement('div');
+                skinItem.classList.add('skin-item');
+                skinItem.dataset.skinId = skinId;
+
+                const preview = document.createElement('div');
+                preview.classList.add('skin-preview');
+                preview.textContent = skin.emoji;
+
+                const name = document.createElement('div');
+                name.classList.add('skin-name');
+                name.textContent = skin.name;
+
+                const cost = document.createElement('div');
+                cost.classList.add('skin-cost');
+                if (skin.cost === 0) {
+                    cost.textContent = "Gratis";
+                } else {
+                    cost.textContent = `${formatNumber(skin.cost)} monedas`;
+                }
+
+                skinItem.appendChild(preview);
+                skinItem.appendChild(name);
+                skinItem.appendChild(cost);
+                skinsGrid.appendChild(skinItem);
+            });
+
+            skinsGrid.addEventListener('click', (event) => {
+                if (isBanned) return;
+                const skinItem = event.target.closest('.skin-item');
+                if (!skinItem) return;
+
+                const skinId = skinItem.dataset.skinId;
+                const skin = skinsState[skinId];
+
+                if (skin.owned) {
+                    currentSkin = skinId;
+                    updateClickButtonSkin();
+                    updateSkinsUI();
+                } else if (coins >= skin.cost) {
+                    coins -= skin.cost;
+                    skin.owned = true;
+                    skin.unlocked = true;
+                    currentSkin = skinId;
+                    updateClickButtonSkin();
+                    updateCoinsDisplay();
+                    updateSkinsUI();
+                }
+            });
+        }
+
+        function updateClickButtonSkin() {
+            const skin = skinsState[currentSkin];
+            clickButton.innerHTML = '';
+
+            if (skin) {
+                const face = document.createElement('div');
+                face.classList.add('click-button-face');
+                face.textContent = skin.emoji;
+                clickButton.appendChild(face);
+
+                const clickText = document.createElement('span');
+                clickText.id = 'click-button-text';
+                clickText.textContent = "¡Clic!";
+                clickButton.appendChild(clickText);
+            }
+        }
+
+        function updateSkinsUI() {
+            Object.keys(skinsState).forEach(skinId => {
+                const skin = skinsState[skinId];
+                const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
+
+                if (skinElement) {
+                    skinElement.classList.remove('skin-locked', 'skin-owned', 'skin-equipped');
+                    
+                    const costEl = skinElement.querySelector('.skin-cost');
+
+                    if (!skin.owned && skin.cost > 0) {
+                        skinElement.classList.add('skin-locked');
+                        costEl.textContent = `${formatNumber(skin.cost)} monedas`;
+                    } else if (skin.owned) {
+                        skinElement.classList.add('skin-owned');
+                        costEl.textContent = "Comprado";
+                        costEl.style.color = "#28a745";
+                    }
+
+                    if (currentSkin === skinId) {
+                        skinElement.classList.add('skin-equipped');
+                        costEl.textContent = "Equipado";
+                        costEl.style.color = "#007bff";
+                    } else if (skin.owned) {
+                         costEl.textContent = "Comprado";
+                         costEl.style.color = "#28a745";
+                    }
+                }
+            });
+        }
+
+        // REFACTOR: Control de carga y auto-guardado
+        async function initializeFirebase() {
+            onAuthStateChanged(auth, async (user) => {
+                
+                isGameLoaded = false; // Bloquear guardado
+                if (autoSaveInterval) clearInterval(autoSaveInterval);
+                
+                if (user) {
+                    userId = user.uid;
+                    currentUsername = user.email.split('@')[0];
+
+                    authSection.style.display = 'none';
+                    scoreSection.style.display = 'flex';
+                    loggedInAs.textContent = `Logueado como: ${currentUsername}`;
+
+                    const presenceRef = ref(db, `presence/${userId}`);
+                    set(presenceRef, true);
+                    onDisconnect(presenceRef).remove();
+
+                    await loadGameState(); // Esperar a que cargue
+                    
+                    // Iniciar auto-guardado SÓLO DESPUÉS de cargar
+                    console.log("Datos del jugador cargados. Guardado automático activado.");
+                    autoSaveInterval = setInterval(() => saveScore(false), 15000);
+
+                } else {
+                    userId = null;
+                    currentUsername = null;
+
+                    authSection.style.display = 'flex';
+                    scoreSection.style.display = 'none';
+                    loggedInAs.textContent = '';
+
+                    resetGameState(false); // Reinicia el juego (isGameLoaded = true)
+                }
+            });
+
+            loadLeaderboard();
+            
+            const allPresenceRef = ref(db, 'presence');
+            onValue(allPresenceRef, (snapshot) => {
+                globalPresence = snapshot.val() || {};
+                updateLeaderboardPresenceStatus();
+            });
+        }
+
+        // REFACTOR: Carga de estado con el nuevo sistema y barrera de seguridad
+        async function loadGameState() {
+            if (!userId) {
+                resetGameState(false);
+                return;
+            }
+            const stateRef = ref(db, `userState/${userId}`);
+
+            try {
+                const snapshot = await get(stateRef);
+
+                if (snapshot.exists()) {
+                    const savedState = snapshot.val();
+                    
+                    const lastSeen = savedState.lastSeen || _DateNow();
+
+                    score = savedState.score || 0;
+                    totalScore = savedState.totalScore || 0;
+                    level = savedState.level || 1;
+                    xp = savedState.xp || 0;
+                    totalClicks = savedState.totalClicks || 0;
+                    modalShown = savedState.modalShown || false;
+                    coins = savedState.coins || 0;
+                    currentSkin = savedState.currentSkin || 'default';
+                    banExpiresAt = savedState.banExpiresAt || 0;
+
+                    // REFACTOR: Cargar upgradeLevels
+                    if (savedState.upgradeLevels) {
+                        upgradeLevels = savedState.upgradeLevels;
+                        // Asegurarse de que cualquier nueva mejora en config tenga una entrada
+                        UPGRADES_CONFIG.forEach(config => {
+                            if (!upgradeLevels[config.id]) {
+                                upgradeLevels[config.id] = {
+                                    level: 0,
+                                    cost: config.initialCost
+                                };
+                            }
+                        });
+                    } else {
+                        // Si no hay estado guardado de upgrades, inicializarlo
+                        UPGRADES_CONFIG.forEach(config => {
+                            upgradeLevels[config.id] = {
+                                level: 0,
+                                cost: config.initialCost
+                            };
+                        });
+                    }
+
+                    if (savedState.skins) {
+                        skinsState = savedState.skins;
+                    } else {
+                        skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+                    }
+                    
+                    recalculateStats();
+                    recalculateLevelStats();
+                    
+                    const now = _DateNow();
+                    let timeOfflineInSeconds = (now - lastSeen) / 1000;
+                    const maxOfflineTimeInSeconds = 10 * 60 * 60; // 10 horas
+                    const effectiveOfflineTime = _MathMin(timeOfflineInSeconds, maxOfflineTimeInSeconds);
+
+                    if (effectiveOfflineTime > 60) { // Solo mostrar si estuvo offline > 1 min
+                        const offlinePPS = pps * 0.05; // 5% de PPS
+                        const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
+                        
+                        score += earnedOfflineScore;
+                        totalScore += earnedOfflineScore; // totalScore también debe sumar ganancia offline
+                        
+                        showOfflineEarningsModal(earnedOfflineScore, effectiveOfflineTime);
+                    }
+
+                } else {
+                    console.log("No saved state found. Starting fresh.");
+                    resetGameState(true); // Reinicia, pero marcando que está logueado
+                }
+            } catch (error) {
+                console.error("Error loading game state:", error);
+                resetGameState(true); // Reinicia si hay error, marcando que está logueado
+            } finally {
+                // --- BARRERA DE SEGURIDAD ---
+                // No importa si la carga fue exitosa o falló,
+                // ahora permitimos que el juego guarde (para no bloquear nuevos usuarios).
+                isGameLoaded = true;
+                // --- FIN BARRERA ---
+            }
+
+            updateUI();
+            updateClickButtonSkin();
+            updateSkinsUI();
+            updateCoinsDisplay();
+            checkBanStatus();
+        }
+        
+        function showOfflineEarningsModal(earnings, time) {
+            offlineEarningsEl.textContent = `+${formatNumber(earnings)}`;
+            offlineTimeEl.textContent = `(durante ${formatTime(time)})`;
+            offlineModalOverlay.style.display = 'flex';
+        }
+
+        function loadLeaderboard() {
+            if (!db) return;
+            const leaderboardRef = ref(db, 'leaderboard');
+            const leaderboardQuery = query(leaderboardRef, orderByChild('score'), limitToLast(100));
+
+            leaderboardStatus.style.display = 'flex';
+            leaderboardList.style.display = 'none';
+
+            onValue(leaderboardQuery, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const scores = Object.entries(data).map(([uid, data]) => ({
+                        uid, ...data
+                    }));
+                    
+                    scores.sort((a, b) => b.score - a.score);
+
+                    leaderboardList.innerHTML = '';
+                    scores.forEach((entry, index) => {
+                        const li = document.createElement('li');
+                        li.dataset.userId = entry.uid;
+                        li.dataset.baseScore = entry.score;
+                        li.dataset.pps = entry.pps || 0;
+                        li.dataset.lastSeen = entry.lastSeen || _DateNow();
+
+                        if (currentUsername && entry.username === currentUsername) {
+                            li.classList.add('current-user');
+                        }
+
+                        const rank = document.createElement('span');
+                        rank.textContent = `#${index + 1}`;
+                        rank.classList.add('rank');
+
+                        const name = document.createElement('span');
+                        name.classList.add('player-name');
+                        
+                        const statusDot = document.createElement('span');
+                        statusDot.classList.add('status-dot');
+                        
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = entry.username || "Anónimo";
+                        
+                        name.appendChild(statusDot);
+                        name.appendChild(nameSpan);
+
+
+                        const scoreVal = document.createElement('span');
+                        scoreVal.textContent = formatNumber(entry.score);
+                        scoreVal.classList.add('player-score');
+
+                        li.appendChild(rank);
+                        li.appendChild(name);
+                        li.appendChild(scoreVal);
+                        leaderboardList.appendChild(li);
+                    });
+
+                    leaderboardStatus.style.display = 'none';
+                    leaderboardList.style.display = 'block';
+                    updateLeaderboardPresenceStatus();
+
+                } else {
+                    leaderboardStatus.innerHTML = '<span>¡Sé el primero en la clasificación!</span>';
+                    leaderboardList.style.display = 'none';
+                }
+            });
+        }
+        
+        function updateLeaderboardPresenceStatus() {
+            const lis = leaderboardList.querySelectorAll('li[data-user-id]');
+            lis.forEach(li => {
+                const uid = li.dataset.userId;
+                const dot = li.querySelector('.status-dot');
+                if (dot) {
+                    if (globalPresence[uid]) {
+                        dot.classList.add('online');
+                    } else {
+                        dot.classList.remove('online');
+                    }
+                }
+            });
+        }
+        
+        function updateLeaderboardVisualTicking() {
+            const now = _DateNow();
+            const maxOfflineTimeMs = 10 * 60 * 60 * 1000;
+            
+            leaderboardList.querySelectorAll('li[data-user-id]').forEach(li => {
+                const dot = li.querySelector('.status-dot');
+                const scoreEl = li.querySelector('.player-score');
+                const baseScore = parseFloat(li.dataset.baseScore);
+                
+                if (dot && !dot.classList.contains('online')) {
+                    const pps = parseFloat(li.dataset.pps);
+                    const lastSeen = parseFloat(li.dataset.lastSeen);
+                    
+                    const timeOfflineMs = now - lastSeen;
+                    const effectiveTimeMs = _MathMin(timeOfflineMs, maxOfflineTimeMs);
+                    
+                    if (effectiveTimeMs > 0) {
+                        const offlineGain = (pps * 0.05) * (effectiveTimeMs / 1000);
+                        const currentScore = baseScore + offlineGain;
+                        scoreEl.textContent = formatNumber(currentScore);
+                    } else {
+                        scoreEl.textContent = formatNumber(baseScore);
+                    }
+                } else if (dot && dot.classList.contains('online')) {
+                     // Si está online, mostramos la puntuación base (que se actualiza con onValue)
+                     scoreEl.textContent = formatNumber(baseScore);
+                }
+            });
+        }
+
+        // REFACTOR: Guardado de estado con barrera de seguridad
+        async function saveScore(manual = false) {
+            
+            // --- BARRERA DE SEGURIDAD ---
+            // No permitir guardado automático (ni al cerrar) si el juego no ha terminado de cargar.
+            if (!isGameLoaded && manual === false) {
+                console.warn("Guardado automático bloqueado: el juego aún no ha cargado.");
+                return Promise.resolve(); 
+            }
+            // --- FIN BARRERA ---
+
+            if (!userId || !db || !currentUsername) {
+                if (manual) {
+                    saveStatus.textContent = "Error: Debes iniciar sesión.";
+                    saveStatus.className = 'error';
+                }
+                return Promise.resolve();
+            }
+
+            const scoreToSave = _MathFloor(totalScore);
+            const now = _DateNow();
+            const currentPPS = pps * levelMultiplier;
+
+            const stateToSave = {
+                score: score,
+                totalScore: totalScore,
+                level: level,
+                xp: xp,
+                totalClicks: totalClicks,
+                modalShown: modalShown,
+                coins: coins,
+                currentSkin: currentSkin,
+                upgradeLevels: upgradeLevels, // REFACTOR: Guardar upgradeLevels
+                skins: skinsState,
+                banExpiresAt: banExpiresAt,
+                lastSeen: now
+            };
+
+            const p1 = set(ref(db, `userState/${userId}`), stateToSave).catch((error) => {
+                console.error("Error saving game state:", error);
+            });
+
+            const p2 = set(ref(db, `leaderboard/${userId}`), {
+                username: currentUsername,
+                score: scoreToSave,
+                pps: currentPPS,
+                lastSeen: now
+            }).then(() => {
+                if (manual) {
+                    saveStatus.textContent = "¡Puntuación guardada!";
+                    saveStatus.className = 'success';
+                    setTimeout(() => { saveStatus.textContent = ""; }, 2000);
+                }
+            }).catch((error) => {
+                if (manual) {
+                    saveStatus.textContent = "Error al guardar.";
+                    saveStatus.className = 'error';
+                }
+                console.error("Error al guardar puntuación:", error);
+            });
+            
+            return Promise.all([p1, p2]);
+        }
+
+        function showLoginModal() {
+            loginModalOverlay.style.display = 'flex';
+        }
+
+        function hideLoginModal() {
+            loginModalOverlay.style.display = 'none';
+        }
+
+        function showTab(tabId) {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            mobileTabButtons.forEach(btn => btn.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+            const activeMobileBtn = document.querySelector(`.mobile-tab-btn[data-tab="${tabId}"]`);
+            const activeContent = document.getElementById(tabId);
+
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activeMobileBtn) activeMobileBtn.classList.add('active');
+            if (activeContent) activeContent.classList.add('active');
+            
+            if (myLiveScoreBox) {
+                myLiveScoreBox.style.display = (tabId === 'leaderboard' && userId) ? 'block' : 'none';
+            }
+            
+            playSound(sfxSwitchTabs); // --- SFX ---
+        }
+
+        function showSubTab(subTabId) {
+            subTabButtons.forEach(btn => btn.classList.remove('active'));
+            subTabContents.forEach(content => content.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.sub-tab-btn[data-subtab="${subTabId}"]`);
+            const activeContent = document.getElementById(subTabId);
+
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activeContent) activeContent.classList.add('active');
+            
+            playSound(sfxSwitchTabs); // --- SFX ---
+        }
+
+        function handleRegister() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (username.length < 3 || password.length < 6) {
+                authStatus.textContent = "Usuario (3+) y contraseña (6+)";
+                authStatus.className = 'error';
+                return;
+            }
+            const email = username + '@click.com';
+
+            authStatus.textContent = "Registrando...";
+            authStatus.className = '';
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    authStatus.textContent = "¡Registrado con éxito!";
+                    authStatus.className = 'success';
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/email-already-in-use') {
+                        authStatus.textContent = "Ese nombre de usuario ya existe.";
+                    } else {
+                        authStatus.textContent = "Error al registrar.";
+                    }
+                    authStatus.className = 'error';
+                });
+        }
+
+        function handleLogin() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                authStatus.textContent = "Rellena ambos campos.";
+                authStatus.className = 'error';
+                return;
+            }
+            const email = username + '@click.com';
+
+            authStatus.textContent = "Iniciando sesión...";
+            authStatus.className = '';
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    authStatus.textContent = "¡Bienvenido de vuelta!";
+                    authStatus.className = 'success';
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        authStatus.textContent = "Usuario o contraseña incorrectos.";
+                    } else {
+                        authStatus.textContent = "Error al iniciar sesión.";
+                    }
+                    authStatus.className = 'error';
+                });
+        }
+
+        async function handleLogout() {
+            if (userId && isGameLoaded) { // Comprobar si ha cargado
+                const presenceRef = ref(db, `presence/${userId}`);
+                await saveScore(false); 
+                await set(presenceRef, null);
+            }
+            
+            // Parar el auto-guardado al salir
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+            isGameLoaded = false; // Bloquear guardado hasta el próximo login
+            
+            signOut(auth).catch((error) => {
+                console.error("Error al cerrar sesión:", error);
+            });
+        }
+
+        // --- INICIO: Funciones Anti-Cheat ---
+        
+        // Valida la TASA de clics (CPS)
+        function _valClkRt(now) {
+            _clkTmstmps.push(now);
+            // Filtra los timestamps que ya son más viejos que la ventana (1s)
+            _clkTmstmps = _clkTmstmps.filter(timestamp => now - timestamp < _cpsWnd);
+            
+            // Si hay más clics en la ventana que el máximo permitido
+            if (_clkTmstmps.length > _maxCPS) {
+                console.warn(`Detección de Tasa de Clics: ${_clkTmstmps.length} CPS detectados.`);
+                return true; // ¡Baneado!
+            }
+            return false;
+        }
+
+        // Valida la CONSISTENCIA (ritmo)
+        function _valClkRglrty(now) {
+            if (_lct === 0) {
+                _lct = now;
+                return false;
+            }
+
+            const interval = now - _lct;
+            _lct = now;
+            
+            if (interval < 10) { // Ignora clics inhumanamente rápidos (ya cubiertos por _valClkRt)
+                return false;
+            }
+
+            _cIntvls.push(interval);
+            if (_cIntvls.length > _cWnd) {
+                _cIntvls.shift();
+            }
+
+            if (_cIntvls.length < _cWnd) {
+                return false;
+            }
+
+            const stdDev = getStandardDeviation(_cIntvls);
+
+            if (stdDev < _cThresh && stdDev !== 0) {
+                console.warn(`Detección de Consistencia: Desviación estándar muy baja: ${stdDev}`);
+                _cIntvls = []; 
+                return true; // ¡Baneado!
+            }
+            
+            return false;
+        }
+        // --- FIN: Funciones Anti-Cheat ---
+        
+        function triggerBan(seconds) {
+            if (isBanned) return; 
+            
+            const durationMs = seconds * 1000;
+            banExpiresAt = _DateNow() + durationMs;
+            isBanned = true;
+            
+            console.error(`USUARIO BANEADO por ${seconds} segundos.`);
+            
+            saveScore(false); 
+            checkBanStatus();
+        }
+        
+        function checkBanStatus() {
+            if (banCheckInterval) clearInterval(banCheckInterval);
+
+            const now = _DateNow();
+            if (banExpiresAt > now) {
+                isBanned = true;
+                showBanScreen();
+                
+                banCheckInterval = setInterval(updateBanTimer, 1000);
+            } else {
+                isBanned = false;
+                hideBanScreen();
+            }
+        }
+        
+        function showBanScreen() {
+            let overlay = document.getElementById('ban-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'ban-overlay';
+                
+                const title = document.createElement('h2');
+                title.textContent = '¡BANEADO!';
+                
+                const message = document.createElement('p');
+                message.textContent = 'Actividad sospechosa detectada (clics demasiado consistentes).';
+                
+                const timer = document.createElement('p');
+                timer.id = 'ban-timer';
+                
+                overlay.appendChild(title);
+                overlay.appendChild(message);
+                overlay.appendChild(timer);
+                
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'flex';
+            updateBanTimer();
+        }
+        
+        function updateBanTimer() {
+            const now = _DateNow();
+            const timeLeft = banExpiresAt - now;
+            
+            if (timeLeft <= 0) {
+                isBanned = false;
+                hideBanScreen();
+                if (banCheckInterval) clearInterval(banCheckInterval);
+            } else {
+                const hours = _MathFloor(timeLeft / (1000 * 60 * 60));
+                const minutes = _MathFloor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = _MathFloor((timeLeft % (1000 * 60)) / 1000);
+                
+                const timerEl = document.getElementById('ban-timer');
+                if (timerEl) {
+                    timerEl.textContent = 
+                        `${hours.toString().padStart(2, '0')}:` +
+                        `${minutes.toString().padStart(2, '0')}:` +
+                        `${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+        }
+        
+        function hideBanScreen() {
+            const overlay = document.getElementById('ban-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        window.onbeforeunload = () => {
+            if (userId && isGameLoaded) { // BARRERA DE SEGURIDAD
+                saveScore(false);
+            }
+        };
+
+        async function loadGameConfigAndStart() {
+            try {
+                // REFACTOR: No se usa fetch, la config está arriba
+                
+                // --- INICIO: Inicializar Sonidos ---
+                sfxBuy = document.getElementById('sfx-buy');
+                sfxNextLevel = document.getElementById('sfx-nextlevel');
+                sfxSwitchTabs = document.getElementById('sfx-switchtabs');
+                bgmMusic = document.getElementById('bgm-music');
+                musicToggleBtn = document.getElementById('music-toggle-btn');
+                // --- FIN: Inicializar Sonidos ---
+
+                resetGameState(true); // Inicia el estado base (marcando como "logeado" temporalmente)
+                initializeStore();
+                initializeSkins();
+                await initializeFirebase(); // Carga el estado guardado (y activa 'isGameLoaded')
+
+                clickButton.addEventListener('mousedown', handleManualClick);
+                
+                // REFACTOR: Listener de clics para la tienda
+                document.getElementById('store').addEventListener('click', (event) => {
+                    const button = event.target.closest('button[data-key]');
+                    if (button) buyUpgrade(button.dataset.key);
+                });
+
+                // --- NUEVO: Listeners para Shift ---
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Shift' && !isShiftPressed) {
+                        isShiftPressed = true;
+                        updateUI(); // Actualiza la UI para mostrar x10
+                    }
+                });
+                window.addEventListener('keyup', (e) => {
+                    if (e.key === 'Shift') {
+                        isShiftPressed = false;
+                        updateUI(); // Actualiza la UI para mostrar x1
+                    }
+                });
+                // --- FIN: Listeners para Shift ---
+
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => showTab(button.dataset.tab));
+                });
+                mobileTabButtons.forEach(button => {
+                    button.addEventListener('click', () => showTab(button.dataset.tab));
+                });
+                
+                subTabButtons.forEach(button => {
+                    button.addEventListener('click', () => showSubTab(button.dataset.subtab));
+                });
+
+                registerBtn.addEventListener('click', handleRegister);
+                loginBtn.addEventListener('click', handleLogin);
+                logoutBtn.addEventListener('click', handleLogout);
+                saveScoreBtn.addEventListener('click', () => saveScore(true));
+
+                modalBtnLater.addEventListener('click', hideLoginModal);
+                modalBtnGo.addEventListener('click', () => {
+                    hideLoginModal();
+                    showTab('leaderboard');
+                });
+                
+                modalBtnClose.addEventListener('click', () => {
+                    offlineModalOverlay.style.display = 'none';
+                });
+
+                // --- INICIO: Lógica del Botón de Música ---
+                musicToggleBtn.addEventListener('click', () => {
+                    if (isMusicPlaying) {
+                        bgmMusic.pause();
+                        musicToggleBtn.classList.remove('playing');
+                        musicToggleBtn.textContent = '🔇';
+                    } else {
+                        // El play() puede fallar si el usuario no ha interactuado
+                        // pero como el botón REQUIERE un clic, funcionará.
+                        bgmMusic.play().then(() => {
+                            musicToggleBtn.classList.add('playing');
+                            musicToggleBtn.textContent = '🎶';
+                        }).catch(e => console.log("Error al reproducir BGM:", e));
+                    }
+                    isMusicPlaying = !isMusicPlaying;
+                });
+                // --- FIN: Lógica del Botón de Música ---
+
+
+                setInterval(gameLoop, 100); // REFACTOR: Loop más rápido (10x por seg)
+                setInterval(updateLeaderboardVisualTicking, 1000);
+
+                updateUI();
+                updateClickButtonSkin();
+                
+            } catch (error) {
+                console.error("Error fatal al iniciar el juego:", error);
+                document.body.innerHTML = "<h1>Error al cargar la configuración del juego. Inténtalo de nuevo más tarde.</h1>";
+            }
+        }
+
+        loadGameConfigAndStart();
+        
+    </script>
+</body>
+</html>
