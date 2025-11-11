@@ -2709,6 +2709,8 @@
                     displayChatMessage(data.username, data.message, data.skin);
                     // Solo mostrar toast para mensajes que no sean del usuario actual
                     // y que se hayan enviado en los últimos 30 segundos (para no spamear al cargar)
+                    const chatTab = document.getElementById('chat');
+                    const isChatActive = chatTab ? chatTab.classList.contains('active') : false;
                     const messageTime = data.timestamp || 0;
                     const isRecent = (_DateNow() - messageTime) < 30000;
                     
@@ -3152,3 +3154,4 @@
     </script>
 </body>
 </html>
+
