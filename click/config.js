@@ -1,9 +1,9 @@
 import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import {
     getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
+    createUserWithEmailAndPassword as FBCreateUser, // Renombrar para evitar conflictos
+    signInWithEmailAndPassword as FBSignIn,       // Renombrar
+    signOut as FBSignOut,                         // Renombrar
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import {
@@ -14,16 +14,132 @@ import {
     orderByChild,
     limitToLast,
     onValue,
-    get,
+    get as FBGet, // Renombrar
     onDisconnect,
     push, 
     serverTimestamp, 
     onChildAdded
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
+// --- EXPORTACIONES CLAVE DE FIREBASE ---
+export const createUserWithEmailAndPassword = FBCreateUser;
+export const signInWithEmailAndPassword = FBSignIn;
+export const signOut = FBSignOut;
+export const get = FBGet;
+
+// Exportamos también las funciones restantes para que estén disponibles
+export { ref, set, query, orderByChild, limitToLast, onValue, onDisconnect, push, serverTimestamp, onChildAdded, onAuthStateChanged };
+
+// --- CONFIGURACIÓN DE FIREBASE PARA EL JUEGO PRINCIPAL (Game State, Leaderboard, Text Chat) ---
+const GAME_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyB_y8OqwksVYbzKZgjSFmzgD2AOg32CsI4",
+    authDomain: "shittyclicker.firebaseapp.com",
+    databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "shittyclicker",
+    storageBucket: "shittyclicker.firebasestorage.app",
+    messagingSenderId: "585004353396",
+    appId: "1:585004353396:web:fcabf12ba0d695ed0ece21",
+    measurementId: "G-XRYBFXCYPG"
+};
+
+// --- CONFIGURACIÓN DE FIREBASE PARA EL CHAT DE VOZ (Voice Chat Signaling) ---
+const VOICE_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDouOiwSEY2le_rsvFcfAVi6f77lX3Nrqg",
+    authDomain: "chatdevozprojects.firebaseapp.com",
+    databaseURL: "https://chatdevozprojects-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "chatdevozprojects",
+    storageBucket: "chatdevozprojects.firebasestorage.app",
+    messagingSenderId: "28342945819",
+    appId: "1:28342945819:web:96a6b6a9c215a37fa6d0be",
+    measurementId: "G-NYP7J9WMQP"
+};
+
+let gameApp, voiceApp;
+
+try {
+    gameApp = getApp('gameApp');
+} catch (e) {
+    gameApp = initializeApp(GAME_FIREBASE_CONFIG, 'gameApp');
+}
+try {
+    voiceApp = getApp('voiceApp');
+} catch (e) {
+    voiceApp = initializeApp(VOICE_FIREBASE_CONFIG, 'voiceApp');
+}
+
+export const auth = getAuth(gameApp);
+export const db = getDatabase(gameApp); // DB para juego principal
+export const voiceDb = getDatabase(voiceApp); // Nueva DB para voz
+
 // --- CONSTANTES GLOBALES DE JUEGO ---
 export const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
 
+export const SKINS_CONFIG = {
+    default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
+    smile: { name: "Feliz", emoji: "😊", cost: 5, unlocked: false, owned: false },
+    heart: { name: "Corazón", emoji: "❤️", cost: 25, unlocked: false, owned: false },
+    star: { name: "Estrella", emoji: "⭐", cost: 100, unlocked: false, owned: false },
+    fire: { name: "Fuego", emoji: "🔥", cost: 500, unlocked: false, owned: false },
+    diamond: { name: "Diamante", emoji: "💎", cost: 2500, unlocked: false, owned: false },
+    ghost: { name: "Fantasma", emoji: "👻", cost: 10000, unlocked: false, owned: false },
+    rocket: { name: "Cohete", emoji: "🚀", cost: 50000, unlocked: false, owned: false },
+    crown: { name: "Corona", emoji: "👑", cost: 250000, unlocked: false, owned: false },
+    skull: { name: "Calavera", emoji: "💀", cost: 1000000, unlocked: false, owned: false },
+    alien: { name: "Alienígena", emoji: "👽", cost: 7500000, unlocked: false, owned: false },
+    robot: { name: "Robot", emoji: "🤖", cost: 50000000, unlocked: false, owned: false }
+};
+
+// --- CONSTANTES MATEMÁTICAS ---
+export const _DateNow = Date.now;
+export const _MathSqrt = Math.sqrt;
+export const _MathPow = Math.pow;
+export const _MathCeil = Math.ceil;
+export const _MathRandom = Math.random;
+export const _MathFloor = Math.floor;
+export const _MathAbs = Math.abs;
+export const _MathMin = Math.min;
+export const _MathPI = Math.PI;
+export const _MathSin = Math.sin;
+export const _MathCos = Math.cos;
+
+// --- PLANTILLAS DE FONDO ---
+export const bgPatternTemplates = [
+    // Patrón 1: Puntos
+    (color) => {
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'>
+                        <rect width='14' height='14' fill='none'/>
+                        <circle cx='7' cy='7' r='1.5' fill='${color}' fill-opacity='0.5'/>
+                     </svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    },
+    // Patrón 2: Líneas diagonales
+    (color) => {
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                        <rect width='20' height='20' fill='none'/>
+                        <path d='M-5,5 l10,-10 M0,20 l20,-20 M15,25 l10,-10' stroke='${color}' stroke-width='1' stroke-opacity='0.3'/>
+                     </svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    },
+    // Patrón 3: Cuadrícula
+    (color) => {
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                        <rect width='20' height='20' fill='none'/>
+                        <path d='M0,10 H20 M10,0 V20' stroke='${color}' stroke-width='1' stroke-opacity='0.2'/>
+                     </svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    },
+    // Patrón 4: Checks sutiles
+    (color) => {
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
+                        <rect width='20' height='20' fill='none'/>
+                        <rect x='0' y='0' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
+                        <rect x='10' y='10' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
+                     </svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    }
+];
+
+// --- CONFIGURACIÓN DE MEJORAS ---
 export const UPGRADES_CONFIG = [
     // Clics (Producción)
     { id: 'click_1', name: 'Dedos Ágiles', emoji: '👆', description: '+2 por clic', initialCost: 14, costMultiplier: 1.08, type: 'clickValue', value: 2 },
@@ -159,95 +275,4 @@ export const UPGRADES_CONFIG = [
     
     // Otros (Especiales)
     { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
-];
-
-export const SKINS_CONFIG = {
-    default: { name: "Clásico", emoji: "👆", cost: 0, unlocked: true, owned: true },
-    smile: { name: "Feliz", emoji: "😊", cost: 5, unlocked: false, owned: false },
-    heart: { name: "Corazón", emoji: "❤️", cost: 25, unlocked: false, owned: false },
-    star: { name: "Estrella", emoji: "⭐", cost: 100, unlocked: false, owned: false },
-    fire: { name: "Fuego", emoji: "🔥", cost: 500, unlocked: false, owned: false },
-    diamond: { name: "Diamante", emoji: "💎", cost: 2500, unlocked: false, owned: false },
-    ghost: { name: "Fantasma", emoji: "👻", cost: 10000, unlocked: false, owned: false },
-    rocket: { name: "Cohete", emoji: "🚀", cost: 50000, unlocked: false, owned: false },
-    crown: { name: "Corona", emoji: "👑", cost: 250000, unlocked: false, owned: false },
-    skull: { name: "Calavera", emoji: "💀", cost: 1000000, unlocked: false, owned: false },
-    alien: { name: "Alienígena", emoji: "👽", cost: 7500000, unlocked: false, owned: false },
-    robot: { name: "Robot", emoji: "🤖", cost: 50000000, unlocked: false, owned: false }
-};
-
-// --- CONSTANTES DE FIREBASE Y UTILIDADES DE MATH ---
-const firebaseConfig = {
-    apiKey: "AIzaSyB_y8OqwksVYbzKZgjSFmzgD2AOg32CsI4",
-    authDomain: "shittyclicker.firebaseapp.com",
-    databaseURL: "https://shittyclicker-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "shittyclicker",
-    storageBucket: "shittyclicker.firebasestorage.app",
-    messagingSenderId: "585004353396",
-    appId: "1:585004353396:web:fcabf12ba0d695ed0ece21",
-    measurementId: "G-XRYBFXCYPG"
-};
-
-let app, auth, db;
-try {
-    app = getApp();
-} catch (e) {
-    app = initializeApp(firebaseConfig);
-}
-
-auth = getAuth(app);
-db = getDatabase(app);
-
-// Exportar instancias de Firebase y funciones clave
-export { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged };
-export { ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, push, serverTimestamp, onChildAdded };
-
-// Exportar funciones Math/Date/etc. para consistencia y anti-cheat
-export const _DateNow = Date.now;
-export const _MathSqrt = Math.sqrt;
-export const _MathPow = Math.pow;
-export const _MathCeil = Math.ceil;
-export const _MathRandom = Math.random;
-export const _MathFloor = Math.floor;
-export const _MathAbs = Math.abs;
-export const _MathMin = Math.min;
-export const _MathPI = Math.PI;
-export const _MathSin = Math.sin;
-export const _MathCos = Math.cos;
-
-// --- Funciones de Utilidad (Patrones de Fondo) ---
-export const bgPatternTemplates = [
-    // Patrón 1: Puntos
-    (color) => {
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'>
-                        <rect width='14' height='14' fill='none'/>
-                        <circle cx='7' cy='7' r='1.5' fill='${color}' fill-opacity='0.5'/>
-                     </svg>`;
-        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    },
-    // Patrón 2: Líneas diagonales
-    (color) => {
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
-                        <rect width='20' height='20' fill='none'/>
-                        <path d='M-5,5 l10,-10 M0,20 l20,-20 M15,25 l10,-10' stroke='${color}' stroke-width='1' stroke-opacity='0.3'/>
-                     </svg>`;
-        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    },
-    // Patrón 3: Cuadrícula
-    (color) => {
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
-                        <rect width='20' height='20' fill='none'/>
-                        <path d='M0,10 H20 M10,0 V20' stroke='${color}' stroke-width='1' stroke-opacity='0.2'/>
-                     </svg>`;
-        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    },
-    // Patrón 4: Checks sutiles
-    (color) => {
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>
-                        <rect width='20' height='20' fill='none'/>
-                        <rect x='0' y='0' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
-                        <rect x='10' y='10' width='10' height='10' fill='${color}' fill-opacity='0.1'/>
-                     </svg>`;
-        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    }
 ];

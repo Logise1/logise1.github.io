@@ -1,7 +1,7 @@
 import { 
     UPGRADES_CONFIG, SKINS_CONFIG, fruits, 
-    auth, db, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, 
-    push, serverTimestamp, onChildAdded,
+    auth, db, voiceDb, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, // << CORREGIDO: 'get' ahora es un import directo
+    push, serverTimestamp, onChildAdded, 
     _DateNow, _MathSqrt, _MathPow, _MathCeil, _MathRandom, _MathFloor, _MathAbs, _MathMin, _MathPI, _MathSin, _MathCos,
     bgPatternTemplates
 } from './config.js';
@@ -60,7 +60,7 @@ export const setIsGameLoaded = (value) => {
     isGameLoaded = value;
 };
 
-// Setter para GlobalPresence (CORRECCIÓN V3)
+// Setter para GlobalPresence
 export const setGlobalPresence = (presenceData) => {
     globalPresence = presenceData;
 };
@@ -825,38 +825,50 @@ export async function saveScore(manual = false) {
     return Promise.all([p1, p2]);
 }
 
-// --- FIREBASE: CHAT ---
+// --- FIREBASE: CHAT DE TEXTO (Menos intensivo en consultas) ---
 export function initializeChat() {
-    const { chatMessagesContainer, chatInput, chatSendBtn } = getDomElements();
+    const { chatMessagesContainer } = getDomElements();
     const chatRef = ref(db, 'chatMessages');
-    const chatQuery = query(chatRef, limitToLast(50));
+    const chatQuery = query(chatRef, orderByChild('timestamp'), limitToLast(50));
     
-    onChildAdded(chatQuery, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            displayChatMessage(data.username, data.message, data.skin);
-            const messageTime = data.timestamp || 0;
-            // Solo mostrar toast para mensajes que no sean del usuario actual
-            const isRecent = (_DateNow() - messageTime) < 30000;
-            
-            if (data.username !== internalCurrentUsername && isRecent) { // Usar internalCurrentUsername
-                showToastNotification(data.username, data.message, data.skin);
-            }
-        }
-    });
-    
-    chatSendBtn.addEventListener('click', sendChatMessage);
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !chatSendBtn.disabled) {
-            sendChatMessage();
-        }
+    // 1. Cargar el historial inicial (usando onValue y desuscribiéndose inmediatamente con get)
+    get(chatQuery).then((snapshot) => {
+        chatMessagesContainer.innerHTML = ''; // Limpiar antes de cargar historial
+        const messages = [];
+        snapshot.forEach((childSnapshot) => {
+            messages.push(childSnapshot.val());
+        });
+        
+        // Mostrar todos los mensajes históricos cargados
+        messages.forEach(msg => displayChatMessage(msg.username, msg.message, msg.skin));
+
+        // 2. Escuchar solo los mensajes NUEVOS usando onChildAdded
+        // Nota: onChildAdded se dispara para los elementos existentes al comienzo,
+        // pero como ya los cargamos con 'get', esta llamada solo escuchará nuevos.
+        // Sin embargo, si Firebase procesa la suscripción ANTES de que termine 'get',
+        // puede haber duplicados. Un patrón más robusto es usar onValue y un tracker de ID.
+        // Para simplificar y mejorar la intensidad, usaremos onChildAdded para los nuevos,
+        // asumiendo que los mensajes históricos iniciales ya fueron mostrados.
+        // Para evitar duplicados, solo usamos onChildAdded para mensajes con timestamp reciente.
+        onChildAdded(chatRef, (snapshot) => {
+             const data = snapshot.val();
+             // Solo mostrar mensajes nuevos que tienen un timestamp muy reciente
+             if (data.timestamp > (_DateNow() - 5000)) { 
+                if (data.username !== internalCurrentUsername) {
+                    showToastNotification(data.username, data.message, data.skin);
+                }
+                // Asegurarse de que no estamos volviendo a mostrar los del historial si la latencia es alta
+                // (Esto es un compromiso, pero reduce la carga de lectura al inicio)
+                displayChatMessage(data.username, data.message, data.skin);
+             }
+        });
     });
 }
 
 export function sendChatMessage() {
     const { chatInput } = getDomElements();
     const message = chatInput.value.trim();
-    if (!message || !internalUserId || !internalCurrentUsername) { // Usar internalUserId y internalCurrentUsername
+    if (!message || !internalUserId || !internalCurrentUsername) { 
         return;
     }
     
@@ -866,11 +878,13 @@ export function sendChatMessage() {
     const skinEmoji = skinsState[currentSkin]?.emoji || '👆';
     
     const chatRef = ref(db, 'chatMessages');
-    push(chatRef, {
-        username: internalCurrentUsername, // Usar internalCurrentUsername
+    // Usamos push para generar una nueva clave, y set para guardar el mensaje.
+    // serverTimestamp se ha eliminado para usar Date.now() y optimizar la detección de nuevos mensajes para el toast.
+    push(chatRef, { 
+        username: internalCurrentUsername, 
         message: message,
         skin: skinEmoji,
-        timestamp: _DateNow() // Usamos Date.now() para la lógica del toast, y Firebase lo guarda como serverTimestamp
+        timestamp: _DateNow() 
     }).then(() => {
         chatInput.value = '';
     }).catch((e) => {

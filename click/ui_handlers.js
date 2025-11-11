@@ -1,7 +1,7 @@
 import { 
     UPGRADES_CONFIG, SKINS_CONFIG, 
     auth, db, ref, set, query, onValue, onAuthStateChanged, 
-    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onDisconnect,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onDisconnect, // << CORREGIDO: Funciones de Auth importadas
     _DateNow, _MathFloor, _MathMin, 
 } from './config.js';
 import { 
@@ -12,8 +12,15 @@ import {
     resetGameState, recalculateStats, calculateMultiBuyCost, 
     handleManualClick, gameLoop, loadGameState, saveScore, loadLeaderboard,
     formatNumber, formatTime, initializeChat, triggerBan, checkBanStatus, buyUpgrade,
-    setCurrentSkin, setCoins, updateSkinsState, spendCoins 
+    setCurrentSkin, setCoins, updateSkinsState, spendCoins, sendChatMessage
 } from './game_logic.js';
+
+// Declarar toggleVoiceChat y initializeVoiceChat aquí
+// Se asegura que por defecto las funciones sean asíncronas para poder usar 'await' sin problemas.
+let toggleVoiceChat = async () => console.warn("La función de chat de voz no está disponible (no cargada).");
+let toggleMute = () => console.warn("toggleMute no se ha cargado.");
+let initializeVoiceChat = () => console.warn("initializeVoiceChat no se ha cargado.");
+
 
 // Objeto para almacenar referencias a elementos DOM, inicializado una vez.
 const DOM = {
@@ -51,7 +58,7 @@ const DOM = {
     leaderboardStatus: document.getElementById('leaderboard-status'),
     myLiveScoreSpan: document.getElementById('my-live-score-span'),
     myLiveScoreBox: document.getElementById('leaderboard-my-score'),
-    authSection: document.getElementById('auth-section'),
+    authSection: document.getElementById('auth-section'), // Este es el <form> ahora
     scoreSection: document.getElementById('score-section'),
     usernameInput: document.getElementById('username-input'),
     passwordInput: document.getElementById('password-input'),
@@ -78,6 +85,16 @@ const DOM = {
     chatSendBtn: document.getElementById('chat-send-btn'),
     toastContainer: document.getElementById('toast-container'),
 
+    // Voice Chat Elements (ACTUALIZADOS)
+    voiceStatus: document.getElementById('voice-status'),
+    joinVoiceChatBtn: document.getElementById('join-voice-chat-btn'), // Nuevo ID
+    muteMicBtn: document.getElementById('mute-mic-btn'),              // Nuevo ID
+    micOnIcon: document.getElementById('mic-on-icon'),
+    micOffIcon: document.getElementById('mic-off-icon'),
+    voiceUsersStatus: document.getElementById('voice-users-status'),
+    voiceUsersList: document.getElementById('voice-users-list'),
+    textChatSubtab: document.getElementById('text-chat-subtab'),
+    
     // Audio
     sfxBuy: document.getElementById('sfx-buy'),
     sfxNextLevel: document.getElementById('sfx-nextlevel'),
@@ -457,19 +474,42 @@ function showTab(tabId) {
     
     sfxSwitchTabs.currentTime = 0;
     sfxSwitchTabs.play().catch(e => {});
+
+    // Mostrar sub-pestaña por defecto (Texto) si es la pestaña de Chat
+    if (tabId === 'chat') {
+        showSubTab('text-chat-subtab');
+    }
 }
 
 function showSubTab(subTabId) {
-    const { subTabButtons, subTabContents, sfxSwitchTabs } = DOM;
+    const { subTabButtons, subTabContents, sfxSwitchTabs, textChatSubtab } = DOM;
+    
+    // Obtener los botones y contenidos específicos de la pestaña activa (Chat)
+    const activeSubButtons = document.querySelectorAll('#chat .sub-tab-btn');
+    const activeSubContents = document.querySelectorAll('#chat .sub-tab-content');
 
-    subTabButtons.forEach(btn => btn.classList.remove('active'));
-    subTabContents.forEach(content => content.classList.remove('active'));
+    activeSubButtons.forEach(btn => btn.classList.remove('active'));
+    activeSubContents.forEach(content => content.classList.remove('active'));
 
     const activeBtn = document.querySelector(`.sub-tab-btn[data-subtab="${subTabId}"]`);
     const activeContent = document.getElementById(subTabId);
 
     if (activeBtn) activeBtn.classList.add('active');
-    if (activeContent) activeContent.classList.add('active');
+    
+    if (activeContent) {
+        activeContent.classList.add('active');
+        
+        // REGLA CRÍTICA: Ocultar o mostrar el chat de texto si la subpestaña es voz.
+        if (subTabId === 'voice-chat-subtab') {
+            // Cuando la pestaña de Voz está activa, forzamos que la de texto esté oculta.
+            if (textChatSubtab) {
+                textChatSubtab.style.display = 'none';
+            }
+            activeContent.style.display = 'flex'; // Usar flex para la estructura de voz
+        } else if (subTabId === 'text-chat-subtab') {
+            activeContent.style.display = 'flex'; // Asegurar que el contenido de texto use flex para su layout
+        }
+    }
     
     sfxSwitchTabs.currentTime = 0;
     sfxSwitchTabs.play().catch(e => {});
@@ -479,7 +519,7 @@ function showSubTab(subTabId) {
 // --- FIREBASE AUTHENTICATION Y PRESENCIA ---
 
 async function initializeFirebase() {
-    const { authSection, scoreSection, loggedInAs, chatInput, chatSendBtn } = DOM;
+    const { authSection, scoreSection, loggedInAs, chatInput, chatSendBtn, joinVoiceChatBtn, muteMicBtn, voiceStatus } = DOM;
     
     onAuthStateChanged(auth, async (user) => {
         
@@ -502,6 +542,13 @@ async function initializeFirebase() {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
             chatInput.placeholder = "Escribe un mensaje...";
+
+            // --- INICIO: CORRECCIÓN DEL CHAT DE VOZ ---
+            // El usuario está logueado. Actualizar el estado de voz a "listo para unirse".
+            joinVoiceChatBtn.disabled = false; 
+            muteMicBtn.disabled = true; // Sigue deshabilitado HASTA que se una
+            voiceStatus.textContent = "Desconectado. Pulsa 'Unirse' para entrar al chat.";
+            // --- FIN: CORRECCIÓN DEL CHAT DE VOZ ---
 
             // Presencia Online
             const presenceRef = ref(db, `presence/${uid}`);
@@ -528,6 +575,11 @@ async function initializeFirebase() {
             chatInput.disabled = true;
             chatSendBtn.disabled = true;
             chatInput.placeholder = "Inicia sesión para chatear...";
+
+            // Deshabilitar Chat de Voz (Esta parte era correcta)
+            joinVoiceChatBtn.disabled = true;
+            muteMicBtn.disabled = true;
+            voiceStatus.textContent = "Desconectado. Necesitas iniciar sesión para unirte.";
 
             resetGameState(false);
             setIsGameLoaded(true); // Modificar isGameLoaded
@@ -611,6 +663,7 @@ function handleRegister() {
     authStatus.textContent = "Registrando...";
     authStatus.className = '';
 
+    // Uso de la función importada directamente
     createUserWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
             authStatus.textContent = "¡Registrado con éxito!";
@@ -641,6 +694,7 @@ function handleLogin() {
     authStatus.textContent = "Iniciando sesión...";
     authStatus.className = '';
 
+    // Uso de la función importada directamente
     signInWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
             authStatus.textContent = "¡Bienvenido de vuelta!";
@@ -666,11 +720,18 @@ async function handleLogout() {
         await set(presenceRef, null);
     }
     
+    // Desconectar chat de voz antes de salir
+    if (toggleVoiceChat) {
+         // Llama a la función para forzar la desconexión si está activo. Ya es una función async.
+        await toggleVoiceChat(true); 
+    }
+    
     if (DOM.autoSaveInterval) clearInterval(DOM.autoSaveInterval);
     if (bgmMusic) bgmMusic.pause(); 
     
     setIsGameLoaded(false); // Modificar isGameLoaded
     
+    // Uso de la función importada directamente
     signOut(auth).catch((error) => {
         console.error("Error al cerrar sesión:", error);
     });
@@ -679,7 +740,7 @@ async function handleLogout() {
 // --- INICIALIZACIÓN DE EVENTOS ---
 
 function initializeEventListeners() {
-    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid } = DOM;
+    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput, joinVoiceChatBtn, muteMicBtn } = DOM;
 
     clickButton.addEventListener('mousedown', handleManualClick);
     
@@ -720,6 +781,7 @@ function initializeEventListeners() {
     mobileTabButtons.forEach(button => {
         button.addEventListener('click', () => showTab(button.dataset.tab));
     });
+    // Listeners de Sub-Navegación (Chat)
     subTabButtons.forEach(button => {
         button.addEventListener('click', () => showSubTab(button.dataset.subtab));
     });
@@ -729,6 +791,15 @@ function initializeEventListeners() {
     loginBtn.addEventListener('click', handleLogin);
     logoutBtn.addEventListener('click', handleLogout);
     saveScoreBtn.addEventListener('click', () => saveScore(true));
+
+    // Listeners de Chat
+    chatSendBtn.addEventListener('click', sendChatMessage);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !chatSendBtn.disabled) {
+            sendChatMessage();
+        }
+    });
+
 
     // Listeners de Modales
     modalBtnLater.addEventListener('click', hideLoginModal);
@@ -787,6 +858,16 @@ function initializeEventListeners() {
         DOM.isMusicPlaying.value = !DOM.isMusicPlaying.value;
     });
 
+    // Listener de Chat de Voz
+    joinVoiceChatBtn.addEventListener('click', () => {
+        // Llama a toggleVoiceChat sin forzar la desconexión
+        toggleVoiceChat(false); 
+    });
+    
+    // Listener de Mutear/Desmutear
+    muteMicBtn.addEventListener('click', toggleMute);
+
+
     // Guardado de estado al cerrar la ventana
     window.onbeforeunload = () => {
         const currentUserId = getUserId(); // Usar getter
@@ -800,11 +881,33 @@ function initializeEventListeners() {
 
 async function loadGameConfigAndStart() {
     try {
+        // --- INICIO DE CORRECCIÓN ---
+        // Cargar el módulo de chat de voz ANTES de inicializar los listeners,
+        // para que la función 'toggleVoiceChat' y 'toggleMute' estén disponibles.
+        try {
+            const voiceChatModule = await import('./voicechat.js');
+            // Reasignar las funciones exportadas
+            toggleVoiceChat = voiceChatModule.toggleVoiceChat;
+            toggleMute = voiceChatModule.toggleMute;
+            initializeVoiceChat = voiceChatModule.initializeVoiceChat;
+        } catch (e) {
+            console.warn("No se pudo cargar el módulo voicechat.js", e);
+            // Si falla la carga, mantenemos las funciones predeterminadas asíncronas para evitar errores de promesa.
+        }
+        // --- FIN DE CORRECCIÓN ---
+
+
         // Inicializar elementos DOM y audios antes de cualquier llamada a Firebase o juego
         initializeEventListeners(); 
         initializeSkins(); 
 
         await initializeFirebase(); 
+        
+        // CORRECCIÓN CLAVE: Inicializar el chat de voz aquí, después de que el módulo esté cargado
+        // y después de que Firebase haya completado el chequeo inicial de autenticación.
+        // Esto evita el race condition y los warnings de "no cargado".
+        if (initializeVoiceChat) initializeVoiceChat();
+
 
         // Iniciar bucles de juego y UI
         setInterval(gameLoop, 100);

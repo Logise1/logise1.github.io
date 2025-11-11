@@ -289,7 +289,11 @@
             display: none;
         }
         .sub-tab-content.active {
-            display: block;
+            /* === CRÍTICO: Esto asegura que el sub-contenido de texto se muestre en columna === */
+            display: flex; 
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
         }
 
         .store-item {
@@ -588,6 +592,7 @@
         }
         .leaderboard-actions button:hover { background-color: #0069d9; }
 
+        /* --- CORRECCIÓN: Aplicar estilos flex al formulario --- */
         #auth-section, #score-section {
             display: flex;
             flex-direction: column;
@@ -877,13 +882,6 @@
             border: 2px solid #eef2f1;
         }
 
-        .skin-name {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #333;
-            text-align: center;
-        }
-
         .skin-selected {
             border: 2px solid #007bff;
             background-color: #f0f8ff;
@@ -951,6 +949,90 @@
         .mobile-tab-bar {
             display: none;
         }
+        
+        /* === NUEVOS ESTILOS PARA CHAT DE VOZ === */
+        #voice-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        
+        #join-voice-chat-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            flex-grow: 1;
+        }
+        
+        #mute-mic-btn {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 10px;
+            border-radius: 8px;
+            width: 50px;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        #mute-mic-btn.active {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        #voice-users-list-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #eef2f1;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        #voice-users-list li {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        #voice-users-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .voice-user-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+            transition: background-color 0.3s ease;
+        }
+        
+        .voice-user-status.mic-on {
+            background-color: #28a745; /* Verde: Hablando */
+        }
+        
+        .voice-user-status.mic-muted {
+            background-color: #ffc107; /* Amarillo: Muteado */
+        }
+        
+        .voice-user-status.self-muted {
+             background-color: #dc3545; /* Rojo: Muteado por el mismo */
+        }
+        
+        .voice-user-name {
+            flex-grow: 1;
+        }
+        /* === FIN NUEVOS ESTILOS === */
+
 
         @media (max-width: 768px) {
             body {
@@ -1172,13 +1254,52 @@
 
             <!-- === INICIO: Contenido del Chat === -->
             <div id="chat" class="tab-content no-scrollbar">
-                <div id="chat-messages-container" class="no-scrollbar">
-                    <!-- Los mensajes del chat se añadirán aquí -->
+                
+                <div class="sub-tab-buttons">
+                    <button class="sub-tab-btn active" data-subtab="text-chat-subtab">Texto</button>
+                    <button class="sub-tab-btn" data-subtab="voice-chat-subtab">Voz</button>
                 </div>
-                <div id="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
-                    <button id="chat-send-btn" disabled>Enviar</button>
+
+                <div id="text-chat-subtab" class="sub-tab-content active" style="padding: 0;">
+                    <div id="chat-messages-container" class="no-scrollbar">
+                        <!-- Los mensajes del chat de texto se añadirán aquí -->
+                    </div>
+                    <div id="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
+                        <button id="chat-send-btn" disabled>Enviar</button>
+                    </div>
                 </div>
+                
+                <!-- === MODIFICACIÓN DE CHAT DE VOZ === -->
+                <div id="voice-chat-subtab" class="sub-tab-content" style="padding: 20px 0 0 0; text-align: center; flex-direction: column; flex-grow: 1; box-sizing: border-box;">
+                    
+                    <h2 style="margin-top: 0;">Chat de Voz</h2>
+                    
+                    <p id="voice-status" style="margin-bottom: 20px;">Desconectado. Necesitas iniciar sesión para unirte.</p>
+                    
+                    <div id="voice-controls" style="padding: 0 15px;">
+                        <button id="join-voice-chat-btn" disabled style="transition: all 0.2s ease;">
+                            Unirse
+                        </button>
+                        
+                        <!-- === INICIO: CAMBIO A EMOJIS === -->
+                        <button id="mute-mic-btn" disabled>
+                            <span id="mic-on-icon" style="display: block; font-size: 1.2rem;">🎤</span>
+                            <span id="mic-off-icon" style="display: none; font-size: 1.2rem;">🔇</span>
+                        </button>
+                        <!-- === FIN: CAMBIO A EMOJIS === -->
+                    </div>
+
+                    <div id="voice-users-list-container" style="margin-top: 15px; padding: 15px 15px 15px 15px;">
+                        <p id="voice-users-status" style="margin: 0; color: #777;">Usuarios conectados: 0</p>
+                        <ul id="voice-users-list" class="no-scrollbar" style="list-style: none; padding: 0; margin-top: 10px;">
+                            <!-- La lista de usuarios de voz se insertará aquí -->
+                        </ul>
+                    </div>
+
+                </div>
+                <!-- === FIN MODIFICACIÓN DE CHAT DE VOZ === -->
+
             </div>
             <!-- === FIN: Contenido del Chat === -->
 
@@ -1201,15 +1322,18 @@
                     </div>
 
                     <div class="leaderboard-actions">
-                        <div id="auth-section">
-                            <input type="text" id="username-input" placeholder="Tu nombre de usuario..." maxlength="20">
-                            <input type="password" id="password-input" placeholder="Contraseña...">
+                        <!-- --- INICIO CORRECCIÓN: div por form --- -->
+                        <form id="auth-section">
+                            <input type="text" id="username-input" placeholder="Tu nombre de usuario..." maxlength="20" autocomplete="username">
+                            <input type="password" id="password-input" placeholder="Contraseña..." autocomplete="current-password">
                             <div class="auth-buttons">
-                                <button id="login-btn">Iniciar Sesión</button>
-                                <button id="register-btn">Registrarse</button>
+                                <button id="login-btn" type="button">Iniciar Sesión</button>
+                                <button id="register-btn" type="button">Registrarse</button>
                             </div>
                             <p id="auth-status"></p>
-                        </div>
+                        </form>
+                        <!-- --- FIN CORRECCIÓN --- -->
+                        
                         <div id="score-section" style="display: none;">
                             <p id="logged-in-as">Logueado como: </p>
                             <button id="save-score-btn">Guardar</button>
@@ -1279,5 +1403,7 @@
     <script type="module" src="./config.js"></script>
     <script type="module" src="./game_logic.js"></script>
     <script type="module" src="./ui_handlers.js"></script>
+    <!-- voicechat.js se carga ahora desde ui_handlers.js -->
+    <!-- <script type="module" src="./voicechat.js"></script> -->
 </body>
 </html>
