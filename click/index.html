@@ -1141,9 +1141,8 @@
         auth = getAuth(app);
         db = getDatabase(app);
 
-        // --- INICIO DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
-        // (upgrades.json ya no se usa, usamos este array)
-        const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"]; // Necesario para 'fruit_variety'
+        // --- INICIO: REBALANCEO v3 ---
+        const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
         const upgradesConfig = [
             // Clics (Producción)
             { id: 'click_1', name: 'Dedos Ágiles', emoji: '👆', description: '+2 por clic', initialCost: 14, costMultiplier: 1.08, type: 'clickValue', value: 2 },
@@ -1159,18 +1158,21 @@
             { id: 'click_11', name: 'Zetta Clic', emoji: '👽', description: '+15M por clic', initialCost: 1e9, costMultiplier: 1.60, type: 'clickValue', value: 1.5e7 },
             { id: 'click_12', name: 'Yotta Clic', emoji: '🤖', description: '+75M por clic', initialCost: 5e9, costMultiplier: 1.65, type: 'clickValue', value: 7.5e7 },
             { id: 'click_13', name: 'Clic Infinito', emoji: '♾️', description: '+350M por clic', initialCost: 2e10, costMultiplier: 1.70, type: 'clickValue', value: 3.5e8 },
-            // --- NUEVAS MEJORAS DE CLIC ---
             { id: 'click_14', name: 'Clic Cósmico', emoji: '💫', description: '+1.5B por clic', initialCost: 1e12, costMultiplier: 1.70, type: 'clickValue', value: 1.5e9 },
             { id: 'click_15', name: 'Pulso Galáctico', emoji: '🌠', description: '+7B por clic', initialCost: 8e12, costMultiplier: 1.72, type: 'clickValue', value: 7e9 },
             { id: 'click_16', name: 'Toque Universal', emoji: '🪐', description: '+30B por clic', initialCost: 5e13, costMultiplier: 1.74, type: 'clickValue', value: 3e10 },
             { id: 'click_17', name: 'Fuerza Primordial', emoji: '🔥', description: '+150B por clic', initialCost: 4e14, costMultiplier: 1.76, type: 'clickValue', value: 1.5e11 },
             { id: 'click_18', name: 'Decreto Divino', emoji: '📜', description: '+700B por clic', initialCost: 3e15, costMultiplier: 1.78, type: 'clickValue', value: 7e11 },
             { id: 'click_19', name: 'Clic Metafísico', emoji: '🧠', description: '+3T por clic', initialCost: 2e16, costMultiplier: 1.80, type: 'clickValue', value: 3e12 },
-            { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+15T por clic', initialCost: 1.5e18, costMultiplier: 1.82, type: 'clickValue', value: 1.5e13 },
-            { id: 'click_21', name: 'Vórtice de Ideas', emoji: '🌀', description: '+80T por clic', initialCost: 1e20, costMultiplier: 1.84, type: 'clickValue', value: 8e13 },
-            { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+500T por clic', initialCost: 9e21, costMultiplier: 1.86, type: 'clickValue', value: 5e14 }, // Costo: 9 Sextillones
-            { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+3Qa por clic', initialCost: 7e23, costMultiplier: 1.88, type: 'clickValue', value: 3e15 },
-            { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+20Qa por clic', initialCost: 5e25, costMultiplier: 1.90, type: 'clickValue', value: 2e16 }, // Costo: 50 Septillones
+            // --- REBALANCEO v3 ---
+            { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+12T por clic', initialCost: 1.5e17, costMultiplier: 1.82, type: 'clickValue', value: 1.2e13 }, // Costo: 150 Cuadrillones
+            { id: 'click_21', name: 'Vórtice de Ideas', emoji: '🌀', description: '+45T por clic', initialCost: 1.8e18, costMultiplier: 1.84, type: 'clickValue', value: 4.5e13 }, // Costo: 1.8 Quintillones
+            { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+180T por clic', initialCost: 2e19, costMultiplier: 1.86, type: 'clickValue', value: 1.8e14 }, // Costo: 20 Quintillones
+            { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+700T por clic', initialCost: 2.2e20, costMultiplier: 1.88, type: 'clickValue', value: 7e14 }, // Costo: 220 Quintillones
+            { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+2.8Qa por clic', initialCost: 2.5e21, costMultiplier: 1.90, type: 'clickValue', value: 2.8e15 }, // Costo: 2.5 Sextillones
+            // --- NUEVAS MEJORAS ---
+            { id: 'click_25', name: 'Clic de Dios', emoji: '🙏', description: '+11Qa por clic', initialCost: 3e22, costMultiplier: 1.91, type: 'clickValue', value: 1.1e16 }, // Costo: 30 Sextillones
+            { id: 'click_26', name: 'El Fin', emoji: '🔚', description: '+40Qa por clic', initialCost: 3.5e23, costMultiplier: 1.92, type: 'clickValue', value: 4e16 }, // Costo: 350 Sextillones
 
             // Auto (Producción)
             { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
@@ -1186,18 +1188,21 @@
             { id: 'auto_11', name: 'Generador Singularidad', emoji: '👾', description: '+15M pps', initialCost: 7e9, costMultiplier: 1.65, type: 'autoClickValue', value: 1.5e7 },
             { id: 'auto_12', name: 'Agujero Negro Puntos', emoji: '🕳️', description: '+70M pps', initialCost: 4e10, costMultiplier: 1.70, type: 'autoClickValue', value: 7e7 },
             { id: 'auto_13', name: 'Realidad Alternativa', emoji: '❓', description: '+300M pps', initialCost: 2e11, costMultiplier: 1.75, type: 'autoClickValue', value: 3e8 },
-            // --- NUEVAS MEJORAS DE AUTO ---
             { id: 'auto_14', name: 'Extractor del Vacío', emoji: '🔭', description: '+1.2B pps', initialCost: 1.2e12, costMultiplier: 1.75, type: 'autoClickValue', value: 1.2e9 },
             { id: 'auto_15', name: 'Nebulosa de Puntos', emoji: '✨', description: '+6B pps', initialCost: 9e12, costMultiplier: 1.77, type: 'autoClickValue', value: 6e9 },
             { id: 'auto_16', name: 'Conciencia Cósmica', emoji: '👁️', description: '+25B pps', initialCost: 6e13, costMultiplier: 1.79, type: 'autoClickValue', value: 2.5e10 },
             { id: 'auto_17', name: 'Motor de Realidad', emoji: '⚙️', description: '+120B pps', initialCost: 5e14, costMultiplier: 1.81, type: 'autoClickValue', value: 1.2e11 },
             { id: 'auto_18', name: 'Omnipresencia', emoji: '🌌', description: '+550B pps', initialCost: 4e15, costMultiplier: 1.83, type: 'autoClickValue', value: 5.5e11 },
             { id: 'auto_19', name: 'Fuente Infinita', emoji: '⛲', description: '+2.5T pps', initialCost: 3e16, costMultiplier: 1.85, type: 'autoClickValue', value: 2.5e12 },
-            { id: 'auto_20', name: 'Fin del Tiempo', emoji: '⌛', description: '+12T pps', initialCost: 2e18, costMultiplier: 1.87, type: 'autoClickValue', value: 1.2e13 },
-            { id: 'auto_21', name: 'Fábrica de ADN', emoji: '🧬', description: '+70T pps', initialCost: 1.5e20, costMultiplier: 1.89, type: 'autoClickValue', value: 7e13 },
-            { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+400T pps', initialCost: 1.1e22, costMultiplier: 1.91, type: 'autoClickValue', value: 4e14 }, // Costo: 11 Sextillones
-            { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+2.2Qa pps', initialCost: 8e23, costMultiplier: 1.93, type: 'autoClickValue', value: 2.2e15 },
-            { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+15Qa pps', initialCost: 6e25, costMultiplier: 1.95, type: 'autoClickValue', value: 1.5e16 }, // Costo: 60 Septillones
+            // --- REBALANCEO v3 ---
+            { id: 'auto_20', name: 'Fin del Tiempo', emoji: '⌛', description: '+10T pps', initialCost: 2.5e17, costMultiplier: 1.87, type: 'autoClickValue', value: 1e13 }, // Costo: 250 Cuadrillones
+            { id: 'auto_21', name: 'Fábrica de ADN', emoji: '🧬', description: '+40T pps', initialCost: 2.8e18, costMultiplier: 1.89, type: 'autoClickValue', value: 4e13 }, // Costo: 2.8 Quintillones
+            { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+160T pps', initialCost: 3e19, costMultiplier: 1.91, type: 'autoClickValue', value: 1.6e14 }, // Costo: 30 Quintillones
+            { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+650T pps', initialCost: 3.3e20, costMultiplier: 1.93, type: 'autoClickValue', value: 6.5e14 }, // Costo: 330 Quintillones
+            { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+2.6Qa pps', initialCost: 3.6e21, costMultiplier: 1.95, type: 'autoClickValue', value: 2.6e15 }, // Costo: 3.6 Sextillones
+            // --- NUEVAS MEJORAS ---
+            { id: 'auto_25', name: 'Motor Infinito', emoji: '♾️', description: '+10Qa pps', initialCost: 4e22, costMultiplier: 1.96, type: 'autoClickValue', value: 1e16 }, // Costo: 40 Sextillones
+            { id: 'auto_26', name: 'El Creador', emoji: '✨', description: '+40Qa pps', initialCost: 4.5e23, costMultiplier: 1.97, type: 'autoClickValue', value: 4e16 }, // Costo: 450 Sextillones
 
             // Multiplicadores de Clic
             { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },
@@ -1207,9 +1212,9 @@
             { id: 'click_mult_5', name: 'Singularidad', emoji: '⚫', description: 'Clics x3', initialCost: 1000000000, costMultiplier: 4.0, type: 'clickMultiplier', value: 3.0, maxLevel: 1 },
             { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
             { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
-            // --- NUEVOS MULTIPLICADORES DE CLIC ---
-            { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e22, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 50 Sextillones
-            { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 1e26, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 100 Septillones
+            // --- REBALANCEO v3 ---
+            { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e21, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 5 Sextillones
+            { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 8e23, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 800 Sextillones
 
             // Multiplicadores de Auto
             { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
@@ -1219,9 +1224,9 @@
             { id: 'auto_mult_5', name: 'Eco Temporal', emoji: '💫', description: 'PPS x3', initialCost: 2000000000, costMultiplier: 4.0, type: 'autoMultiplier', value: 3.0, maxLevel: 1 },
             { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
             { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
-            // --- NUEVOS MULTIPLICADORES DE AUTO ---
-            { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 8e22, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 80 Sextillones
-            { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 2e26, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 200 Septillones
+            // --- REBALANCEO v3 ---
+            { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 6e21, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 6 Sextillones
+            { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 9e23, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 900 Sextillones
 
             // Sinergias (Especiales) - NERFEADAS
             { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+0.1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.001, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
@@ -1237,7 +1242,7 @@
             // Otros (Especiales)
             { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
         ];
-        // --- FIN DE LA NUEVA CONFIGURACIÓN DE DISEÑO ---
+        // --- FIN: REBALANCEO v3 ---
 
         let UPGRADES_CONFIG = upgradesConfig; // Asignación global
         let upgradeLevels = {}; // NUEVO: Estado de niveles de mejoras
@@ -1268,8 +1273,6 @@
         let score = 0;
         let clickPower = 1;
         let pps = 0;
-        // REFACTOR: gameState ya no es necesario, se usa 'upgradeLevels'
-        // const gameState = { upgrades: {} }; 
 
         let level = 1;
         let xp = 0;
@@ -1313,7 +1316,7 @@
         const _MathSin = Math.sin;
         const _MathCos = Math.cos;
         
-        // --- INICIO: CORRECCIÓN - Definición de plantillas de fondo ---
+        // --- INICIO: Definición de plantillas de fondo ---
         const bgPatternTemplates = [
             // Patrón 1: Puntos
             (color) => {
@@ -1349,7 +1352,7 @@
                 return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
             }
         ];
-        // --- FIN: CORRECCIÓN ---
+        // --- FIN: Definición de plantillas de fondo ---
         
         // --- INICIO: Variables de Sonido ---
         let isMusicPlaying = false;
@@ -1359,14 +1362,17 @@
         function formatNumber(num) {
             num = _MathFloor(num);
             if (num < 1000) return num.toString();
-            if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y';
-            if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z';
-            if (num >= 1e18) return (num / 1e18).toFixed(num % 1e18 === 0 ? 0 : 2).replace(/\./g, ',') + 'E';
-            if (num >= 1e15) return (num / 1e15).toFixed(num % 1e15 === 0 ? 0 : 2).replace(/\./g, ',') + 'P';
-            if (num >= 1e12) return (num / 1e12).toFixed(num % 1e12 === 0 ? 0 : 2).replace(/\./g, ',') + 'T';
-            if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B';
-            if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M';
-            if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K';
+            // --- CORREGIDO: Lógica de formateo extendida ---
+            if (num >= 1e27) return (num / 1e27).toFixed(num % 1e27 === 0 ? 0 : 2).replace(/\./g, ',') + 'O'; // Octillion
+            if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y'; // Yottillion
+            if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z'; // Zettillion
+            if (num >= 1e18) return (num / 1e18).toFixed(num % 1e18 === 0 ? 0 : 2).replace(/\./g, ',') + 'E'; // Exillion
+            if (num >= 1e15) return (num / 1e15).toFixed(num % 1e15 === 0 ? 0 : 2).replace(/\./g, ',') + 'P'; // Petillion
+            if (num >= 1e12) return (num / 1e12).toFixed(num % 1e12 === 0 ? 0 : 2).replace(/\./g, ',') + 'T'; // Trillion
+            if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B'; // Billion
+            if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M'; // Million
+            if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K'; // Thousand
+            // --- FIN: CORREGIDO ---
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
         
@@ -1392,15 +1398,13 @@
             // Reinicia el sonido y lo reproduce.
             audioElement.currentTime = 0;
             audioElement.play().catch(e => {
-                // El error más común es la interrupción por otro play(), lo cual es normal.
                 // No es necesario loguear cada vez.
-                // console.log("Error de reproducción de SFX:", e);
             });
         }
         // --- Fin Función para reproducir Sonido ---
 
 
-        // REFACTOR: Inicializa el estado con la nueva config
+        // Inicializa el estado con la nueva config
         function resetGameState(isLoggedIn = false) {
             score = 0;
             totalScore = 0;
@@ -1416,7 +1420,7 @@
             _cIntvls = [];
             _clkTmstmps = [];
 
-            // REFACTOR: Inicializa upgradeLevels
+            // Inicializa upgradeLevels desde la config
             upgradeLevels = {};
             UPGRADES_CONFIG.forEach(upgrade => {
                 upgradeLevels[upgrade.id] = {
@@ -1431,8 +1435,6 @@
             recalculateLevelStats(); // Esto aplica el fondo inicial
             
             if (!isLoggedIn) {
-                // Si no estamos logueados, el juego está "cargado" por defecto
-                // (no hay nada que esperar de la DB).
                 isGameLoaded = true; 
             }
             
@@ -1447,7 +1449,6 @@
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
         
-        // REFACTOR: Contenedores de tienda actualizados
         const storeCpcContainer = document.getElementById('store-items-cpc-container');
         const storePpsContainer = document.getElementById('store-items-pps-container');
         const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
@@ -1526,19 +1527,17 @@
             }
             // --- FIN: Lógica Anti-Cheat ---
 
-            // REFACTOR: El clickPower base (calculado) se multiplica por el nivel
             const baseGain = clickPower;
             const earnedScore = baseGain * levelMultiplier;
 
             score += earnedScore;
-            gainXP(earnedScore); // <-- CORREGIDO (usa la puntuación final)
+            gainXP(earnedScore); 
 
             coins += 1;
             updateCoinsDisplay();
 
-            // REFACTOR: Pasa el evento al visual
             showClickVisual(event, earnedScore);
-            createClickParticles(event); // NUEVO: Partículas
+            createClickParticles(event);
             updateUI();
 
             totalClicks++;
@@ -1550,13 +1549,13 @@
 
         function gainXP(amount) {
             xp += amount;
-            totalScore += amount; // <-- CORREGIDO (usa la misma cantidad que 'score')
+            totalScore += amount; 
 
             while (xp >= xpToNextLevel) {
                 xp -= xpToNextLevel;
                 level++;
-                recalculateLevelStats(); // ¡Se llama aquí!
-                playSound(sfxNextLevel); // --- SFX ---
+                recalculateLevelStats();
+                playSound(sfxNextLevel);
             }
         }
 
@@ -1564,24 +1563,14 @@
             xpToNextLevel = 100 * _MathPow(5, level - 1);
             levelMultiplier = 1 + (level - 1) * 0.05;
             
-            // --- NUEVO: Lógica de cambio de fondo ---
+            // --- Lógica de cambio de fondo ---
             try {
-                const hue = (level * 20) % 360; // Cambia el tinte basado en el nivel
-                
-                // --- INICIO: CORRECCIÓN ---
-                // Un color claro y pastel para el patrón (NO codificado)
+                const hue = (level * 20) % 360;
                 const patternColor = `hsl(${hue}, 100%, 85%)`;
-                
-                // Un color muy claro para el fondo (no necesita codificación)
                 const bgColor = `hsl(${hue}, 80%, 95%)`; 
-                
-                // Elige un patrón basado en el nivel, rotando
                 const patternIndex = (level - 1) % bgPatternTemplates.length;
-                // La función del template se encarga de codificar
                 const newPattern = bgPatternTemplates[patternIndex](patternColor);
-                // --- FIN: CORRECCIÓN ---
                 
-                // Aplica los nuevos estilos al body
                 document.body.style.backgroundColor = bgColor;
                 document.body.style.backgroundImage = newPattern;
             } catch (e) {
@@ -1593,24 +1582,14 @@
         function showClickVisual(event, amount) {
             const visual = document.createElement('div');
             
-            // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
-            // 1. Comprobar el nivel de la mejora 'fruit_variety'
             const fruitLevel = upgradeLevels['fruit_variety']?.level || 0;
-            
-            // 2. Crear la lista de frutas desbloqueadas (el nivel 0 da 1 fruta, nivel 1 da 2, etc.)
             const unlockedFruits = fruits.slice(0, fruitLevel + 1);
-            
-            // 3. Elegir una fruta al azar de esa lista
             const randomFruit = unlockedFruits[_MathFloor(_MathRandom() * unlockedFruits.length)];
             
-            // 4. Mostrar la fruta + la puntuación
             visual.textContent = `${randomFruit} +${formatNumber(amount)}`;
-            // --- FIN DE LA CORRECCIÓN ---
-            
             visual.classList.add('click-visual');
 
             const rect = clickerZone.getBoundingClientRect();
-            // REFACTOR: Usa pageX/pageY si está disponible (mejor para móvil), si no clientX/Y
             const clickX = (event.touches ? event.touches[0].pageX : event.pageX) - rect.left;
             const clickY = (event.touches ? event.touches[0].pageY : event.pageY) - rect.top;
 
@@ -1641,7 +1620,6 @@
 
                 particle.style.transform = `translate(${clickX}px, ${clickY}px) scale(0)`;
                 
-                // Animar con JS
                 let startTime = null;
                 function animateParticle(timestamp) {
                     if (!startTime) startTime = timestamp;
@@ -1678,33 +1656,32 @@
             
             ppsVisualElement.textContent = `+${formatNumber(amount)}`;
             ppsVisualElement.style.animation = 'none';
-            // Forzar reflow
             ppsVisualElement.offsetHeight; 
             ppsVisualElement.style.animation = 'float-up-pps 1.5s ease-out forwards';
 
             if (ppsVisualTimer) clearTimeout(ppsVisualTimer);
             ppsVisualTimer = setTimeout(() => {
                 if (ppsVisualElement) {
-                    ppsVisualElement.style.animation = 'none'; // Detener la animación al final
+                    ppsVisualElement.style.animation = 'none';
                 }
             }, 1500);
         }
         // --- FIN: Efectos Visuales (Engagement) ---
         
-        // --- NUEVO: Cálculo de coste x10 ---
+        // Cálculo de coste x10
         function calculateMultiBuyCost(config, startLevel, amount) {
             let totalCost = 0;
             let currentLevel = startLevel;
             for (let i = 0; i < amount; i++) {
                 if (config.maxLevel && (currentLevel + i) >= config.maxLevel) {
-                    break; // No se puede comprar más allá del nivel máximo
+                    break;
                 }
                 totalCost += _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel + i));
             }
             return totalCost;
         }
 
-        // REFACTOR: Lógica de compra con el nuevo sistema (y x10)
+        // Lógica de compra
         function buyUpgrade(key) {
             if (isBanned) return;
             
@@ -1717,11 +1694,10 @@
             const amountToBuy = isShiftPressed ? 10 : 1;
             let currentLevel = state.level;
             
-            // Ajustar cantidad si se excede el maxLevel
             let finalAmount = amountToBuy;
             if (config.maxLevel) {
                 const remainingLevels = config.maxLevel - currentLevel;
-                if (remainingLevels <= 0) return; // Ya está al máximo
+                if (remainingLevels <= 0) return;
                 finalAmount = _MathMin(amountToBuy, remainingLevels);
             }
             
@@ -1732,21 +1708,20 @@
             if (score >= totalCost) {
                 score -= totalCost;
                 state.level += finalAmount;
-                currentLevel = state.level; // Nivel actualizado
+                currentLevel = state.level;
                 
                 // Actualizar coste
                 if (config.maxLevel && currentLevel >= config.maxLevel) {
-                    state.cost = null; // Coste infinito si se alcanza el max
+                    state.cost = null; // Usar null en lugar de Infinity
                 } else {
                     state.cost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
                 }
                 
-                playSound(sfxBuy); // --- SFX ---
+                playSound(sfxBuy); 
 
                 recalculateStats();
                 updateUI();
                 
-                // Animación de compra
                 const itemEl = document.getElementById(`item-${key}`);
                 if (itemEl) {
                     itemEl.classList.add('purchased');
@@ -1755,16 +1730,13 @@
             }
         }
 
-        // REFACTOR: Lógica de recálculo completa (CON NERF DE LÓGICA)
+        // Lógica de recálculo
         function recalculateStats() {
             let newPPS = 0;
-            let newClickPower = 1; // El clic base siempre da 1
+            let newClickPower = 1;
             
-            // --- CAMBIO DE LÓGICA ---
-            // Los multiplicadores ahora son bonus aditivos (ej: +10%, +20%)
             let clickMultiplierBonus = 0;
             let autoMultiplierBonus = 0;
-            // --- FIN CAMBIO DE LÓGICA ---
 
             let synergyClickBonus = 0;
             let synergyAutoBonus = 0;
@@ -1810,32 +1782,23 @@
                     case 'autoClickValue':
                         newPPS += config.value * state.level;
                         break;
-                    
-                    // --- CAMBIO DE LÓGICA ---
-                    // Ya no se multiplican entre sí. Se suman como bonus.
-                    // Un multiplicador x2 (valor 2.0) es un bonus de +1.0 (100%)
                     case 'clickMultiplier':
                         clickMultiplierBonus += (config.value - 1) * state.level;
                         break;
                     case 'autoMultiplier':
                         autoMultiplierBonus += (config.value - 1) * state.level;
                         break;
-                    // --- FIN CAMBIO DE LÓGICA ---
                 }
             });
             
             // 3. Aplicar todos los multiplicadores
-            // Fórmula: (Base) * (1 + Bonus_Multiplicadores) * (1 + Bonus_Sinergias) * (1 + Bonus_Nivel) * Multiplicador_Nivel_Juego
-            
-            // Clics
             let finalClickPower = (newClickPower);
-            finalClickPower *= (1 + clickMultiplierBonus); // Se aplica el bonus aditivo
+            finalClickPower *= (1 + clickMultiplierBonus);
             finalClickPower *= (1 + synergyClickBonus);
             finalClickPower *= (1 + levelClickBonus);
             
-            // PPS
             let finalPPS = (newPPS);
-            finalPPS *= (1 + autoMultiplierBonus); // Se aplica el bonus aditivo
+            finalPPS *= (1 + autoMultiplierBonus);
             finalPPS *= (1 + synergyAutoBonus);
             finalPPS *= (1 + levelAutoBonus);
 
@@ -1848,15 +1811,14 @@
         function gameLoop() {
             if (isBanned) return;
             
-            // REFACTOR: El PPS base (calculado) se multiplica por el nivel
             const baseGain = pps;
-            const earnedScore = (baseGain * levelMultiplier) / 10; // Dividido en 10 para un loop de 100ms
+            const earnedScore = (baseGain * levelMultiplier) / 10;
 
             score += earnedScore;
 
             if (baseGain > 0) {
-                gainXP(earnedScore); // <-- CORREGIDO (usa la puntuación final)
-                showPpsVisual(earnedScore); // Mostrar el PPS visual
+                gainXP(earnedScore);
+                showPpsVisual(earnedScore);
             }
 
             updateUI();
@@ -1866,7 +1828,7 @@
             }
         }
 
-        // REFACTOR: Lógica de UI con el nuevo sistema (y x10)
+        // Lógica de UI
         function updateUI() {
             scoreDisplay.textContent = formatNumber(score);
             ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
@@ -1888,7 +1850,6 @@
                     const currentLevel = state.level;
                     const amountToBuy = isShiftPressed ? 10 : 1;
                     
-                    // Ajustar cantidad si se excede el maxLevel
                     let finalAmount = amountToBuy;
                     let isMaxed = false;
                     if (config.maxLevel) {
@@ -1922,16 +1883,24 @@
                         if (isShiftPressed && finalAmount > 0) {
                             buttonEl.textContent = `x${finalAmount} Costo: ${formatNumber(totalCost)}`;
                         } else {
-                            buttonEl.textContent = `Costo: ${formatNumber(totalCost)}`;
+                            // --- CORRECCIÓN: Mostrar coste incluso si no es shift ---
+                            buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
                         }
                         
                         const canAfford = score >= totalCost;
-                        buttonEl.disabled = !canAfford;
+                        // --- CORRECCIÓN: Comprobar coste de 1 unidad para 'affordable' ---
+                        const canAffordOne = score >= (state.cost || 0);
+                        buttonEl.disabled = !canAffordOne;
 
-                        if (canAfford) {
+                        if (canAffordOne) {
                             itemEl.classList.add('affordable');
                         } else {
                             itemEl.classList.remove('affordable');
+                        }
+                        
+                        // Si está en modo shift, comprobar ese coste
+                        if (isShiftPressed) {
+                             buttonEl.disabled = !canAfford;
                         }
                     }
                 }
@@ -1942,7 +1911,7 @@
             coinsDisplay.textContent = formatNumber(coins);
         }
 
-        // REFACTOR: Lógica de tienda con el nuevo sistema
+        // Lógica de tienda
         function initializeStore() {
             // Limpiar contenedores
             storeCpcContainer.innerHTML = '<h3>Mejoras de Clic</h3>';
@@ -1959,7 +1928,7 @@
 
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('store-item');
-                itemDiv.id = `item-${config.id}`; // ID para el div principal
+                itemDiv.id = `item-${config.id}`;
 
                 const infoDiv = document.createElement('div');
                 infoDiv.classList.add('item-info');
@@ -2116,11 +2085,11 @@
             });
         }
 
-        // REFACTOR: Control de carga y auto-guardado
+        // Control de carga y auto-guardado
         async function initializeFirebase() {
             onAuthStateChanged(auth, async (user) => {
                 
-                isGameLoaded = false; // Bloquear guardado
+                isGameLoaded = false;
                 if (autoSaveInterval) clearInterval(autoSaveInterval);
                 
                 if (user) {
@@ -2135,10 +2104,9 @@
                     set(presenceRef, true);
                     onDisconnect(presenceRef).remove();
 
-                    await loadGameState(); // Esperar a que cargue
+                    await loadGameState(); 
                     
-                    // Iniciar auto-guardado SÓLO DESPUÉS de cargar
-                    console.log("Datos del jugador cargados. Guardado automático activado.");
+                    console.log("Datos del jugador cargados y migrados. Guardado automático activado.");
                     autoSaveInterval = setInterval(() => saveScore(false), 15000);
 
                 } else {
@@ -2149,7 +2117,7 @@
                     scoreSection.style.display = 'none';
                     loggedInAs.textContent = '';
 
-                    resetGameState(false); // Reinicia el juego (isGameLoaded = true)
+                    resetGameState(false);
                 }
             });
 
@@ -2162,7 +2130,7 @@
             });
         }
 
-        // REFACTOR: Carga de estado con el nuevo sistema y barrera de seguridad
+        // --- INICIO: LÓGICA DE MIGRACIÓN ---
         async function loadGameState() {
             if (!userId) {
                 resetGameState(false);
@@ -2188,27 +2156,28 @@
                     currentSkin = savedState.currentSkin || 'default';
                     banExpiresAt = savedState.banExpiresAt || 0;
 
-                    // REFACTOR: Cargar upgradeLevels
-                    if (savedState.upgradeLevels) {
-                        upgradeLevels = savedState.upgradeLevels;
-                        // Asegurarse de que cualquier nueva mejora en config tenga una entrada
-                        UPGRADES_CONFIG.forEach(config => {
-                            if (!upgradeLevels[config.id]) {
-                                upgradeLevels[config.id] = {
-                                    level: 0,
-                                    cost: config.initialCost
-                                };
-                            }
-                        });
-                    } else {
-                        // Si no hay estado guardado de upgrades, inicializarlo
-                        UPGRADES_CONFIG.forEach(config => {
-                            upgradeLevels[config.id] = {
-                                level: 0,
-                                cost: config.initialCost
-                            };
-                        });
-                    }
+                    // --- INICIO: LÓGICA DE MIGRACIÓN DE MEJORAS ---
+                    const savedLevels = savedState.upgradeLevels || {};
+                    upgradeLevels = {}; // Empezar de cero
+
+                    UPGRADES_CONFIG.forEach(config => {
+                        const savedUpgrade = savedLevels[config.id];
+                        const currentLevel = savedUpgrade ? savedUpgrade.level : 0;
+                        let currentCost;
+
+                        // Recalcular el costo basado en la config actual
+                        if (config.maxLevel && currentLevel >= config.maxLevel) {
+                            currentCost = null; // Nivel máximo alcanzado
+                        } else {
+                            currentCost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
+                        }
+
+                        upgradeLevels[config.id] = {
+                            level: currentLevel,
+                            cost: currentCost
+                        };
+                    });
+                    // --- FIN: LÓGICA DE MIGRACIÓN DE MEJORAS ---
 
                     if (savedState.skins) {
                         skinsState = savedState.skins;
@@ -2224,30 +2193,30 @@
                     const maxOfflineTimeInSeconds = 10 * 60 * 60; // 10 horas
                     const effectiveOfflineTime = _MathMin(timeOfflineInSeconds, maxOfflineTimeInSeconds);
 
-                    if (effectiveOfflineTime > 60) { // Solo mostrar si estuvo offline > 1 min
-                        const offlinePPS = pps * 0.05; // 5% de PPS
+                    if (effectiveOfflineTime > 60) {
+                        const offlinePPS = pps * 0.05;
                         const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
                         
                         score += earnedOfflineScore;
-                        totalScore += earnedOfflineScore; // totalScore también debe sumar ganancia offline
+                        totalScore += earnedOfflineScore;
                         
                         showOfflineEarningsModal(earnedOfflineScore, effectiveOfflineTime);
                     }
 
                 } else {
                     console.log("No saved state found. Starting fresh.");
-                    resetGameState(true); // Reinicia, pero marcando que está logueado
+                    resetGameState(true);
                 }
             } catch (error) {
                 console.error("Error loading game state:", error);
-                resetGameState(true); // Reinicia si hay error, marcando que está logueado
+                resetGameState(true);
             } finally {
-                // --- BARRERA DE SEGURIDAD ---
-                // No importa si la carga fue exitosa o falló,
-                // ahora permitimos que el juego guarde (para no bloquear nuevos usuarios).
                 isGameLoaded = true;
-                // --- FIN BARRERA ---
             }
+            
+            // --- IMPORTANTE: Actualizar la tienda DESPUÉS de la migración ---
+            initializeStore(); 
+            // --- FIN ---
 
             updateUI();
             updateClickButtonSkin();
@@ -2255,6 +2224,7 @@
             updateCoinsDisplay();
             checkBanStatus();
         }
+        // --- FIN: LÓGICA DE MIGRACIÓN ---
         
         function showOfflineEarningsModal(earnings, time) {
             offlineEarningsEl.textContent = `+${formatNumber(earnings)}`;
@@ -2368,22 +2338,18 @@
                         scoreEl.textContent = formatNumber(baseScore);
                     }
                 } else if (dot && dot.classList.contains('online')) {
-                     // Si está online, mostramos la puntuación base (que se actualiza con onValue)
                      scoreEl.textContent = formatNumber(baseScore);
                 }
             });
         }
 
-        // REFACTOR: Guardado de estado con barrera de seguridad
+        // Guardado de estado
         async function saveScore(manual = false) {
             
-            // --- BARRERA DE SEGURIDAD ---
-            // No permitir guardado automático (ni al cerrar) si el juego no ha terminado de cargar.
             if (!isGameLoaded && manual === false) {
                 console.warn("Guardado automático bloqueado: el juego aún no ha cargado.");
                 return Promise.resolve(); 
             }
-            // --- FIN BARRERA ---
 
             if (!userId || !db || !currentUsername) {
                 if (manual) {
@@ -2406,7 +2372,7 @@
                 modalShown: modalShown,
                 coins: coins,
                 currentSkin: currentSkin,
-                upgradeLevels: upgradeLevels, // REFACTOR: Guardar upgradeLevels
+                upgradeLevels: upgradeLevels,
                 skins: skinsState,
                 banExpiresAt: banExpiresAt,
                 lastSeen: now
@@ -2463,7 +2429,7 @@
                 myLiveScoreBox.style.display = (tabId === 'leaderboard' && userId) ? 'block' : 'none';
             }
             
-            playSound(sfxSwitchTabs); // --- SFX ---
+            playSound(sfxSwitchTabs);
         }
 
         function showSubTab(subTabId) {
@@ -2476,7 +2442,7 @@
             if (activeBtn) activeBtn.classList.add('active');
             if (activeContent) activeContent.classList.add('active');
             
-            playSound(sfxSwitchTabs); // --- SFX ---
+            playSound(sfxSwitchTabs);
         }
 
         function handleRegister() {
@@ -2538,15 +2504,14 @@
         }
 
         async function handleLogout() {
-            if (userId && isGameLoaded) { // Comprobar si ha cargado
+            if (userId && isGameLoaded) {
                 const presenceRef = ref(db, `presence/${userId}`);
                 await saveScore(false); 
                 await set(presenceRef, null);
             }
             
-            // Parar el auto-guardado al salir
             if (autoSaveInterval) clearInterval(autoSaveInterval);
-            isGameLoaded = false; // Bloquear guardado hasta el próximo login
+            isGameLoaded = false;
             
             signOut(auth).catch((error) => {
                 console.error("Error al cerrar sesión:", error);
@@ -2555,21 +2520,17 @@
 
         // --- INICIO: Funciones Anti-Cheat ---
         
-        // Valida la TASA de clics (CPS)
         function _valClkRt(now) {
             _clkTmstmps.push(now);
-            // Filtra los timestamps que ya son más viejos que la ventana (1s)
             _clkTmstmps = _clkTmstmps.filter(timestamp => now - timestamp < _cpsWnd);
             
-            // Si hay más clics en la ventana que el máximo permitido
             if (_clkTmstmps.length > _maxCPS) {
                 console.warn(`Detección de Tasa de Clics: ${_clkTmstmps.length} CPS detectados.`);
-                return true; // ¡Baneado!
+                return true;
             }
             return false;
         }
 
-        // Valida la CONSISTENCIA (ritmo)
         function _valClkRglrty(now) {
             if (_lct === 0) {
                 _lct = now;
@@ -2579,7 +2540,7 @@
             const interval = now - _lct;
             _lct = now;
             
-            if (interval < 10) { // Ignora clics inhumanamente rápidos (ya cubiertos por _valClkRt)
+            if (interval < 10) {
                 return false;
             }
 
@@ -2597,7 +2558,7 @@
             if (stdDev < _cThresh && stdDev !== 0) {
                 console.warn(`Detección de Consistencia: Desviación estándar muy baja: ${stdDev}`);
                 _cIntvls = []; 
-                return true; // ¡Baneado!
+                return true;
             }
             
             return false;
@@ -2688,50 +2649,48 @@
         }
         
         window.onbeforeunload = () => {
-            if (userId && isGameLoaded) { // BARRERA DE SEGURIDAD
+            if (userId && isGameLoaded) {
                 saveScore(false);
             }
         };
 
         async function loadGameConfigAndStart() {
             try {
-                // REFACTOR: No se usa fetch, la config está arriba
                 
-                // --- INICIO: Inicializar Sonidos ---
                 sfxBuy = document.getElementById('sfx-buy');
                 sfxNextLevel = document.getElementById('sfx-nextlevel');
                 sfxSwitchTabs = document.getElementById('sfx-switchtabs');
                 bgmMusic = document.getElementById('bgm-music');
                 musicToggleBtn = document.getElementById('music-toggle-btn');
-                // --- FIN: Inicializar Sonidos ---
 
-                resetGameState(true); // Inicia el estado base (marcando como "logeado" temporalmente)
-                initializeStore();
-                initializeSkins();
-                await initializeFirebase(); // Carga el estado guardado (y activa 'isGameLoaded')
+                // --- CAMBIO IMPORTANTE ---
+                // initializeStore() y initializeSkins() AHORA se llaman
+                // DENTRO de loadGameState() DESPUÉS de migrar los datos,
+                // para que los botones de la tienda se creen con los costes correctos.
+                // Ya no se llaman desde aquí.
+                
+                initializeSkins(); // Skins no necesita migración, puede ir aquí.
+                await initializeFirebase(); // Esto llamará a loadGameState, que ahora inicializa la tienda.
 
                 clickButton.addEventListener('mousedown', handleManualClick);
                 
-                // REFACTOR: Listener de clics para la tienda
                 document.getElementById('store').addEventListener('click', (event) => {
                     const button = event.target.closest('button[data-key]');
                     if (button) buyUpgrade(button.dataset.key);
                 });
 
-                // --- NUEVO: Listeners para Shift ---
                 window.addEventListener('keydown', (e) => {
                     if (e.key === 'Shift' && !isShiftPressed) {
                         isShiftPressed = true;
-                        updateUI(); // Actualiza la UI para mostrar x10
+                        updateUI();
                     }
                 });
                 window.addEventListener('keyup', (e) => {
                     if (e.key === 'Shift') {
                         isShiftPressed = false;
-                        updateUI(); // Actualiza la UI para mostrar x1
+                        updateUI();
                     }
                 });
-                // --- FIN: Listeners para Shift ---
 
 
                 tabButtons.forEach(button => {
@@ -2760,15 +2719,12 @@
                     offlineModalOverlay.style.display = 'none';
                 });
 
-                // --- INICIO: Lógica del Botón de Música ---
                 musicToggleBtn.addEventListener('click', () => {
                     if (isMusicPlaying) {
                         bgmMusic.pause();
                         musicToggleBtn.classList.remove('playing');
                         musicToggleBtn.textContent = '🔇';
                     } else {
-                        // El play() puede fallar si el usuario no ha interactuado
-                        // pero como el botón REQUIERE un clic, funcionará.
                         bgmMusic.play().then(() => {
                             musicToggleBtn.classList.add('playing');
                             musicToggleBtn.textContent = '🎶';
@@ -2776,10 +2732,8 @@
                     }
                     isMusicPlaying = !isMusicPlaying;
                 });
-                // --- FIN: Lógica del Botón de Música ---
 
-
-                setInterval(gameLoop, 100); // REFACTOR: Loop más rápido (10x por seg)
+                setInterval(gameLoop, 100);
                 setInterval(updateLeaderboardVisualTicking, 1000);
 
                 updateUI();
@@ -2795,5 +2749,4 @@
         
     </script>
 </body>
-
 </html>
