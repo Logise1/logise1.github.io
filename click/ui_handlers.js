@@ -15,14 +15,6 @@ import {
     setCurrentSkin, setCoins, updateSkinsState, spendCoins, sendChatMessage
 } from './game_logic.js';
 
-// Las funciones de chat de voz se han ELIMINADO ya que la característica fue eliminada en config.js.
-// Dejamos las declaraciones para que no fallen las referencias que pudieran quedar
-// en algunas funciones como handleLogout o initializeEventListeners.
-let toggleVoiceChat = async () => Promise.resolve();
-let toggleMute = () => {};
-let initializeVoiceChat = () => {};
-
-
 // Objeto para almacenar referencias a elementos DOM, inicializado una vez.
 const DOM = {
     // Stats
@@ -50,8 +42,8 @@ const DOM = {
     // Navegación
     tabButtons: document.querySelectorAll('.tab-btn'),
     tabContents: document.querySelectorAll('.tab-content'),
-    subTabButtons: document.querySelectorAll('.sub-tab-btn'),
-    subTabContents: document.querySelectorAll('.sub-tab-content'),
+    subTabButtons: document.querySelectorAll('.sub-tab-btn'), // Reintroducido
+    subTabContents: document.querySelectorAll('.sub-tab-content'), // Reintroducido
     mobileTabButtons: document.querySelectorAll('.mobile-tab-btn'),
 
     // Leaderboard/Auth
@@ -86,16 +78,11 @@ const DOM = {
     chatSendBtn: document.getElementById('chat-send-btn'),
     toastContainer: document.getElementById('toast-container'),
 
-    // Voice Chat Elements (ELIMINADOS - Solo conservamos referencias si existen en el DOM, pero el código de voz se elimina)
-    // voiceStatus: document.getElementById('voice-status'), // Ya no existe
-    // joinVoiceChatBtn: document.getElementById('join-voice-chat-btn'), // Ya no existe
-    // muteMicBtn: document.getElementById('mute-mic-btn'), // Ya no existe
-    // micOnIcon: document.getElementById('mic-on-icon'), // Ya no existe
-    // micOffIcon: document.getElementById('mic-off-icon'), // Ya no existe
-    // voiceUsersStatus: document.getElementById('voice-users-status'), // Ya no existe
-    // voiceUsersList: document.getElementById('voice-users-list'), // Ya no existe
-    // textChatSubtab: document.getElementById('text-chat-subtab'), // Esto es un subtab para texto, lo dejamos
-
+    // Voice Chat Elements (Modificado)
+    voiceStatus: document.getElementById('voice-status'),
+    joinVoiceChatBtn: document.getElementById('join-voice-chat-btn'),
+    voiceIframeEmbedContainer: document.getElementById('voice-iframe-embed-container'), // Nuevo
+    
     // Audio
     sfxBuy: document.getElementById('sfx-buy'),
     sfxNextLevel: document.getElementById('sfx-nextlevel'),
@@ -107,11 +94,70 @@ const DOM = {
     banCheckInterval: { value: null },
     
     // Bandera para música
-    isMusicPlaying: { value: false }
+    isMusicPlaying: { value: false },
+    
+    // Estado del chat de voz
+    isVoiceConnected: { value: false }
 };
 
 export function getDomElements() {
     return DOM;
+}
+
+// --- LÓGICA DEL IFRAME DE VOZ ---
+const VOICE_CHAT_BASE_URL = "https://logise1.github.io/voicechat";
+
+// Lógica para alternar la conexión (llamada desde el botón en la subpestaña)
+function toggleVoiceConnection() {
+    const { voiceStatus, joinVoiceChatBtn, voiceIframeEmbedContainer } = DOM;
+    const username = getCurrentUsername();
+
+    if (!username) {
+        voiceStatus.textContent = "Error: Debes iniciar sesión para unirte.";
+        return;
+    }
+
+    if (DOM.isVoiceConnected.value) {
+        // --- Desconectar ---
+        DOM.isVoiceConnected.value = false;
+        
+        // Ocultar iframe container, mostrar de nuevo el botón/status
+        voiceIframeEmbedContainer.innerHTML = ''; // Limpiar iframe
+        voiceIframeEmbedContainer.style.display = 'none';
+        voiceStatus.style.display = 'block';
+        joinVoiceChatBtn.style.display = 'block';
+
+        // Actualizar UI del botón
+        joinVoiceChatBtn.textContent = "Unirse a Voz";
+        joinVoiceChatBtn.classList.remove('active');
+        
+    } else {
+        // --- Conectar ---
+        DOM.isVoiceConnected.value = true;
+
+        // Ocultar status, mostrar container del iframe (botón se mantiene)
+        voiceStatus.style.display = 'none';
+        joinVoiceChatBtn.style.display = 'block';
+        // CORRECCIÓN: Usar 'flex' para que respete el flex-grow del HTML
+        voiceIframeEmbedContainer.style.display = 'flex'; 
+
+        // Construir URL y crear iframe
+        const url = `${VOICE_CHAT_BASE_URL}?appid=clicker&username=${encodeURIComponent(username)}`;
+        const iframe = document.createElement('iframe');
+        iframe.allow = "microphone; speaker; autoplay";
+        iframe.src = url;
+        iframe.style.width = '100%';
+        // CORRECCIÓN: Usar flexGrow para que ocupe el espacio
+        iframe.style.flexGrow = '1'; 
+        iframe.style.border = 'none';
+        
+        voiceIframeEmbedContainer.innerHTML = ''; // Limpiar por si acaso
+        voiceIframeEmbedContainer.appendChild(iframe);
+
+        // Actualizar UI del botón
+        joinVoiceChatBtn.textContent = "Desconectar";
+        joinVoiceChatBtn.classList.add('active');
+    }
 }
 
 // --- ACTUALIZACIÓN DE UI ---
@@ -475,24 +521,24 @@ function showTab(tabId) {
     
     sfxSwitchTabs.currentTime = 0;
     sfxSwitchTabs.play().catch(e => {});
-
-    // Mostrar sub-pestaña por defecto (Texto) si es la pestaña de Chat
-    if (tabId === 'chat') {
-        // En la versión actual solo hay chat de texto, no hay sub-pestañas.
-        // Pero para mantener la estructura, usaremos el antiguo nombre de subtab.
-        showSubTab('text-chat-subtab');
-    }
+    
+    // Lógica de minimizado de iframe eliminada
 }
 
 function showSubTab(subTabId) {
     const { subTabButtons, subTabContents, sfxSwitchTabs } = DOM;
     
-    // Obtener los botones y contenidos específicos de la pestaña activa (Chat)
-    const activeSubButtons = document.querySelectorAll('#chat .sub-tab-btn');
-    const activeSubContents = document.querySelectorAll('#chat .sub-tab-content');
-
-    activeSubButtons.forEach(btn => btn.classList.remove('active'));
-    activeSubContents.forEach(content => content.classList.remove('active'));
+    // Desactivar todos los botones y contenidos de la pestaña de chat
+    const chatContainer = document.getElementById('chat');
+    if (chatContainer) {
+        chatContainer.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        // CORRECCIÓN: No solo quitar la clase, sino ocultar explícitamente el elemento
+        chatContainer.querySelectorAll('.sub-tab-content').forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none'; // <-- BUG CORREGIDO AQUÍ
+        });
+    }
 
     const activeBtn = document.querySelector(`.sub-tab-btn[data-subtab="${subTabId}"]`);
     const activeContent = document.getElementById(subTabId);
@@ -501,19 +547,20 @@ function showSubTab(subTabId) {
     
     if (activeContent) {
         activeContent.classList.add('active');
-        // El contenido de texto siempre debe usar flex para su layout
-        activeContent.style.display = 'flex';
+        activeContent.style.display = 'flex'; // Mostrar el activo
     }
     
     sfxSwitchTabs.currentTime = 0;
     sfxSwitchTabs.play().catch(e => {});
+    
+    // Lógica de minimizado de iframe eliminada
 }
 
 
 // --- FIREBASE AUTHENTICATION Y PRESENCIA ---
 
 async function initializeFirebase() {
-    const { authSection, scoreSection, loggedInAs, chatInput, chatSendBtn } = DOM;
+    const { authSection, scoreSection, loggedInAs, chatInput, chatSendBtn, joinVoiceChatBtn, voiceIframeEmbedContainer, voiceStatus } = DOM;
     
     onAuthStateChanged(auth, async (user) => {
         
@@ -536,6 +583,10 @@ async function initializeFirebase() {
             chatInput.disabled = false;
             chatSendBtn.disabled = false;
             chatInput.placeholder = "Escribe un mensaje...";
+            
+            // Habilitar botón de voz
+            if (joinVoiceChatBtn) joinVoiceChatBtn.disabled = false;
+            if (DOM.voiceStatus) DOM.voiceStatus.textContent = "Pulsa 'Unirse a Voz' para iniciar.";
 
             // Presencia Online
             const presenceRef = ref(db, `presence/${uid}`);
@@ -562,6 +613,25 @@ async function initializeFirebase() {
             chatInput.disabled = true;
             chatSendBtn.disabled = true;
             chatInput.placeholder = "Inicia sesión para chatear...";
+            
+            // Deshabilitar botón de voz y desconectar (LÓGICA ACTUALIZADA)
+            if (joinVoiceChatBtn) joinVoiceChatBtn.disabled = true;
+            DOM.isVoiceConnected.value = false;
+            
+            // Resetear manualmente la UI del chat de voz
+            if (voiceIframeEmbedContainer) {
+                voiceIframeEmbedContainer.innerHTML = '';
+                voiceIframeEmbedContainer.style.display = 'none';
+            }
+            if (voiceStatus) {
+                voiceStatus.style.display = 'block';
+                voiceStatus.textContent = "Inicia sesión para usar el chat de voz.";
+            }
+            if (joinVoiceChatBtn) {
+                joinVoiceChatBtn.style.display = 'block';
+                joinVoiceChatBtn.textContent = "Unirse a Voz";
+                joinVoiceChatBtn.classList.remove('active');
+            }
 
             resetGameState(false);
             setIsGameLoaded(true); // Modificar isGameLoaded
@@ -702,7 +772,9 @@ async function handleLogout() {
         await set(presenceRef, null);
     }
     
-    // El chat de voz ha sido eliminado, no hay necesidad de desconexión aquí.
+    // Desconectar chat de voz y ocultar (la lógica de reseteo está en onAuthStateChanged)
+    DOM.isVoiceConnected.value = false;
+    // updateVoiceIframe(false); <-- ELIMINADO
     
     if (DOM.autoSaveInterval) clearInterval(DOM.autoSaveInterval);
     if (bgmMusic) bgmMusic.pause(); 
@@ -718,7 +790,7 @@ async function handleLogout() {
 // --- INICIALIZACIÓN DE EVENTOS ---
 
 function initializeEventListeners() {
-    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput } = DOM;
+    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput, joinVoiceChatBtn } = DOM;
 
     clickButton.addEventListener('mousedown', handleManualClick);
     
@@ -752,18 +824,21 @@ function initializeEventListeners() {
     });
 
 
-    // Listeners de Navegación
+    // Listeners de Navegación (Pestañas principales)
     tabButtons.forEach(button => {
         button.addEventListener('click', () => showTab(button.dataset.tab));
     });
     mobileTabButtons.forEach(button => {
         button.addEventListener('click', () => showTab(button.dataset.tab));
     });
-    // Listeners de Sub-Navegación (Chat)
-    subTabButtons.forEach(button => {
-        button.addEventListener('click', () => showSubTab(button.dataset.subtab));
-    });
     
+    // Listeners de Sub-Navegación (Subpestañas de chat)
+    if (subTabButtons) {
+        subTabButtons.forEach(button => {
+            button.addEventListener('click', () => showSubTab(button.dataset.subtab));
+        });
+    }
+
     // Listeners de Auth
     registerBtn.addEventListener('click', handleRegister);
     loginBtn.addEventListener('click', handleLogin);
@@ -778,6 +853,12 @@ function initializeEventListeners() {
         }
     });
 
+
+    // Listener del botón Unirse a Voz
+    if (joinVoiceChatBtn) {
+        joinVoiceChatBtn.addEventListener('click', toggleVoiceConnection);
+    }
+    
 
     // Listeners de Modales
     modalBtnLater.addEventListener('click', hideLoginModal);
@@ -836,9 +917,6 @@ function initializeEventListeners() {
         DOM.isMusicPlaying.value = !DOM.isMusicPlaying.value;
     });
 
-    // Los listeners de Chat de Voz (joinVoiceChatBtn, muteMicBtn) han sido ELIMINADOS.
-
-
     // Guardado de estado al cerrar la ventana
     window.onbeforeunload = () => {
         const currentUserId = getUserId(); // Usar getter
@@ -852,18 +930,14 @@ function initializeEventListeners() {
 
 async function loadGameConfigAndStart() {
     try {
-        // Se ha ELIMINADO la carga dinámica de 'voicechat.js' y la inicialización de sus funciones.
-        // Las funciones 'toggleVoiceChat', 'toggleMute' e 'initializeVoiceChat' se han redefinido
-        // en la parte superior para ser no-operativas, limpiando el código de dependencias eliminadas.
-
         // Inicializar elementos DOM y audios antes de cualquier llamada a Firebase o juego
         initializeEventListeners(); 
         initializeSkins(); 
 
+        // ELIMINADO: updateVoiceIframe(false); (El estado inicial de HTML es suficiente)
+
         await initializeFirebase(); 
         
-        // Se ha ELIMINADO la llamada a initializeVoiceChat();
-
         // Iniciar bucles de juego y UI
         setInterval(gameLoop, 100);
         setInterval(updateLeaderboardVisualTicking, 1000);

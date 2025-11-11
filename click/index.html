@@ -289,7 +289,7 @@
             display: none;
         }
         .sub-tab-content.active {
-            /* === CRÍTICO: Esto asegura que el sub-contenido de texto se muestre en columna === */
+            /* === CRÍTICO: Esto asegura que el sub-contenido se muestre en columna === */
             display: flex; 
             flex-direction: column;
             flex-grow: 1;
@@ -947,25 +947,7 @@
             display: none;
         }
         
-        /* === INICIO: Estilos para el Iframe de Chat de Voz === */
-        #voice-chat-iframe-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001; /* Encima de la mayoría de las cosas */
-            display: none;
-            width: 250px;
-            height: 300px;
-        }
-        
-        #voice-chat-iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-        }
-        /* === FIN: Estilos Iframe === */
+        /* === ESTILOS DE IFRAME DE VOZ ELIMINADOS (YA NO ES FLOTANTE) === */
 
 
         @media (max-width: 768px) {
@@ -1102,13 +1084,7 @@
                 height: 100vh;
             }
             
-            /* --- Iframe de Voz en Móvil --- */
-            #voice-chat-iframe-container {
-                width: 200px;
-                height: 250px;
-                top: 10px;
-                right: 10px;
-            }
+            /* === ESTILOS DE IFRAME DE VOZ ELIMINADOS (YA NO ES FLOTANTE) === */
         }
 
     </style>
@@ -1137,7 +1113,7 @@
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="store">Mejoras</button>
                 <button class="tab-btn" data-tab="skins">Skins</button>
-                <!-- === NUEVO: Botón Tab Chat === -->
+                <!-- === Botón Tab Chat === -->
                 <button class="tab-btn" data-tab="chat">Chat</button>
                 <!-- ============================ -->
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
@@ -1194,21 +1170,36 @@
                 </div>
             </div>
 
-            <!-- === INICIO: Contenido del Chat (SIMPLIFICADO) === -->
+            <!-- === INICIO: Contenido del Chat con Subpestañas de nuevo === -->
             <div id="chat" class="tab-content no-scrollbar">
                 
-                <!-- La barra de sub-pestañas ha sido eliminada -->
+                <div class="sub-tab-buttons">
+                    <button class="sub-tab-btn active" data-subtab="text-chat-subtab">Texto</button>
+                    <button class="sub-tab-btn" data-subtab="voice-chat-subtab">Voz</button>
+                </div>
 
-                <div id="chat-messages-container" class="no-scrollbar">
-                    <!-- Los mensajes del chat de texto se añadirán aquí -->
+                <div id="text-chat-subtab" class="sub-tab-content active" style="flex-grow: 1; min-height: 0;">
+                    <div id="chat-messages-container" class="no-scrollbar">
+                        <!-- Los mensajes del chat de texto se añadirán aquí -->
+                    </div>
+                    <div id="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
+                        <button id="chat-send-btn" disabled>Enviar</button>
+                    </div>
                 </div>
-                <div id="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
-                    <button id="chat-send-btn" disabled>Enviar</button>
+
+                <!-- === INICIO: Pestaña de Voz Modificada === -->
+                <div id="voice-chat-subtab" class="sub-tab-content" style="flex-grow: 1; display: none; padding: 20px; text-align: center; gap: 15px; justify-content: flex-start; align-items: center; flex-direction: column;">
+                    <p id="voice-status">Inicia sesión para usar el chat de voz.</p>
+                    <button id="join-voice-chat-btn" disabled class="leaderboard-actions button">Unirse a Voz</button>
+                    
+                    <!-- NUEVO: Contenedor para el Iframe Embebido -->
+                    <div id="voice-iframe-embed-container" style="flex-grow: 1; width: 100%; height: 100%; display: none;">
+                        <!-- El Iframe se inyectará aquí con JS -->
+                    </div>
                 </div>
+                <!-- === FIN: Pestaña de Voz Modificada === -->
                 
-                <!-- El contenido del chat de voz (WebRTC) ha sido eliminado -->
-
             </div>
             <!-- === FIN: Contenido del Chat === -->
 
@@ -1259,9 +1250,7 @@
     <div id="toast-container"></div>
     <!-- === FIN: Contenedor de Toasts === -->
     
-    <!-- === INICIO: Contenedor del Iframe de Chat de Voz === -->
-    <div id="voice-chat-iframe-container"></div>
-    <!-- === FIN: Contenedor del Iframe de Chat de Voz === -->
+    <!-- === CONTENEDOR DE IFRAME FLOTANTE ELIMINADO === -->
 
     <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-box">
@@ -1296,7 +1285,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5 4.5c2.336 0 4.31 1.454 5.116 3.5H6.884c.806-2.046 2.78-3.5 5.116-3.5z"/></svg>
             <span>Skins</span>
         </button>
-        <!-- === NUEVO: Botón Chat Móvil === -->
+        <!-- === NUEVO: Botón Tab Chat === -->
         <button class="mobile-tab-btn" data-tab="chat">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
             <span>Chat</span>
@@ -1314,8 +1303,12 @@
     <audio id="bgm-music" src="https://logise1.netlify.app/click/bgm.mp3" loop preload="auto"></audio>
 
     <script type="module" src="./config.js"></script>
-    <script type="module" src="./game_logic.js"></script>
+    <!--
+    CAMBIO CLAVE: 
+    'ui_handlers.js' se carga ANTES que 'game_logic.js' para resolver
+    la dependencia circular de inicialización del módulo.
+    -->
     <script type="module" src="./ui_handlers.js"></script>
-    <!-- voicechat.js ya no se carga -->
+    <script type="module" src="./game_logic.js"></script>
 </body>
 </html>

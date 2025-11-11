@@ -69,13 +69,9 @@
         <!-- SECCIÓN DE CHAT (Oculta por defecto) -->
         <div id="chat-section" class="hidden space-y-1.5">
             
-            <!-- Cabecera con Lista Plegable y Botones de Icono -->
+            <!-- CAMBIO: Cabecera Estática (sin plegable) -->
             <div class="flex justify-between items-center space-x-2">
-                <!-- Botón Plegable (con glassmorphism más sutil) -->
-                <div id="toggle-user-list-btn" class="flex-grow bg-gray-700/50 hover:bg-gray-600/70 p-1.5 rounded-md flex justify-between items-center cursor-pointer transition-colors">
-                    <h3 id="voice-users-status" class="font-semibold text-gray-200 text-xs">Usuarios: 0</h3>
-                    <span id="list-arrow" class="text-xs text-gray-400 transition-transform duration-300">▼</span>
-                </div>
+                <h3 id="voice-users-status" class="font-semibold text-gray-200 text-xs">Usuarios: 0</h3>
                 
                 <!-- Botones de Icono (con glassmorphism más sutil) -->
                 <div class="flex-shrink-0 flex space-x-1.5">
@@ -96,8 +92,8 @@
                 </div>
             </div>
 
-            <!-- Lista Plegable (con glassmorphism más sutil) -->
-            <div id="user-list-wrapper" class="bg-gray-800/50 rounded-md h-0 overflow-y-auto transition-all duration-300 ease-in-out no-scrollbar">
+            <!-- CAMBIO: Lista Siempre Visible -->
+            <div id="user-list-wrapper" class="bg-gray-800/50 rounded-md h-28 overflow-y-auto no-scrollbar">
                 <ul id="voice-users-list" class="space-y-0.5 p-1.5">
                     <!-- Los usuarios se añadirán aquí dinámicamente -->
                 </ul>
@@ -148,6 +144,10 @@
             ]
         };
         const HISTORY_LENGTH = 200; // ~1.7 segundos de historial de volumen
+        
+        // --- NUEVAS CONSTANTES ---
+        const SPEAKING_THRESHOLD = 20; // Volumen (de 0 a 128) para ser considerado "hablando"
+        const LIST_UPDATE_INTERVAL = 250; // Actualizar lista de hablantes 4 veces/seg
 
         // --- VARIABLES DE ESTADO ---
         let isVoiceChatActive = false;
@@ -167,6 +167,10 @@
         let source = null;
         let drawVisual = null;
         let volumeHistory = new Array(HISTORY_LENGTH).fill(0); // Historial de volumen
+        
+        // --- NUEVAS VARIABLES DE ESTADO ---
+        let userVolumes = {}; // Almacena el volumen actual de cada usuario
+        let lastListUpdate = 0; // Para throttlinear la actualización de la lista
 
         // --- ELEMENTOS DOM ---
         const joinSection = document.getElementById('join-section');
@@ -190,11 +194,6 @@
         const canvasCtx = canvas.getContext('2d');
         canvasCtx.fillStyle = '#000000';
         canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // --- Elementos Plegables ---
-        const toggleUserListBtn = document.getElementById('toggle-user-list-btn');
-        const userListWrapper = document.getElementById('user-list-wrapper');
-        const listArrow = document.getElementById('list-arrow');
 
         // --- FUNCIONES SIMPLIFICADAS ---
         function getUserId() { return currentUserId; }
@@ -233,14 +232,6 @@
         muteMicBtnIcon.addEventListener('click', toggleMute);
         leaveChatBtn.addEventListener('click', () => toggleVoiceChat()); // Re-usa toggle para desconectar
 
-        // --- Manejador Plegable ---
-        toggleUserListBtn.addEventListener('click', () => {
-            userListWrapper.classList.toggle('h-0');
-            userListWrapper.classList.toggle('h-32'); // Altura al expandir
-            userListWrapper.classList.toggle('p-1.5');
-            listArrow.classList.toggle('rotate-180');
-        });
-
         // --- LÓGICA PRINCIPAL ---
 
         async function toggleVoiceChat(forceDisconnect = false) {
@@ -269,21 +260,23 @@
                 localAudioTrack = localStream.getAudioTracks()[0];
                 
                 // --- Configurar Visualizador de Audio ---
+                // CREAR AudioContext (¡importante!)
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 }
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
+                
+                // Analizador LOCAL
                 analyser = audioContext.createAnalyser();
                 source = audioContext.createMediaStreamSource(localStream);
                 source.connect(analyser);
-                
                 analyser.fftSize = 256;
-                const bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-                volumeHistory.fill(0); // Reiniciar historial
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
+                volumeHistory.fill(0); // Reiniciar historial
+                userVolumes = {}; // Reiniciar volúmenes
                 visualize(); // Iniciar el loop de dibujo
                 // --- Fin Configuración Visualizador ---
 
@@ -331,13 +324,21 @@
                 source = null;
             }
             analyser = null;
+            // No cerramos el audioContext, pero limpiamos los analizadores remotos
+            Object.values(peerConnections).forEach(pc => {
+                if (pc.remoteStreamSource) {
+                    pc.remoteStreamSource.disconnect();
+                }
+            });
+            
             volumeHistory.fill(0); // Limpiar historial
-            canvasCtx.fillStyle = '#000000';
+            userVolumes = {}; // Limpiar volúmenes
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
             // --- Fin Detener Visualizador ---
             
             Object.values(peerConnections).forEach(pc => {
-                if (pc) pc.close();
+                if (pc) pc.close(); // Esto disparará la limpieza en closePeerConnection
             });
             peerConnections = {};
             
@@ -400,34 +401,85 @@
             updateVoiceUI(true);
         }
         
-        // --- FUNCIÓN: VISUALIZE (Modificada para historial de volumen) ---
+        // --- FUNCIÓN PARA DIBUJAR CUADRÍCULA ---
+        function drawGrid(width, height, spacing = 20) {
+            canvasCtx.beginPath();
+            canvasCtx.strokeStyle = 'rgba(156, 163, 175, 0.1)'; // gray-400/10
+            canvasCtx.lineWidth = 0.5;
+
+            // Líneas verticales
+            for (let x = spacing; x < width; x += spacing) {
+                canvasCtx.moveTo(x, 0);
+                canvasCtx.lineTo(x, height);
+            }
+            // Líneas horizontales
+            for (let y = spacing; y < height; y += spacing) {
+                canvasCtx.moveTo(0, y);
+                canvasCtx.lineTo(width, y);
+            }
+            canvasCtx.stroke();
+            canvasCtx.closePath();
+        }
+
+        // --- FUNCIÓN: VISUALIZE (Modificada para historial de volumen y múltiples fuentes) ---
         function visualize() {
+            // Seguir ejecutando solo si el analizador local existe (estamos conectados)
             if (!analyser) return; 
             drawVisual = requestAnimationFrame(visualize); 
 
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
 
-            const bufferLength = analyser.frequencyBinCount;
-            analyser.getByteTimeDomainData(dataArray); 
-
-            // 1. Calcular volumen actual (amplitud máxima)
-            let currentVolume = 0;
-            for (let i = 0; i < bufferLength; i++) {
-                const v = Math.abs(dataArray[i] - 128); // 128 es silencio (0-128)
-                if (v > currentVolume) {
-                    currentVolume = v;
-                }
-            }
-
-            // 2. Actualizar historial (quitar el más antiguo, añadir el nuevo)
-            volumeHistory.shift();
-            volumeHistory.push(currentVolume);
-
-            // 3. Dibujar historial
+            // 1. Dibujar fondo y cuadrícula
             canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Fondo semitransparente
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            drawGrid(canvas.width, canvas.height, 20); // <-- AÑADIDO
 
+            // 2. Calcular volumen LOCAL
+            let localVolume = 0;
+            if (analyser && dataArray) {
+                analyser.getByteTimeDomainData(dataArray); 
+                for (let i = 0; i < dataArray.length; i++) {
+                    const v = Math.abs(dataArray[i] - 128); 
+                    if (v > localVolume) localVolume = v;
+                }
+            }
+            // --- CAMBIO: Almacenar volumen local ---
+            if (currentUserId) userVolumes[currentUserId] = localVolume;
+            let maxVolume = localVolume;
+
+            // 3. Calcular volumen MÁXIMO (incluyendo remotos)
+            // --- CAMBIO: Almacenar también volúmenes remotos ---
+            Object.entries(peerConnections).forEach(([remoteId, pc]) => {
+                let remoteVolume = 0;
+                if (pc && pc.remoteAnalyser && pc.remoteDataArray) {
+                    try {
+                        pc.remoteAnalyser.getByteTimeDomainData(pc.remoteDataArray);
+                        for (let i = 0; i < pc.remoteDataArray.length; i++) {
+                            const v = Math.abs(pc.remoteDataArray[i] - 128);
+                            if (v > remoteVolume) remoteVolume = v;
+                        }
+                    } catch(e) {
+                        console.warn("No se pudo obtener datos del analizador remoto", e);
+                    }
+                }
+                userVolumes[remoteId] = remoteVolume; // Almacenar volumen remoto
+                if (remoteVolume > maxVolume) maxVolume = remoteVolume;
+            });
+
+            // --- CAMBIO: Llamada throttled a la actualización de la lista ---
+            const now = Date.now();
+            if (now - lastListUpdate > LIST_UPDATE_INTERVAL) {
+                updateVoiceUserList(); 
+                lastListUpdate = now;
+            }
+            // --- FIN CAMBIO ---
+
+            // 4. Actualizar historial con el volumen MÁXIMO
+            volumeHistory.shift();
+            volumeHistory.push(maxVolume); // <-- USAR maxVolume
+
+            // 5. Dibujar historial
             const barWidth = canvas.width / HISTORY_LENGTH;
             
             for (let i = 0; i < HISTORY_LENGTH; i++) {
@@ -479,7 +531,7 @@
                         }
                     });
                 }
-                updateVoiceUserList();
+                updateVoiceUserList(); // Actualizar lista inmediatamente si el roster cambia
             });
         }
 
@@ -563,8 +615,28 @@
                     audio.autoplay = true;
                     document.body.appendChild(audio); // Oculto
                 }
-                audio.srcObject = event.streams[0];
+                const remoteStream = event.streams[0]; // <-- OBTENER STREAM
+                audio.srcObject = remoteStream;
                 pc.remoteAudioElement = audio;
+
+                // --- AÑADIDO: Conectar stream remoto al AudioContext para visualización ---
+                if (audioContext && remoteStream) {
+                    try {
+                        // Asegurarse de que el audioContext esté 'running'
+                        if (audioContext.state === 'suspended') {
+                            audioContext.resume();
+                        }
+                        pc.remoteStreamSource = audioContext.createMediaStreamSource(remoteStream);
+                        pc.remoteAnalyser = audioContext.createAnalyser();
+                        pc.remoteAnalyser.fftSize = 256;
+                        pc.remoteStreamSource.connect(pc.remoteAnalyser);
+                        pc.remoteDataArray = new Uint8Array(pc.remoteAnalyser.frequencyBinCount);
+                        console.log(`Analizador remoto creado para ${remoteId}`);
+                    } catch (e) {
+                        console.error(`Error conectando analizador remoto para ${remoteId}:`, e);
+                    }
+                }
+                // --- FIN AÑADIDO ---
             };
 
             pc.oniceconnectionstatechange = () => {
@@ -587,7 +659,18 @@
                 if (pc.remoteAudioElement) {
                     pc.remoteAudioElement.remove(); 
                 }
+
+                // --- AÑADIDO: Limpiar analizador remoto ---
+                if (pc.remoteStreamSource) {
+                    pc.remoteStreamSource.disconnect();
+                }
+                delete pc.remoteAnalyser;
+                delete pc.remoteDataArray;
+                delete pc.remoteStreamSource;
+                // --- FIN AÑADIDO ---
+
                 delete peerConnections[remoteId];
+                console.log(`Conexión y analizador limpiados para ${remoteId}`);
             }
         }
 
@@ -612,11 +695,15 @@
             }
         }
 
+        // --- CAMBIO: Lógica de actualización de lista de usuarios (para "hablando") ---
         function updateVoiceUserList() {
             const currentUserId = getUserId();
-            voiceUsersList.innerHTML = '';
+            // voiceUsersList.innerHTML = ''; // No limpiar aquí
             const activeUsers = Object.keys(voiceUsers).length;
             voiceUsersStatus.textContent = `Usuarios: ${activeUsers}`;
+
+            let speakingListItems = [];
+            let quietListItems = [];
 
             Object.entries(voiceUsers).forEach(([uid, data]) => {
                 if (!data || !data.username) return;
@@ -624,28 +711,48 @@
                 const isSelf = uid === currentUserId;
                 const isMuted = data.isMuted === true;
 
+                // Obtener volumen actual (0 si no existe)
+                const currentVolume = userVolumes[uid] || 0;
+                // Considerar "hablando" si el volumen supera el umbral Y no está muteado
+                const isSpeaking = currentVolume > SPEAKING_THRESHOLD && !isMuted;
+
                 const li = document.createElement('li');
                 li.className = 'flex items-center text-gray-300 text-xs'; 
                 
                 const statusDot = document.createElement('span');
                 statusDot.className = 'voice-user-status w-2 h-2 rounded-full mr-1.5 flex-shrink-0'; 
                 
-                let statusClass = 'bg-emerald-400 mic-on'; 
-                if (isSelf && isMuted) {
-                    statusClass = 'bg-red-500'; 
-                } else if (isMuted) {
-                    statusClass = 'bg-yellow-500'; 
-                }
-                statusDot.classList.add(...statusClass.split(' '));
-
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'truncate';
                 nameSpan.textContent = data.username + (isSelf ? " (Tú)" : "");
 
+                // Asignar estilos basados en estado
+                if (isSelf && isMuted) {
+                    statusDot.classList.add('bg-red-500'); // Muteado (Tú)
+                } else if (isMuted) {
+                    statusDot.classList.add('bg-yellow-500'); // Muteado (Otro)
+                } else if (isSpeaking) {
+                    statusDot.classList.add('bg-emerald-400', 'mic-on'); // Hablando (Animación)
+                    nameSpan.classList.add('font-bold', 'text-white'); // Negrita
+                } else {
+                    statusDot.classList.add('bg-emerald-400'); // Conectado (sin animación)
+                }
+
                 li.appendChild(statusDot);
                 li.appendChild(nameSpan);
-                voiceUsersList.appendChild(li);
+                
+                // Clasificar para ordenar
+                if (isSpeaking) {
+                    speakingListItems.push(li);
+                } else {
+                    quietListItems.push(li);
+                }
             });
+
+            // Reconstruir la lista (hablantes primero)
+            voiceUsersList.innerHTML = '';
+            speakingListItems.forEach(li => voiceUsersList.appendChild(li));
+            quietListItems.forEach(li => voiceUsersList.appendChild(li));
         }
 
         // --- INICIALIZACIÓN ---
