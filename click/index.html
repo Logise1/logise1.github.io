@@ -2714,7 +2714,7 @@
                     const messageTime = data.timestamp || 0;
                     const isRecent = (_DateNow() - messageTime) < 30000;
                     
-                    if (data.username !== currentUsername && isRecent) {
+                    if (data.username !== currentUsername && isRecent && !isChatActive) {
                         showToastNotification(data.username, data.message, data.skin);
                     }
                 }
@@ -3154,4 +3154,5 @@
     </script>
 </body>
 </html>
+
 
