@@ -1,6 +1,6 @@
 import { 
     UPGRADES_CONFIG, SKINS_CONFIG, fruits, 
-    auth, db, voiceDb, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, // << CORREGIDO: 'get' ahora es un import directo
+    auth, db, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, // voiceDb import REMOVED
     push, serverTimestamp, onChildAdded, 
     _DateNow, _MathSqrt, _MathPow, _MathCeil, _MathRandom, _MathFloor, _MathAbs, _MathMin, _MathPI, _MathSin, _MathCos,
     bgPatternTemplates
