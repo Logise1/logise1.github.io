@@ -42,34 +42,19 @@ const GAME_FIREBASE_CONFIG = {
     measurementId: "G-XRYBFXCYPG"
 };
 
-// --- CONFIGURACIÓN DE FIREBASE PARA EL CHAT DE VOZ (Voice Chat Signaling) ---
-const VOICE_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyDouOiwSEY2le_rsvFcfAVi6f77lX3Nrqg",
-    authDomain: "chatdevozprojects.firebaseapp.com",
-    databaseURL: "https://chatdevozprojects-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "chatdevozprojects",
-    storageBucket: "chatdevozprojects.firebasestorage.app",
-    messagingSenderId: "28342945819",
-    appId: "1:28342945819:web:96a6b6a9c215a37fa6d0be",
-    measurementId: "G-NYP7J9WMQP"
-};
+// --- Configuración de Firebase para Chat de Voz ELIMINADA ---
 
-let gameApp, voiceApp;
+let gameApp;
 
 try {
     gameApp = getApp('gameApp');
 } catch (e) {
     gameApp = initializeApp(GAME_FIREBASE_CONFIG, 'gameApp');
 }
-try {
-    voiceApp = getApp('voiceApp');
-} catch (e) {
-    voiceApp = initializeApp(VOICE_FIREBASE_CONFIG, 'voiceApp');
-}
 
 export const auth = getAuth(gameApp);
 export const db = getDatabase(gameApp); // DB para juego principal
-export const voiceDb = getDatabase(voiceApp); // Nueva DB para voz
+// voiceDb ELIMINADO
 
 // --- CONSTANTES GLOBALES DE JUEGO ---
 export const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];

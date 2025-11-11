@@ -30,15 +30,36 @@
         }
     </style>
 </head>
-<body class="font-sans bg-black flex items-center justify-center p-1">
+<!-- CAMBIO: Fondo con gradiente para que el glassmorphism sea visible -->
+<body class="font-sans bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-1 min-h-screen">
 
-    <!-- Contenedor principal: Todo negro, más pequeño y moderno -->
-    <div class="w-full max-w-xs bg-black rounded-lg shadow-xl p-2 space-y-1.5 border border-gray-700">
+    <!-- 
+      CAMBIO: Efecto Glassmorphism 
+      - Fondo semitransparente (bg-gray-800/40)
+      - Desenfoque del fondo (backdrop-blur-md)
+      - Borde sutil (border border-gray-500/30)
+    -->
+    <div class="w-full max-w-xs bg-gray-800/40 backdrop-blur-md border border-gray-500/30 rounded-lg shadow-xl p-2 space-y-1.5">
 
         <!-- SECCIÓN PARA UNIRSE (Se oculta al conectar) -->
         <div id="join-section" class="space-y-1.5">
             <h1 class="text-base font-bold text-center text-white">Voz</h1>
-            <input type="text" id="username-input" placeholder="Escribe tu nombre..." class="w-full px-2 py-1 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-gray-800 text-white placeholder-gray-400">
+            
+            <!-- Estado 1: Input Manual (Por defecto) -->
+            <div id="manual-join-div" class="space-y-1.5">
+                <input type="text" id="username-input" placeholder="Escribe tu nombre..." class="w-full px-2 py-1 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-gray-900/70 text-white placeholder-gray-400">
+            </div>
+
+            <!-- Estado 2: Prompt por URL (Oculto por defecto) -->
+            <div id="prompt-join-div" class="hidden space-y-1.5 text-center">
+                <p class="text-sm text-gray-200">¡Hola, <strong id="prompt-username" class="font-bold"></strong>!</p>
+                <p class="text-xs text-gray-300">
+                    Estás a punto de unirte a un chat de voz. 
+                    Esto activará tu micrófono para hablar con otros en esta sala.
+                </p>
+            </div>
+
+            <!-- Botón común -->
             <button id="join-voice-chat-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded-md transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed text-xs">
                 Unirse al Chat de Voz
             </button>
@@ -50,15 +71,15 @@
             
             <!-- Cabecera con Lista Plegable y Botones de Icono -->
             <div class="flex justify-between items-center space-x-2">
-                <!-- Botón Plegable (ocupa el espacio restante) -->
-                <div id="toggle-user-list-btn" class="flex-grow bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex justify-between items-center cursor-pointer transition-colors">
+                <!-- Botón Plegable (con glassmorphism más sutil) -->
+                <div id="toggle-user-list-btn" class="flex-grow bg-gray-700/50 hover:bg-gray-600/70 p-1.5 rounded-md flex justify-between items-center cursor-pointer transition-colors">
                     <h3 id="voice-users-status" class="font-semibold text-gray-200 text-xs">Usuarios: 0</h3>
                     <span id="list-arrow" class="text-xs text-gray-400 transition-transform duration-300">▼</span>
                 </div>
                 
-                <!-- Botones de Icono -->
+                <!-- Botones de Icono (con glassmorphism más sutil) -->
                 <div class="flex-shrink-0 flex space-x-1.5">
-                    <button id="mute-mic-btn-icon" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded-md transition-all disabled:opacity-50" disabled>
+                    <button id="mute-mic-btn-icon" class="bg-gray-700/50 hover:bg-gray-600/70 text-white p-1.5 rounded-md transition-all disabled:opacity-50" disabled>
                         <svg id="mic-on-icon-sm" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                         </svg>
@@ -66,7 +87,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3zM15 9a3 3 0 00-3-3m0 0a3 3 0 00-3 3m3-3v6m0 0v6m6-3a3 3 0 00-3-3m0 0a3 3 0 00-3 3m0 0v6m-9 3l18-18" />
                         </svg>
                     </button>
-                    <button id="leave-chat-btn" class="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-md transition-all">
+                    <button id="leave-chat-btn" class="bg-red-500/70 hover:bg-red-600/80 text-white p-1.5 rounded-md transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16 8l2-2m0 0l2 2m-2-2v2.5M20 12a8 8 0 11-16 0 8 8 0 0116 0zM7 12a1 1 0 102 0v-2a1 1 0 10-2 0v2z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 12a1 1 0 102 0v-2a1 1 0 10-2 0v2zM9 9.5a1 1 0 112 0v-1a1 1 0 11-2 0v1z" />
@@ -75,8 +96,8 @@
                 </div>
             </div>
 
-            <!-- Lista Plegable -->
-            <div id="user-list-wrapper" class="bg-gray-800 rounded-md h-0 overflow-y-auto transition-all duration-300 ease-in-out no-scrollbar">
+            <!-- Lista Plegable (con glassmorphism más sutil) -->
+            <div id="user-list-wrapper" class="bg-gray-800/50 rounded-md h-0 overflow-y-auto transition-all duration-300 ease-in-out no-scrollbar">
                 <ul id="voice-users-list" class="space-y-0.5 p-1.5">
                     <!-- Los usuarios se añadirán aquí dinámicamente -->
                 </ul>
@@ -84,8 +105,8 @@
             
             <p id="voice-status-connected" class="text-xs text-gray-400 text-center">Conectado. Hablando...</p>
 
-            <!-- Visualizador de Voz (en la parte inferior) -->
-            <canvas id="voice-visualizer" class="w-full h-[40px] rounded-md bg-black"></canvas>
+            <!-- Visualizador de Voz (fondo negro para contraste) -->
+            <canvas id="voice-visualizer" class="w-full h-[40px] rounded-md bg-black/70"></canvas>
         </div>
     </div>
 
@@ -113,8 +134,13 @@
 
         // --- 5. Lógica del Chat de Voz ---
 
+        // --- LEER PARÁMETROS DE URL ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlUsername = urlParams.get('username') || null;
+        const urlAppId = urlParams.get('appid') || 'public_channel'; // Default si no hay appid
+
         // --- CONSTANTES ---
-        const ROOM_ID = 'public_channel';
+        const ROOM_ID = urlAppId; // Usar el appid como ID de la sala
         const ICE_SERVERS = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -154,6 +180,11 @@
         const voiceUsersList = document.getElementById('voice-users-list');
         const usernameInput = document.getElementById('username-input');
         
+        // --- NUEVOS ELEMENTOS DOM (para el prompt) ---
+        const manualJoinDiv = document.getElementById('manual-join-div');
+        const promptJoinDiv = document.getElementById('prompt-join-div');
+        const promptUsernameEl = document.getElementById('prompt-username');
+        
         // --- Elementos del Canvas ---
         const canvas = document.getElementById('voice-visualizer');
         const canvasCtx = canvas.getContext('2d');
@@ -171,21 +202,32 @@
         
         // --- MANEJADORES de EVENTOS ---
         joinVoiceChatBtn.addEventListener('click', () => {
-            const username = usernameInput.value.trim();
-            if (!username && !isVoiceChatActive) {
-                voiceStatus.textContent = "Por favor, ingresa un nombre.";
-                usernameInput.focus();
-                return;
+            if (isVoiceChatActive) return; // Seguridad, aunque el botón debería estar oculto
+
+            let username;
+
+            if (urlUsername) {
+                // El nombre ya está seteado desde la URL (en init)
+                username = currentUsername;
+            } else {
+                // Modo manual, leer del input
+                username = usernameInput.value.trim();
+                if (!username) {
+                    voiceStatus.textContent = "Por favor, ingresa un nombre.";
+                    usernameInput.focus();
+                    return;
+                }
+                currentUsername = username;
             }
             
-            if (!isVoiceChatActive) {
-                currentUsername = username;
-                currentUserId = username.replace(/[^a-zA-Z0-9]/g, '_') + `_${Date.now()}`;
-                usernameInput.disabled = true;
-                toggleVoiceChat(); // Solo llamar a toggle si no estamos activos
-            }
-            // Si ya estamos activos, el botón de "unirse" no debería estar visible.
-            // El botón de salir (leaveChatBtn) se encarga de la desconexión.
+            // Generar ID de usuario único
+            currentUserId = username.replace(/[^a-zA-Z0-9]/g, '_') + `_${Date.now()}`;
+            
+            // Deshabilitar input (si era visible)
+            usernameInput.disabled = true; 
+            
+            // Iniciar conexión
+            toggleVoiceChat(); 
         });
         
         muteMicBtnIcon.addEventListener('click', toggleMute);
@@ -219,7 +261,8 @@
             if (!userId || isVoiceChatActive) return;
 
             try {
-                voiceStatus.textContent = "Solicitando micrófono...";
+                // Mostrar estado de conexión
+                voiceStatus.textContent = `Conectando como "${getCurrentUsername()}"...`;
                 joinVoiceChatBtn.disabled = true;
                 
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -268,7 +311,10 @@
                 voiceStatus.textContent = "Error: No se pudo acceder al micrófono.";
                 joinVoiceChatBtn.disabled = false; // Permitir reintentar
                 isVoiceChatActive = false;
-                usernameInput.disabled = false; 
+                // No re-habilitar el input si venía de URL
+                if (!urlUsername) {
+                    usernameInput.disabled = false; 
+                }
             }
         }
 
@@ -318,7 +364,25 @@
             // --- Actualizar UI para mostrar sección de unirse ---
             joinSection.classList.remove('hidden');
             chatSection.classList.add('hidden');
-            usernameInput.disabled = false; // Reactivar input
+
+            // --- Lógica de UI post-desconexión ---
+            if (urlUsername) {
+                // Si el nombre vino de URL, mostrar el prompt de nuevo
+                manualJoinDiv.classList.add('hidden');
+                promptJoinDiv.classList.remove('hidden');
+                promptUsernameEl.textContent = urlUsername;
+                usernameInput.value = urlUsername; // Mantener valor
+                usernameInput.disabled = true; // Mantener deshabilitado
+                voiceStatus.textContent = `Desconectado. Vuelve a unirte como "${urlUsername}".`;
+            } else {
+                // Si fue manual, mostrar el input de nuevo
+                manualJoinDiv.classList.remove('hidden');
+                promptJoinDiv.classList.add('hidden');
+                usernameInput.value = ""; // Limpiar
+                usernameInput.disabled = false; // Habilitar
+                voiceStatus.textContent = "Desconectado. Ingresa un nombre.";
+            }
+            
             joinVoiceChatBtn.disabled = false; // Reactivar botón de unirse
             updateVoiceUI(false, isLogout);
             
@@ -361,7 +425,7 @@
             volumeHistory.push(currentVolume);
 
             // 3. Dibujar historial
-            canvasCtx.fillStyle = '#000000'; 
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // Fondo semitransparente
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
             const barWidth = canvas.width / HISTORY_LENGTH;
@@ -537,18 +601,14 @@
                 
                 // Actualizar estado visual del botón de mute
                 muteMicBtnIcon.classList.toggle('active', isMicMuted);
-                muteMicBtnIcon.classList.toggle('bg-gray-700', !isMicMuted);
-                muteMicBtnIcon.classList.toggle('hover:bg-gray-600', !isMicMuted);
-                muteMicBtnIcon.classList.toggle('bg-yellow-500', isMicMuted); // Amarillo para 'muteado'
-                muteMicBtnIcon.classList.toggle('hover:bg-yellow-600', isMicMuted);
+                muteMicBtnIcon.classList.toggle('bg-gray-700/50', !isMicMuted);
+                muteMicBtnIcon.classList.toggle('hover:bg-gray-600/70', !isMicMuted);
+                muteMicBtnIcon.classList.toggle('bg-yellow-500/70', isMicMuted); // Amarillo para 'muteado'
+                muteMicBtnIcon.classList.toggle('hover:bg-yellow-600/80', isMicMuted);
                 
             } else {
                 // Estamos en la sección de unirse
-                if (!getUserId() || isLogout) {
-                    voiceStatus.textContent = "Desconectado. Ingresa un nombre.";
-                } else {
-                    voiceStatus.textContent = "Desconectado.";
-                }
+                // El texto de 'voice-status' se maneja en disconnectVoiceChat y en init
             }
         }
 
@@ -588,8 +648,37 @@
             });
         }
 
-        // Iniciar el listener de presencia al cargar la página
-        startVoicePresenceListener();
+        // --- INICIALIZACIÓN ---
+        function init() {
+            // Iniciar el listener de presencia al cargar la página
+            startVoicePresenceListener();
+
+            // Comprobar si hay un nombre de usuario en la URL
+            if (urlUsername) {
+                // --- NO AUTO-UNIRSE ---
+                // 1. Pre-configurar el estado (sin conectar)
+                currentUsername = urlUsername; // Pre-setear esto
+                usernameInput.value = urlUsername;
+                usernameInput.disabled = true;
+
+                // 2. Actualizar la UI para mostrar el prompt
+                manualJoinDiv.classList.add('hidden');
+                promptJoinDiv.classList.remove('hidden');
+                promptUsernameEl.textContent = urlUsername;
+                
+                // 3. Actualizar el texto de estado
+                voiceStatus.textContent = `¿Unirte como "${urlUsername}"?`;
+
+            } else {
+                // Modo manual, asegúrate de que se muestre el input
+                manualJoinDiv.classList.remove('hidden');
+                promptJoinDiv.classList.add('hidden');
+                voiceStatus.textContent = "Desconectado. Ingresa un nombre.";
+            }
+        }
+
+        // Iniciar la lógica
+        init();
     </script>
 
 </body>

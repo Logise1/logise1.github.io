@@ -628,11 +628,8 @@
         }
         
         /* === INICIO: Estilos del Chat === */
-        #chat {
-            height: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
+        /* #chat se ha movido/modificado */
+        
         #chat-messages-container {
             flex-grow: 1; 
             overflow-y: auto;
@@ -950,88 +947,25 @@
             display: none;
         }
         
-        /* === NUEVOS ESTILOS PARA CHAT DE VOZ === */
-        #voice-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-shrink: 0;
+        /* === INICIO: Estilos para el Iframe de Chat de Voz === */
+        #voice-chat-iframe-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001; /* Encima de la mayoría de las cosas */
+            display: none;
+            width: 250px;
+            height: 300px;
         }
         
-        #join-voice-chat-btn {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            flex-grow: 1;
-        }
-        
-        #mute-mic-btn {
-            background-color: #f0f0f0;
-            color: #333;
-            padding: 10px;
-            border-radius: 8px;
-            width: 50px;
-            font-size: 1.2rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        #mute-mic-btn.active {
-            background-color: #dc3545;
-            color: white;
-        }
-        
-        #voice-users-list-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            background-color: #f9f9f9;
-            border: 1px solid #eef2f1;
+        #voice-chat-iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
             border-radius: 12px;
-            padding: 15px;
-            text-align: left;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
-        
-        #voice-users-list li {
-            display: flex;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed #eee;
-            font-weight: 700;
-            color: #333;
-        }
-        
-        #voice-users-list li:last-child {
-            border-bottom: none;
-        }
-        
-        .voice-user-status {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 10px;
-            flex-shrink: 0;
-            transition: background-color 0.3s ease;
-        }
-        
-        .voice-user-status.mic-on {
-            background-color: #28a745; /* Verde: Hablando */
-        }
-        
-        .voice-user-status.mic-muted {
-            background-color: #ffc107; /* Amarillo: Muteado */
-        }
-        
-        .voice-user-status.self-muted {
-             background-color: #dc3545; /* Rojo: Muteado por el mismo */
-        }
-        
-        .voice-user-name {
-            flex-grow: 1;
-        }
-        /* === FIN NUEVOS ESTILOS === */
+        /* === FIN: Estilos Iframe === */
 
 
         @media (max-width: 768px) {
@@ -1167,6 +1101,14 @@
                 width: 100vw;
                 height: 100vh;
             }
+            
+            /* --- Iframe de Voz en Móvil --- */
+            #voice-chat-iframe-container {
+                width: 200px;
+                height: 250px;
+                top: 10px;
+                right: 10px;
+            }
         }
 
     </style>
@@ -1252,53 +1194,20 @@
                 </div>
             </div>
 
-            <!-- === INICIO: Contenido del Chat === -->
+            <!-- === INICIO: Contenido del Chat (SIMPLIFICADO) === -->
             <div id="chat" class="tab-content no-scrollbar">
                 
-                <div class="sub-tab-buttons">
-                    <button class="sub-tab-btn active" data-subtab="text-chat-subtab">Texto</button>
-                    <button class="sub-tab-btn" data-subtab="voice-chat-subtab">Voz</button>
-                </div>
+                <!-- La barra de sub-pestañas ha sido eliminada -->
 
-                <div id="text-chat-subtab" class="sub-tab-content active" style="padding: 0;">
-                    <div id="chat-messages-container" class="no-scrollbar">
-                        <!-- Los mensajes del chat de texto se añadirán aquí -->
-                    </div>
-                    <div id="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
-                        <button id="chat-send-btn" disabled>Enviar</button>
-                    </div>
+                <div id="chat-messages-container" class="no-scrollbar">
+                    <!-- Los mensajes del chat de texto se añadirán aquí -->
+                </div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
+                    <button id="chat-send-btn" disabled>Enviar</button>
                 </div>
                 
-                <!-- === MODIFICACIÓN DE CHAT DE VOZ === -->
-                <div id="voice-chat-subtab" class="sub-tab-content" style="padding: 20px 0 0 0; text-align: center; flex-direction: column; flex-grow: 1; box-sizing: border-box;">
-                    
-                    <h2 style="margin-top: 0;">Chat de Voz</h2>
-                    
-                    <p id="voice-status" style="margin-bottom: 20px;">Desconectado. Necesitas iniciar sesión para unirte.</p>
-                    
-                    <div id="voice-controls" style="padding: 0 15px;">
-                        <button id="join-voice-chat-btn" disabled style="transition: all 0.2s ease;">
-                            Unirse
-                        </button>
-                        
-                        <!-- === INICIO: CAMBIO A EMOJIS === -->
-                        <button id="mute-mic-btn" disabled>
-                            <span id="mic-on-icon" style="display: block; font-size: 1.2rem;">🎤</span>
-                            <span id="mic-off-icon" style="display: none; font-size: 1.2rem;">🔇</span>
-                        </button>
-                        <!-- === FIN: CAMBIO A EMOJIS === -->
-                    </div>
-
-                    <div id="voice-users-list-container" style="margin-top: 15px; padding: 15px 15px 15px 15px;">
-                        <p id="voice-users-status" style="margin: 0; color: #777;">Usuarios conectados: 0</p>
-                        <ul id="voice-users-list" class="no-scrollbar" style="list-style: none; padding: 0; margin-top: 10px;">
-                            <!-- La lista de usuarios de voz se insertará aquí -->
-                        </ul>
-                    </div>
-
-                </div>
-                <!-- === FIN MODIFICACIÓN DE CHAT DE VOZ === -->
+                <!-- El contenido del chat de voz (WebRTC) ha sido eliminado -->
 
             </div>
             <!-- === FIN: Contenido del Chat === -->
@@ -1349,6 +1258,10 @@
     <!-- === INICIO: Contenedor de Toasts === -->
     <div id="toast-container"></div>
     <!-- === FIN: Contenedor de Toasts === -->
+    
+    <!-- === INICIO: Contenedor del Iframe de Chat de Voz === -->
+    <div id="voice-chat-iframe-container"></div>
+    <!-- === FIN: Contenedor del Iframe de Chat de Voz === -->
 
     <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-box">
@@ -1403,7 +1316,6 @@
     <script type="module" src="./config.js"></script>
     <script type="module" src="./game_logic.js"></script>
     <script type="module" src="./ui_handlers.js"></script>
-    <!-- voicechat.js se carga ahora desde ui_handlers.js -->
-    <!-- <script type="module" src="./voicechat.js"></script> -->
+    <!-- voicechat.js ya no se carga -->
 </body>
 </html>
