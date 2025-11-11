@@ -249,6 +249,10 @@
             flex-grow: 1;
             overflow-y: auto;
             padding: 15px;
+            /* === NUEVO: Necesario para que el chat funcione === */
+            height: 100%;
+            box-sizing: border-box;
+            /* ============================================== */
         }
         .tab-content.active {
             display: block;
@@ -517,6 +521,17 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        
+        /* === NUEVO: Estilo para la skin en la clasificación === */
+        #leaderboard-list .player-skin {
+            margin-right: 8px;
+            font-size: 1.2rem;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+        /* ================================================== */
+
 
         #leaderboard-list .player-score {
             font-weight: 500;
@@ -605,6 +620,124 @@
         #logout-btn:hover {
             background-color: #5a6268;
         }
+        
+        /* === INICIO: Estilos del Chat === */
+        #chat {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #chat-messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #eef2f1;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .chat-message strong {
+            color: #0056b3;
+            font-weight: 700;
+        }
+        .chat-message .player-skin {
+            margin-right: 5px;
+            display: inline-block;
+            width: 18px;
+            text-align: center;
+        }
+
+        #chat-input-area {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        #chat-input {
+            flex-grow: 1;
+            padding: 12px;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+        }
+        #chat-send-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #chat-send-btn:hover {
+            background-color: #0069d9;
+        }
+        #chat-input:disabled, #chat-send-btn:disabled {
+            background-color: #e9ecef;
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        /* === FIN: Estilos del Chat === */
+
+        /* === INICIO: Estilos de Notificación Toast === */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+        }
+        .toast-notification {
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideInToast 0.4s ease forwards, fadeOutToast 0.4s 4s ease forwards;
+        }
+        .toast-notification strong {
+            color: #0056b3;
+            font-weight: 700;
+        }
+        .toast-notification .player-skin {
+            margin-right: 5px;
+        }
+        @keyframes slideInToast {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        @keyframes fadeOutToast {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+        /* === FIN: Estilos de Notificación Toast === */
+
 
         .modal-overlay {
             position: fixed;
@@ -933,6 +1066,14 @@
                 fill: currentColor;
             }
             
+            /* === NUEVO: Icono de Chat Móvil === */
+            .mobile-tab-bar .mobile-tab-btn[data-tab="chat"] svg {
+                width: 22px;
+                height: 22px;
+            }
+            /* =============================== */
+
+            
             .leaderboard-actions input {
                 padding: 10px;
             }
@@ -973,13 +1114,13 @@
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="store">Mejoras</button>
                 <button class="tab-btn" data-tab="skins">Skins</button>
+                <!-- === NUEVO: Botón Tab Chat === -->
+                <button class="tab-btn" data-tab="chat">Chat</button>
+                <!-- ============================ -->
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
             </div>
 
             <div id="store" class="tab-content active no-scrollbar">
-                <!-- ====================================================== -->
-                <!-- ===== INICIO: CAMBIO DE PESTAÑAS DE PRODUCCIÓN ===== -->
-                <!-- ====================================================== -->
                 <div class="sub-tab-buttons">
                     <button class="sub-tab-btn active" data-subtab="store-ppc">PPC</button>
                     <button class="sub-tab-btn" data-subtab="store-pps">PPS</button>
@@ -998,9 +1139,6 @@
                         <h3>Mejoras de PPS</h3>
                     </div>
                 </div>
-                <!-- ====================================================== -->
-                <!-- ===== FIN: CAMBIO DE PESTAÑAS DE PRODUCCIÓN ===== -->
-                <!-- ====================================================== -->
                 
                 <div id="store-mult" class="sub-tab-content no-scrollbar">
                     <div id="store-items-click-mult-container">
@@ -1032,6 +1170,19 @@
                     </div>
                 </div>
             </div>
+
+            <!-- === INICIO: Contenido del Chat === -->
+            <div id="chat" class="tab-content no-scrollbar">
+                <div id="chat-messages-container" class="no-scrollbar">
+                    <!-- Los mensajes del chat se añadirán aquí -->
+                </div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100" disabled>
+                    <button id="chat-send-btn" disabled>Enviar</button>
+                </div>
+            </div>
+            <!-- === FIN: Contenido del Chat === -->
+
 
             <div id="leaderboard" class="tab-content no-scrollbar">
                 <div id="leaderboard-content">
@@ -1072,6 +1223,10 @@
         </div>
     </div>
 
+    <!-- === INICIO: Contenedor de Toasts === -->
+    <div id="toast-container"></div>
+    <!-- === FIN: Contenedor de Toasts === -->
+
     <div id="login-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-box">
             <h2>¡Únete a la Clasificación!</h2>
@@ -1105,6 +1260,12 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5 4.5c2.336 0 4.31 1.454 5.116 3.5H6.884c.806-2.046 2.78-3.5 5.116-3.5z"/></svg>
             <span>Skins</span>
         </button>
+        <!-- === NUEVO: Botón Chat Móvil === -->
+        <button class="mobile-tab-btn" data-tab="chat">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+            <span>Chat</span>
+        </button>
+        <!-- =============================== -->
         <button class="mobile-tab-btn" data-tab="leaderboard">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 1l9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V5l9-4zm0 2.69L5 7.7v3.3c0 3.5 2.5 7.6 7 9.3 4.5-1.7 7-5.8 7-9.3V7.7L12 3.69zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 8c-2.3 0-4.3-.9-5.9-2.4.4-1.3 2.1-2.1 5.9-2.1s5.5.8 5.9 2.1C16.3 17.1 14.3 18 12 18z"/></svg>
             <span>Clasificación</span>
@@ -1135,7 +1296,10 @@
             limitToLast,
             onValue,
             get,
-            onDisconnect
+            onDisconnect,
+            push, // --- NUEVO: Importar push para chat
+            serverTimestamp, // --- NUEVO: Importar serverTimestamp
+            onChildAdded // --- NUEVO: Importar onChildAdded para chat
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
         
         const firebaseConfig = {
@@ -1499,15 +1663,14 @@
             
             if (!isLoggedIn) {
                 isGameLoaded = true; 
+                initializeStore(); // --- BUGFIX: Llamar a initializeStore para no logueados ---
             }
             
             updateUI(); 
             updateSkinsUI(); 
             checkBanStatus();
             
-            // --- INICIO: CORRECCIÓN BUG SKIN VACÍA ---
             updateClickButtonSkin(); // Asegura que la skin se aplique al resetear
-            // --- FIN: CORRECCIÓN BUG SKIN VACÍA ---
         }
 
         const scoreDisplay = document.getElementById('score');
@@ -1516,10 +1679,8 @@
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
         
-        // --- INICIO: Contenedores de tienda v5 ---
         const storeCpcContainer = document.getElementById('store-items-cpc-container');
         const storePpsContainer = document.getElementById('store-items-pps-container');
-        // --- FIN: Contenedores de tienda v5 ---
         const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
         const storeAutoMultContainer = document.getElementById('store-items-auto-mult-container');
         const storeSynergyContainer = document.getElementById('store-items-synergy-container');
@@ -1564,6 +1725,13 @@
 
         const coinsDisplay = document.getElementById('coins-amount');
         const skinsGrid = document.getElementById('skins-grid');
+        
+        // --- INICIO: Variables del Chat ---
+        const chatMessagesContainer = document.getElementById('chat-messages-container');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        const toastContainer = document.getElementById('toast-container');
+        // --- FIN: Variables del Chat ---
         
         let firstClick = true;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -2119,6 +2287,11 @@
         }
 
         function updateClickButtonSkin() {
+            // --- CORRECCIÓN: Asegurarse de que skinsState exista ---
+            if (!skinsState[currentSkin]) {
+                currentSkin = 'default';
+            }
+            // --- FIN CORRECCIÓN ---
             const skin = skinsState[currentSkin];
             clickButton.innerHTML = '';
 
@@ -2137,7 +2310,6 @@
 
         function updateSkinsUI() {
             if (!skinsState || Object.keys(skinsState).length === 0) {
-                 // Si skinsState no está listo, inicializarlo (como en resetGameState)
                  skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
             }
             
@@ -2192,6 +2364,11 @@
                     scoreSection.style.display = 'flex';
                     loggedInAs.textContent = `Logueado como: ${currentUsername}`;
 
+                    // --- NUEVO: Habilitar Chat ---
+                    chatInput.disabled = false;
+                    chatSendBtn.disabled = false;
+                    chatInput.placeholder = "Escribe un mensaje...";
+
                     const presenceRef = ref(db, `presence/${userId}`);
                     set(presenceRef, true);
                     onDisconnect(presenceRef).remove();
@@ -2208,12 +2385,18 @@
                     authSection.style.display = 'flex';
                     scoreSection.style.display = 'none';
                     loggedInAs.textContent = '';
+                    
+                    // --- NUEVO: Deshabilitar Chat ---
+                    chatInput.disabled = true;
+                    chatSendBtn.disabled = true;
+                    chatInput.placeholder = "Inicia sesión para chatear...";
 
                     resetGameState(false);
                 }
             });
 
             loadLeaderboard();
+            initializeChat(); // --- NUEVO: Iniciar el listener del chat ---
             
             const allPresenceRef = ref(db, 'presence');
             onValue(allPresenceRef, (snapshot) => {
@@ -2367,10 +2550,17 @@
                         const statusDot = document.createElement('span');
                         statusDot.classList.add('status-dot');
                         
+                        // --- NUEVO: Añadir Skin a la Clasificación ---
+                        const skinSpan = document.createElement('span');
+                        skinSpan.classList.add('player-skin');
+                        skinSpan.textContent = entry.skin || '👆'; // Skin guardada o default
+                        // --- FIN ---
+
                         const nameSpan = document.createElement('span');
                         nameSpan.textContent = entry.username || "Anónimo";
                         
                         name.appendChild(statusDot);
+                        name.appendChild(skinSpan); // --- NUEVO ---
                         name.appendChild(nameSpan);
 
 
@@ -2454,10 +2644,17 @@
                 }
                 return Promise.resolve();
             }
+            
+            // --- NUEVO: Asegurarse de que skinsState exista ---
+            if (!skinsState[currentSkin]) {
+                currentSkin = 'default';
+            }
+            // --- FIN ---
 
             const scoreToSave = _MathFloor(totalScore);
             const now = _DateNow();
             const currentPPS = pps * levelMultiplier;
+            const currentSkinEmoji = skinsState[currentSkin]?.emoji || '👆'; // --- NUEVO: Obtener skin emoji
 
             const stateToSave = {
                 score: score,
@@ -2482,7 +2679,8 @@
                 username: currentUsername,
                 score: scoreToSave,
                 pps: currentPPS,
-                lastSeen: now
+                lastSeen: now,
+                skin: currentSkinEmoji // --- NUEVO: Guardar skin en leaderboard
             }).then(() => {
                 if (manual) {
                     saveStatus.textContent = "¡Puntuación guardada!";
@@ -2499,6 +2697,110 @@
             
             return Promise.all([p1, p2]);
         }
+        
+        // --- INICIO: Funciones del Chat ---
+        function initializeChat() {
+            const chatRef = ref(db, 'chatMessages');
+            const chatQuery = query(chatRef, limitToLast(50));
+            
+            onChildAdded(chatQuery, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    displayChatMessage(data.username, data.message, data.skin);
+                    // Solo mostrar toast para mensajes que no sean del usuario actual
+                    // y que se hayan enviado en los últimos 30 segundos (para no spamear al cargar)
+                    const messageTime = data.timestamp || 0;
+                    const isRecent = (_DateNow() - messageTime) < 30000;
+                    
+                    if (data.username !== currentUsername && isRecent) {
+                        showToastNotification(data.username, data.message, data.skin);
+                    }
+                }
+            });
+            
+            chatSendBtn.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !chatSendBtn.disabled) {
+                    sendChatMessage();
+                }
+            });
+        }
+        
+        function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (!message || !userId || !currentUsername) {
+                return;
+            }
+            
+            // --- NUEVO: Asegurarse de que skinsState exista ---
+            if (!skinsState[currentSkin]) {
+                currentSkin = 'default';
+            }
+            const skinEmoji = skinsState[currentSkin]?.emoji || '👆';
+            
+            const chatRef = ref(db, 'chatMessages');
+            push(chatRef, {
+                username: currentUsername,
+                message: message,
+                skin: skinEmoji,
+                timestamp: serverTimestamp()
+            }).then(() => {
+                chatInput.value = '';
+            }).catch((e) => {
+                console.error("Error al enviar mensaje:", e);
+            });
+        }
+        
+        function displayChatMessage(username, message, skin) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('chat-message');
+            
+            // Sanitize message by creating text nodes
+            const skinSpan = document.createElement('span');
+            skinSpan.classList.add('player-skin');
+            skinSpan.textContent = skin || '👤';
+            
+            const strong = document.createElement('strong');
+            strong.textContent = `${username}: `;
+            
+            const msgText = document.createTextNode(message);
+            
+            msgDiv.appendChild(skinSpan);
+            msgDiv.appendChild(strong);
+            msgDiv.appendChild(msgText);
+            
+            chatMessagesContainer.appendChild(msgDiv);
+            
+            // Auto-scroll
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+        
+        function showToastNotification(username, message, skin) {
+            const toast = document.createElement('div');
+            toast.classList.add('toast-notification');
+            
+            const skinSpan = document.createElement('span');
+            skinSpan.classList.add('player-skin');
+            skinSpan.textContent = skin || '👤';
+            
+            const strong = document.createElement('strong');
+            strong.textContent = `${username}: `;
+            
+            const msgText = document.createTextNode(message);
+            
+            toast.appendChild(skinSpan);
+            toast.appendChild(strong);
+            toast.appendChild(msgText);
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto-destruir el toast
+            setTimeout(() => {
+                toast.remove();
+            }, 4500);
+        }
+        // --- FIN: Funciones del Chat ---
+
 
         function showLoginModal() {
             loginModalOverlay.style.display = 'flex';
@@ -2760,7 +3062,7 @@
                 musicToggleBtn = document.getElementById('music-toggle-btn');
                 
                 initializeSkins(); 
-                await initializeFirebase(); // Esto llama a loadGameState, que ahora inicializa la tienda.
+                await initializeFirebase(); // Esto llama a loadGameState (que llama a initializeStore) Y a initializeChat
 
                 clickButton.addEventListener('mousedown', handleManualClick);
                 
@@ -2781,15 +3083,14 @@
                         updateUI();
                     }
                 });
-
-                // --- INICIO: CORRECCIÓN BUG x10 STUCK ---
+                
+                // --- BUGFIX: Añadir listener 'blur' para resetear 'isShiftPressed' ---
                 window.addEventListener('blur', () => {
                     if (isShiftPressed) {
                         isShiftPressed = false;
                         updateUI();
                     }
                 });
-                // --- FIN: CORRECCIÓN BUG x10 STUCK ---
 
 
                 tabButtons.forEach(button => {
@@ -2836,6 +3137,7 @@
                 setInterval(updateLeaderboardVisualTicking, 1000);
 
                 // Estas llamadas son importantes al final por si el usuario no está logueado
+                // (aunque initializeStore() ya se llama en resetGameState)
                 updateUI();
                 updateClickButtonSkin();
                 
