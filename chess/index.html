@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Ajedrez</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. chess.js (Lógica del juego) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    
+    <!-- 3. chessboard.js (UI del tablero) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css"
+        xintegrity="sha512-RSTAInPFlLNJQypGfUfS+L1S/KBTUvQVtH1TISQbpMX1aVuzM/MV/vGA/qB2eBiGlxEIkbIqPjT/9cmR1G/DAw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+        xintegrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR2e5o"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"
+        xintegrity="sha512-sD/ZfeQvLdPBBTLMCgLrNv/PKNhv/sQG6unNxC/e/h1JnlBqNPaGdBjJ/AFYV2w2Bw/Qf2yHqXv/3lB/LrhNfQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Scrollbar personalizado */
+        #game-log::-webkit-scrollbar { width: 4px; }
+        #game-log::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 20px; }
+        
+        /* Animación para modales */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-content {
+            animation: fadeIn 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-full overflow-hidden flex items-center justify-center p-4 md:p-8">
+
+    <!-- 
+      PANTALLA 1: LOGIN / REGISTRO 
+    -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm modal-content">
+            <h1 class="text-3xl font-bold mb-6 text-center text-white">Plataforma de Ajedrez</h1>
+            
+            <input type="text" id="username-input" placeholder="Usuario" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 transition-all">
+            
+            <input type="password" id="password-input" placeholder="Contraseña" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6 transition-all">
+            
+            <div id="login-error" class="text-red-400 text-sm mb-4 text-center" style="display: none;"></div>
+
+            <button id="login-btn" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-lg transition-all mb-3 flex items-center justify-center gap-2">
+                <!-- Icono de Login (inline SVG) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Iniciar Sesión
+            </button>
+            <button id="register-btn" class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2">
+                <!-- Icono de Registro (inline SVG) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+                Registrarse y Empezar
+            </button>
+        </div>
+    </div>
+
+    <!-- 
+      PANTALLA 2: APLICACIÓN PRINCIPAL (Oculta al inicio)
+    -->
+    <div id="main-app-screen" class="w-full h-full max-w-7xl mx-auto flex flex-col md:flex-row gap-6 hidden">
+
+        <!-- Columna Izquierda: Tablero y Controles -->
+        <div class="flex-grow w-full md:w-2/3 lg:w-3/4 flex flex-col">
+            <h1 class="text-3xl font-bold text-center mb-4 hidden md:block">Plataforma de Ajedrez</h1>
+            <!-- Contenedor del tablero para centrarlo -->
+            <div class="w-full max-w-2xl mx-auto aspect-square">
+                 <div id="myBoard" class="w-full shadow-xl rounded-lg overflow-hidden"></div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Menú, Multijugador y Estado -->
+        <div class="w-full md:w-1/3 lg:w-1/4 bg-gray-800 p-4 rounded-xl shadow-xl flex flex-col" style="max-height: 90vh;">
+            
+            <!-- Info de Usuario -->
+            <div class="mb-4">
+                <h2 class="text-2xl font-semibold mb-2">
+                    ¡Hola, <span id="username-display" class="text-blue-400">Jugador</span>!
+                </h2>
+                <div class="text-xs text-gray-400 truncate mb-2">
+                    ID: <span id="user-id-display" class="font-mono">...</span>
+                </div>
+                 <div id="auth-status" class="mt-1 p-2 bg-gray-700 rounded-md text-sm truncate font-medium">
+                    Conectando...
+                </div>
+            </div>
+
+            <!-- VISTA 1: MENÚ PRINCIPAL -->
+            <div id="main-menu-view" style="display: none;">
+                <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Menú Principal</h2>
+                <button id="goto-online-btn" class="w-full mb-3 px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M2 8c0-2.2.7-4.3 2-6"/><path d="M22 8c0-2.2-.7-4.3-2-6"/></svg>
+                    Jugar Online
+                </button>
+                <button id="goto-play-ai-btn" class="w-full mb-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-lg transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="6" height="6"/><rect x="5" y="5" width="2" height="2"/><rect x="13" y="5" width="2" height="2"/><rect x="5" y="13" width="2" height="2"/><rect x="13"y="13" width="2" height="2"/><rect x="17" y="9" width="2" height="2"/><rect x="17" y="5" width="2" height="2"/><rect x="17" y="13" width="2" height="2"/><rect x="9" y="17" width="2" height="2"/><rect x="5" y="17" width="2" height="2"/><rect x="13" y="17" width="2" height="2"/><rect x="9" y="5" width="2" height="2"/><rect x="5" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/></svg>
+                    Jugar vs. IA
+                </button>
+                 <button id="logout-btn" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-all flex items-center justify-center gap-2">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- VISTA 2: MULTIJUGADOR ONLINE -->
+            <div id="online-view" style="display: none;">
+                <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-2">Multijugador Online</h2>
+                <button id="create-game-btn" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all mb-2 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Crear Partida
+                </button>
+                <div class="flex gap-2">
+                    <input type="text" id="join-game-id" placeholder="Pegar ID de partida" class="flex-grow p-2 bg-gray-700 rounded-lg border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="join-game-btn" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold transition-all">Unirse</button>
+                </div>
+                <div id="game-id-display" class="mt-3 p-2 bg-gray-700 rounded-md text-sm" style="display: none;">
+                    ID: <strong id="game-id" class="font-mono text-yellow-300"></strong>
+                </div>
+                <button id="goto-menu-btn" class="w-full mt-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Volver al Menú
+                </button>
+            </div>
+
+            <!-- Estado del Juego (Común a todas las vistas) -->
+            <div class="flex-grow flex flex-col min-h-0 mt-4">
+                <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-2">Estado de la Partida</h2>
+                <div id="game-status" class="p-3 bg-gray-700 rounded-lg shadow-inner text-center font-medium">
+                    Bienvenido.
+                </div>
+                <div id="game-log-container" class="mt-2 p-2 bg-gray-900 rounded-lg flex-grow min-h-0 overflow-hidden" style="display: none;">
+                    <h3 class="text-sm font-semibold mb-1 text-gray-400">Historial (PGN)</h3>
+                    <div id="game-log" class="text-sm font-mono text-gray-300 overflow-y-auto h-full pr-2"></div>
+                </div>
+                <div class="mt-2">
+                    <label for="fen-string" class="text-xs text-gray-500">FEN:</label>
+                    <input type="text" id="fen-string" readonly class="w-full p-1 bg-gray-700 text-xs text-gray-400 rounded-md border border-gray-600 font-mono">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+      PANTALLA 3: MODAL DE FIN DE PARTIDA (Oculto)
+    -->
+    <div id="game-over-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm text-center modal-content">
+            <h1 id="game-over-title" class="text-3xl font-bold mb-4">¡Jaque Mate!</h1>
+            <p id="game-over-message" class="text-lg text-gray-300 mb-6">Las Negras han perdido.</p>
+            <button id="game-over-close-btn" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-lg transition-all">
+                Aceptar
+            </button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // 1. Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            addDoc,
+            updateDoc,
+            onSnapshot,
+            collection,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 2. Variables Globales de la App
+        let board = null;
+        let game = new Chess();
+        let playerColor = 'w';
+        let currentGameMode = 'local'; // 'local', 'ai', 'online', 'test-match'
+        let currentGameId = null;
+        let gameUnsubscribe = null;
+        let username = 'Jugador';
+        let appState = 'login'; // 'login', 'test-match', 'main-menu', 'online'
+        let isAuthReady = false; // Flag para controlar la carga inicial
+
+        // 3. Variables Globales de Firebase
+        let db, auth, userId;
+
+        // 4. Configuración de Firebase (proporcionada por el usuario)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
+            authDomain: "chess-a9347.firebaseapp.com",
+            projectId: "chess-a9347",
+            storageBucket: "chess-a9347.appspot.com",
+            messagingSenderId: "950558367537",
+            appId: "1:950558367537:web:4cee83e2053262a4541a10",
+            measurementId: "G-Z3KNSZBL2F"
+        };
+        
+        // --- GESTIÓN DE ESTADO DE LA APLICACIÓN ---
+
+        function setAppState(newState) {
+            appState = newState;
+            console.log("Cambiando estado a:", newState);
+
+            const loginScreen = document.getElementById('login-screen');
+            const mainAppScreen = document.getElementById('main-app-screen');
+            const mainMenu = document.getElementById('main-menu-view');
+            const onlineView = document.getElementById('online-view');
+            const gameOverModal = document.getElementById('game-over-modal');
+
+            // Ocultar vistas principales
+            loginScreen.style.display = 'none';
+            mainAppScreen.style.display = 'none';
+            mainMenu.style.display = 'none';
+            onlineView.style.display = 'none';
+            gameOverModal.style.display = 'none';
+
+            switch (newState) {
+                case 'login':
+                    loginScreen.style.display = 'flex';
+                    break;
+                
+                case 'test-match':
+                    mainAppScreen.style.display = 'flex';
+                    // Ocultar menús
+                    mainMenu.style.display = 'none';
+                    onlineView.style.display = 'none';
+                    // Iniciar partida
+                    currentGameMode = 'test-match';
+                    startAiGame();
+                    updateGameStatus(`¡Hola, ${username}! Comienza tu partida de prueba vs. IA.`);
+                    break;
+
+                case 'main-menu':
+                    mainAppScreen.style.display = 'flex';
+                    mainMenu.style.display = 'block';
+                    currentGameMode = 'local';
+                    resetGame();
+                    updateGameStatus(`¡Bienvenido al menú principal, ${username}!`);
+                    break;
+                
+                case 'online':
+                    mainAppScreen.style.display = 'flex';
+                    onlineView.style.display = 'block';
+                    currentGameMode = 'online';
+                    resetGame();
+                    updateGameStatus("Modo multijugador online.");
+                    break;
+            }
+        }
+
+        // --- INICIALIZACIÓN DE FIREBASE Y APP ---
+
+        function initializeAppLogic() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // setLogLevel('Debug');
+                console.log("Firebase initialized with user config.");
+
+                setupAuth();
+                
+                // Bind login buttons
+                $('#login-btn').on('click', handleLogin);
+                $('#register-btn').on('click', handleRegister);
+                $('#game-over-close-btn').on('click', handleCloseGameOverModal);
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showLoginError(`Error de Firebase: ${error.message}`);
+                updateAuthStatus(`Error de Firebase: ${error.message}`, true);
+            }
+        }
+
+        function setupAuth() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    // Usuario está logueado
+                    userId = user.uid;
+                    updateAuthStatus(`Conectado`);
+                    document.getElementById('user-id-display').textContent = userId;
+                    
+                    await loadUserProfile(user);
+
+                    // Inicializar el tablero SÓLO UNA VEZ
+                    if (!board) {
+                        initializeChessApp();
+                    }
+
+                    // Si es la primera carga (p.ej. recargar página) y estamos en login,
+                    // mover al menú principal.
+                    if (!isAuthReady && appState === 'login') {
+                        setAppState('main-menu');
+                    }
+                    isAuthReady = true;
+
+                } else {
+                    // Usuario está deslogueado
+                    userId = null;
+                    username = 'Jugador';
+                    updateAuthStatus("Desconectado", true);
+                    setAppState('login'); // Forzar pantalla de login
+                    isAuthReady = false;
+                }
+            });
+        }
+        
+        async function loadUserProfile(user) {
+            try {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    username = userDoc.data().username;
+                } else {
+                    username = user.email.split('@')[0];
+                }
+            } catch (error) {
+                console.error("Error loading user profile:", error);
+                username = user.email.split('@')[0]; // Fallback
+            }
+            $('#username-display').text(username);
+        }
+        
+        function showLoginError(message) {
+            const errorEl = document.getElementById('login-error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        // --- LÓGICA DE AUTENTICACIÓN ---
+
+        async function handleLogin() {
+            const userInput = $('#username-input').val();
+            const password = $('#password-input').val();
+            if (!userInput || !password) {
+                showLoginError("Usuario y contraseña no pueden estar vacíos.");
+                return;
+            }
+            const email = userInput + '@email.com';
+            
+            try {
+                showLoginError("");
+                await signInWithEmailAndPassword(auth, email, password);
+                // Éxito: onAuthStateChanged se disparará, pero forzamos el estado
+                setAppState('main-menu');
+            } catch (error) {
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                    showLoginError("Usuario o contraseña incorrectos.");
+                } else {
+                    showLoginError(error.message);
+                }
+            }
+        }
+
+        async function handleRegister() {
+            const userInput = $('#username-input').val();
+            const password = $('#password-input').val();
+            if (!userInput || !password) {
+                showLoginError("Usuario y contraseña no pueden estar vacíos.");
+                return;
+            }
+            if (password.length < 6) {
+                showLoginError("La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
+            const email = userInput + '@email.com';
+            
+            try {
+                showLoginError("");
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Guardar el nombre de usuario en Firestore
+                username = userInput;
+                userId = userCredential.user.uid;
+                await setDoc(doc(db, "users", userId), {
+                    username: username,
+                    elo: 800
+                });
+
+                $('#username-display').text(username);
+                
+                // Éxito: onAuthStateChanged se disparará, pero forzamos el estado
+                setAppState('test-match');
+
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    showLoginError("Ese nombre de usuario ya existe.");
+                } else {
+                    showLoginError(error.message);
+                }
+            }
+        }
+        
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+                // onAuthStateChanged se encargará de cambiar a 'login'
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        }
+
+        // --- LÓGICA DE LA UI Y EL JUEGO ---
+
+        function initializeChessApp() {
+            const config = {
+                draggable: true,
+                position: 'start',
+                pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png',
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd
+            };
+            board = Chessboard('myBoard', config);
+            $(window).on('resize', () => board.resize()); // Hacer tablero responsive
+            
+            // Bind UI buttons
+            $('#goto-play-ai-btn').on('click', () => {
+                setAppState('test-match'); // Re-usar 'test-match' como 'jugar vs ia'
+                currentGameMode = 'ai';
+                updateGameStatus("Iniciando partida vs. IA...");
+            });
+            $('#logout-btn').on('click', handleLogout);
+            $('#goto-online-btn').on('click', () => setAppState('online'));
+            $('#goto-menu-btn').on('click', () => setAppState('main-menu'));
+            
+            $('#create-game-btn').on('click', createOnlineGame);
+            $('#join-game-btn').on('click', joinOnlineGame);
+        }
+
+        // --- MANEJADORES DE EVENTOS DEL TABLERO ---
+
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false; // Corregido
+            if ((currentGameMode === 'ai' || currentGameMode === 'test-match') && piece.search(/^b/) !== -1) return false;
+            if (currentGameMode === 'online') {
+                if (playerColor === 'w' && piece.search(/^b/) !== -1) return false;
+                if (playerColor === 'b' && piece.search(/^w/) !== -1) return false;
+            }
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function onDrop(source, target) {
+            let move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+            updateGameStatus();
+            if (game.game_over()) { // Corregido
+                handleGameOver();
+            } else if (currentGameMode === 'ai' || currentGameMode === 'test-match') {
+                window.setTimeout(makeRandomMove, 250);
+            } else if (currentGameMode === 'online') {
+                updateGameInFirestore();
+            }
+        }
+
+        function onSnapEnd() { board.position(game.fen()); }
+
+        function handleGameOver() {
+            let title = '';
+            let message = '';
+            const moveColor = game.turn() === 'b' ? 'Blancas' : 'Negras'; // El color que *perdió* o está ahogado
+
+            if (game.in_checkmate()) {
+                title = '¡Jaque Mate!';
+                message = `¡${moveColor} ha${moveColor === 'Blancas' ? '' : 'n'} perdido!`;
+            } else if (game.in_draw()) {
+                title = '¡Tablas!';
+                message = 'La partida ha terminado en empate.';
+            } else if (game.in_stalemate()) {
+                title = '¡Tablas!';
+                message = '¡Ahogado! Empate.';
+            } else if (game.in_threefold_repetition()) {
+                title = '¡Tablas!';
+                message = 'Empate por triple repetición.';
+            }
+            
+            $('#game-over-title').text(title);
+            $('#game-over-message').text(message);
+            $('#game-over-modal').css('display', 'flex');
+        }
+
+        function handleCloseGameOverModal() {
+             $('#game-over-modal').css('display', 'none');
+             // Si era la partida de prueba, ir al menú
+             if (currentGameMode === 'test-match') {
+                setAppState('main-menu');
+             } else {
+                // Para otras partidas, solo reiniciar el tablero
+                resetGame();
+             }
+        }
+
+        // --- LÓGICA DE MODOS DE JUEGO ---
+
+        function startAiGame() {
+            resetGame();
+            playerColor = 'w';
+        }
+
+        function makeRandomMove() {
+            if (game.game_over()) { handleGameOver(); return; }; // Corregido
+            const possibleMoves = game.moves();
+            const randomIdx = Math.floor(Math.random() * possibleMoves.length);
+            game.move(possibleMoves[randomIdx]);
+            board.position(game.fen());
+            updateGameStatus();
+            if (game.game_over()) handleGameOver(); // Corregido
+        }
+
+        // --- LÓGICA MULTIJUGADOR (FIREBASE) ---
+
+        async function createOnlineGame() {
+            if (!userId) { updateGameStatus("Error: Debes estar autenticado.", true); return; }
+            resetGame();
+            currentGameMode = 'online';
+            playerColor = 'w';
+            try {
+                const gameDoc = await addDoc(collection(db, "games"), {
+                    fen: game.fen(),
+                    player1: userId,
+                    player1_username: username,
+                    player2: '',
+                    player2_username: '',
+                    status: 'waiting',
+                    createdAt: new Date().toISOString()
+                });
+                currentGameId = gameDoc.id;
+                $('#game-id').text(currentGameId);
+                $('#game-id-display').show();
+                updateGameStatus("Partida creada. Esperando oponente...");
+                listenToGame(currentGameId);
+            } catch (error) {
+                updateGameStatus(`Error al crear partida: ${error.message}`, true);
+            }
+        }
+
+        async function joinOnlineGame() {
+            if (!userId) { updateGameStatus("Error: Debes estar autenticado.", true); return; }
+            const gameIdToJoin = $('#join-game-id').val();
+            if (!gameIdToJoin) { updateGameStatus("Por favor, introduce un ID de partida.", true); return; }
+
+            const gameRef = doc(db, "games", gameIdToJoin);
+            try {
+                const gameSnap = await getDoc(gameRef);
+                if (!gameSnap.exists()) { updateGameStatus("Error: No se encontró la partida.", true); return; }
+                const gameData = gameSnap.data();
+                if (gameData.player2 && gameData.player2 !== userId) { updateGameStatus("Error: La partida ya está llena.", true); return; }
+                
+                resetGame();
+                currentGameMode = 'online';
+                playerColor = 'b';
+                currentGameId = gameIdToJoin;
+                await updateDoc(gameRef, { player2: userId, player2_username: username, status: 'active' });
+                $('#game-id').text(currentGameId);
+                $('#game-id-display').show();
+                updateGameStatus(`Te has unido. Juegas con Negras vs. ${gameData.player1_username}.`);
+                listenToGame(currentGameId);
+            } catch (error) {
+                updateGameStatus(`Error al unirse: ${error.message}`, true);
+            }
+        }
+        
+        function listenToGame(gameId) {
+            if (gameUnsubscribe) gameUnsubscribe();
+            const gameRef = doc(db, "games", gameId);
+            gameUnsubscribe = onSnapshot(gameRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    if (gameUnsubscribe) gameUnsubscribe();
+                    resetGame();
+                    updateGameStatus("La partida ha terminado o fue borrada.", true);
+                    setAppState('main-menu');
+                    return;
+                }
+                const gameData = docSnap.data();
+                if (game.fen() !== gameData.fen) {
+                    game.load(gameData.fen);
+                    board.position(gameData.fen);
+                    updateGameStatus();
+                    if (game.game_over()) handleGameOver(); // Corregido
+                }
+                if (gameData.status === 'waiting') {
+                    updateGameStatus("Esperando que el Oponente (Negras) se una...");
+                }
+            });
+        }
+        
+        async function updateGameInFirestore() {
+            if (!currentGameId || currentGameMode !== 'online') return;
+            const gameRef = doc(db, "games", currentGameId);
+            try {
+                await updateDoc(gameRef, { fen: game.fen(), turn: game.turn() });
+            } catch (error) {
+                console.error("Error updating game state:", error);
+            }
+        }
+
+        // --- FUNCIONES AUXILIARES DE UI Y JUEGO ---
+
+        function resetGame() {
+            game.reset();
+            if (board) board.position('start');
+            currentGameId = null;
+            playerColor = 'w';
+            if (gameUnsubscribe) { gameUnsubscribe(); gameUnsubscribe = null; }
+            $('#game-id-display').hide();
+            $('#game-id').text('');
+            $('#join-game-id').val('');
+            $('#game-log-container').hide();
+            $('#game-log').html('');
+        }
+
+        function updateGameStatus(customMessage = "") {
+            const statusEl = $('#game-status');
+            let status = customMessage;
+            if (!customMessage && !game.game_over()) { // Corregido
+                const moveColor = game.turn() === 'b' ? 'Negras' : 'Blancas';
+                status = `Turno de ${moveColor}.`;
+                if (game.in_check()) status = `¡Jaque! ${status}`;
+            } else if (game.game_over()) { // Corregido
+                return; // handleGameOver se encarga
+            }
+            if (currentGameMode === 'online') {
+                const colorString = playerColor === 'w' ? '(Juegas con Blancas)' : '(Juegas con Negras)';
+                status = `${status} ${colorString}`;
+            }
+            statusEl.html(status);
+            $('#fen-string').val(game.fen());
+            const pgn = game.pgn({ max_width: 5, newline_char: '<br />' });
+            if (pgn) {
+                $('#game-log-container').show();
+                $('#game-log').html(pgn);
+                $('#game-log').scrollTop($('#game-log')[0].scrollHeight);
+            } else {
+                 $('#game-log-container').hide();
+            }
+        }
+        
+        function updateAuthStatus(message, isError = false) {
+            const authStatusEl = document.getElementById('auth-status');
+            authStatusEl.textContent = message;
+            if (isError) authStatusEl.classList.add('bg-red-600', 'text-white');
+            else authStatusEl.classList.remove('bg-red-600', 'text-white');
+        }
+
+        // --- INICIAR LA APP ---
+        initializeAppLogic();
+
+    </script>
+</body>
+</html>
