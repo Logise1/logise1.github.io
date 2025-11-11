@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voz</title>
+    <!-- 1. Cargar Tailwind CSS para estilos rápidos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos para los nuevos botones de icono */
+        #mute-mic-btn-icon.active #mic-on-icon-sm { display: none; }
+        #mute-mic-btn-icon:not(.active) #mic-off-icon-sm { display: none; }
+        
+        /* Pequeña animación para el estado "hablando" (modo oscuro) */
+        @keyframes talking {
+            0%, 100% { box-shadow: 0 0 4px 2px rgba(52, 211, 153, 0.7); } /* emerald-400 */
+            50% { box-shadow: 0 0 8px 4px rgba(52, 211, 153, 0.4); }
+        }
+        .voice-user-status.mic-on {
+            animation: talking 1.5s infinite;
+        }
+
+        /* Ocultar scrollbar de forma más consistente */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE y Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="font-sans bg-black flex items-center justify-center p-1">
+
+    <!-- Contenedor principal: Todo negro, más pequeño y moderno -->
+    <div class="w-full max-w-xs bg-black rounded-lg shadow-xl p-2 space-y-1.5 border border-gray-700">
+
+        <!-- SECCIÓN PARA UNIRSE (Se oculta al conectar) -->
+        <div id="join-section" class="space-y-1.5">
+            <h1 class="text-base font-bold text-center text-white">Voz</h1>
+            <input type="text" id="username-input" placeholder="Escribe tu nombre..." class="w-full px-2 py-1 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-gray-800 text-white placeholder-gray-400">
+            <button id="join-voice-chat-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded-md transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed text-xs">
+                Unirse al Chat de Voz
+            </button>
+            <p id="voice-status" class="text-xs text-gray-400 text-center mb-1">Desconectado. Ingresa un nombre.</p>
+        </div>
+
+        <!-- SECCIÓN DE CHAT (Oculta por defecto) -->
+        <div id="chat-section" class="hidden space-y-1.5">
+            
+            <!-- Cabecera con Lista Plegable y Botones de Icono -->
+            <div class="flex justify-between items-center space-x-2">
+                <!-- Botón Plegable (ocupa el espacio restante) -->
+                <div id="toggle-user-list-btn" class="flex-grow bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex justify-between items-center cursor-pointer transition-colors">
+                    <h3 id="voice-users-status" class="font-semibold text-gray-200 text-xs">Usuarios: 0</h3>
+                    <span id="list-arrow" class="text-xs text-gray-400 transition-transform duration-300">▼</span>
+                </div>
+                
+                <!-- Botones de Icono -->
+                <div class="flex-shrink-0 flex space-x-1.5">
+                    <button id="mute-mic-btn-icon" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded-md transition-all disabled:opacity-50" disabled>
+                        <svg id="mic-on-icon-sm" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                        <svg id="mic-off-icon-sm" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3zM15 9a3 3 0 00-3-3m0 0a3 3 0 00-3 3m3-3v6m0 0v6m6-3a3 3 0 00-3-3m0 0a3 3 0 00-3 3m0 0v6m-9 3l18-18" />
+                        </svg>
+                    </button>
+                    <button id="leave-chat-btn" class="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-md transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 8l2-2m0 0l2 2m-2-2v2.5M20 12a8 8 0 11-16 0 8 8 0 0116 0zM7 12a1 1 0 102 0v-2a1 1 0 10-2 0v2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 12a1 1 0 102 0v-2a1 1 0 10-2 0v2zM9 9.5a1 1 0 112 0v-1a1 1 0 11-2 0v1z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista Plegable -->
+            <div id="user-list-wrapper" class="bg-gray-800 rounded-md h-0 overflow-y-auto transition-all duration-300 ease-in-out no-scrollbar">
+                <ul id="voice-users-list" class="space-y-0.5 p-1.5">
+                    <!-- Los usuarios se añadirán aquí dinámicamente -->
+                </ul>
+            </div>
+            
+            <p id="voice-status-connected" class="text-xs text-gray-400 text-center">Conectado. Hablando...</p>
+
+            <!-- Visualizador de Voz (en la parte inferior) -->
+            <canvas id="voice-visualizer" class="w-full h-[40px] rounded-md bg-black"></canvas>
+        </div>
+    </div>
+
+    <!-- 2. Cargar SDKs de Firebase -->
+    <script type="module">
+        // Importar funciones de Firebase desde el CDN
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // --- 3. Configuración de Firebase (la que proporcionaste) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDouOiwSEY2le_rsvFcfAVi6f77lX3Nrqg",
+          authDomain: "chatdevozprojects.firebaseapp.com",
+          databaseURL: "https://chatdevozprojects-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "chatdevozprojects",
+          storageBucket: "chatdevozprojects.firebasestorage.app",
+          messagingSenderId: "28342945819",
+          appId: "1:28342945819:web:96a6b6a9c215a37fa6d0be",
+          measurementId: "G-NYP7J9WMQP"
+        };
+
+        // --- 4. Inicializar Firebase y la Base de Datos ---
+        const app = initializeApp(firebaseConfig);
+        const voiceDb = getDatabase(app);
+
+        // --- 5. Lógica del Chat de Voz ---
+
+        // --- CONSTANTES ---
+        const ROOM_ID = 'public_channel';
+        const ICE_SERVERS = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        const HISTORY_LENGTH = 200; // ~1.7 segundos de historial de volumen
+
+        // --- VARIABLES DE ESTADO ---
+        let isVoiceChatActive = false;
+        let isMicMuted = false;
+        let localStream = null;
+        let peerConnections = {};
+        let listeners = {}; 
+        let localAudioTrack = null;
+        let voiceUsers = {};
+        let currentUserId = null; 
+        let currentUsername = null;
+
+        // --- Variables para Visualizador de Audio ---
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let source = null;
+        let drawVisual = null;
+        let volumeHistory = new Array(HISTORY_LENGTH).fill(0); // Historial de volumen
+
+        // --- ELEMENTOS DOM ---
+        const joinSection = document.getElementById('join-section');
+        const chatSection = document.getElementById('chat-section');
+        const voiceStatus = document.getElementById('voice-status');
+        const voiceStatusConnected = document.getElementById('voice-status-connected');
+        const joinVoiceChatBtn = document.getElementById('join-voice-chat-btn');
+        const muteMicBtnIcon = document.getElementById('mute-mic-btn-icon');
+        const leaveChatBtn = document.getElementById('leave-chat-btn');
+        const voiceUsersStatus = document.getElementById('voice-users-status');
+        const voiceUsersList = document.getElementById('voice-users-list');
+        const usernameInput = document.getElementById('username-input');
+        
+        // --- Elementos del Canvas ---
+        const canvas = document.getElementById('voice-visualizer');
+        const canvasCtx = canvas.getContext('2d');
+        canvasCtx.fillStyle = '#000000';
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // --- Elementos Plegables ---
+        const toggleUserListBtn = document.getElementById('toggle-user-list-btn');
+        const userListWrapper = document.getElementById('user-list-wrapper');
+        const listArrow = document.getElementById('list-arrow');
+
+        // --- FUNCIONES SIMPLIFICADAS ---
+        function getUserId() { return currentUserId; }
+        function getCurrentUsername() { return currentUsername; }
+        
+        // --- MANEJADORES de EVENTOS ---
+        joinVoiceChatBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (!username && !isVoiceChatActive) {
+                voiceStatus.textContent = "Por favor, ingresa un nombre.";
+                usernameInput.focus();
+                return;
+            }
+            
+            if (!isVoiceChatActive) {
+                currentUsername = username;
+                currentUserId = username.replace(/[^a-zA-Z0-9]/g, '_') + `_${Date.now()}`;
+                usernameInput.disabled = true;
+                toggleVoiceChat(); // Solo llamar a toggle si no estamos activos
+            }
+            // Si ya estamos activos, el botón de "unirse" no debería estar visible.
+            // El botón de salir (leaveChatBtn) se encarga de la desconexión.
+        });
+        
+        muteMicBtnIcon.addEventListener('click', toggleMute);
+        leaveChatBtn.addEventListener('click', () => toggleVoiceChat()); // Re-usa toggle para desconectar
+
+        // --- Manejador Plegable ---
+        toggleUserListBtn.addEventListener('click', () => {
+            userListWrapper.classList.toggle('h-0');
+            userListWrapper.classList.toggle('h-32'); // Altura al expandir
+            userListWrapper.classList.toggle('p-1.5');
+            listArrow.classList.toggle('rotate-180');
+        });
+
+        // --- LÓGICA PRINCIPAL ---
+
+        async function toggleVoiceChat(forceDisconnect = false) {
+            if (forceDisconnect && isVoiceChatActive) {
+                await disconnectVoiceChat(true);
+                return;
+            }
+            
+            if (isVoiceChatActive) {
+                await disconnectVoiceChat(false);
+            } else {
+                await connectVoiceChat();
+            }
+        }
+
+        async function connectVoiceChat() {
+            const userId = getUserId();
+            if (!userId || isVoiceChatActive) return;
+
+            try {
+                voiceStatus.textContent = "Solicitando micrófono...";
+                joinVoiceChatBtn.disabled = true;
+                
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                localAudioTrack = localStream.getAudioTracks()[0];
+                
+                // --- Configurar Visualizador de Audio ---
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                analyser = audioContext.createAnalyser();
+                source = audioContext.createMediaStreamSource(localStream);
+                source.connect(analyser);
+                
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                volumeHistory.fill(0); // Reiniciar historial
+                
+                visualize(); // Iniciar el loop de dibujo
+                // --- Fin Configuración Visualizador ---
+
+                isVoiceChatActive = true;
+                isMicMuted = false;
+                
+                const userRef = ref(voiceDb, `${ROOM_ID}/${userId}`);
+                await set(userRef, { 
+                    username: getCurrentUsername(),
+                    timestamp: Date.now(),
+                    isMuted: isMicMuted
+                });
+                onDisconnect(userRef).remove();
+
+                startVoiceSignaling();
+                
+                // --- Actualizar UI para mostrar sección de chat ---
+                joinSection.classList.add('hidden');
+                chatSection.classList.remove('hidden');
+                updateVoiceUI(true);
+                console.log("Chat de Voz activado.");
+
+            } catch (error) {
+                console.error("Error al iniciar el chat de voz:", error);
+                voiceStatus.textContent = "Error: No se pudo acceder al micrófono.";
+                joinVoiceChatBtn.disabled = false; // Permitir reintentar
+                isVoiceChatActive = false;
+                usernameInput.disabled = false; 
+            }
+        }
+
+        async function disconnectVoiceChat(isLogout = false) {
+            if (!isVoiceChatActive) return;
+
+            // --- Detener Visualizador ---
+            if (drawVisual) {
+                cancelAnimationFrame(drawVisual);
+                drawVisual = null;
+            }
+            if (source) {
+                source.disconnect();
+                source = null;
+            }
+            analyser = null;
+            volumeHistory.fill(0); // Limpiar historial
+            canvasCtx.fillStyle = '#000000';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            // --- Fin Detener Visualizador ---
+            
+            Object.values(peerConnections).forEach(pc => {
+                if (pc) pc.close();
+            });
+            peerConnections = {};
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                localAudioTrack = null;
+            }
+            
+            const userId = getUserId();
+            if (userId) {
+                await set(ref(voiceDb, `${ROOM_ID}/${userId}`), null);
+                await set(ref(voiceDb, `signals/${userId}`), null);
+            }
+            
+            if (listeners.signals) {
+                listeners.signals(); 
+                delete listeners.signals;
+            }
+            
+            isVoiceChatActive = false;
+            isMicMuted = false;
+            
+            // --- Actualizar UI para mostrar sección de unirse ---
+            joinSection.classList.remove('hidden');
+            chatSection.classList.add('hidden');
+            usernameInput.disabled = false; // Reactivar input
+            joinVoiceChatBtn.disabled = false; // Reactivar botón de unirse
+            updateVoiceUI(false, isLogout);
+            
+            console.log("Chat de Voz desactivado.");
+        }
+
+        function toggleMute() {
+            if (!isVoiceChatActive || !localAudioTrack) return;
+            const userId = getUserId();
+
+            isMicMuted = !isMicMuted;
+            localAudioTrack.enabled = !isMicMuted; 
+
+            set(ref(voiceDb, `${ROOM_ID}/${userId}/isMuted`), isMicMuted);
+            updateVoiceUI(true);
+        }
+        
+        // --- FUNCIÓN: VISUALIZE (Modificada para historial de volumen) ---
+        function visualize() {
+            if (!analyser) return; 
+            drawVisual = requestAnimationFrame(visualize); 
+
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            const bufferLength = analyser.frequencyBinCount;
+            analyser.getByteTimeDomainData(dataArray); 
+
+            // 1. Calcular volumen actual (amplitud máxima)
+            let currentVolume = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const v = Math.abs(dataArray[i] - 128); // 128 es silencio (0-128)
+                if (v > currentVolume) {
+                    currentVolume = v;
+                }
+            }
+
+            // 2. Actualizar historial (quitar el más antiguo, añadir el nuevo)
+            volumeHistory.shift();
+            volumeHistory.push(currentVolume);
+
+            // 3. Dibujar historial
+            canvasCtx.fillStyle = '#000000'; 
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = canvas.width / HISTORY_LENGTH;
+            
+            for (let i = 0; i < HISTORY_LENGTH; i++) {
+                const amp = volumeHistory[i];
+                const barHeight = (amp / 128) * canvas.height; // Escala de 0-128 a 0-altura_canvas
+
+                // Asignar color según la altura
+                if (barHeight > canvas.height * 0.7) {
+                    canvasCtx.fillStyle = '#ef4444'; // red-500
+                } else if (barHeight > canvas.height * 0.4) {
+                    canvasCtx.fillStyle = '#facc15'; // yellow-400
+                } else {
+                    canvasCtx.fillStyle = '#34D399'; // emerald-400
+                }
+
+                // Dibujar barra desde abajo hacia arriba
+                canvasCtx.fillRect(
+                    i * barWidth,                // x
+                    canvas.height - barHeight,   // y
+                    barWidth - 1,                // width (con 1px de espacio)
+                    barHeight                    // height
+                );
+            }
+        }
+
+
+        // --- LÓGICA DE SEÑALIZACIÓN (SIGNALING) ---
+
+        function startVoicePresenceListener() {
+            const usersRef = ref(voiceDb, ROOM_ID);
+            listeners.users = onValue(usersRef, (snapshot) => {
+                const users = snapshot.val() || {};
+                voiceUsers = users;
+                
+                if (isVoiceChatActive) {
+                    const userId = getUserId();
+                    const userIds = Object.keys(users).filter(uid => uid !== userId);
+            
+                    userIds.forEach(remoteId => {
+                        if (!peerConnections[remoteId]) {
+                            const isOfferer = userId < remoteId; 
+                            createPeerConnection(remoteId, isOfferer);
+                        }
+                    });
+            
+                    Object.keys(peerConnections).forEach(remoteId => {
+                        if (!users[remoteId]) {
+                            closePeerConnection(remoteId);
+                        }
+                    });
+                }
+                updateVoiceUserList();
+            });
+        }
+
+        function startVoiceSignaling() {
+            const userId = getUserId();
+            const signalsRef = ref(voiceDb, `signals/${userId}`);
+            
+            listeners.signals = onValue(signalsRef, (snapshot) => {
+                const signals = snapshot.val();
+                if (signals) {
+                    Object.keys(signals).forEach(async (remoteId) => {
+                        const signal = signals[remoteId];
+                        if (signal) {
+                            await handleSignal(remoteId, signal);
+                            await set(ref(voiceDb, `signals/${userId}/${remoteId}`), null);
+                        }
+                    });
+                }
+            });
+        }
+
+        async function handleSignal(remoteId, signal) {
+            if (!peerConnections[remoteId]) {
+                if (signal.type === 'offer' && isVoiceChatActive) {
+                    await createPeerConnection(remoteId, false); 
+                } else {
+                    return;
+                }
+            }
+            
+            const pc = peerConnections[remoteId];
+            
+            try {
+                if (signal.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                    if (signal.type === 'offer') {
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        sendSignal(remoteId, { type: 'answer', sdp: pc.localDescription.toJSON() });
+                    }
+                } else if (signal.ice) {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal.ice));
+                }
+            } catch (e) {
+                console.error(`Error manejando señal de ${remoteId}:`, e);
+            }
+        }
+
+        function sendSignal(remoteId, signal) {
+            const userId = getUserId();
+            if (!userId) return; 
+            const signalRef = ref(voiceDb, `signals/${remoteId}/${userId}`);
+            set(signalRef, signal);
+        }
+
+        // --- LÓGICA DE PEER CONNECTION ---
+
+        async function createPeerConnection(remoteId, isOfferer) {
+            if (!isVoiceChatActive) return;
+            
+            const pc = new RTCPeerConnection(ICE_SERVERS);
+            peerConnections[remoteId] = pc;
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignal(remoteId, { ice: event.candidate.toJSON() });
+                }
+            };
+            
+            pc.ontrack = (event) => {
+                let audio = document.getElementById(`audio-${remoteId}`);
+                if (!audio) {
+                    audio = document.createElement('audio');
+                    audio.id = `audio-${remoteId}`;
+                    audio.autoplay = true;
+                    document.body.appendChild(audio); // Oculto
+                }
+                audio.srcObject = event.streams[0];
+                pc.remoteAudioElement = audio;
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+                    closePeerConnection(remoteId);
+                }
+            };
+
+            if (isOfferer) {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                sendSignal(remoteId, { type: 'offer', sdp: pc.localDescription.toJSON() });
+            }
+        }
+
+        function closePeerConnection(remoteId) {
+            const pc = peerConnections[remoteId];
+            if (pc) {
+                pc.close();
+                if (pc.remoteAudioElement) {
+                    pc.remoteAudioElement.remove(); 
+                }
+                delete peerConnections[remoteId];
+            }
+        }
+
+        // --- LÓGICA DE ACTUALIZACIÓN DE UI (Simplificada) ---
+
+        function updateVoiceUI(isConnected, isLogout = false) {
+            if (isConnected) {
+                // Estamos en la sección de chat
+                voiceStatusConnected.textContent = "Conectado. Hablando...";
+                muteMicBtnIcon.disabled = false;
+                
+                // Actualizar estado visual del botón de mute
+                muteMicBtnIcon.classList.toggle('active', isMicMuted);
+                muteMicBtnIcon.classList.toggle('bg-gray-700', !isMicMuted);
+                muteMicBtnIcon.classList.toggle('hover:bg-gray-600', !isMicMuted);
+                muteMicBtnIcon.classList.toggle('bg-yellow-500', isMicMuted); // Amarillo para 'muteado'
+                muteMicBtnIcon.classList.toggle('hover:bg-yellow-600', isMicMuted);
+                
+            } else {
+                // Estamos en la sección de unirse
+                if (!getUserId() || isLogout) {
+                    voiceStatus.textContent = "Desconectado. Ingresa un nombre.";
+                } else {
+                    voiceStatus.textContent = "Desconectado.";
+                }
+            }
+        }
+
+        function updateVoiceUserList() {
+            const currentUserId = getUserId();
+            voiceUsersList.innerHTML = '';
+            const activeUsers = Object.keys(voiceUsers).length;
+            voiceUsersStatus.textContent = `Usuarios: ${activeUsers}`;
+
+            Object.entries(voiceUsers).forEach(([uid, data]) => {
+                if (!data || !data.username) return;
+
+                const isSelf = uid === currentUserId;
+                const isMuted = data.isMuted === true;
+
+                const li = document.createElement('li');
+                li.className = 'flex items-center text-gray-300 text-xs'; 
+                
+                const statusDot = document.createElement('span');
+                statusDot.className = 'voice-user-status w-2 h-2 rounded-full mr-1.5 flex-shrink-0'; 
+                
+                let statusClass = 'bg-emerald-400 mic-on'; 
+                if (isSelf && isMuted) {
+                    statusClass = 'bg-red-500'; 
+                } else if (isMuted) {
+                    statusClass = 'bg-yellow-500'; 
+                }
+                statusDot.classList.add(...statusClass.split(' '));
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'truncate';
+                nameSpan.textContent = data.username + (isSelf ? " (Tú)" : "");
+
+                li.appendChild(statusDot);
+                li.appendChild(nameSpan);
+                voiceUsersList.appendChild(li);
+            });
+        }
+
+        // Iniciar el listener de presencia al cargar la página
+        startVoicePresenceListener();
+    </script>
+
+</body>
+</html>
