@@ -426,7 +426,9 @@
             const config = {
                 draggable: true,
                 position: 'start',
-                pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/img/chesspieces/wikipedia/{piece}.png',
+                // *** ¡CAMBIO AQUÍ! ***
+                // Cambiado de 'cdnjs.cloudflare.com' a 'unpkg.com' para evitar 404s
+                pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png',
                 onDragStart: onDragStart,
                 onDrop: onDrop,
                 onSnapEnd: onSnapEnd
@@ -451,7 +453,7 @@
         // --- MANEJADORES DE EVENTOS DEL TABLERO ---
 
         function onDragStart(source, piece, position, orientation) {
-            if (game.game_over()) return false; // Corregido
+            if (game.game_over()) return false;
             if ((currentGameMode === 'ai' || currentGameMode === 'test-match') && piece.search(/^b/) !== -1) return false;
             if (currentGameMode === 'online') {
                 if (playerColor === 'w' && piece.search(/^b/) !== -1) return false;
@@ -467,7 +469,7 @@
             let move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
             updateGameStatus();
-            if (game.game_over()) { // Corregido
+            if (game.game_over()) {
                 handleGameOver();
             } else if (currentGameMode === 'ai' || currentGameMode === 'test-match') {
                 window.setTimeout(makeRandomMove, 250);
@@ -521,13 +523,13 @@
         }
 
         function makeRandomMove() {
-            if (game.game_over()) { handleGameOver(); return; }; // Corregido
+            if (game.game_over()) { handleGameOver(); return; };
             const possibleMoves = game.moves();
             const randomIdx = Math.floor(Math.random() * possibleMoves.length);
             game.move(possibleMoves[randomIdx]);
             board.position(game.fen());
             updateGameStatus();
-            if (game.game_over()) handleGameOver(); // Corregido
+            if (game.game_over()) handleGameOver();
         }
 
         // --- LÓGICA MULTIJUGADOR (FIREBASE) ---
@@ -599,7 +601,7 @@
                     game.load(gameData.fen);
                     board.position(gameData.fen);
                     updateGameStatus();
-                    if (game.game_over()) handleGameOver(); // Corregido
+                    if (game.game_over()) handleGameOver();
                 }
                 if (gameData.status === 'waiting') {
                     updateGameStatus("Esperando que el Oponente (Negras) se una...");
@@ -635,11 +637,11 @@
         function updateGameStatus(customMessage = "") {
             const statusEl = $('#game-status');
             let status = customMessage;
-            if (!customMessage && !game.game_over()) { // Corregido
+            if (!customMessage && !game.game_over()) {
                 const moveColor = game.turn() === 'b' ? 'Negras' : 'Blancas';
                 status = `Turno de ${moveColor}.`;
                 if (game.in_check()) status = `¡Jaque! ${status}`;
-            } else if (game.game_over()) { // Corregido
+            } else if (game.game_over()) {
                 return; // handleGameOver se encarga
             }
             if (currentGameMode === 'online') {
