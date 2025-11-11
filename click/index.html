@@ -977,33 +977,50 @@
             </div>
 
             <div id="store" class="tab-content active no-scrollbar">
+                <!-- ====================================================== -->
+                <!-- ===== INICIO: CAMBIO DE PESTAÑAS DE PRODUCCIÓN ===== -->
+                <!-- ====================================================== -->
                 <div class="sub-tab-buttons">
-                    <button class="sub-tab-btn active" data-subtab="store-prod">Producción</button>
+                    <button class="sub-tab-btn active" data-subtab="store-ppc">PPC</button>
+                    <button class="sub-tab-btn" data-subtab="store-pps">PPS</button>
                     <button class="sub-tab-btn" data-subtab="store-mult">Multiplicadores</button>
                     <button class="sub-tab-btn" data-subtab="store-spec">Especiales</button>
                 </div>
                 
-                <div id="store-prod" class="sub-tab-content active no-scrollbar">
+                <div id="store-ppc" class="sub-tab-content active no-scrollbar">
                     <div id="store-items-cpc-container">
-                        </div>
-                    <div id="store-items-pps-container">
-                        </div>
+                        <h3>Mejoras de Clic</h3>
+                    </div>
                 </div>
+                
+                <div id="store-pps" class="sub-tab-content no-scrollbar">
+                    <div id="store-items-pps-container">
+                        <h3>Mejoras de PPS</h3>
+                    </div>
+                </div>
+                <!-- ====================================================== -->
+                <!-- ===== FIN: CAMBIO DE PESTAÑAS DE PRODUCCIÓN ===== -->
+                <!-- ====================================================== -->
                 
                 <div id="store-mult" class="sub-tab-content no-scrollbar">
                     <div id="store-items-click-mult-container">
-                        </div>
+                        <h3>Multiplicadores de Clic</h3>
+                    </div>
                     <div id="store-items-auto-mult-container">
-                        </div>
+                        <h3>Multiplicadores de PPS</h3>
+                    </div>
                 </div>
                 
                 <div id="store-spec" class="sub-tab-content no-scrollbar">
                     <div id="store-items-synergy-container">
-                        </div>
+                        <h3>Sinergias</h3>
+                    </div>
                     <div id="store-items-bonus-container">
-                        </div>
+                        <h3>Bonus de Nivel</h3>
+                    </div>
                      <div id="store-items-other-container">
-                        </div>
+                        <h3>Otros</h3>
+                    </div>
                 </div>
             </div>
 
@@ -1141,7 +1158,7 @@
         auth = getAuth(app);
         db = getDatabase(app);
 
-        // --- INICIO: REBALANCEO v3 ---
+        // --- INICIO: REBALANCEO v5 ---
         const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
         const upgradesConfig = [
             // Clics (Producción)
@@ -1164,15 +1181,34 @@
             { id: 'click_17', name: 'Fuerza Primordial', emoji: '🔥', description: '+150B por clic', initialCost: 4e14, costMultiplier: 1.76, type: 'clickValue', value: 1.5e11 },
             { id: 'click_18', name: 'Decreto Divino', emoji: '📜', description: '+700B por clic', initialCost: 3e15, costMultiplier: 1.78, type: 'clickValue', value: 7e11 },
             { id: 'click_19', name: 'Clic Metafísico', emoji: '🧠', description: '+3T por clic', initialCost: 2e16, costMultiplier: 1.80, type: 'clickValue', value: 3e12 },
-            // --- REBALANCEO v3 ---
-            { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+12T por clic', initialCost: 1.5e17, costMultiplier: 1.82, type: 'clickValue', value: 1.2e13 }, // Costo: 150 Cuadrillones
-            { id: 'click_21', name: 'Vórtice de Ideas', emoji: '🌀', description: '+45T por clic', initialCost: 1.8e18, costMultiplier: 1.84, type: 'clickValue', value: 4.5e13 }, // Costo: 1.8 Quintillones
-            { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+180T por clic', initialCost: 2e19, costMultiplier: 1.86, type: 'clickValue', value: 1.8e14 }, // Costo: 20 Quintillones
-            { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+700T por clic', initialCost: 2.2e20, costMultiplier: 1.88, type: 'clickValue', value: 7e14 }, // Costo: 220 Quintillones
-            { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+2.8Qa por clic', initialCost: 2.5e21, costMultiplier: 1.90, type: 'clickValue', value: 2.8e15 }, // Costo: 2.5 Sextillones
-            // --- NUEVAS MEJORAS ---
-            { id: 'click_25', name: 'Clic de Dios', emoji: '🙏', description: '+11Qa por clic', initialCost: 3e22, costMultiplier: 1.91, type: 'clickValue', value: 1.1e16 }, // Costo: 30 Sextillones
-            { id: 'click_26', name: 'El Fin', emoji: '🔚', description: '+40Qa por clic', initialCost: 3.5e23, costMultiplier: 1.92, type: 'clickValue', value: 4e16 }, // Costo: 350 Sextillones
+            { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+12T por clic', initialCost: 1.5e17, costMultiplier: 1.82, type: 'clickValue', value: 1.2e13 },
+            { id: 'click_21', name: 'Vórtice de Ideas', emoji: '🌀', description: '+45T por clic', initialCost: 1.8e18, costMultiplier: 1.84, type: 'clickValue', value: 4.5e13 },
+            { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+180T por clic', initialCost: 2e19, costMultiplier: 1.86, type: 'clickValue', value: 1.8e14 },
+            { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+700T por clic', initialCost: 2.2e20, costMultiplier: 1.88, type: 'clickValue', value: 7e14 },
+            { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+2.8Qa por clic', initialCost: 2.5e21, costMultiplier: 1.90, type: 'clickValue', value: 2.8e15 },
+            { id: 'click_25', name: 'Clic de Dios', emoji: '🙏', description: '+11Qa por clic', initialCost: 3e22, costMultiplier: 1.91, type: 'clickValue', value: 1.1e16 },
+            { id: 'click_26', name: 'El Fin', emoji: '🔚', description: '+40Qa por clic', initialCost: 3.5e23, costMultiplier: 1.92, type: 'clickValue', value: 4e16 },
+            // --- NUEVAS 20 MEJORAS PPC ---
+            { id: 'click_27', name: 'Quasar', emoji: '☄️', description: '+150Qa por clic', initialCost: 4e24, costMultiplier: 1.93, type: 'clickValue', value: 1.5e17 },
+            { id: 'click_28', name: 'Supernova', emoji: '💥', description: '+500Qa por clic', initialCost: 5e25, costMultiplier: 1.94, type: 'clickValue', value: 5e17 },
+            { id: 'click_29', name: 'Púlsar', emoji: '💫', description: '+1.8Qi por clic', initialCost: 6e26, costMultiplier: 1.95, type: 'clickValue', value: 1.8e18 },
+            { id: 'click_30', name: 'Magnetar', emoji: '🌠', description: '+6Qi por clic', initialCost: 7e27, costMultiplier: 1.96, type: 'clickValue', value: 6e18 },
+            { id: 'click_31', name: 'Hipernova', emoji: '✨', description: '+20Qi por clic', initialCost: 8e28, costMultiplier: 1.97, type: 'clickValue', value: 2e19 },
+            { id: 'click_32', name: 'Materia Oscura', emoji: '⚫', description: '+70Qi por clic', initialCost: 9e29, costMultiplier: 1.98, type: 'clickValue', value: 7e19 },
+            { id: 'click_33', name: 'Energía Oscura', emoji: '🌌', description: '+250Qi por clic', initialCost: 1e31, costMultiplier: 1.99, type: 'clickValue', value: 2.5e20 },
+            { id: 'click_34', name: 'Big Bang', emoji: '💥', description: '+900Qi por clic', initialCost: 1.2e32, costMultiplier: 2.00, type: 'clickValue', value: 9e20 },
+            { id: 'click_35', name: 'Big Crunch', emoji: '🌀', description: '+3.5Sx por clic', initialCost: 1.5e33, costMultiplier: 2.01, type: 'clickValue', value: 3.5e21 },
+            { id: 'click_36', name: 'Conciencia Pura', emoji: '🧘', description: '+12Sx por clic', initialCost: 2e34, costMultiplier: 2.02, type: 'clickValue', value: 1.2e22 },
+            { id: 'click_37', name: 'Nirvana', emoji: '🕉️', description: '+40Sx por clic', initialCost: 2.5e35, costMultiplier: 2.03, type: 'clickValue', value: 4e22 },
+            { id: 'click_38', name: 'Ojo de Dios', emoji: '👁️', description: '+150Sx por clic', initialCost: 3e36, costMultiplier: 2.04, type: 'clickValue', value: 1.5e23 },
+            { id: 'click_39', name: 'Voluntad Divina', emoji: '📜', description: '+500Sx por clic', initialCost: 4e37, costMultiplier: 2.05, type: 'clickValue', value: 5e23 },
+            { id: 'click_40', name: 'Panteón', emoji: '🏛️', description: '+1.8Sp por clic', initialCost: 5e38, costMultiplier: 2.06, type: 'clickValue', value: 1.8e24 },
+            { id: 'click_41', name: 'Ragnarok', emoji: '🔥', description: '+6Sp por clic', initialCost: 6e39, costMultiplier: 2.08, type: 'clickValue', value: 6e24 },
+            { id: 'click_42', name: 'Azathoth', emoji: '🐙', description: '+20Sp por clic', initialCost: 7e40, costMultiplier: 2.10, type: 'clickValue', value: 2e25 },
+            { id: 'click_43', name: 'Yog-Sothoth', emoji: '🔑', description: '+70Sp por clic', initialCost: 8e41, costMultiplier: 2.12, type: 'clickValue', value: 7e25 },
+            { id: 'click_44', name: 'Clic del Vacío', emoji: '🕳️', description: '+250Sp por clic', initialCost: 1e43, costMultiplier: 2.14, type: 'clickValue', value: 2.5e26 },
+            { id: 'click_45', name: 'A-Omega', emoji: '♎', description: '+900Sp por clic', initialCost: 1.2e44, costMultiplier: 2.16, type: 'clickValue', value: 9e26 },
+            { id: 'click_46', name: 'El Creador', emoji: '🌌', description: '+3.5Oc por clic', initialCost: 1.5e45, costMultiplier: 2.18, type: 'clickValue', value: 3.5e27 },
 
             // Auto (Producción)
             { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
@@ -1194,15 +1230,34 @@
             { id: 'auto_17', name: 'Motor de Realidad', emoji: '⚙️', description: '+120B pps', initialCost: 5e14, costMultiplier: 1.81, type: 'autoClickValue', value: 1.2e11 },
             { id: 'auto_18', name: 'Omnipresencia', emoji: '🌌', description: '+550B pps', initialCost: 4e15, costMultiplier: 1.83, type: 'autoClickValue', value: 5.5e11 },
             { id: 'auto_19', name: 'Fuente Infinita', emoji: '⛲', description: '+2.5T pps', initialCost: 3e16, costMultiplier: 1.85, type: 'autoClickValue', value: 2.5e12 },
-            // --- REBALANCEO v3 ---
-            { id: 'auto_20', name: 'Fin del Tiempo', emoji: '⌛', description: '+10T pps', initialCost: 2.5e17, costMultiplier: 1.87, type: 'autoClickValue', value: 1e13 }, // Costo: 250 Cuadrillones
-            { id: 'auto_21', name: 'Fábrica de ADN', emoji: '🧬', description: '+40T pps', initialCost: 2.8e18, costMultiplier: 1.89, type: 'autoClickValue', value: 4e13 }, // Costo: 2.8 Quintillones
-            { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+160T pps', initialCost: 3e19, costMultiplier: 1.91, type: 'autoClickValue', value: 1.6e14 }, // Costo: 30 Quintillones
-            { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+650T pps', initialCost: 3.3e20, costMultiplier: 1.93, type: 'autoClickValue', value: 6.5e14 }, // Costo: 330 Quintillones
-            { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+2.6Qa pps', initialCost: 3.6e21, costMultiplier: 1.95, type: 'autoClickValue', value: 2.6e15 }, // Costo: 3.6 Sextillones
-            // --- NUEVAS MEJORAS ---
-            { id: 'auto_25', name: 'Motor Infinito', emoji: '♾️', description: '+10Qa pps', initialCost: 4e22, costMultiplier: 1.96, type: 'autoClickValue', value: 1e16 }, // Costo: 40 Sextillones
-            { id: 'auto_26', name: 'El Creador', emoji: '✨', description: '+40Qa pps', initialCost: 4.5e23, costMultiplier: 1.97, type: 'autoClickValue', value: 4e16 }, // Costo: 450 Sextillones
+            { id: 'auto_20', name: 'Fin del Tiempo', emoji: '⌛', description: '+10T pps', initialCost: 2.5e17, costMultiplier: 1.87, type: 'autoClickValue', value: 1e13 },
+            { id: 'auto_21', name: 'Fábrica de ADN', emoji: '🧬', description: '+40T pps', initialCost: 2.8e18, costMultiplier: 1.89, type: 'autoClickValue', value: 4e13 },
+            { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+160T pps', initialCost: 3e19, costMultiplier: 1.91, type: 'autoClickValue', value: 1.6e14 },
+            { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+650T pps', initialCost: 3.3e20, costMultiplier: 1.93, type: 'autoClickValue', value: 6.5e14 },
+            { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+2.6Qa pps', initialCost: 3.6e21, costMultiplier: 1.95, type: 'autoClickValue', value: 2.6e15 },
+            { id: 'auto_25', name: 'Motor Infinito', emoji: '♾️', description: '+10Qa pps', initialCost: 4e22, costMultiplier: 1.96, type: 'autoClickValue', value: 1e16 },
+            { id: 'auto_26', name: 'El Creador (Auto)', emoji: '✨', description: '+40Qa pps', initialCost: 4.5e23, costMultiplier: 1.97, type: 'autoClickValue', value: 4e16 },
+            // --- NUEVAS 20 MEJORAS PPS ---
+            { id: 'auto_27', name: 'Ejército de Clones', emoji: '👥', description: '+150Qa pps', initialCost: 5e24, costMultiplier: 1.98, type: 'autoClickValue', value: 1.5e17 },
+            { id: 'auto_28', name: 'Enjambre de IA', emoji: '🤖', description: '+500Qa pps', initialCost: 6e25, costMultiplier: 1.99, type: 'autoClickValue', value: 5e17 },
+            { id: 'auto_29', name: 'Red Neuronal', emoji: '🧠', description: '+1.8Qi pps', initialCost: 7e26, costMultiplier: 2.00, type: 'autoClickValue', value: 1.8e18 },
+            { id: 'auto_30', name: 'IA Sentiente', emoji: '💡', description: '+6Qi pps', initialCost: 8e27, costMultiplier: 2.01, type: 'autoClickValue', value: 6e18 },
+            { id: 'auto_31', name: 'Dominio de la IA', emoji: '👑', description: '+20Qi pps', initialCost: 9e28, costMultiplier: 2.02, type: 'autoClickValue', value: 2e19 },
+            { id: 'auto_32', name: 'Simulación Ancestral', emoji: '💻', description: '+70Qi pps', initialCost: 1e30, costMultiplier: 2.03, type: 'autoClickValue', value: 7e19 },
+            { id: 'auto_33', name: 'Mundo Matriz', emoji: '🟩', description: '+250Qi pps', initialCost: 1.2e31, costMultiplier: 2.04, type: 'autoClickValue', value: 2.5e20 },
+            { id: 'auto_34', name: 'Constructor Universal', emoji: '🛠️', description: '+900Qi pps', initialCost: 1.5e32, costMultiplier: 2.05, type: 'autoClickValue', value: 9e20 },
+            { id: 'auto_35', name: 'Esfera de Dyson', emoji: '☀️', description: '+3.5Sx pps', initialCost: 2e33, costMultiplier: 2.06, type: 'autoClickValue', value: 3.5e21 },
+            { id: 'auto_36', name: 'Computronium', emoji: '🧱', description: '+12Sx pps', initialCost: 2.5e34, costMultiplier: 2.07, type: 'autoClickValue', value: 1.2e22 },
+            { id: 'auto_37', name: 'Cerebro de Júpiter', emoji: '🪐', description: '+40Sx pps', initialCost: 3e35, costMultiplier: 2.08, type: 'autoClickValue', value: 4e22 },
+            { id: 'auto_38', name: 'Red Galáctica', emoji: '🌌', description: '+150Sx pps', initialCost: 4e36, costMultiplier: 2.10, type: 'autoClickValue', value: 1.5e23 },
+            { id: 'auto_39', name: 'Motor de Azathoth', emoji: '🐙', description: '+500Sx pps', initialCost: 5e37, costMultiplier: 2.12, type: 'autoClickValue', value: 5e23 },
+            { id: 'auto_40', name: 'Coro Celestial', emoji: '🎶', description: '+1.8Sp pps', initialCost: 6e38, costMultiplier: 2.14, type: 'autoClickValue', value: 1.8e24 },
+            { id: 'auto_41', name: 'Frecuencia Omega', emoji: '♎', description: '+6Sp pps', initialCost: 7e39, costMultiplier: 2.16, type: 'autoClickValue', value: 6e24 },
+            { id: 'auto_42', name: 'El Telar del Destino', emoji: '🕸️', description: '+20Sp pps', initialCost: 8e40, costMultiplier: 2.18, type: 'autoClickValue', value: 2e25 },
+            { id: 'auto_43', name: 'Eco del Principio', emoji: '🌀', description: '+70Sp pps', initialCost: 9e41, costMultiplier: 2.20, type: 'autoClickValue', value: 7e25 },
+            { id: 'auto_44', name: 'Flujo Infinito', emoji: '🌊', description: '+250Sp pps', initialCost: 1.2e43, costMultiplier: 2.22, type: 'autoClickValue', value: 2.5e26 },
+            { id: 'auto_45', name: 'Deus Ex Machina', emoji: '⚙️', description: '+900Sp pps', initialCost: 1.5e44, costMultiplier: 2.24, type: 'autoClickValue', value: 9e26 },
+            { id: 'auto_46', name: 'La Singularidad', emoji: '🕳️', description: '+3.5Oc pps', initialCost: 2e45, costMultiplier: 2.26, type: 'autoClickValue', value: 3.5e27 },
 
             // Multiplicadores de Clic
             { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },
@@ -1212,9 +1267,8 @@
             { id: 'click_mult_5', name: 'Singularidad', emoji: '⚫', description: 'Clics x3', initialCost: 1000000000, costMultiplier: 4.0, type: 'clickMultiplier', value: 3.0, maxLevel: 1 },
             { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
             { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
-            // --- REBALANCEO v3 ---
-            { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e21, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 5 Sextillones
-            { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 8e23, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 800 Sextillones
+            { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e21, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 },
+            { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 8e23, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 },
 
             // Multiplicadores de Auto
             { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
@@ -1224,25 +1278,29 @@
             { id: 'auto_mult_5', name: 'Eco Temporal', emoji: '💫', description: 'PPS x3', initialCost: 2000000000, costMultiplier: 4.0, type: 'autoMultiplier', value: 3.0, maxLevel: 1 },
             { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
             { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
-            // --- REBALANCEO v3 ---
-            { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 6e21, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 }, // Costo: 6 Sextillones
-            { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 9e23, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Costo: 900 Sextillones
+            { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 6e21, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 },
+            { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 9e23, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 },
 
-            // Sinergias (Especiales) - NERFEADAS
+            // Sinergias (Especiales)
             { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+0.1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.001, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
             { id: 'synergy_2', name: 'Eco del Cursor', emoji: '🔊', description: '+0.1% Clic por nivel de Cursor Tímido', initialCost: 10000, costMultiplier: 1.6, type: 'synergy', value: 0.001, targetUpgrade: 'auto_1', targetStat: 'clickValue' },
             { id: 'synergy_3', name: 'Conexión Profunda', emoji: '🧠', description: '+0.05% PPS por nivel Clic Potente', initialCost: 1e6, costMultiplier: 1.7, type: 'synergy', value: 0.0005, targetUpgrade: 'click_3', targetStat: 'autoClickValue' },
             { id: 'synergy_4', name: 'Resonancia Automática', emoji: '🦾', description: '+0.05% Clic por nivel Fábrica Frutal', initialCost: 2.5e6, costMultiplier: 1.8, type: 'synergy', value: 0.0005, targetUpgrade: 'auto_4', targetStat: 'clickValue' },
             { id: 'synergy_5', name: 'Fusión Cuántica', emoji: '🌌', description: '+0.01% PPS por nivel Giga Clic', initialCost: 1e10, costMultiplier: 1.9, type: 'synergy', value: 0.0001, targetUpgrade: 'click_7', targetStat: 'autoClickValue' },
+            // --- NUEVAS MEJORAS ESPECIALES ---
+            { id: 'synergy_6', name: 'Sinergia Total', emoji: '🌀', description: '+0.001% PPS por nivel Clic Infinito', initialCost: 1e15, costMultiplier: 2.0, type: 'synergy', value: 0.00001, targetUpgrade: 'click_13', targetStat: 'autoClickValue' },
+            { id: 'synergy_7', name: 'Sinergia Inversa', emoji: '☯️', description: '+0.001% Clic por nivel Realidad Alternativa', initialCost: 1e16, costMultiplier: 2.1, type: 'synergy', value: 0.00001, targetUpgrade: 'auto_13', targetStat: 'clickValue' },
             
-            // Bonos de Nivel (Especiales) - NERFEADOS
+            // Bonos de Nivel (Especiales)
             { id: 'level_boost_1', name: 'Bono de Nivel', emoji: '📈', description: '+1% PPS por Nivel', initialCost: 25000, costMultiplier: 1.8, type: 'levelBonus', value: 0.01, targetStat: 'autoClickValue' },
             { id: 'level_boost_2', name: 'Maestría de Nivel', emoji: '🎓', description: '+0.5% Clic por Nivel', initialCost: 50000, costMultiplier: 1.9, type: 'levelBonus', value: 0.005, targetStat: 'clickValue' },
+            // --- NUEVAS MEJORAS ESPECIALES ---
+            { id: 'level_boost_3', name: 'Bono de Nivel Experto', emoji: '🌟', description: '+0.25% Clic y PPS por Nivel', initialCost: 1e20, costMultiplier: 2.5, type: 'levelBonus', value: 0.0025, targetStat: 'all' },
             
             // Otros (Especiales)
             { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
         ];
-        // --- FIN: REBALANCEO v3 ---
+        // --- FIN: REBALANCEO v5 ---
 
         let UPGRADES_CONFIG = upgradesConfig; // Asignación global
         let upgradeLevels = {}; // NUEVO: Estado de niveles de mejoras
@@ -1251,7 +1309,6 @@
         let currentUsername = null; 
         let autoSaveInterval = null; 
         
-        // --- NUEVO: Barrera de seguridad para el guardado ---
         let isGameLoaded = false;
         let isShiftPressed = false; // Para compra x10
 
@@ -1362,7 +1419,13 @@
         function formatNumber(num) {
             num = _MathFloor(num);
             if (num < 1000) return num.toString();
-            // --- CORREGIDO: Lógica de formateo extendida ---
+            // --- INICIO: Lógica de formateo extendida v5 ---
+            if (num >= 1e45) return (num / 1e45).toFixed(num % 1e45 === 0 ? 0 : 2).replace(/\./g, ',') + 'qD'; // Quattuordecillion
+            if (num >= 1e42) return (num / 1e42).toFixed(num % 1e42 === 0 ? 0 : 2).replace(/\./g, ',') + 'tD'; // Tredecillion
+            if (num >= 1e39) return (num / 1e39).toFixed(num % 1e39 === 0 ? 0 : 2).replace(/\./g, ',') + 'dD'; // Duodecillion
+            if (num >= 1e36) return (num / 1e36).toFixed(num % 1e36 === 0 ? 0 : 2).replace(/\./g, ',') + 'U'; // Undecillion
+            if (num >= 1e33) return (num / 1e33).toFixed(num % 1e33 === 0 ? 0 : 2).replace(/\./g, ',') + 'D'; // Decillion
+            if (num >= 1e30) return (num / 1e30).toFixed(num % 1e30 === 0 ? 0 : 2).replace(/\./g, ',') + 'N'; // Nonillion
             if (num >= 1e27) return (num / 1e27).toFixed(num % 1e27 === 0 ? 0 : 2).replace(/\./g, ',') + 'O'; // Octillion
             if (num >= 1e24) return (num / 1e24).toFixed(num % 1e24 === 0 ? 0 : 2).replace(/\./g, ',') + 'Y'; // Yottillion
             if (num >= 1e21) return (num / 1e21).toFixed(num % 1e21 === 0 ? 0 : 2).replace(/\./g, ',') + 'Z'; // Zettillion
@@ -1372,7 +1435,7 @@
             if (num >= 1e9) return (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2).replace(/\./g, ',') + 'B'; // Billion
             if (num >= 1e6) return (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 2).replace(/\./g, ',') + 'M'; // Million
             if (num >= 1e3) return (num / 1e3).toFixed(num % 1e3 === 0 ? 0 : 1).replace(/\./g, ',') + 'K'; // Thousand
-            // --- FIN: CORREGIDO ---
+            // --- FIN: Lógica de formateo extendida v5 ---
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
         
@@ -1441,6 +1504,10 @@
             updateUI(); 
             updateSkinsUI(); 
             checkBanStatus();
+            
+            // --- INICIO: CORRECCIÓN BUG SKIN VACÍA ---
+            updateClickButtonSkin(); // Asegura que la skin se aplique al resetear
+            // --- FIN: CORRECCIÓN BUG SKIN VACÍA ---
         }
 
         const scoreDisplay = document.getElementById('score');
@@ -1449,8 +1516,10 @@
         const clickButton = document.getElementById('click-button');
         const clickerZone = document.getElementById('clicker-zone');
         
+        // --- INICIO: Contenedores de tienda v5 ---
         const storeCpcContainer = document.getElementById('store-items-cpc-container');
         const storePpsContainer = document.getElementById('store-items-pps-container');
+        // --- FIN: Contenedores de tienda v5 ---
         const storeClickMultContainer = document.getElementById('store-items-click-mult-container');
         const storeAutoMultContainer = document.getElementById('store-items-auto-mult-container');
         const storeSynergyContainer = document.getElementById('store-items-synergy-container');
@@ -1766,6 +1835,9 @@
                         levelClickBonus += bonus;
                     } else if (config.targetStat === 'autoClickValue') {
                         levelAutoBonus += bonus;
+                    } else if (config.targetStat === 'all') { // --- NUEVO: Bonus 'all' ---
+                        levelClickBonus += bonus;
+                        levelAutoBonus += bonus;
                     }
                 }
             });
@@ -1852,14 +1924,15 @@
                     
                     let finalAmount = amountToBuy;
                     let isMaxed = false;
-                    if (config.maxLevel) {
-                        const remainingLevels = config.maxLevel - currentLevel;
-                        if (remainingLevels <= 0) {
-                            isMaxed = true;
-                            finalAmount = 0;
-                        } else {
-                            finalAmount = _MathMin(amountToBuy, remainingLevels);
-                        }
+                    // --- CORRECCIÓN: Comprobar si el coste es null (MAX) ---
+                    if (state.cost === null || (config.maxLevel && currentLevel >= config.maxLevel)) {
+                        isMaxed = true;
+                        finalAmount = 0;
+                    }
+                    
+                    if (config.maxLevel && !isMaxed) {
+                         const remainingLevels = config.maxLevel - currentLevel;
+                         finalAmount = _MathMin(amountToBuy, remainingLevels);
                     }
 
                     // Actualizar descripción y nivel
@@ -1883,12 +1956,10 @@
                         if (isShiftPressed && finalAmount > 0) {
                             buttonEl.textContent = `x${finalAmount} Costo: ${formatNumber(totalCost)}`;
                         } else {
-                            // --- CORRECCIÓN: Mostrar coste incluso si no es shift ---
                             buttonEl.textContent = `Costo: ${formatNumber(state.cost)}`;
                         }
                         
                         const canAfford = score >= totalCost;
-                        // --- CORRECCIÓN: Comprobar coste de 1 unidad para 'affordable' ---
                         const canAffordOne = score >= (state.cost || 0);
                         buttonEl.disabled = !canAffordOne;
 
@@ -1898,7 +1969,6 @@
                             itemEl.classList.remove('affordable');
                         }
                         
-                        // Si está en modo shift, comprobar ese coste
                         if (isShiftPressed) {
                              buttonEl.disabled = !canAfford;
                         }
@@ -1951,12 +2021,18 @@
                 const button = document.createElement('button');
                 button.id = `buy-${config.id}`;
                 button.dataset.key = config.id;
-                button.textContent = `Costo: ${formatNumber(state.cost)}`;
+                // --- CORRECCIÓN: Comprobar si el coste es null (MAX) ---
+                if (state.cost === null) {
+                    button.textContent = `Comprado`;
+                    button.disabled = true;
+                } else {
+                    button.textContent = `Costo: ${formatNumber(state.cost)}`;
+                }
 
                 itemDiv.appendChild(infoDiv);
                 itemDiv.appendChild(button);
                 
-                // Asignar al contenedor correcto
+                // Asignar al contenedor correcto v5
                 switch (config.type) {
                     case 'clickValue':
                         storeCpcContainer.appendChild(itemDiv);
@@ -1984,6 +2060,7 @@
         }
 
         function initializeSkins() {
+            skinsGrid.innerHTML = ''; // Limpiar skins
             Object.keys(SKINS_CONFIG).forEach(skinId => {
                 const skin = SKINS_CONFIG[skinId];
 
@@ -2013,28 +2090,32 @@
                 skinsGrid.appendChild(skinItem);
             });
 
-            skinsGrid.addEventListener('click', (event) => {
-                if (isBanned) return;
-                const skinItem = event.target.closest('.skin-item');
-                if (!skinItem) return;
+            // Mover el listener para que solo se añada una vez
+            if (!skinsGrid.dataset.listenerAttached) {
+                skinsGrid.addEventListener('click', (event) => {
+                    if (isBanned) return;
+                    const skinItem = event.target.closest('.skin-item');
+                    if (!skinItem) return;
 
-                const skinId = skinItem.dataset.skinId;
-                const skin = skinsState[skinId];
+                    const skinId = skinItem.dataset.skinId;
+                    const skin = skinsState[skinId];
 
-                if (skin.owned) {
-                    currentSkin = skinId;
-                    updateClickButtonSkin();
-                    updateSkinsUI();
-                } else if (coins >= skin.cost) {
-                    coins -= skin.cost;
-                    skin.owned = true;
-                    skin.unlocked = true;
-                    currentSkin = skinId;
-                    updateClickButtonSkin();
-                    updateCoinsDisplay();
-                    updateSkinsUI();
-                }
-            });
+                    if (skin.owned) {
+                        currentSkin = skinId;
+                        updateClickButtonSkin();
+                        updateSkinsUI();
+                    } else if (coins >= skin.cost) {
+                        coins -= skin.cost;
+                        skin.owned = true;
+                        skin.unlocked = true;
+                        currentSkin = skinId;
+                        updateClickButtonSkin();
+                        updateCoinsDisplay();
+                        updateSkinsUI();
+                    }
+                });
+                skinsGrid.dataset.listenerAttached = 'true';
+            }
         }
 
         function updateClickButtonSkin() {
@@ -2055,8 +2136,18 @@
         }
 
         function updateSkinsUI() {
+            if (!skinsState || Object.keys(skinsState).length === 0) {
+                 // Si skinsState no está listo, inicializarlo (como en resetGameState)
+                 skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+            }
+            
             Object.keys(skinsState).forEach(skinId => {
                 const skin = skinsState[skinId];
+                if (!skin) {
+                    console.warn(`Skin ID "${skinId}" no encontrado en skinsState.`);
+                    return;
+                }
+                
                 const skinElement = document.querySelector(`.skin-item[data-skin-id="${skinId}"]`);
 
                 if (skinElement) {
@@ -2067,6 +2158,7 @@
                     if (!skin.owned && skin.cost > 0) {
                         skinElement.classList.add('skin-locked');
                         costEl.textContent = `${formatNumber(skin.cost)} monedas`;
+                        costEl.style.color = "#28a745"; // Reset color
                     } else if (skin.owned) {
                         skinElement.classList.add('skin-owned');
                         costEl.textContent = "Comprado";
@@ -2130,7 +2222,7 @@
             });
         }
 
-        // --- INICIO: LÓGICA DE MIGRACIÓN ---
+        // Lógica de carga y migración
         async function loadGameState() {
             if (!userId) {
                 resetGameState(false);
@@ -2179,11 +2271,18 @@
                     });
                     // --- FIN: LÓGICA DE MIGRACIÓN DE MEJORAS ---
 
+                    // --- INICIO: Lógica de migración de Skins (MÁS ROBUSTA) ---
+                    skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
                     if (savedState.skins) {
-                        skinsState = savedState.skins;
-                    } else {
-                        skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+                        // Migrar el estado 'owned' de las skins guardadas
+                        Object.keys(savedState.skins).forEach(skinId => {
+                            if (skinsState[skinId]) {
+                                skinsState[skinId].owned = savedState.skins[skinId].owned;
+                                skinsState[skinId].unlocked = savedState.skins[skinId].unlocked;
+                            }
+                        });
                     }
+                    // --- FIN: Lógica de migración de Skins ---
                     
                     recalculateStats();
                     recalculateLevelStats();
@@ -2214,9 +2313,7 @@
                 isGameLoaded = true;
             }
             
-            // --- IMPORTANTE: Actualizar la tienda DESPUÉS de la migración ---
             initializeStore(); 
-            // --- FIN ---
 
             updateUI();
             updateClickButtonSkin();
@@ -2224,7 +2321,6 @@
             updateCoinsDisplay();
             checkBanStatus();
         }
-        // --- FIN: LÓGICA DE MIGRACIÓN ---
         
         function showOfflineEarningsModal(earnings, time) {
             offlineEarningsEl.textContent = `+${formatNumber(earnings)}`;
@@ -2662,15 +2758,9 @@
                 sfxSwitchTabs = document.getElementById('sfx-switchtabs');
                 bgmMusic = document.getElementById('bgm-music');
                 musicToggleBtn = document.getElementById('music-toggle-btn');
-
-                // --- CAMBIO IMPORTANTE ---
-                // initializeStore() y initializeSkins() AHORA se llaman
-                // DENTRO de loadGameState() DESPUÉS de migrar los datos,
-                // para que los botones de la tienda se creen con los costes correctos.
-                // Ya no se llaman desde aquí.
                 
-                initializeSkins(); // Skins no necesita migración, puede ir aquí.
-                await initializeFirebase(); // Esto llamará a loadGameState, que ahora inicializa la tienda.
+                initializeSkins(); 
+                await initializeFirebase(); // Esto llama a loadGameState, que ahora inicializa la tienda.
 
                 clickButton.addEventListener('mousedown', handleManualClick);
                 
@@ -2691,6 +2781,15 @@
                         updateUI();
                     }
                 });
+
+                // --- INICIO: CORRECCIÓN BUG x10 STUCK ---
+                window.addEventListener('blur', () => {
+                    if (isShiftPressed) {
+                        isShiftPressed = false;
+                        updateUI();
+                    }
+                });
+                // --- FIN: CORRECCIÓN BUG x10 STUCK ---
 
 
                 tabButtons.forEach(button => {
@@ -2736,6 +2835,7 @@
                 setInterval(gameLoop, 100);
                 setInterval(updateLeaderboardVisualTicking, 1000);
 
+                // Estas llamadas son importantes al final por si el usuario no está logueado
                 updateUI();
                 updateClickButtonSkin();
                 
