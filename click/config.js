@@ -144,6 +144,9 @@ export const UPGRADES_CONFIG = [
     { id: 'click_15', name: 'Pulso Galáctico', emoji: '🌠', description: '+7B por clic', initialCost: 8e12, costMultiplier: 1.72, type: 'clickValue', value: 7e9 },
     { id: 'click_16', name: 'Toque Universal', emoji: '🪐', description: '+30B por clic', initialCost: 5e13, costMultiplier: 1.74, type: 'clickValue', value: 3e10 },
     { id: 'click_17', name: 'Fuerza Primordial', emoji: '🔥', description: '+150B por clic', initialCost: 4e14, costMultiplier: 1.76, type: 'clickValue', value: 1.5e11 },
+    { id: 'click_17.1', name: 'Energía Primordial', emoji: '⚡', description: '+75B por clic', initialCost: 2e14, costMultiplier: 1.75, type: 'clickValue', value: 7.5e10 },
+    { id: 'click_17.2', name: 'Esencia Primordial', emoji: '🌟', description: '+100B por clic', initialCost: 3e14, costMultiplier: 1.76, type: 'clickValue', value: 1e11 },
+    { id: 'click_17.3', name: 'Alma Primordial', emoji: '💠', description: '+125B por clic', initialCost: 3.5e14, costMultiplier: 1.77, type: 'clickValue', value: 1.25e11 },
     { id: 'click_18', name: 'Decreto Divino', emoji: '📜', description: '+700B por clic', initialCost: 3e15, costMultiplier: 1.78, type: 'clickValue', value: 7e11 },
     { id: 'click_19', name: 'Clic Metafísico', emoji: '🧠', description: '+3T por clic', initialCost: 2e16, costMultiplier: 1.80, type: 'clickValue', value: 3e12 },
     { id: 'click_20', name: 'El Último Clic', emoji: '🏆', description: '+12T por clic', initialCost: 1.5e17, costMultiplier: 1.82, type: 'clickValue', value: 1.2e13 },
@@ -256,9 +259,9 @@ export const UPGRADES_CONFIG = [
     { id: 'synergy_7', name: 'Sinergia Inversa', emoji: '☯️', description: '+0.001% Clic por nivel Realidad Alternativa', initialCost: 1e16, costMultiplier: 2.1, type: 'synergy', value: 0.00001, targetUpgrade: 'auto_13', targetStat: 'clickValue' },
     
     // Bonos de Nivel (Especiales)
-    { id: 'level_boost_1', name: 'Bono de Nivel', emoji: '📈', description: '+1% PPS por Nivel', initialCost: 25000, costMultiplier: 1.8, type: 'levelBonus', value: 0.01, targetStat: 'autoClickValue' },
-    { id: 'level_boost_2', name: 'Maestría de Nivel', emoji: '🎓', description: '+0.5% Clic por Nivel', initialCost: 50000, costMultiplier: 1.9, type: 'levelBonus', value: 0.005, targetStat: 'clickValue' },
-    { id: 'level_boost_3', name: 'Bono de Nivel Experto', emoji: '🌟', description: '+0.25% Clic y PPS por Nivel', initialCost: 1e20, costMultiplier: 2.5, type: 'levelBonus', value: 0.0025, targetStat: 'all' },
+    { id: 'level_boost_1', name: 'Bono de Nivel', emoji: '📈', description: '+5% PPS por Nivel', initialCost: 25000, costMultiplier: 1.8, type: 'levelBonus', value: 0.05, targetStat: 'autoClickValue' },
+    { id: 'level_boost_2', name: 'Maestría de Nivel', emoji: '🎓', description: '+2.5% Clic por Nivel', initialCost: 50000, costMultiplier: 1.9, type: 'levelBonus', value: 0.025, targetStat: 'clickValue' },
+    { id: 'level_boost_3', name: 'Bono de Nivel Experto', emoji: '🌟', description: '+1% Clic y PPS por Nivel', initialCost: 1e20, costMultiplier: 2.5, type: 'levelBonus', value: 0.01, targetStat: 'all' },
     
     // Otros (Especiales)
     { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
