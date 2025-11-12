@@ -151,14 +151,14 @@ export const UPGRADES_CONFIG = [
     { id: 'click_22', name: 'Idea Pura', emoji: '💡', description: '+180T por clic', initialCost: 2e19, costMultiplier: 1.86, type: 'clickValue', value: 1.8e14 },
     { id: 'click_23', name: 'Toque Multiversal', emoji: '🌌', description: '+700T por clic', initialCost: 2.2e20, costMultiplier: 1.88, type: 'clickValue', value: 7e14 },
     { id: 'click_24', name: 'Singularidad Manual', emoji: '💥', description: '+2.8Qa por clic', initialCost: 2.5e21, costMultiplier: 1.90, type: 'clickValue', value: 2.8e15 },
-    { id: 'click_25', name: 'Clic de Dios', emoji: '🙏', description: '+11Qa por clic', initialCost: 3e22, costMultiplier: 1.91, type: 'clickValue', value: 1.1e16 },
-    { id: 'click_26', name: 'El Fin', emoji: '🔚', description: '+40Qa por clic', initialCost: 3.5e23, costMultiplier: 1.92, type: 'clickValue', value: 4e16 },
-    { id: 'click_27', name: 'Quasar', emoji: '☄️', description: '+150Qa por clic', initialCost: 4e24, costMultiplier: 1.93, type: 'clickValue', value: 1.5e17 },
-    { id: 'click_28', name: 'Supernova', emoji: '💥', description: '+500Qa por clic', initialCost: 5e25, costMultiplier: 1.94, type: 'clickValue', value: 5e17 },
-    { id: 'click_29', name: 'Púlsar', emoji: '💫', description: '+1.8Qi por clic', initialCost: 6e26, costMultiplier: 1.95, type: 'clickValue', value: 1.8e18 },
-    { id: 'click_30', name: 'Magnetar', emoji: '🌠', description: '+6Qi por clic', initialCost: 7e27, costMultiplier: 1.96, type: 'clickValue', value: 6e18 },
-    { id: 'click_31', name: 'Hipernova', emoji: '✨', description: '+20Qi por clic', initialCost: 8e28, costMultiplier: 1.97, type: 'clickValue', value: 2e19 },
-    { id: 'click_32', name: 'Materia Oscura', emoji: '⚫', description: '+70Qi por clic', initialCost: 9e29, costMultiplier: 1.98, type: 'clickValue', value: 7e19 },
+    { id: 'click_25', name: 'Clic de Dios', emoji: '🙏', description: '+15Qa por clic', initialCost: 3e22, costMultiplier: 1.85, type: 'clickValue', value: 1.5e16 }, // Antes 11Qa, costMultiplier 1.91
+    { id: 'click_26', name: 'El Fin', emoji: '🔚', description: '+50Qa por clic', initialCost: 3.5e23, costMultiplier: 1.87, type: 'clickValue', value: 5e16 }, // Antes 40Qa, costMultiplier 1.92
+    { id: 'click_27', name: 'Quasar', emoji: '☄️', description: '+200Qa por clic', initialCost: 4e24, costMultiplier: 1.89, type: 'clickValue', value: 2e17 }, // Antes 150Qa, costMultiplier 1.93
+    { id: 'click_28', name: 'Supernova', emoji: '💥', description: '+700Qa por clic', initialCost: 5e25, costMultiplier: 1.91, type: 'clickValue', value: 7e17 }, // Antes 500Qa, costMultiplier 1.94
+    { id: 'click_29', name: 'Púlsar', emoji: '💫', description: '+2Qi por clic', initialCost: 6e26, costMultiplier: 1.93, type: 'clickValue', value: 2e18 }, // Antes 1.8Qi
+    { id: 'click_30', name: 'Magnetar', emoji: '🌠', description: '+8Qi por clic', initialCost: 7e27, costMultiplier: 1.95, type: 'clickValue', value: 8e18 }, // Antes 6Qi
+    { id: 'click_31', name: 'Hipernova', emoji: '✨', description: '+30Qi por clic', initialCost: 8e28, costMultiplier: 1.96, type: 'clickValue', value: 3e19 }, // Antes 20Qi
+    { id: 'click_32', name: 'Materia Oscura', emoji: '⚫', description: '+100Qi por clic', initialCost: 9e29, costMultiplier: 1.97, type: 'clickValue', value: 1e20 }, // Antes 70Qi
     { id: 'click_33', name: 'Energía Oscura', emoji: '🌌', description: '+250Qi por clic', initialCost: 1e31, costMultiplier: 1.99, type: 'clickValue', value: 2.5e20 },
     { id: 'click_34', name: 'Big Bang', emoji: '💥', description: '+900Qi por clic', initialCost: 1.2e32, costMultiplier: 2.00, type: 'clickValue', value: 9e20 },
     { id: 'click_35', name: 'Big Crunch', emoji: '🌀', description: '+3.5Sx por clic', initialCost: 1.5e33, costMultiplier: 2.01, type: 'clickValue', value: 3.5e21 },
@@ -172,8 +172,8 @@ export const UPGRADES_CONFIG = [
     { id: 'click_43', name: 'Yog-Sothoth', emoji: '🔑', description: '+70Sp por clic', initialCost: 8e41, costMultiplier: 2.12, type: 'clickValue', value: 7e25 },
     { id: 'click_44', name: 'Clic del Vacío', emoji: '🕳️', description: '+250Sp por clic', initialCost: 1e43, costMultiplier: 2.14, type: 'clickValue', value: 2.5e26 },
     // === CAMBIO CLAVE 2: Reducción de Cost Multiplier en las últimas mejoras ===
-    { id: 'click_45', name: 'A-Omega', emoji: '♎', description: '+900Sp por clic', initialCost: 1.2e44, costMultiplier: 1.95, type: 'clickValue', value: 9e26 }, // Antes 2.16
-    { id: 'click_46', name: 'El Creador', emoji: '🌌', description: '+3.5Oc por clic', initialCost: 1.5e45, costMultiplier: 1.95, type: 'clickValue', value: 3.5e27 }, // Antes 2.18
+    { id: 'click_45', name: 'A-Omega', emoji: '♎', description: '+900Sp por clic', initialCost: 1.2e44, costMultiplier: 1.85, type: 'clickValue', value: 9e26 }, // Antes 1.95
+    { id: 'click_46', name: 'El Creador', emoji: '🌌', description: '+3.5Oc por clic', initialCost: 1.5e45, costMultiplier: 1.85, type: 'clickValue', value: 3.5e27 }, // Antes 1.95
 
     // Auto (Producción)
     { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
@@ -200,14 +200,14 @@ export const UPGRADES_CONFIG = [
     { id: 'auto_22', name: 'Núcleo Estelar', emoji: '☀️', description: '+160T pps', initialCost: 3e19, costMultiplier: 1.91, type: 'autoClickValue', value: 1.6e14 },
     { id: 'auto_23', name: 'Cosechador Galáctico', emoji: '🌠', description: '+650T pps', initialCost: 3.3e20, costMultiplier: 1.93, type: 'autoClickValue', value: 6.5e14 },
     { id: 'auto_24', name: 'El Gran Atractor', emoji: '🌀', description: '+2.6Qa pps', initialCost: 3.6e21, costMultiplier: 1.95, type: 'autoClickValue', value: 2.6e15 },
-    { id: 'auto_25', name: 'Motor Infinito', emoji: '♾️', description: '+10Qa pps', initialCost: 4e22, costMultiplier: 1.96, type: 'autoClickValue', value: 1e16 },
-    { id: 'auto_26', name: 'El Creador (Auto)', emoji: '✨', description: '+40Qa pps', initialCost: 4.5e23, costMultiplier: 1.97, type: 'autoClickValue', value: 4e16 },
-    { id: 'auto_27', name: 'Ejército de Clones', emoji: '👥', description: '+150Qa pps', initialCost: 5e24, costMultiplier: 1.98, type: 'autoClickValue', value: 1.5e17 },
-    { id: 'auto_28', name: 'Enjambre de IA', emoji: '🤖', description: '+500Qa pps', initialCost: 6e25, costMultiplier: 1.99, type: 'autoClickValue', value: 5e17 },
-    { id: 'auto_29', name: 'Red Neuronal', emoji: '🧠', description: '+1.8Qi pps', initialCost: 7e26, costMultiplier: 2.00, type: 'autoClickValue', value: 1.8e18 },
-    { id: 'auto_30', name: 'IA Sentiente', emoji: '💡', description: '+6Qi pps', initialCost: 8e27, costMultiplier: 2.01, type: 'autoClickValue', value: 6e18 },
-    { id: 'auto_31', name: 'Dominio de la IA', emoji: '👑', description: '+20Qi pps', initialCost: 9e28, costMultiplier: 2.02, type: 'autoClickValue', value: 2e19 },
-    { id: 'auto_32', name: 'Simulación Ancestral', emoji: '💻', description: '+70Qi pps', initialCost: 1e30, costMultiplier: 2.03, type: 'autoClickValue', value: 7e19 },
+    { id: 'auto_25', name: 'Motor Infinito', emoji: '♾️', description: '+15Qa pps', initialCost: 4e22, costMultiplier: 1.85, type: 'autoClickValue', value: 1.5e16 }, // Antes 10Qa, costMultiplier 1.96
+    { id: 'auto_26', name: 'El Creador (Auto)', emoji: '✨', description: '+50Qa pps', initialCost: 4.5e23, costMultiplier: 1.87, type: 'autoClickValue', value: 5e16 }, // Antes 40Qa, costMultiplier 1.97
+    { id: 'auto_27', name: 'Ejército de Clones', emoji: '👥', description: '+200Qa pps', initialCost: 5e24, costMultiplier: 1.89, type: 'autoClickValue', value: 2e17 }, // Antes 150Qa, costMultiplier 1.98
+    { id: 'auto_28', name: 'Enjambre de IA', emoji: '🤖', description: '+700Qa pps', initialCost: 6e25, costMultiplier: 1.91, type: 'autoClickValue', value: 7e17 }, // Antes 500Qa, costMultiplier 1.99
+    { id: 'auto_29', name: 'Red Neuronal', emoji: '🧠', description: '+2Qi pps', initialCost: 7e26, costMultiplier: 1.93, type: 'autoClickValue', value: 2e18 }, // Antes 1.8Qi
+    { id: 'auto_30', name: 'IA Sentiente', emoji: '💡', description: '+8Qi pps', initialCost: 8e27, costMultiplier: 1.95, type: 'autoClickValue', value: 8e18 }, // Antes 6Qi
+    { id: 'auto_31', name: 'Dominio de la IA', emoji: '👑', description: '+30Qi pps', initialCost: 9e28, costMultiplier: 1.96, type: 'autoClickValue', value: 3e19 }, // Antes 20Qi
+    { id: 'auto_32', name: 'Simulación Ancestral', emoji: '💻', description: '+100Qi pps', initialCost: 1e30, costMultiplier: 1.97, type: 'autoClickValue', value: 1e20 }, // Antes 70Qi
     { id: 'auto_33', name: 'Mundo Matriz', emoji: '🟩', description: '+250Qi pps', initialCost: 1.2e31, costMultiplier: 2.04, type: 'autoClickValue', value: 2.5e20 },
     { id: 'auto_34', name: 'Constructor Universal', emoji: '🛠️', description: '+900Qi pps', initialCost: 1.5e32, costMultiplier: 2.05, type: 'autoClickValue', value: 9e20 },
     { id: 'auto_35', name: 'Esfera de Dyson', emoji: '☀️', description: '+3.5Sx pps', initialCost: 2e33, costMultiplier: 2.06, type: 'autoClickValue', value: 3.5e21 },
@@ -220,9 +220,9 @@ export const UPGRADES_CONFIG = [
     { id: 'auto_42', name: 'El Telar del Destino', emoji: '🕸️', description: '+20Sp pps', initialCost: 8e40, costMultiplier: 2.18, type: 'autoClickValue', value: 2e25 },
     { id: 'auto_43', name: 'Eco del Principio', emoji: '🌀', description: '+70Sp pps', initialCost: 9e41, costMultiplier: 2.20, type: 'autoClickValue', value: 7e25 },
     // === CAMBIO CLAVE 2: Reducción de Cost Multiplier en las últimas mejoras ===
-    { id: 'auto_44', name: 'Flujo Infinito', emoji: '🌊', description: '+250Sp pps', initialCost: 1.2e43, costMultiplier: 1.95, type: 'autoClickValue', value: 2.5e26 }, // Antes 2.22
-    { id: 'auto_45', name: 'Deus Ex Machina', emoji: '⚙️', description: '+900Sp pps', initialCost: 1.5e44, costMultiplier: 1.95, type: 'autoClickValue', value: 9e26 }, // Antes 2.24
-    { id: 'auto_46', name: 'La Singularidad', emoji: '🕳️', description: '+3.5Oc pps', initialCost: 2e45, costMultiplier: 1.95, type: 'autoClickValue', value: 3.5e27 }, // Antes 2.26
+    { id: 'auto_44', name: 'Flujo Infinito', emoji: '🌊', description: '+250Sp pps', initialCost: 1.2e43, costMultiplier: 1.85, type: 'autoClickValue', value: 2.5e26 }, // Antes 1.95
+    { id: 'auto_45', name: 'Deus Ex Machina', emoji: '⚙️', description: '+900Sp pps', initialCost: 1.5e44, costMultiplier: 1.85, type: 'autoClickValue', value: 9e26 }, // Antes 1.95
+    { id: 'auto_46', name: 'La Singularidad', emoji: '🕳️', description: '+3.5Oc pps', initialCost: 2e45, costMultiplier: 1.85, type: 'autoClickValue', value: 3.5e27 }, // Antes 1.95
 
     // Multiplicadores de Clic
     { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },
@@ -233,7 +233,7 @@ export const UPGRADES_CONFIG = [
     { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
     { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
     { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e21, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 },
-    { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 8e23, costMultiplier: 7, type: 'clickMultiplier', value: 50.0, maxLevel: 1 },
+    { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 5e23, costMultiplier: 5, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Antes 7
 
     // Multiplicadores de Auto
     { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
@@ -244,7 +244,7 @@ export const UPGRADES_CONFIG = [
     { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
     { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
     { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 6e21, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 },
-    { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 9e23, costMultiplier: 7, type: 'autoMultiplier', value: 50.0, maxLevel: 1 },
+    { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 6e23, costMultiplier: 5, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Antes 7
 
     // Sinergias (Especiales)
     { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+0.1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.001, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
