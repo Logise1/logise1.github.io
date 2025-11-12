@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Ajedrez - Partida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-white font-sans antialiased">
+
+    <!-- Fondo dinámico -->
+    <div id="dynamic-background"></div>
+
+    <div id="app-container" class="min-h-screen p-4 flex items-center justify-center">
+        <!-- Pantalla de Partida -->
+        <div id="game-screen" class="w-full max-w-4xl">
+            <div class="glass-panel p-6">
+                
+                <!-- Info Oponente (NUEVO) -->
+                <div id="opponent-info" class="player-info p-4 mb-2">
+                    <span id="opponent-name" class="font-bold">Oponente</span>
+                    <span id="opponent-elo" class="text-gray-400"></span>
+                </div>
+
+                <h3 id="game-status" class="text-xl font-bold text-center mb-4 h-6">Cargando partida...</h3>
+                
+                <div id="board-container">
+                    <div id="board" class="w-full"></div>
+                </div>
+                
+                <!-- Info Jugador (NUEVO) -->
+                <div id="player-info" class="player-info p-4 mt-2">
+                    <span id="player-name" class="font-bold">Tú</span>
+                    <span id="player-elo" class="text-gray-400"></span>
+                </div>
+
+                <p class="text-center text-gray-300 mt-2 text-xs">FEN: <code id="fen-display" class="bg-gray-900 bg-opacity-50 p-1 rounded">...</code></p>
+                
+                <button id="exit-game-btn" class="w-full max-w-sm mx-auto mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md btn-hover-effect block">
+                    Volver al Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta Personalizado -->
+    <div id="custom-alert" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="glass-panel p-6 max-w-sm w-full">
+            <p id="alert-message" class="text-white text-lg mb-4"></p>
+            <button id="alert-ok-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md btn-hover-effect">
+                Entendido
+            </button>
+        </div>
+    </div>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Chessboard.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.js"></script>
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc,
+            updateDoc,
+            deleteDoc,
+            serverTimestamp,
+            setLogLevel,
+            onSnapshot,
+            increment
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
+            authDomain: "chess-a9347.firebaseapp.com",
+            projectId: "chess-a9347",
+            storageBucket: "chess-a99347.firebasestorage.app",
+            messagingSenderId: "950558367537",
+            appId: "1:950558367537:web:4cee83e2053262a4541a10"
+        };
+
+        // --- Inicialización de Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('Debug');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+
+        // --- Variables Globales ---
+        let board = null;
+        let game = new Chess();
+        let currentUser = null;
+        let currentUserId = null;
+        let userElo = 300;
+        
+        let gameMode = null; // 'ai-test', 'ai-practice', 'online'
+        let playerColor = 'w'; // <-- BUG FIX: Variable faltante declarada
+        let currentAIOpponent = { level: 1, elo: 800, name: "IA" }; 
+        let currentOnlineGameId = null;
+        let onlineGameUnsubscribe = null;
+        let opponentElo = 1200; // ELO por defecto del oponente
+        // BUG FIX: Se eliminó la declaración duplicada de 'opponentName'
+
+        // --- Referencias al DOM ---
+        const gameStatus = document.getElementById('game-status');
+        const fenDisplay = document.getElementById('fen-display');
+        const exitGameBtn = document.getElementById('exit-game-btn');
+        const customAlert = document.getElementById('custom-alert');
+        const alertMessage = document.getElementById('alert-message');
+        const alertOkBtn = document.getElementById('alert-ok-btn');
+
+        // Nuevas referencias a info de jugador
+        const playerName = document.getElementById('player-name');
+        const playerElo = document.getElementById('player-elo');
+        const opponentName = document.getElementById('opponent-name');
+        const opponentElo = document.getElementById('opponent-elo');
+
+
+        // --- Funciones de Utilidad ---
+        function showAlert(message) {
+            alertMessage.textContent = message;
+            customAlert.classList.remove('hidden');
+        }
+
+        alertOkBtn.addEventListener('click', () => {
+            customAlert.classList.add('hidden');
+            // Si el juego terminó, redirigir
+            if (gameMode === null) {
+                window.location.href = 'home.html';
+            }
+        });
+        
+        // --- Lógica de Auth y Carga ---
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                currentUserId = user.uid;
+                loadGameFromURL();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        async function loadGameFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            gameMode = urlParams.get('mode');
+            
+            // Cargar ELO del usuario
+            const userRef = getUserDocRef(currentUserId);
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists()) {
+                userElo = docSnap.data().elo || 300;
+            }
+            
+            // Actualizar info del jugador local (Tú)
+            playerName.textContent = currentUser.displayName || "Tú";
+            playerElo.textContent = `ELO: ${userElo}`;
+
+            if (gameMode === 'ai-test') {
+                const level = parseInt(urlParams.get('level')) || 0;
+                startAITestGame(level);
+            } else if (gameMode === 'ai-practice') {
+                const level = parseInt(urlParams.get('level')) || 0;
+                const elo = parseInt(urlParams.get('elo')) || 800;
+                const color = urlParams.get('color') || 'w';
+                startAIPracticeGame(color, level, elo);
+            } else if (gameMode === 'online') {
+                const gameId = urlParams.get('gameId');
+                if (gameId) {
+                    await startOnlineGame(gameId);
+                } else {
+                    showAlert("ID de partida no encontrado.");
+                    window.location.href = 'home.html';
+                }
+            } else {
+                showAlert("Modo de juego no válido.");
+                window.location.href = 'home.html';
+            }
+        }
+        
+        // --- Lógica de ELO ---
+        function calculateEloChange(playerElo, opponentElo, score) {
+            const K = 32;
+            const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
+            const eloChange = K * (score - expectedScore);
+            return Math.round(eloChange);
+        }
+
+        // --- Lógica de Firestore ---
+        function getUserDocRef(uid) {
+            return doc(db, 'artifacts', appId, 'users', uid, 'profile', 'data');
+        }
+        
+        function getPublicGameRef(gameId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+        }
+
+        async function updateUserStats(newElo, score) {
+            if (!currentUserId) return;
+            const userRef = getUserDocRef(currentUserId);
+            
+            const stats = {
+                elo: newElo,
+                gamesPlayed: increment(1)
+            };
+            
+            if (score === 1) {
+                stats.wins = increment(1);
+            }
+            
+            try {
+                await updateDoc(userRef, stats);
+                userElo = newElo;
+                console.log("ELO actualizado a:", newElo);
+            } catch (error) {
+                console.error("Error al actualizar ELO:", error);
+            }
+        }
+        
+        async function markTestAsComplete() {
+            if (!currentUserId) return;
+            const userRef = getUserDocRef(currentUserId);
+            try {
+                await updateDoc(userRef, { needsTest: false });
+            } catch (error) {
+                console.error("Error al marcar test como completado:", error);
+            }
+        }
+
+        // --- Lógica del Juego ---
+        
+        async function handleGameEnd(result) {
+            if (gameMode === null) return;
+            
+            let message = '';
+            let score = 0.5; // Empate
+            let eloChange = 0;
+            const currentMode = gameMode;
+            gameMode = null; // Marcar partida como terminada
+            
+            if (result === 'checkmate') {
+                const winner = game.turn() === 'w' ? 'b' : 'w';
+                if (winner === playerColor) score = 1;
+                else score = 0;
+            }
+
+            if (currentMode === 'ai-test') {
+                eloChange = calculateEloChange(userElo, currentAIOpponent.elo, score);
+                const newElo = Math.max(100, userElo + eloChange);
+                
+                if (score === 1) {
+                    if (currentAIOpponent.level === 0) {
+                        message = `¡Nivel 1 Superado! ELO +${eloChange} (Total: ${newElo}).\nPreparando Nivel 2...`;
+                        await updateUserStats(newElo, score);
+                        setTimeout(() => {
+                            // Recargar para Nivel 2
+                            window.location.href = `play.html?mode=ai-test&level=1`;
+                        }, 2000);
+                        showAlert(message);
+                        return; // No salir todavía
+                    } else {
+                        message = `¡Test Completado! ELO +${eloChange}.\nTu ELO final es: ${newElo}.`;
+                        await markTestAsComplete();
+                        await updateUserStats(newElo, score);
+                    }
+                } else {
+                    message = `Test finalizado. ELO ${eloChange > 0 ? '+' : ''}${eloChange}.\nTu ELO final es: ${newElo}.`;
+                    await markTestAsComplete();
+                    await updateUserStats(newElo, score);
+                }
+                
+            } else if (currentMode === 'ai-practice') {
+                message = "Partida de práctica finalizada. El ELO no se ha modificado.";
+            
+            } else if (currentMode === 'online') {
+                eloChange = calculateEloChange(userElo, opponentElo, score);
+                const newElo = Math.max(100, userElo + eloChange);
+                message = `Partida online finalizada. ELO ${eloChange > 0 ? '+' : ''}${eloChange}.\nTu ELO ahora es: ${newElo}.`;
+                await updateUserStats(newElo, score);
+                
+                if (currentOnlineGameId) {
+                    await deleteDoc(getPublicGameRef(currentOnlineGameId)).catch(e => {});
+                    currentOnlineGameId = null;
+                }
+            }
+            
+            showAlert(message);
+            // El botón OK de la alerta redirigirá a home.html
+        }
+
+        function startAITestGame(level) {
+            game = new Chess();
+            gameMode = 'ai-test';
+            playerColor = 'w';
+            currentAIOpponent = level === 0 
+                ? { level: 0, elo: 300, name: "Test Nivel 1" } 
+                : { level: 1, elo: 500, name: "Test Nivel 2" };
+            
+            // Actualizar info oponente
+            opponentName.textContent = currentAIOpponent.name;
+            opponentElo.textContent = `ELO: ${currentAIOpponent.elo}`;
+
+            board.orientation('white');
+            board.position(game.fen());
+            updateGameStatus();
+        }
+        
+        function startAIPracticeGame(color, level, elo) {
+            game = new Chess();
+            gameMode = 'ai-practice';
+            playerColor = color;
+            // Determinar nombre de IA
+            let botName = "IA";
+            if (level === 0) botName = "Bronco";
+            if (level === 1) botName = "Astuta";
+            if (level === 2) botName = "Magnus";
+            currentAIOpponent = { level, elo, name: botName };
+
+            // Actualizar info oponente
+            opponentName.textContent = currentAIOpponent.name;
+            opponentElo.textContent = `ELO: ${currentAIOpponent.elo}`;
+
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            board.position(game.fen());
+            updateGameStatus();
+            
+            if (game.turn() !== playerColor) {
+                setTimeout(makeAIMove, 250);
+            }
+        }
+        
+        async function startOnlineGame(gameId) {
+            game = new Chess();
+            gameMode = 'online';
+            currentOnlineGameId = gameId;
+            
+            const gameRef = getPublicGameRef(gameId);
+            const gameDoc = await getDoc(gameRef);
+
+            if (!gameDoc.exists()) {
+                showAlert("Error: La partida online no existe.");
+                window.location.href = 'home.html';
+                return;
+            }
+
+            const gameData = gameDoc.data();
+            const opponentId = Object.keys(gameData.players).find(id => id !== currentUserId);
+            
+            if (!opponentId) {
+                 showAlert("Error: No se encontró al oponente en la partida.");
+                 await deleteDoc(gameRef); // Limpiar partida corrupta
+                 window.location.href = 'home.html';
+                 return;
+            }
+            
+            playerColor = gameData.players[currentUserId].color;
+            opponentElo = gameData.players[opponentId].elo;
+            opponentName.textContent = gameData.players[opponentId].username; // <-- NUEVO
+            opponentElo.textContent = `ELO: ${opponentElo}`; // <-- NUEVO
+            
+            game.load(gameData.fen);
+            
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            board.position(game.fen());
+            
+            listenToOnlineGame(gameId);
+            updateGameStatus();
+        }
+
+        function listenToOnlineGame(gameId) {
+            const gameRef = getPublicGameRef(gameId);
+            onlineGameUnsubscribe = onSnapshot(gameRef, (doc) => {
+                if (!doc.exists()) {
+                    if (gameMode === 'online') { // Evitar doble alerta si ya ganamos/perdimos
+                        showAlert("La partida ha finalizado (borrada).");
+                        gameMode = null; // Prevenir handleGameEnd
+                        window.location.href = 'home.html';
+                    }
+                    if (onlineGameUnsubscribe) onlineGameUnsubscribe();
+                    return;
+                }
+                
+                const data = doc.data();
+                if (data.fen !== game.fen()) {
+                    game.load(data.fen);
+                    board.position(game.fen());
+                }
+
+                if (data.status === 'finished' && gameMode === 'online') {
+                    if (onlineGameUnsubscribe) onlineGameUnsubscribe();
+                    handleGameEnd(data.result);
+                } else {
+                    updateGameStatus();
+                }
+                
+            }, (error) => {
+                console.error("Error escuchando la partida:", error);
+                showAlert("Se perdió la conexión con la partida.");
+                window.location.href = 'home.html';
+            });
+        }
+
+
+        function updateGameStatus() {
+            fenDisplay.textContent = game.fen();
+            let status = '';
+            
+            // Ya no necesitamos modeText, la info está en los paneles
+            // let modeText = '';
+            // if (gameMode === 'ai-test')...
+            
+            if (game.in_checkmate()) {
+                status = `Jaque Mate. ${game.turn() === 'w' ? 'Negras' : 'Blancas'} ganan.`;
+                if (gameMode !== 'online') { // El online lo maneja el listener
+                    handleGameEnd('checkmate');
+                }
+            } else if (game.in_draw()) {
+                status = `Tablas (Empate).`;
+                 if (gameMode !== 'online') {
+                    handleGameEnd('draw');
+                }
+            } else {
+                status = `Turno de ${game.turn() === 'w' ? 'Blancas' : 'Negras'}.`;
+                if (game.in_check()) {
+                    status += ' (¡Jaque!)';
+                }
+            }
+            gameStatus.textContent = status;
+        }
+
+        // --- Lógica de IA ---
+        function getPieceValue(piece) {
+            if (!piece) return 0;
+            const lowerPiece = piece.toLowerCase();
+            switch (lowerPiece) {
+                case 'p': return 1; case 'n': return 3; case 'b': return 3;
+                case 'r': return 5; case 'q': return 9; case 'k': return 0;
+                default: return 0;
+            }
+        }
+
+        function makeGreedyMove() { // Niveles 1 y 2
+            if (game.game_over()) return;
+            const possibleMoves = game.moves({ verbose: true });
+            let bestScore = -Infinity;
+            let movesWithBestScore = [];
+
+            for (const move of possibleMoves) {
+                let score = Math.random() * 0.1;
+                if (move.captured) score += 10 * getPieceValue(move.captured) - getPieceValue(move.piece);
+                if (move.promotion) score += getPieceValue(move.promotion);
+                
+                game.move(move.san);
+                if (game.in_checkmate()) score = 10000;
+                else if (game.in_check()) score += 0.5;
+                game.undo();
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    movesWithBestScore = [move];
+                } else if (score === bestScore) {
+                    movesWithBestScore.push(move);
+                }
+            }
+
+            if (movesWithBestScore.length > 0) {
+                const bestMove = movesWithBestScore[Math.floor(Math.random() * movesWithBestScore.length)];
+                game.move(bestMove.san);
+                board.position(game.fen());
+                updateGameStatus();
+            }
+        }
+
+        function makeRandomMove() { // Nivel 0
+            if (game.game_over()) return;
+            const possibleMoves = game.moves();
+            if (possibleMoves.length === 0) return;
+            const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            game.move(move);
+            board.position(game.fen());
+            updateGameStatus();
+        }
+        
+        function makeAIMove() {
+            if (currentAIOpponent.level === 0) {
+                makeRandomMove();
+            } else {
+                makeGreedyMove();
+            }
+        }
+
+        // --- Eventos del Tablero (Chessboard.js) ---
+        function onDragStart(source, piece) {
+            if (game.game_over() || gameMode === null) return false;
+            if (game.turn() !== playerColor) return false;
+            if (piece.search(playerColor === 'w' ? /^b/ : /^w/) !== -1) return false;
+        }
+
+        async function onDrop(source, target) {
+            let move;
+            try {
+                move = game.move({
+                    from: source,
+                    to: target,
+                    promotion: 'q'
+                });
+            } catch (e) {
+                return 'snapback';
+            }
+
+            if (move === null) return 'snapback';
+
+            if (gameMode === 'online') {
+                if (!currentOnlineGameId) return 'snapback';
+                const gameRef = getPublicGameRef(currentOnlineGameId);
+                try {
+                    let gameData = {
+                        fen: game.fen(),
+                        turn: game.turn()
+                    };
+                    
+                    if (game.game_over()) {
+                        gameData.status = 'finished';
+                        gameData.result = game.in_checkmate() ? 'checkmate' : 'draw';
+                    }
+                    
+                    await updateDoc(gameRef, gameData);
+                    
+                } catch (error) {
+                    console.error("Error al enviar movimiento:", error);
+                    game.undo();
+                    return 'snapback';
+                }
+                
+            } else if (gameMode === 'ai-test' || gameMode === 'ai-practice') {
+                updateGameStatus();
+                if (!game.game_over()) {
+                    window.setTimeout(makeAIMove, 250);
+                }
+            }
+        }
+
+        function onSnapEnd() {
+            board.position(game.fen());
+        }
+
+        // --- Inicialización del Tablero ---
+        function initBoard() {
+            const boardConfig = {
+                draggable: true,
+                position: 'start',
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd,
+                pieceTheme: function(piece) {
+                    const pieceName = piece.toLowerCase();
+                    return `https://logise1.github.io/chess/assets/${pieceName}.png`;
+                }
+            };
+            
+            if (typeof Chessboard === 'undefined') {
+                console.error("Chessboard.js no se ha cargado.");
+                return;
+            }
+
+            board = Chessboard('board', boardConfig);
+            $(window).on('resize', () => {
+                if(board) board.resize();
+            });
+        }
+        
+        // --- Punto de Entrada ---
+        window.addEventListener('load', () => {
+            initBoard();
+            // onAuthStateChanged llamará a loadGameFromURL()
+        });
+        
+        exitGameBtn.addEventListener('click', () => {
+             if (gameMode === 'online' && onlineGameUnsubscribe) {
+                onlineGameUnsubscribe();
+                // TODO: Marcar abandono y ajustar ELO
+            }
+            gameMode = null;
+            window.location.href = 'home.html';
+        });
+
+    </script>
+</body>
+</html>

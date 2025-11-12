@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Ajedrez - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide-react@0.395.0/dist/umd/lucide.js"></script>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <!-- Fondo dinámico -->
+    <div id="dynamic-background"></div>
+
+    <div class="flex min-h-screen">
+        <!-- Barra Lateral de Navegación -->
+        <nav class="glass-panel w-64 p-6 hidden md:flex flex-col flex-shrink-0">
+            <h2 class="text-2xl font-bold mb-8">Ajedrez</h2>
+            <ul class="space-y-4">
+                <li>
+                    <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-white font-medium">
+                        <i data-lucide="home"></i>
+                        Inicio
+                    </a>
+                </li>
+                <li>
+                    <a href="#play" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
+                        <i data-lucide="swords"></i>
+                        Jugar
+                    </a>
+                </li>
+                <li>
+                    <a href="#puzzles" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
+                        <i data-lucide="puzzle"></i>
+                        Puzles
+                    </a>
+                </li>
+                <li>
+                    <a href="#learn" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
+                        <i data-lucide="graduation-cap"></i>
+                        Aprender
+                    </a>
+                </li>
+            </ul>
+            <button id="logout-btn" class="flex items-center gap-3 p-2 rounded-lg hover:bg-red-700/50 text-red-300 mt-auto">
+                <i data-lucide="log-out"></i>
+                Cerrar Sesión
+            </button>
+        </nav>
+
+        <!-- Contenido Principal del Dashboard -->
+        <main id="lobby-screen" class="flex-1 p-6">
+            <!-- Encabezado del Perfil -->
+            <div class="glass-panel p-6 mb-6">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold">Bienvenido, <span id="user-display" class="text-blue-300">...</span></h2>
+                        <p class="text-gray-300 text-sm">Tu ID: <code id="user-id-display" class="bg-gray-900 bg-opacity-50 px-2 py-1 rounded-md">...</code></p>
+                    </div>
+                    <div class="flex items-center gap-6 mt-4 md:mt-0">
+                        <div class="text-center">
+                            <span class="block text-sm text-gray-400">ELO</span>
+                            <span id="user-elo-display" class="block text-4xl font-bold text-yellow-300">
+                                <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid del Dashboard -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Card: Jugar Online -->
+                <div class="glass-panel p-6 dashboard-card">
+                    <h3 class="text-2xl font-bold mb-4">Jugar Online</h3>
+                    <p class="text-gray-300 mb-6">Enfréntate a otros jugadores y pon a prueba tu ELO.</p>
+                    <button id="find-match-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto">
+                        <span id="find-match-text">Buscar Partida</span>
+                        <span id="find-match-spinner" class="hidden">Buscando... (Haz click para cancelar)</span>
+                    </button>
+                </div>
+
+                <!-- Card: Practicar con IA -->
+                <div class="glass-panel p-6 dashboard-card">
+                    <h3 class="text-2xl font-bold mb-4">Practicar</h3>
+                    <p class="text-gray-300 mb-6">Mejora tus habilidades contra nuestros bots.</p>
+                    <button id="ai-practice-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto">
+                        Jugar contra IA
+                    </button>
+                </div>
+                
+                <!-- Card: Jugar con Amigo (NUEVO) -->
+                <div class="glass-panel p-6 dashboard-card">
+                    <h3 class="text-2xl font-bold mb-4">Jugar con Amigo</h3>
+                    <p class="text-gray-300 mb-6">Reta a un amigo a una partida amistosa.</p>
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto opacity-70 cursor-not-allowed" disabled>
+                        Crear Partida
+                    </button>
+                </div>
+
+                <!-- Card: Puzles (Placeholder - Más grande) -->
+                <div class="glass-panel p-6 dashboard-card opacity-80 lg:col-span-2">
+                    <h3 class="text-2xl font-bold mb-4">Puzle del Día</h3>
+                    <p class="text-gray-300 mb-6">Resuelve el puzle diario para agudizar tu táctica.</p>
+                    <button class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md mt-auto cursor-not-allowed" disabled>
+                        Resolver Puzle (Próximamente)
+                    </button>
+                </div>
+
+                <!-- Card: Estadísticas -->
+                <div class="glass-panel p-6 dashboard-card lg:col-span-1">
+                    <h3 class="text-2xl font-bold mb-4">Estadísticas</h3>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <span class="block text-sm text-gray-400">ELO</span>
+                            <span id="stats-elo" class="block text-2xl font-bold text-yellow-300">
+                                <span class="loading-dots sm"><span>.</span><span>.</span><span>.</span></span>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="block text-sm text-gray-400">Partidas</span>
+                            <span id="stats-games" class="block text-2xl font-bold">0</span>
+                        </div>
+                        <div>
+                            <span class="block text-sm text-gray-400">Victorias</span>
+                            <span id="stats-wins" class="block text-2xl font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card: Partidas Anteriores (Placeholder) -->
+                <div class="glass-panel p-6 dashboard-card opacity-80 lg:col-span-3">
+                    <h3 class="text-2xl font-bold mb-4">Mis Partidas</h3>
+                    <p class="text-gray-300 mb-6">Revisa tus partidas guardadas para aprender de tus errores.</p>
+                    <div class="text-center text-gray-400 mt-auto py-4">
+                        Aún no has completado partidas.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Práctica IA -->
+    <div id="ai-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <!-- (Contenido del modal de IA, igual que antes) -->
+        <div class="glass-panel p-6 max-w-md w-full">
+            <h3 class="text-2xl font-bold text-white mb-6">Elige un Oponente</h3>
+            <div id="bot-selection-list" class="flex flex-col gap-4 mb-6">
+                <button class="bot-select-btn text-left" data-level="0" data-elo="400">
+                    <h4 class="font-bold text-lg">Bronco el Principiante</h4>
+                    <p class="text-sm text-gray-300">ELO Estimado: 400</p>
+                </button>
+                <button class="bot-select-btn text-left selected" data-level="1" data-elo="800">
+                    <h4 class="font-bold text-lg">Astuta la Intermedia</h4>
+                    <p class="text-sm text-gray-300">ELO Estimado: 800</p>
+                </button>
+                <button class="bot-select-btn text-left" data-level="2" data-elo="1200">
+                    <h4 class="font-bold text-lg">Magnus el Agresivo</h4>
+                    <p class="text-sm text-gray-300">ELO Estimado: 1200</p>
+                </button>
+            </div>
+            <div class="mb-6">
+                <label for="ai-color-select" class="block text-sm font-medium text-gray-300 mb-1">Jugar como</label>
+                <select id="ai-color-select" class="w-full px-4 py-2 bg-gray-700 bg-opacity-70 border border-gray-600 rounded-md">
+                    <option value="w">Blancas</option>
+                    <option value="b">Negras</option>
+                    <option value="random">Aleatorio</option>
+                </select>
+            </div>
+            <div class="flex gap-4">
+                <button id="start-ai-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Jugar</button>
+                <button id="cancel-ai-modal-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            deleteDoc,
+            setLogLevel,
+            collection,
+            query,
+            where,
+            onSnapshot,
+            runTransaction,
+            getDocs,
+            setDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
+            authDomain: "chess-a9347.firebaseapp.com",
+            projectId: "chess-a9347",
+            storageBucket: "chess-a99347.firebasestorage.app",
+            messagingSenderId: "950558367537",
+            appId: "1:950558367537:web:4cee83e2053262a4541a10"
+        };
+
+        // --- Inicialización de Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('Debug');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+
+        // --- Variables Globales ---
+        let currentUser = null;
+        let currentUserId = null;
+        let userElo = 300;
+        let matchmakingUnsubscribe = null;
+        let isFindingMatch = false;
+        let currentAIOpponent = { level: 1, elo: 800 }; 
+
+        // --- Referencias al DOM ---
+        const userDisplay = document.getElementById('user-display');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const userEloDisplay = document.getElementById('user-elo-display');
+        const statsElo = document.getElementById('stats-elo');
+        const statsGames = document.getElementById('stats-games');
+        const statsWins = document.getElementById('stats-wins');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        const aiPracticeBtn = document.getElementById('ai-practice-btn');
+        const findMatchBtn = document.getElementById('find-match-btn');
+        const findMatchText = document.getElementById('find-match-text');
+        const findMatchSpinner = document.getElementById('find-match-spinner');
+
+        const aiModal = document.getElementById('ai-modal');
+        const botSelectButtons = document.querySelectorAll('.bot-select-btn');
+        const aiColorSelect = document.getElementById('ai-color-select');
+        const startAiGameBtn = document.getElementById('start-ai-game-btn');
+        const cancelAiModalBtn = document.getElementById('cancel-ai-modal-btn');
+        
+        // --- Lógica de Auth y Carga de Datos ---
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                currentUserId = user.uid;
+                userDisplay.textContent = user.displayName;
+                userIdDisplay.textContent = user.uid;
+                loadUserData(user.uid);
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            if (isFindingMatch) {
+                cancelMatchmaking();
+            }
+            signOut(auth);
+        });
+        
+        function getUserDocRef(uid) {
+            return doc(db, 'artifacts', appId, 'users', uid, 'profile', 'data');
+        }
+        
+        async function loadUserData(uid) {
+            const userRef = getUserDocRef(uid);
+            try {
+                const docSnap = await getDoc(userRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    userElo = data.elo || 300;
+                    userEloDisplay.textContent = userElo; // Actualiza el ELO del header
+                    statsElo.textContent = userElo; // Actualiza el ELO de stats
+                    statsGames.textContent = data.gamesPlayed || 0;
+                    statsWins.textContent = data.wins || 0;
+                    
+                    // Si es un usuario nuevo, redirigir al test
+                    if (data.needsTest === true) {
+                        alert("¡Bienvenido! Vamos a jugar una partida de prueba para estimar tu ELO inicial.");
+                        // Redirigir a play.html con parámetros de test
+                        window.location.href = `play.html?mode=ai-test&level=0`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error al cargar datos de usuario:", error);
+            }
+        }
+        
+        // --- Lógica de Práctica IA ---
+        
+        aiPracticeBtn.addEventListener('click', () => {
+            aiModal.classList.remove('hidden');
+        });
+
+        cancelAiModalBtn.addEventListener('click', () => {
+            aiModal.classList.add('hidden');
+        });
+
+        botSelectButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                botSelectButtons.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                currentAIOpponent.level = parseInt(btn.dataset.level);
+                currentAIOpponent.elo = parseInt(btn.dataset.elo);
+            });
+        });
+        
+        startAiGameBtn.addEventListener('click', () => {
+            let color = aiColorSelect.value;
+            if (color === 'random') {
+                color = Math.random() < 0.5 ? 'w' : 'b';
+            }
+            aiModal.classList.add('hidden');
+            
+            // Redirigir a play.html con parámetros de práctica
+            window.location.href = `play.html?mode=ai-practice&level=${currentAIOpponent.level}&elo=${currentAIOpponent.elo}&color=${color}`;
+        });
+
+        // --- Lógica de Matchmaking ---
+
+        function getMatchmakingQueueRef() {
+            return collection(db, 'artifacts', appId, 'public', 'data', 'matchmakingQueue');
+        }
+        
+        function getPublicGameRef(gameId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+        }
+
+        findMatchBtn.addEventListener('click', () => {
+            if (isFindingMatch) cancelMatchmaking();
+            else joinMatchmakingQueue();
+        });
+
+        async function joinMatchmakingQueue() {
+            if (!currentUserId) return;
+            isFindingMatch = true;
+            findMatchText.classList.add('hidden');
+            findMatchSpinner.classList.remove('hidden');
+
+            const queueRef = getMatchmakingQueueRef();
+            const playerDocRef = doc(queueRef, currentUserId);
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const q = query(queueRef, where("opponentId", "==", null), where("playerId", "!=", currentUserId));
+                    const queueSnapshot = await getDocs(q);
+                    
+                    let opponentFound = queueSnapshot.empty ? null : queueSnapshot.docs[0];
+
+                    if (opponentFound) {
+                        const opponentData = opponentFound.data();
+                        const gameId = crypto.randomUUID();
+                        const isPlayerWhite = Math.random() < 0.5;
+                        
+                        const players = {
+                            [currentUserId]: { color: isPlayerWhite ? 'w' : 'b', elo: userElo, username: currentUser.displayName },
+                            [opponentData.playerId]: { color: isPlayerWhite ? 'b' : 'w', elo: opponentData.elo, username: opponentData.username }
+                        };
+                        
+                        const gameRef = getPublicGameRef(gameId);
+                        transaction.set(gameRef, {
+                            fen: 'start', status: 'active', players: players, createdAt: serverTimestamp(), turn: 'w'
+                        });
+                        
+                        transaction.update(playerDocRef, { opponentId: opponentData.playerId, gameId: gameId });
+                        transaction.update(opponentFound.ref, { opponentId: currentUserId, gameId: gameId });
+                        
+                    } else {
+                        transaction.set(playerDocRef, {
+                            playerId: currentUserId, username: currentUser.displayName, elo: userElo,
+                            opponentId: null, gameId: null, timestamp: serverTimestamp()
+                        });
+                    }
+                });
+                
+                listenForGameStart();
+
+            } catch (error) {
+                console.error("Error al unirse a la cola:", error);
+                cancelMatchmaking();
+            }
+        }
+
+        function listenForGameStart() {
+            if (!currentUserId) return;
+            const playerDocRef = doc(getMatchmakingQueueRef(), currentUserId);
+
+            matchmakingUnsubscribe = onSnapshot(playerDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.gameId) {
+                        // ¡Partida encontrada!
+                        if(matchmakingUnsubscribe) matchmakingUnsubscribe();
+                        matchmakingUnsubscribe = null;
+                        
+                        // Redirigir a play.html con parámetros online
+                        window.location.href = `play.html?mode=online&gameId=${data.gameId}`;
+                    }
+                }
+            }, (error) => {
+                console.error("Error escuchando la cola:", error);
+                cancelMatchmaking();
+            });
+        }
+        
+        async function cancelMatchmaking() {
+            if (matchmakingUnsubscribe) {
+                matchmakingUnsubscribe();
+                matchmakingUnsubscribe = null;
+            }
+            if (currentUserId) {
+                const playerDocRef = doc(getMatchmakingQueueRef(), currentUserId);
+                await deleteDoc(playerDocRef).catch(e => console.warn("Error al limpiar la cola", e));
+            }
+            isFindingMatch = false;
+            findMatchText.classList.remove('hidden');
+            findMatchSpinner.classList.add('hidden');
+        }
+
+        // Inicializar iconos
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>

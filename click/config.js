@@ -171,8 +171,9 @@ export const UPGRADES_CONFIG = [
     { id: 'click_42', name: 'Azathoth', emoji: '🐙', description: '+20Sp por clic', initialCost: 7e40, costMultiplier: 2.10, type: 'clickValue', value: 2e25 },
     { id: 'click_43', name: 'Yog-Sothoth', emoji: '🔑', description: '+70Sp por clic', initialCost: 8e41, costMultiplier: 2.12, type: 'clickValue', value: 7e25 },
     { id: 'click_44', name: 'Clic del Vacío', emoji: '🕳️', description: '+250Sp por clic', initialCost: 1e43, costMultiplier: 2.14, type: 'clickValue', value: 2.5e26 },
-    { id: 'click_45', name: 'A-Omega', emoji: '♎', description: '+900Sp por clic', initialCost: 1.2e44, costMultiplier: 2.16, type: 'clickValue', value: 9e26 },
-    { id: 'click_46', name: 'El Creador', emoji: '🌌', description: '+3.5Oc por clic', initialCost: 1.5e45, costMultiplier: 2.18, type: 'clickValue', value: 3.5e27 },
+    // === CAMBIO CLAVE 2: Reducción de Cost Multiplier en las últimas mejoras ===
+    { id: 'click_45', name: 'A-Omega', emoji: '♎', description: '+900Sp por clic', initialCost: 1.2e44, costMultiplier: 1.95, type: 'clickValue', value: 9e26 }, // Antes 2.16
+    { id: 'click_46', name: 'El Creador', emoji: '🌌', description: '+3.5Oc por clic', initialCost: 1.5e45, costMultiplier: 1.95, type: 'clickValue', value: 3.5e27 }, // Antes 2.18
 
     // Auto (Producción)
     { id: 'auto_1', name: 'Cursor Tímido', emoji: '🖱️', description: '+1 pps', initialCost: 7, costMultiplier: 1.15, type: 'autoClickValue', value: 1 },
@@ -218,9 +219,10 @@ export const UPGRADES_CONFIG = [
     { id: 'auto_41', name: 'Frecuencia Omega', emoji: '♎', description: '+6Sp pps', initialCost: 7e39, costMultiplier: 2.16, type: 'autoClickValue', value: 6e24 },
     { id: 'auto_42', name: 'El Telar del Destino', emoji: '🕸️', description: '+20Sp pps', initialCost: 8e40, costMultiplier: 2.18, type: 'autoClickValue', value: 2e25 },
     { id: 'auto_43', name: 'Eco del Principio', emoji: '🌀', description: '+70Sp pps', initialCost: 9e41, costMultiplier: 2.20, type: 'autoClickValue', value: 7e25 },
-    { id: 'auto_44', name: 'Flujo Infinito', emoji: '🌊', description: '+250Sp pps', initialCost: 1.2e43, costMultiplier: 2.22, type: 'autoClickValue', value: 2.5e26 },
-    { id: 'auto_45', name: 'Deus Ex Machina', emoji: '⚙️', description: '+900Sp pps', initialCost: 1.5e44, costMultiplier: 2.24, type: 'autoClickValue', value: 9e26 },
-    { id: 'auto_46', name: 'La Singularidad', emoji: '🕳️', description: '+3.5Oc pps', initialCost: 2e45, costMultiplier: 2.26, type: 'autoClickValue', value: 3.5e27 },
+    // === CAMBIO CLAVE 2: Reducción de Cost Multiplier en las últimas mejoras ===
+    { id: 'auto_44', name: 'Flujo Infinito', emoji: '🌊', description: '+250Sp pps', initialCost: 1.2e43, costMultiplier: 1.95, type: 'autoClickValue', value: 2.5e26 }, // Antes 2.22
+    { id: 'auto_45', name: 'Deus Ex Machina', emoji: '⚙️', description: '+900Sp pps', initialCost: 1.5e44, costMultiplier: 1.95, type: 'autoClickValue', value: 9e26 }, // Antes 2.24
+    { id: 'auto_46', name: 'La Singularidad', emoji: '🕳️', description: '+3.5Oc pps', initialCost: 2e45, costMultiplier: 1.95, type: 'autoClickValue', value: 3.5e27 }, // Antes 2.26
 
     // Multiplicadores de Clic
     { id: 'click_mult_1', name: 'Guantes de Poder', emoji: '🧤', description: 'Clics x1.1', initialCost: 1000, costMultiplier: 2.0, type: 'clickMultiplier', value: 1.1, maxLevel: 1 },

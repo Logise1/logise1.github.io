@@ -526,20 +526,21 @@ function showTab(tabId) {
 }
 
 function showSubTab(subTabId) {
-    const { subTabButtons, subTabContents, sfxSwitchTabs } = DOM;
+    const { subTabButtons, sfxSwitchTabs } = DOM;
     
-    // Desactivar todos los botones y contenidos de la pestaña de chat
-    const chatContainer = document.getElementById('chat');
-    if (chatContainer) {
-        chatContainer.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-        
-        // CORRECCIÓN: No solo quitar la clase, sino ocultar explícitamente el elemento
-        chatContainer.querySelectorAll('.sub-tab-content').forEach(content => {
-            content.classList.remove('active');
-            content.style.display = 'none'; // <-- BUG CORREGIDO AQUÍ
-        });
-    }
+    // Obtener el contenedor principal (tienda o chat)
+    const activeTabContent = document.querySelector('.tab-content.active');
+    if (!activeTabContent) return;
 
+    // Desactivar todos los botones y contenidos dentro de la pestaña activa
+    activeTabContent.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // === CORRECCIÓN CLAVE 1: Ocultar TODOS los contenidos dentro de la pestaña activa ===
+    activeTabContent.querySelectorAll('.sub-tab-content').forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none'; 
+    });
+    
     const activeBtn = document.querySelector(`.sub-tab-btn[data-subtab="${subTabId}"]`);
     const activeContent = document.getElementById(subTabId);
 
@@ -547,7 +548,13 @@ function showSubTab(subTabId) {
     
     if (activeContent) {
         activeContent.classList.add('active');
-        activeContent.style.display = 'flex'; // Mostrar el activo
+        // Usar la regla de display correcta basada en el contenedor padre
+        // La regla CSS en index.html se encarga de definir si es 'block' o 'flex' al añadir '.active'
+        if (activeContent.parentElement.id === 'chat') {
+            activeContent.style.display = 'flex'; 
+        } else {
+             activeContent.style.display = 'block'; 
+        }
     }
     
     sfxSwitchTabs.currentTime = 0;
@@ -832,7 +839,7 @@ function initializeEventListeners() {
         button.addEventListener('click', () => showTab(button.dataset.tab));
     });
     
-    // Listeners de Sub-Navegación (Subpestañas de chat)
+    // Listeners de Sub-Navegación (Subpestañas de chat/mejoras)
     if (subTabButtons) {
         subTabButtons.forEach(button => {
             button.addEventListener('click', () => showSubTab(button.dataset.subtab));

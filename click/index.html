@@ -286,10 +286,19 @@
         }
         
         .sub-tab-content {
+            /* === CAMBIO CLAVE 1: Ocultar el contenido por defecto para evitar la superposición === */
             display: none;
+            /* === También asegurarse de que el contenido de mejoras tenga scroll === */
+            overflow-y: auto; 
+            padding-right: 5px; /* Pequeño padding para el scrollbar */
         }
-        .sub-tab-content.active {
-            /* === CRÍTICO: Esto asegura que el sub-contenido se muestre en columna === */
+        #store .sub-tab-content.active {
+             /* === Para las pestañas de MEJORAS, deben usar block para el layout de lista === */
+            display: block; 
+            flex-grow: 1;
+        }
+        #chat .sub-tab-content.active {
+            /* === Para las pestañas de CHAT, deben usar flex para el layout de chatbox === */
             display: flex; 
             flex-direction: column;
             flex-grow: 1;
@@ -1127,19 +1136,19 @@
                     <button class="sub-tab-btn" data-subtab="store-spec">Especiales</button>
                 </div>
                 
-                <div id="store-ppc" class="sub-tab-content active no-scrollbar">
+                <div id="store-ppc" class="sub-tab-content active">
                     <div id="store-items-cpc-container">
                         <h3>Mejoras de Clic</h3>
                     </div>
                 </div>
                 
-                <div id="store-pps" class="sub-tab-content no-scrollbar">
+                <div id="store-pps" class="sub-tab-content">
                     <div id="store-items-pps-container">
                         <h3>Mejoras de PPS</h3>
                     </div>
                 </div>
                 
-                <div id="store-mult" class="sub-tab-content no-scrollbar">
+                <div id="store-mult" class="sub-tab-content">
                     <div id="store-items-click-mult-container">
                         <h3>Multiplicadores de Clic</h3>
                     </div>
@@ -1148,7 +1157,7 @@
                     </div>
                 </div>
                 
-                <div id="store-spec" class="sub-tab-content no-scrollbar">
+                <div id="store-spec" class="sub-tab-content">
                     <div id="store-items-synergy-container">
                         <h3>Sinergias</h3>
                     </div>
