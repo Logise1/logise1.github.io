@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Acertijos Traviesos</title>
+    <!-- 1. Cargar Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Configurar la fuente Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 sm:p-8">
+
+    <!-- Contenedor principal del test -->
+    <div class="bg-gray-800 p-6 sm:p-10 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto border-t-4 border-cyan-400">
+
+        <!-- Título -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-black text-cyan-400 text-center">
+                Acertijos :)
+            </h1>
+            <p class="text-gray-400 text-lg mt-2">totalmente normal 100% no fake</p>
+        </div>
+
+        <!-- Contenedor de la lista de acertijos -->
+        <div id="acertijos-lista" class="space-y-4">
+            <!-- Los acertijos se cargarán aquí dinámicamente -->
+        </div>
+
+    </div>
+
+    <script>
+        // --- Base de Datos de Preguntas (Ahora con 100 y editadas) ---
+        const ALL_QUESTIONS = [
+            // Primeros 50
+            { question: "La metes dura y seca, la chupas un rato, y la sacas blanda y mojada. ¿Qué es?", answer: "Un chicle" },
+            { question: "Sale blanco y espeso de un tubo, te lo metes en la boca, pero siempre lo escupes. ¿Qué es?", answer: "La pasta de dientes" },
+            { question: "¿Qué es peludo por fuera, húmedo por dentro y empieza por 'C'?", answer: "Un coco" },
+            { question: "Tiene cabeza y tiene cola, pero no tiene cuerpo ni patas. ¿Qué es?", answer: "Una moneda" },
+            { question: "Me usas en la cama. A veces me pones por delante, a veces por detrás. ¿Qué soy?", answer: "La almohada" },
+            { question: "La agarras, la abres bien y le metes la lengua. ¿Qué es?", answer: "Una carta" }, // Editada
+            { question: "Para usarme, tienes que abrirme de piernas. Cuanto más me abres, mejor corto. ¿Qué soy?", answer: "Una tijera" },
+            { question: "Un hombre lo tiene más largo que una mujer, y el Papa no lo usa. ¿Qué es?", answer: "El apellido" },
+            { question: "Entra duro y tieso, pero sale blando y goteando... ¿Qué es?", answer: "El espagueti" },
+            { question: "Empieza por 'C', acaba en 'O', es arrugado y lo tienes en la parte de atrás. ¿Qué es?", answer: "El codo" },
+            { question: "Soy largo y duro. Me chupan la cabeza hasta que suelto mi líquido dulce. ¿Qué soy?", answer: "Una piruleta" },
+            { question: "¿Qué se moja más y más... mientras más seca?", answer: "Una toalla" },
+            { question: "Crece en el cuerpo, tiene raíz y a las mujeres les encanta. ¿Qué es?", answer: "El cabello" },
+            { question: "¿Qué es lo que, cuando lo necesitas, lo tiras... y cuando ya no lo necesitas, lo recoges?", answer: "Un ancla" },
+            { question: "Me aprietan, me chupan y al final me tiran. ¿Qué soy?", answer: "Un cigarro" },
+            { question: "Soy redonda, me gusta estar en pareja y los hombres me manosean mucho. ¿Qué soy?", answer: "Una bola de billar" },
+            { question: "Para usarme, me tienes que abrir y meterme los dedos. ¿Qué soy?", answer: "Unos guantes" },
+            { question: "Tiene pelos por arriba y por abajo, y en el medio una ranura húmeda. ¿Qué es?", answer: "Un ojo" },
+            { question: "Mientras más grande, más placer da... ¿Qué es?", answer: "Un premio" },
+            { question: "Me metes y me sacas repetidamente en un agujero húmedo y caliente para que suelte mi sabor. ¿Qué soy?", answer: "Un saquito de té" },
+            { question: "Te subes encima, te agarras fuerte, y te menean para todos lados. ¿Qué es?", answer: "Un toro mecánico" }, // Editada
+            { question: "Se hace con la boca, es húmedo y a veces suena. ¿Qué es?", answer: "Un beso" },
+            { question: "Le gusta a hombres y mujeres, puede ser de muchos tamaños y a veces gotea. ¿Qué es?", answer: "Un helado" },
+            { question: "Lo metes seco, lo sacudes bien, y sale goteando algo blanco. ¿Qué es?", answer: "Un pincel" },
+            { question: "Es una parte del cuerpo, empieza por 'T' y acaba en 'AS'. ¿Qué es?", answer: "El tórax" },
+            { question: "Lo pones en la boca y lo mueves para que suene música. ¿Qué es?", answer: "Un silbato" },
+            { question: "Dos pelotas cuelgan, y un palo se menea. ¿Qué es?", answer: "Un reloj de péndulo" },
+            { question: "A veces se da, a veces se recibe, y es mejor con la boca cerrada. ¿Qué es?", answer: "Un golpe" },
+            { question: "¿Qué cosa tiene un 'agujero' y le entra y sale líquido?", answer: "Un lavamanos" },
+            { question: "¿Qué parte del cuerpo de un hombre puede crecer hasta 7 veces su tamaño?", answer: "La pupila" },
+            { question: "Lo tienes entre las piernas, pero más arriba de las rodillas. ¿Qué es?", answer: "El ombligo" },
+            { question: "Tiene un agujero en la punta y le gusta disparar. ¿Qué es?", answer: "Una pistola de agua" },
+            { question: "¿Qué tienen las mujeres en medio de las piernas?", answer: "Las rodillas" },
+            { question: "Me encanta que me claven. Soy largo y de metal. ¿Qué soy?", answer: "Un clavo" },
+            { question: "Se pone tieso cuando se mete en algo húmedo. ¿Qué es?", answer: "Un bizcocho" }, // (en la leche)
+            { question: "¿Qué es una cosa que se alarga cuando la agarras, pasa entre los pechos y se mete en un agujero?", answer: "El cinturón de seguridad" },
+            { question: "Lo tienes que lamer para que se ponga duro y poder meterlo. ¿Qué es?", answer: "Un hilo en una aguja" },
+            { question: "Soy un palo que entra en un agujero, y dejo un líquido blanco. ¿Qué soy?", answer: "Una tiza" },
+            { question: "Se mete, se saca, se menea, y la mujer goza. ¿Qué es?", answer: "Una hamaca" },
+            { question: "Empieza por 'P', acaba en 'A' y es algo que se levanta. ¿Qué es?", answer: "La pestaña" },
+            { question: "Soy una cosa larga y goteo por la punta. ¿Qué soy?", answer: "Una vela" },
+            { question: "Entra seco y sale oliendo a pescado. ¿Qué es?", answer: "Un buzo" },
+            { question: "Lo metes en un agujero, le das vueltas y lo sacas. ¿Qué es?", answer: "Una llave" },
+            { question: "A las mujeres les encanta tenerme detrás, bien pegado. ¿Qué soy?", answer: "El respaldo" },
+            { question: "Para hacerlo bien, hay que hacerlo de rodillas. ¿Qué es?", answer: "Rezar" },
+            { question: "Soy redondo, me meten el dedo y a veces suelto líquido. ¿Qué soy?", answer: "Un grifo" },
+            { question: "Se pone duro, crece y a veces molesta al andar. ¿Qué es?", answer: "Un callo" }, // Editada
+            { question: "Lo haces de pie, lo hago sentada, lo haces en un momento, lo hago todo el rato. ¿Qué es?", answer: "El pensamiento" },
+            { question: "Tiene boca, pero no habla. Tiene culo, pero no caga. ¿Qué es?", answer: "Una botella" },
+            { question: "Todas las mujeres lo tienen, y lo pueden abrir cuando quieran. ¿Qué es?", answer: "Un abanico" },
+
+            // Siguientes 50 (con ediciones)
+            { question: "Lo agarras con la mano, lo frotas en el pecho y sale espuma. ¿Qué es?", answer: "El jabón" },
+            { question: "Sale de un huevo, es blanco y pegajoso. ¿Qué es?", answer: "La clara de huevo" },
+            { question: "Me agarras del palo, me sacudes y sale un líquido blanco. ¿Qué soy?", answer: "Un bote de Tipp-Ex" },
+            { question: "Mientras más me frotan, más grande me pongo. ¿Qué soy?", answer: "Una bola de nieve" },
+            { question: "Me pones la boca y te doy de beber. ¿Qué soy?", answer: "Un porrón" },
+            { question: "Tiene pelos y se usa para limpiar. ¿Qué es?", answer: "Una escoba" },
+            { question: "Se menea mucho cuando se usa. ¿Qué es?", answer: "Un columpio" },
+            { question: "Es duro, redondo y se mete en el agujero. ¿Qué es?", answer: "Un botón" },
+            { question: "Le metes el dedo, la abres y te la comes. ¿Qué es?", answer: "Una lata (con anilla)" }, // Editada
+            { question: "Me tocas, me clavas los dedos y yo te doy placer. ¿Qué soy?", answer: "Una guitarra" }, // Editada
+            { question: "Si me aprietas las pelotas, me pongo duro. ¿Qué soy?", answer: "Un mechero" },
+            { question: "Se come de noche y a veces gotea. ¿Qué es?", answer: "Un taco" },
+            { question: "Es mejor hacerlo en la cama. ¿Qué es?", answer: "Dormir" },
+            { question: "Se chupa, se lame y se muerde. ¿Qué es?", answer: "Un caramelo" },
+            { question: "Lo agitas antes de usarlo. ¿Qué es?", answer: "Un bote de ketchup" },
+            { question: "Tiene una ranura y le metes dinero. ¿Qué es?", answer: "Una hucha" },
+            { question: "Te sientas encima, te mueves y gritas. ¿Qué es?", answer: "Una montaña rusa" },
+            { question: "Me abres, me chupas el contenido y te quedas con el palo. ¿Qué soy?", answer: "Un polo" },
+            { question: "Es una cosa larga y goteante que las mujeres se meten en la boca. ¿Qué es?", answer: "Un helado de cucurucho" },
+            { question: "Le metes el dedo en el agujero y le das vueltas. ¿Qué es?", answer: "Un teléfono de disco" },
+            { question: "Tiene dientes pero no muerde. ¿Qué es?", answer: "Un peine" },
+            { question: "Se pone en la boca y se sopla. ¿Qué es?", answer: "Un globo" },
+            { question: "Es más rico si está caliente y bien hecho. ¿Qué es?", answer: "El café" },
+            { question: "Es de carne, es húmedo y se mueve mucho. ¿Qué es?", answer: "La lengua" },
+            { question: "Me abres las patas, me la metes, y yo hago el trabajo. ¿Qué soy?", answer: "Una grapadora" }, // Editada
+            { question: "Me agarras con las dos manos y me aprietas fuerte. ¿Qué soy?", answer: "Un manillar de bici" },
+            { question: "Tiene un agujero en medio y le gusta que le metan carne. ¿Qué es?", answer: "Un donut" },
+            { question: "¿Qué cosa peluda se abre de piernas cuando la usas?", answer: "Un albornoz" },
+            { question: "Entra por un agujero y sale por dos. ¿Qué es?", answer: "Una camiseta" },
+            { question: "Te lo metes en la boca de varios colores. ¿Qué es?", answer: "Un Sugus" },
+            { question: "Es una cosa que cuelga, se menea y tiene la punta roja. ¿Qué es?", answer: "Una guindilla" },
+            { question: "Tiene dos pelotas y un palo en medio. ¿Qué es?", answer: "Un futbolín" },
+            { question: "Me agitan y me menean antes de echar el líquido. ¿Qué soy?", answer: "Una coctelera" }, // Editada
+            { question: "Lo tienes que meter en un agujero oscuro y húmedo. ¿Qué es?", answer: "El pie en un zapato" },
+            { question: "A los hombres se les para, a las mujeres se les moja. ¿Qué es?", answer: "El autobús" },
+            { question: "Tiene boca y traga todo lo que le metes. ¿Qué es?", answer: "Un buzón" },
+            { question: "Me estiras, me abres y me la metes. ¿Qué soy?", answer: "Una media" },
+            { question: "Me abro de piernas para que me puedas montar. ¿Qué soy?", answer: "Una bicicleta" },
+            { question: "La abres, la metes doblada y la guardas. ¿Qué es?", answer: "Una cartera" }, // Editada
+            { question: "Es redondo y le gusta que le den con un palo. ¿Qué es?", answer: "Un tambor" },
+            { question: "Es largo, duro y lo chupas. ¿Qué es?", answer: "Un hueso de pollo" },
+            { question: "Mientras más caliente, más goza la gente. ¿Qué es?", answer: "La sopa" },
+            { question: "Tiene una raja en medio y se come. ¿Qué es?", answer: "Un melocotón" },
+            { question: "Si lo sobas mucho, se te pone duro. ¿Qué es?", answer: "El cemento" },
+            { question: "Solo se lo metes a la mujer. ¿Qué es?", answer: "El anillo de bodas" }, // Editada
+            { question: "Te lo quitas para que otro lo use. ¿Qué es?", answer: "El puesto" },
+            { question: "Tiene una cabeza grande y solo un pie. ¿Qué es?", answer: "Una seta" },
+            { question: "Me aprietas, me retuerces y suelto todo mi jugo. ¿Qué soy?", answer: "Una naranja" }, // Editada (reemplaza duplicado)
+            { question: "Dos pelotas peludas que cuelgan. ¿Qué son?", answer: "Dos kiwis" }, // Editada (reemplaza duplicado)
+            { question: "Empieza por 'teta' y no es teta. ¿Qué es?", answer: "Una tetera" }, // FIX: Removed '*'
+            { question: "Tiene un agujero principal y dos más pequeños para los dedos. ¿Qué es?", answer: "Una bola de bolos" } // Editada
+        ];
+
+        // --- Funciones ---
+
+        // Función para cargar la lista de acertijos en el HTML
+        function loadRiddles() {
+            const container = document.getElementById('acertijos-lista');
+            let htmlContent = '';
+
+            ALL_QUESTIONS.forEach((riddle, index) => {
+                htmlContent += `
+                    <div class="bg-gray-700 p-5 rounded-lg text-left shadow-md">
+                        <p class="text-xl text-white mb-4">${riddle.question}</p>
+                        <button class="toggle-answer bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-full text-sm transition-all duration-200" data-target="answer-${index}">
+                            Ver Respuesta
+                        </button>
+                        <p id="answer-${index}" class="answer hidden mt-4 text-2xl font-bold text-green-400 border-t border-gray-600 pt-3">
+                            ${riddle.answer}
+                        </p>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = htmlContent;
+        }
+
+        // Función para manejar los clics en los botones
+        function setupToggleButtons() {
+            const buttons = document.querySelectorAll('.toggle-answer');
+            
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-target');
+                    const answerElement = document.getElementById(targetId);
+
+                    if (answerElement) {
+                        const isHidden = answerElement.classList.toggle('hidden');
+                        if (isHidden) {
+                            button.innerText = 'Ver Respuesta';
+                            button.classList.remove('bg-red-500', 'hover:bg-red-600');
+                            button.classList.add('bg-cyan-500', 'hover:bg-cyan-600');
+                        } else {
+                            button.innerText = 'Ocultar Respuesta';
+                            button.classList.remove('bg-cyan-500', 'hover:bg-cyan-600');
+                            button.classList.add('bg-red-500', 'hover:bg-red-600');
+                        }
+                    }
+                });
+            });
+        }
+        
+        // --- Inicialización ---
+        // Carga los acertijos y luego configura los botones
+        loadRiddles();
+        setupToggleButtons();
+
+    </script>
+</body>
+</html>
