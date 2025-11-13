@@ -1,5 +1,6 @@
 import { 
     UPGRADES_CONFIG, SKINS_CONFIG, 
+    PRESTIGE_REQUIREMENT, PRESTIGE_UPGRADES_CONFIG, // NUEVO
     auth, db, ref, set, query, onValue, onAuthStateChanged, 
     createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onDisconnect, // Funciones de Auth importadas
     _DateNow, _MathFloor, _MathMin, 
@@ -9,10 +10,16 @@ import {
     isShiftPressed, isBanned, isGameLoaded,
     getUserId, getCurrentUsername, setAuthState, setIsShiftPressed, setIsGameLoaded, autoSaveInterval, 
     currentSkin, coins, skinsState, upgradeLevels, globalPresence, banExpiresAt, setGlobalPresence, 
+    
+    prestigePoints, prestigeLevels, // NUEVO: Importar estado de prestigio
+    
     resetGameState, recalculateStats, calculateMultiBuyCost, 
     handleManualClick, gameLoop, loadGameState, saveScore, loadLeaderboard,
     formatNumber, formatTime, initializeChat, triggerBan, checkBanStatus, buyUpgrade,
-    setCurrentSkin, setCoins, updateSkinsState, spendCoins, sendChatMessage
+    setCurrentSkin, setCoins, updateSkinsState, spendCoins, sendChatMessage,
+
+    calculatePrestigeGain, performPrestige, buyPrestigeUpgrade // NUEVO: Importar funciones de prestigio
+
 } from './game_logic.js';
 
 // Objeto para almacenar referencias a elementos DOM, inicializado una vez.
@@ -38,6 +45,17 @@ const DOM = {
     // Skins
     coinsDisplay: document.getElementById('coins-amount'),
     skinsGrid: document.getElementById('skins-grid'),
+
+    // --- NUEVO: Prestigio ---
+    prestigePointsDisplay: document.getElementById('prestige-points-amount'),
+    prestigeStoreContainer: document.getElementById('prestige-store-container'),
+    prestigeButton: document.getElementById('prestige-button'),
+    prestigeModalOverlay: document.getElementById('prestige-modal-overlay'),
+    prestigeModalGain: document.getElementById('prestige-modal-gain'),
+    prestigeModalTotalScore: document.getElementById('prestige-modal-total-score'),
+    modalBtnPrestigeConfirm: document.getElementById('modal-btn-prestige-confirm'),
+    modalBtnPrestigeCancel: document.getElementById('modal-btn-prestige-cancel'),
+    // -------------------------
     
     // Navegación
     tabButtons: document.querySelectorAll('.tab-btn'),
@@ -163,7 +181,7 @@ function toggleVoiceConnection() {
 // --- ACTUALIZACIÓN DE UI ---
 
 export function updateUI() {
-    const { scoreDisplay, ppsDisplay, cpcDisplay, levelDisplay, xpBar } = DOM;
+    const { scoreDisplay, ppsDisplay, cpcDisplay, levelDisplay, xpBar, prestigeButton } = DOM;
     
     scoreDisplay.textContent = formatNumber(score);
     ppsDisplay.textContent = `${formatNumber(pps * levelMultiplier)} Puntos por segundo`;
@@ -171,6 +189,24 @@ export function updateUI() {
 
     levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
     xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
+
+    // --- NUEVO: Actualizar botón de Prestigio ---
+    if (prestigeButton) {
+        if (totalScore >= PRESTIGE_REQUIREMENT) {
+            const gain = calculatePrestigeGain();
+            prestigeButton.textContent = `¡Prestigio! (+${formatNumber(gain)} Pipas PIP)
+`;
+            prestigeButton.disabled = false;
+            prestigeButton.style.display = 'block';
+            prestigeButton.classList.add('affordable'); // Reutilizar la clase 'affordable' para la animación
+        } else {
+            prestigeButton.textContent = `Alcanza ${formatNumber(PRESTIGE_REQUIREMENT)} Puntos Totales`;
+            prestigeButton.disabled = true;
+            prestigeButton.style.display = 'block';
+            prestigeButton.classList.remove('affordable');
+        }
+    }
+    // ------------------------------------------
 
     UPGRADES_CONFIG.forEach(config => {
         const state = upgradeLevels[config.id];
@@ -325,6 +361,99 @@ export function initializeStore() {
         }
     });
 }
+
+// --- NUEVO: Funciones de UI de Prestigio ---
+
+/**
+ * Crea los elementos de la tienda de prestigio.
+ */
+export function initializePrestigeStore() {
+    const { prestigeStoreContainer } = DOM;
+    prestigeStoreContainer.innerHTML = ''; // Limpiar
+
+    PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('store-item', 'prestige-item'); // Clase especial
+        itemDiv.id = `item-${config.id}`;
+
+        const infoDiv = document.createElement('div');
+        infoDiv.classList.add('item-info');
+
+        const nameStrong = document.createElement('strong');
+        nameStrong.textContent = `${config.emoji} ${config.name}`;
+
+        const statsSpan = document.createElement('span');
+        statsSpan.id = `stats-${config.id}`;
+        // El nivel se pondrá en updatePrestigeUI
+        statsSpan.textContent = config.description;
+
+        infoDiv.appendChild(nameStrong);
+        infoDiv.appendChild(statsSpan);
+
+        const button = document.createElement('button');
+        button.id = `buy-${config.id}`;
+        button.dataset.key = config.id;
+        // El costo se pondrá en updatePrestigeUI
+
+        itemDiv.appendChild(infoDiv);
+        itemDiv.appendChild(button);
+        prestigeStoreContainer.appendChild(itemDiv);
+    });
+}
+
+/**
+ * Actualiza la UI de la tienda de prestigio (costos, niveles, pipas).
+ */
+export function updatePrestigeUI() {
+    const { prestigePointsDisplay } = DOM;
+    
+    if (prestigePointsDisplay) {
+        prestigePointsDisplay.textContent = formatNumber(prestigePoints);
+    }
+    
+    PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+        const state = prestigeLevels[config.id];
+        if (!state) return;
+
+        const statsEl = document.getElementById(`stats-${config.id}`);
+        const buttonEl = document.getElementById(`buy-${config.id}`);
+        const itemEl = document.getElementById(`item-${config.id}`);
+
+        if (statsEl && buttonEl && itemEl) {
+            const currentLevel = state.level;
+            
+            // Actualizar descripción y nivel
+            let levelText = `Nivel: ${currentLevel}`;
+            if (config.maxLevel) {
+                levelText = `Nivel: ${currentLevel} / ${config.maxLevel}`;
+            }
+            if (state.cost === null) {
+                 levelText = "¡MAX!";
+            }
+            statsEl.textContent = `${config.description} | ${levelText}`;
+
+            // Actualizar coste y estado del botón
+            if (state.cost === null) {
+                buttonEl.textContent = `Comprado`;
+                buttonEl.disabled = true;
+                itemEl.classList.remove('affordable');
+            } else {
+                buttonEl.textContent = `Costo: ${formatNumber(state.cost)} Pipas`;
+                
+                const canAfford = prestigePoints >= state.cost;
+                buttonEl.disabled = !canAfford;
+
+                if (canAfford) {
+                    itemEl.classList.add('affordable');
+                } else {
+                    itemEl.classList.remove('affordable');
+                }
+            }
+        }
+    });
+}
+
+// ------------------------------------------
 
 export function initializeSkins() {
     const { skinsGrid } = DOM;
@@ -494,6 +623,21 @@ export function showOfflineEarningsModal(earnings, time) {
     DOM.offlineModalOverlay.style.display = 'flex';
 }
 
+// --- NUEVO: Modales de Prestigio ---
+export function showPrestigeModal() {
+    const { prestigeModalOverlay, prestigeModalGain, prestigeModalTotalScore } = DOM;
+    const gain = calculatePrestigeGain();
+    
+    prestigeModalGain.textContent = `+${formatNumber(gain)} Pipas de Prestigio`;
+    prestigeModalTotalScore.textContent = `(de ${formatNumber(totalScore)} puntos totales)`;
+    
+    prestigeModalOverlay.style.display = 'flex';
+}
+
+export function hidePrestigeModal() {
+    DOM.prestigeModalOverlay.style.display = 'none';
+}
+
 
 // --- NAVEGACIÓN DE PESTAÑAS ---
 
@@ -640,7 +784,7 @@ async function initializeFirebase() {
                 joinVoiceChatBtn.classList.remove('active');
             }
 
-            resetGameState(false);
+            resetGameState(true); // Reseteo total (isLogout = true)
             setIsGameLoaded(true); // Modificar isGameLoaded
         }
     });
@@ -699,7 +843,11 @@ export function updateLeaderboardVisualTicking() {
                 scoreEl.textContent = formatNumber(baseScore);
             }
         } else if (dot && dot.classList.contains('online')) {
-             scoreEl.textContent = formatNumber(baseScore);
+             // Si está online, mostramos el score base (que se actualiza con onValue)
+             // Opcional: podríamos hacer que el score en vivo tickee aquí, pero
+             // 'onValue' de loadLeaderboard ya lo hace bastante bien.
+             // Dejamos que muestre el último score guardado de 'onValue'.
+             scoreEl.textContent = scoreEl.textContent; // Mantener el valor actual de onValue
         }
     });
 }
@@ -797,15 +945,28 @@ async function handleLogout() {
 // --- INICIALIZACIÓN DE EVENTOS ---
 
 function initializeEventListeners() {
-    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput, joinVoiceChatBtn } = DOM;
+    const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput, joinVoiceChatBtn, 
+    
+    // --- NUEVO: Listeners de Prestigio ---
+    prestigeButton, prestigeStoreContainer, modalBtnPrestigeCancel, modalBtnPrestigeConfirm
+    
+    } = DOM;
 
     clickButton.addEventListener('mousedown', handleManualClick);
     
-    // Listener de compras
+    // Listener de compras (Mejoras Normales)
     document.getElementById('store').addEventListener('click', (event) => {
         const button = event.target.closest('button[data-key]');
         if (button) buyUpgrade(button.dataset.key);
     });
+
+    // --- NUEVO: Listener de compras (Mejoras de Prestigio) ---
+    if (prestigeStoreContainer) {
+        prestigeStoreContainer.addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-key]');
+            if (button) buyPrestigeUpgrade(button.dataset.key);
+        });
+    }
 
     // Listeners de Shift (x10)
     window.addEventListener('keydown', (e) => {
@@ -877,6 +1038,14 @@ function initializeEventListeners() {
         DOM.offlineModalOverlay.style.display = 'none';
     });
 
+    // --- NUEVO: Listeners de Modal de Prestigio ---
+    if (prestigeButton) prestigeButton.addEventListener('click', showPrestigeModal);
+    if (modalBtnPrestigeCancel) modalBtnPrestigeCancel.addEventListener('click', hidePrestigeModal);
+    if (modalBtnPrestigeConfirm) modalBtnPrestigeConfirm.addEventListener('click', () => {
+        performPrestige();
+        hidePrestigeModal();
+    });
+
     // Listener de Skins
     if (!skinsGrid.dataset.listenerAttached) {
         skinsGrid.addEventListener('click', (event) => {
@@ -940,6 +1109,7 @@ async function loadGameConfigAndStart() {
         // Inicializar elementos DOM y audios antes de cualquier llamada a Firebase o juego
         initializeEventListeners(); 
         initializeSkins(); 
+        initializePrestigeStore(); // NUEVO: Inicializar tienda de prestigio
 
         // ELIMINADO: updateVoiceIframe(false); (El estado inicial de HTML es suficiente)
 
@@ -952,6 +1122,7 @@ async function loadGameConfigAndStart() {
         // Llamadas de actualización inicial
         updateUI();
         updateClickButtonSkin();
+        updatePrestigeUI(); // NUEVO: Actualizar UI de prestigio al inicio
         
     } catch (error) {
         console.error("Error fatal al iniciar el juego:", error);

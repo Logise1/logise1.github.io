@@ -10,6 +10,10 @@
     <style>
         :root {
             --tab-bar-height: 60px;
+            /* NUEVO: Colores de prestigio */
+            --prestige-color: #9b59b6;
+            --prestige-color-dark: #8e44ad;
+            --prestige-color-light: #f3e5f5;
         }
         body {
             font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -243,6 +247,11 @@
             border-bottom: 2px solid #007bff;
             margin-bottom: -1px;
         }
+        /* NUEVO: Color para pestaña de prestigio */
+        .tab-btn[data-tab="prestige"].active {
+            color: var(--prestige-color);
+            border-bottom-color: var(--prestige-color);
+        }
 
         .tab-content {
             display: none;
@@ -364,6 +373,31 @@
         .store-item.affordable button {
             animation: pulse-green 1.5s infinite;
         }
+        
+        /* --- NUEVO: Animación para Prestigio --- */
+        @keyframes pulse-prestige {
+            0% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(142, 68, 173, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0); }
+        }
+        
+        #prestige-button.affordable,
+        .prestige-item.affordable button {
+            background-color: var(--prestige-color);
+            animation: pulse-prestige 1.5s infinite;
+        }
+        #prestige-button.affordable:hover,
+        .prestige-item.affordable button:hover {
+             background-color: var(--prestige-color-dark);
+        }
+        .prestige-item button {
+             background-color: var(--prestige-color);
+        }
+         .prestige-item button:hover {
+             background-color: var(--prestige-color-dark);
+         }
+        /* ------------------------------------- */
+
         
         .store-item.affordable:hover button {
             animation-play-state: paused; /* Pausa la animación al pasar el ratón */
@@ -550,6 +584,10 @@
         #leaderboard-list .player-score {
             font-weight: 500;
             color: #333;
+            /* NUEVO: Alinear texto a la derecha y permitir prestige */
+            text-align: right;
+            font-size: 0.95rem;
+            line-height: 1.3;
         }
 
         #leaderboard-status {
@@ -850,6 +888,38 @@
             background-color: #0069d9;
         }
 
+        /* --- NUEVO: Estilos Modal Prestigio --- */
+        #prestige-modal-overlay .modal-box h2 {
+            color: var(--prestige-color);
+        }
+        #prestige-modal-gain {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--prestige-color);
+            margin: 15px 0 5px;
+        }
+        #prestige-modal-total-score {
+            font-size: 1rem;
+            color: #777;
+            margin-bottom: 20px;
+        }
+        #modal-btn-prestige-cancel {
+            background-color: #6c757d;
+            color: white;
+        }
+        #modal-btn-prestige-cancel:hover {
+            background-color: #5a6268;
+        }
+        #modal-btn-prestige-confirm {
+            background-color: var(--prestige-color);
+            color: white;
+        }
+        #modal-btn-prestige-confirm:hover {
+            background-color: var(--prestige-color-dark);
+        }
+        /* --- FIN Estilos Modal Prestigio --- */
+
+
         .skins-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -958,6 +1028,54 @@
         
         /* === ESTILOS DE IFRAME DE VOZ ELIMINADOS (YA NO ES FLOTANTE) === */
 
+        /* --- NUEVO: Estilos de Pestaña Prestigio --- */
+        #prestige-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+            text-align: center;
+        }
+        #prestige-content h2 {
+            margin-top: 0;
+            color: var(--prestige-color);
+        }
+        #prestige-points-display {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        #prestige-points-display span {
+            font-size: 1.5rem;
+            color: var(--prestige-color);
+        }
+        #prestige-button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            background-color: var(--prestige-color);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.4;
+        }
+        #prestige-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+            animation: none;
+        }
+        #prestige-store-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            border-top: 1px solid #eef2f1;
+            padding-top: 15px;
+        }
+        /* --- FIN Estilos Prestigio --- */
+
 
         @media (max-width: 768px) {
             body {
@@ -1064,6 +1182,10 @@
             .mobile-tab-btn.active {
                 color: #007bff;
             }
+            /* NUEVO: Color activo para prestigio móvil */
+            .mobile-tab-btn[data-tab="prestige"].active {
+                color: var(--prestige-color);
+            }
             
             .mobile-tab-btn svg {
                 width: 24px;
@@ -1122,9 +1244,10 @@
             <div class="tab-buttons">
                 <button class="tab-btn active" data-tab="store">Mejoras</button>
                 <button class="tab-btn" data-tab="skins">Skins</button>
-                <!-- === Botón Tab Chat === -->
+                <!-- === NUEVO: Botón Pestaña Prestigio === -->
+                <button class="tab-btn" data-tab="prestige">Prestigio</button>
+                <!-- =================================== -->
                 <button class="tab-btn" data-tab="chat">Chat</button>
-                <!-- ============================ -->
                 <button class="tab-btn" data-tab="leaderboard">Clasificación</button>
             </div>
 
@@ -1178,6 +1301,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- === NUEVO: Contenido Pestaña Prestigio === -->
+            <div id="prestige" class="tab-content no-scrollbar">
+                <div id="prestige-content">
+                    <h2>Prestigio (WIP)</h2>
+                    <p id="prestige-points-display">Pipas de Prestigio: <span id="prestige-points-amount">0</span></p>
+                    
+                    <button id="prestige-button" disabled>Alcanza 1T Puntos</button>
+                    
+                    <div id="prestige-store-container" class="no-scrollbar">
+                        <!-- Las mejoras de prestigio se añadirán aquí por JS -->
+                    </div>
+                </div>
+            </div>
+            <!-- === FIN Contenido Prestigio === -->
 
             <!-- === INICIO: Contenido del Chat con Subpestañas de nuevo === -->
             <div id="chat" class="tab-content no-scrollbar">
@@ -1284,6 +1422,22 @@
             </div>
         </div>
     </div>
+
+    <!-- === NUEVO: Modal de Prestigio === -->
+    <div id="prestige-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>¿Confirmar Prestigio?</h2>
+            <p>Esto reiniciará tus puntos, mejoras, nivel y XP, pero conservarás tus skins y monedas.</p>
+            <p>A cambio, ganarás:</p>
+            <p id="prestige-modal-gain">+0 Pipas de Prestigio</p>
+            <p id="prestige-modal-total-score">(de 0 puntos totales)</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-prestige-cancel">Cancelar</button>
+                <button id="modal-btn-prestige-confirm">¡Prestigio!</button>
+            </div>
+        </div>
+    </div>
+    <!-- === FIN Modal Prestigio === -->
     
     <div class="mobile-tab-bar">
         <button class="mobile-tab-btn active" data-tab="store">
@@ -1294,12 +1448,16 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-3.5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-3.5 4.5c2.336 0 4.31 1.454 5.116 3.5H6.884c.806-2.046 2.78-3.5 5.116-3.5z"/></svg>
             <span>Skins</span>
         </button>
-        <!-- === NUEVO: Botón Tab Chat === -->
+        <!-- === NUEVO: Botón Pestaña Prestigio Móvil === -->
+        <button class="mobile-tab-btn" data-tab="prestige">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 17.27l4.59 2.73-1.06-5.23 4.1-3.74-5.3-.61L12 6 9.67 11.12l-5.3.61 4.1 3.74-1.06 5.23L12 17.27zM12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.27l-6.18 3.73L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <span>Prestigio</span>
+        </button>
+        <!-- ========================================= -->
         <button class="mobile-tab-btn" data-tab="chat">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
             <span>Chat</span>
         </button>
-        <!-- =============================== -->
         <button class="mobile-tab-btn" data-tab="leaderboard">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 1l9 4v6c0 5.5-3.8 10.7-9 12-5.2-1.3-9-6.5-9-12V5l9-4zm0 2.69L5 7.7v3.3c0 3.5 2.5 7.6 7 9.3 4.5-1.7 7-5.8 7-9.3V7.7L12 3.69zM12 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 8c-2.3 0-4.3-.9-5.9-2.4.4-1.3 2.1-2.1 5.9-2.1s5.5.8 5.9 2.1C16.3 17.1 14.3 18 12 18z"/></svg>
             <span>Clasificación</span>

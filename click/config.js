@@ -287,3 +287,82 @@ export const UPGRADES_CONFIG = [
     // Otros (Especiales)
     { id: 'fruit_variety', name: 'Variedad Frutal', emoji: '🌈', description: 'Desbloquea más frutas', initialCost: 100, costMultiplier: 10, type: 'cosmetic', value: 1, maxLevel: fruits.length -1 },
 ];
+
+// --- NUEVO: CONFIGURACIÓN DE PRESTIGIO ---
+
+/**
+ * Puntuación total requerida para poder prestigiar.
+ * (1e12 = 1 Trillón)
+ */
+export const PRESTIGE_REQUIREMENT = 1e12;
+
+/**
+ * Configuración de las mejoras de prestigio.
+ * 'type' puede ser:
+ * - 'globalClickMultiplier': Multiplica el PPC total.
+ * - 'globalAutoMultiplier': Multiplica el PPS total.
+ * - 'startingCoins': Empiezas con más monedas.
+ * - 'xpGain': Multiplica la ganancia de XP.
+ */
+export const PRESTIGE_UPGRADES_CONFIG = [
+    { 
+        id: 'prestige_click_1', 
+        name: 'Pipa de Poder', 
+        emoji: '💥', 
+        description: 'Multiplica x2 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1, 
+        costMultiplier: 2.0, 
+        type: 'globalClickMultiplier', 
+        value: 2 
+    },
+    { 
+        id: 'prestige_auto_1', 
+        name: 'Pipa de Flujo', 
+        emoji: '🌊', 
+        description: 'Multiplica x2 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1, 
+        costMultiplier: 2.0, 
+        type: 'globalAutoMultiplier', 
+        value: 2 
+    },
+    { 
+        id: 'prestige_xp_1', 
+        name: 'Pipa de Sabiduría', 
+        emoji: '🧠', 
+        description: 'Ganas un 50% más de XP de todas las fuentes.', 
+        initialCost: 3, 
+        costMultiplier: 2.5, 
+        type: 'xpGain', 
+        value: 1.5 
+    },
+    { 
+        id: 'prestige_start_coins_1', 
+        name: 'Bolsa de Monedas', 
+        emoji: '💰', 
+        description: 'Empiezas cada reseteo con 100 monedas.', 
+        initialCost: 2, 
+        costMultiplier: 1.8, 
+        type: 'startingCoins', 
+        value: 100 
+    },
+    { 
+        id: 'prestige_click_2', 
+        name: 'Pipa de Poder II', 
+        emoji: '🚀', 
+        description: 'Multiplica x3 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 10, 
+        costMultiplier: 2.2, 
+        type: 'globalClickMultiplier', 
+        value: 3 
+    },
+    { 
+        id: 'prestige_auto_2', 
+        name: 'Pipa de Flujo II', 
+        emoji: '🌌', 
+        description: 'Multiplica x3 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 10, 
+        costMultiplier: 2.2, 
+        type: 'globalAutoMultiplier', 
+        value: 3 
+    },
+];

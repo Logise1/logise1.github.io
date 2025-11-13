@@ -1,5 +1,6 @@
 import { 
     UPGRADES_CONFIG, SKINS_CONFIG, fruits, 
+    PRESTIGE_REQUIREMENT, PRESTIGE_UPGRADES_CONFIG, // NUEVO: Importar config de prestigio
     auth, db, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, // voiceDb import REMOVED
     push, serverTimestamp, onChildAdded, 
     _DateNow, _MathSqrt, _MathPow, _MathCeil, _MathRandom, _MathFloor, _MathAbs, _MathMin, _MathPI, _MathSin, _MathCos,
@@ -8,7 +9,9 @@ import {
 import { 
     updateUI, updateCoinsDisplay, initializeStore, updateSkinsUI, updateClickButtonSkin,
     showLoginModal, showOfflineEarningsModal, showToastNotification, displayChatMessage, 
-    getDomElements, updateLeaderboardPresenceStatus, updateLeaderboardVisualTicking 
+    getDomElements, updateLeaderboardPresenceStatus, updateLeaderboardVisualTicking,
+    // La siguiente función la crearemos en ui_handlers.js, pero la importamos aquí
+    updatePrestigeUI // NUEVO: Para actualizar la UI de prestigio
 } from './ui_handlers.js';
 
 
@@ -20,7 +23,7 @@ export let level = 1;
 export let xp = 0;
 export let xpToNextLevel = 100;
 export let levelMultiplier = 1.0;
-export let totalScore = 0;
+export let totalScore = 0; // Puntuación total en esta "ronda" de prestigio
 export let totalClicks = 0;
 export let modalShown = false;
 export let coins = 0;
@@ -28,6 +31,12 @@ export let currentSkin = 'default';
 export let skinsState = {};
 export let upgradeLevels = {};
 export let globalPresence = {};
+
+// --- NUEVO: Variables de Estado de Prestigio ---
+export let prestigePoints = 0; // "Pipas de Prestigio"
+export let totalPrestigePoints = 0; // Pipas totales ganadas (histórico)
+export let prestigeLevels = {}; // Niveles de las mejoras de prestigio
+// ----------------------------------------------
 
 // Estas variables serán modificadas mediante funciones exportadas
 let internalUserId = null;
@@ -91,6 +100,11 @@ export const spendCoins = (amount) => {
     return false;
 };
 
+// --- NUEVO: Setter para Pipas de Prestigio (para la UI) ---
+export const setPrestigePoints = (value) => {
+    prestigePoints = value;
+};
+
 
 // --- Variables Anti-Cheat ---
 let _lct = 0; // lastClickTimestamp
@@ -143,22 +157,37 @@ function getStandardDeviation(array) {
 
 // --- FUNCIONES DE ESTADO Y LÓGICA DE JUEGO ---
 
-export function resetGameState(isLoggedIn = false) {
+/**
+ * Resetea el estado del juego.
+ * @param {boolean} isLogout - Si es 'true', es un reseteo total (logout).
+ * Si es 'false' (por defecto), es un reseteo por Prestigio.
+ */
+export function resetGameState(isLogout = false) {
     score = 0;
     totalScore = 0;
     level = 1;
     xp = 0;
     totalClicks = 0;
-    modalShown = false;
-    coins = 0;
-    currentSkin = 'default';
-    isBanned = false;
-    banExpiresAt = 0;
+    modalShown = false; // Para que vuelva a salir el modal de login
+    
+    // Aplicar bonus de monedas iniciales de prestigio
+    let startingCoinsBonus = 0;
+    if (Object.keys(prestigeLevels).length > 0) {
+        PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+            const state = prestigeLevels[config.id];
+            if (state && state.level > 0 && config.type === 'startingCoins') {
+                startingCoinsBonus += config.value * state.level;
+            }
+        });
+    }
+    coins = startingCoinsBonus;
+    
+    // Resetear anti-cheat
     _lct = 0;
     _cIntvls = [];
     _clkTmstmps = [];
 
-    // Inicializa upgradeLevels desde la config
+    // Resetear mejoras normales
     upgradeLevels = {};
     UPGRADES_CONFIG.forEach(upgrade => {
         upgradeLevels[upgrade.id] = {
@@ -167,27 +196,62 @@ export function resetGameState(isLoggedIn = false) {
         };
     });
 
-    // Clonar el estado inicial de las skins
-    skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG));
+    if (isLogout) {
+        // Reseteo TOTAL por logout
+        isBanned = false;
+        banExpiresAt = 0;
+        prestigePoints = 0;
+        totalPrestigePoints = 0;
+        prestigeLevels = {}; // Borra mejoras de prestigio
+        skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG)); // Resetea skins
+        currentSkin = 'default';
+        coins = 0; // Un logout resetea las monedas
+    }
+    
+    // Inicializar mejoras de prestigio si no existen (primera carga o post-logout)
+    if (Object.keys(prestigeLevels).length === 0) {
+        PRESTIGE_UPGRADES_CONFIG.forEach(upgrade => {
+            prestigeLevels[upgrade.id] = {
+                level: 0,
+                cost: upgrade.initialCost
+            };
+        });
+    }
 
     recalculateStats(); 
     recalculateLevelStats();
     
-    if (!isLoggedIn) {
+    if (isLogout) {
         isGameLoaded = true; 
         initializeStore();
+        // initializePrestigeStore() se llamará desde ui_handlers
     }
     
     updateUI(); 
     updateSkinsUI(); 
-    checkBanStatus();
+    checkBanStatus(); // Re-chequear estado de ban (por si acaso)
     updateClickButtonSkin();
+    updateCoinsDisplay(); // Actualizar monedas para mostrar las iniciales
 }
 
 export function gainXP(amount) {
     const { sfxNextLevel } = getDomElements();
-    xp += amount;
-    totalScore += amount; 
+    
+    // --- Aplicar Bonus de XP de Prestigio ---
+    let xpMultiplier = 1;
+    if (Object.keys(prestigeLevels).length > 0) {
+        PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+            const state = prestigeLevels[config.id];
+            if (state && state.level > 0 && config.type === 'xpGain') {
+                // Usamos _MathPow para que el bonus se acumule (ej. 1.5^2)
+                xpMultiplier *= _MathPow(config.value, state.level);
+            }
+        });
+    }
+    // ---------------------------------------
+
+    xp += (amount * xpMultiplier); // Ganancia de XP con bonus
+    totalScore += amount; // totalScore rastrea la puntuación de esta ronda
 
     while (xp >= xpToNextLevel) {
         xp -= xpToNextLevel;
@@ -291,6 +355,21 @@ export function recalculateStats() {
     finalPPS *= (1 + autoMultiplierBonus);
     finalPPS *= (1 + synergyAutoBonus);
     finalPPS *= (1 + levelAutoBonus);
+
+    // --- NUEVO: Aplicar Multiplicadores Globales de Prestigio ---
+    if (Object.keys(prestigeLevels).length > 0) {
+        PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+            const state = prestigeLevels[config.id];
+            if (state && state.level > 0) {
+                if (config.type === 'globalClickMultiplier') {
+                    finalClickPower *= _MathPow(config.value, state.level);
+                } else if (config.type === 'globalAutoMultiplier') {
+                    finalPPS *= _MathPow(config.value, state.level);
+                }
+            }
+        });
+    }
+    // --------------------------------------------------------
 
     // Asignar valores finales
     pps = finalPPS;
@@ -422,7 +501,7 @@ export function handleManualClick(event) {
     const earnedScore = baseGain * levelMultiplier;
 
     score += earnedScore;
-    gainXP(earnedScore); 
+    gainXP(earnedScore); // Llama a gainXP, que ahora maneja el bonus de XP y el totalScore
 
     coins += 1;
     updateCoinsDisplay();
@@ -664,7 +743,7 @@ function hideBanScreen() {
 
 export async function loadGameState() {
     if (!internalUserId) {
-        resetGameState(false);
+        resetGameState(true); // Reseteo total (isLogout = true)
         return;
     }
     const stateRef = ref(db, `userState/${internalUserId}`); // Usar internalUserId
@@ -686,6 +765,31 @@ export async function loadGameState() {
             coins = savedState.coins || 0;
             currentSkin = savedState.currentSkin || 'default';
             banExpiresAt = savedState.banExpiresAt || 0;
+
+            // --- NUEVO: Cargar datos de Prestigio ---
+            prestigePoints = savedState.prestigePoints || 0;
+            totalPrestigePoints = savedState.totalPrestigePoints || 0;
+            
+            // Cargar/Migrar niveles de Prestigio
+            const savedPrestigeLevels = savedState.prestigeLevels || {};
+            prestigeLevels = {};
+            PRESTIGE_UPGRADES_CONFIG.forEach(config => {
+                const savedUpgrade = savedPrestigeLevels[config.id];
+                const currentLevel = savedUpgrade ? savedUpgrade.level : 0;
+                let currentCost;
+
+                if (config.maxLevel && currentLevel >= config.maxLevel) {
+                    currentCost = null;
+                } else {
+                    currentCost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, currentLevel));
+                }
+                
+                prestigeLevels[config.id] = {
+                    level: currentLevel,
+                    cost: currentCost
+                };
+            });
+            // ----------------------------------------
 
             // Lógica de Migración de Mejoras (Recalculo de costos)
             const savedLevels = savedState.upgradeLevels || {};
@@ -719,7 +823,7 @@ export async function loadGameState() {
                 });
             }
             
-            recalculateStats();
+            recalculateStats(); // Recalcula stats CON bonus de prestigio
             recalculateLevelStats();
             
             const now = _DateNow();
@@ -732,28 +836,30 @@ export async function loadGameState() {
                 const earnedOfflineScore = offlinePPS * effectiveOfflineTime * levelMultiplier;
                 
                 score += earnedOfflineScore;
-                totalScore += earnedOfflineScore;
+                totalScore += earnedOfflineScore; // Añadir ganancia offline al total de esta ronda
                 
                 showOfflineEarningsModal(earnedOfflineScore, effectiveOfflineTime);
             }
 
         } else {
             console.log("No saved state found. Starting fresh.");
-            resetGameState(true);
+            resetGameState(true); // Reseteo total (isLogout = true)
         }
     } catch (error) {
         console.error("Error loading game state:", error);
-        resetGameState(true);
+        resetGameState(true); // Reseteo total (isLogout = true)
     } finally {
         isGameLoaded = true;
     }
     
     initializeStore(); 
+    // initializePrestigeStore() se llamará desde ui_handlers
 
     updateUI();
     updateClickButtonSkin();
     updateSkinsUI();
     updateCoinsDisplay();
+    updatePrestigeUI(); // Actualizar UI de prestigio al cargar
     checkBanStatus();
 }
 
@@ -778,11 +884,12 @@ export async function saveScore(manual = false) {
         currentSkin = 'default';
     }
 
-    const scoreToSave = _MathFloor(totalScore);
+    const scoreToSave = _MathFloor(totalScore); // El score del leaderboard es el total de la ronda
     const now = _DateNow();
     const currentPPS = pps * levelMultiplier;
     const currentSkinEmoji = skinsState[currentSkin]?.emoji || '👆';
 
+    // --- NUEVO: Añadir estado de prestigio al guardado ---
     const stateToSave = {
         score: score,
         totalScore: totalScore,
@@ -795,19 +902,27 @@ export async function saveScore(manual = false) {
         upgradeLevels: upgradeLevels,
         skins: skinsState,
         banExpiresAt: banExpiresAt,
+        
+        prestigePoints: prestigePoints, // NUEVO
+        totalPrestigePoints: totalPrestigePoints, // NUEVO
+        prestigeLevels: prestigeLevels, // NUEVO
+        
         lastSeen: now
     };
+    // ----------------------------------------------------
 
     const p1 = set(ref(db, `userState/${internalUserId}`), stateToSave).catch((error) => { // Usar internalUserId
         console.error("Error saving game state:", error);
     });
 
+    // Guardar en Leaderboard
     const p2 = set(ref(db, `leaderboard/${internalUserId}`), { // Usar internalUserId
         username: internalCurrentUsername, // Usar internalCurrentUsername
-        score: scoreToSave,
+        score: scoreToSave, // Guardamos el totalScore de la ronda
         pps: currentPPS,
         lastSeen: now,
-        skin: currentSkinEmoji
+        skin: currentSkinEmoji,
+        prestige: totalPrestigePoints // NUEVO: Guardar pipas totales para fardar
     }).then(() => {
         if (manual) {
             saveStatus.textContent = "¡Puntuación guardada!";
@@ -897,6 +1012,7 @@ export function loadLeaderboard() {
     const { leaderboardStatus, leaderboardList } = getDomElements();
     if (!db) return;
     const leaderboardRef = ref(db, 'leaderboard');
+    // Ordenamos por 'score'
     const leaderboardQuery = query(leaderboardRef, orderByChild('score'), limitToLast(100));
 
     leaderboardStatus.style.display = 'flex';
@@ -945,7 +1061,9 @@ export function loadLeaderboard() {
                 name.appendChild(nameSpan);
 
                 const scoreVal = document.createElement('span');
-                scoreVal.textContent = formatNumber(entry.score);
+                // NUEVO: Mostrar Pipas de Prestigio en el leaderboard si tienen
+                const prestigeText = entry.prestige ? ` (Pipas: ${entry.prestige})` : '';
+                scoreVal.textContent = formatNumber(entry.score) + prestigeText;
                 scoreVal.classList.add('player-score');
 
                 li.appendChild(rank);
@@ -963,4 +1081,97 @@ export function loadLeaderboard() {
             leaderboardList.style.display = 'none';
         }
     });
+}
+
+// --- NUEVA SECCIÓN: LÓGICA DE PRESTIGIO ---
+
+/**
+ * Calcula cuántas "Pipas de Prestigio" ganará el jugador.
+ * @returns {number} - La cantidad de pipas a ganar.
+ */
+export function calculatePrestigeGain() {
+    if (totalScore < PRESTIGE_REQUIREMENT) {
+        return 0;
+    }
+    
+    // Fórmula: 1 Pipa por cada raíz cuadrada de (totalScore / Requisito)
+    // A 1T (req), ganas 1. A 4T, ganas 2. A 9T, ganas 3.
+    // Esto escala bien y recompensa la progresión exponencial.
+    const gain = _MathFloor(_MathSqrt(totalScore / PRESTIGE_REQUIREMENT));
+    
+    // (Aquí se podrían añadir bonus futuros, ej: gain *= (1 + bonusPipas))
+    
+    return _MathMax(1, gain); // Garantiza al menos 1 si cumples el requisito
+}
+
+/**
+ * Ejecuta el reseteo por Prestigio.
+ * Da pipas al jugador y resetea el progreso del juego.
+ */
+export function performPrestige() {
+    const gain = calculatePrestigeGain();
+    if (gain === 0) {
+        console.warn("Intento de Prestigio fallido. No se cumple el requisito.");
+        return;
+    }
+    
+    prestigePoints += gain;
+    totalPrestigePoints += gain;
+    
+    // Resetea el juego (isLogout = false), conservando prestigio y skins
+    resetGameState(false); 
+    
+    // Llama a guardar inmediatamente
+    saveScore(false);
+    
+    // Actualizar la UI (la función la crearemos en ui_handlers.js)
+    updateUI();
+    updatePrestigeUI();
+    initializeStore(); // Reinicializar la tienda normal (costos reseteados)
+}
+
+/**
+ * Compra una mejora de prestigio.
+ * @param {string} key - El ID de la mejora de prestigio (ej: 'prestige_click_1').
+ */
+export function buyPrestigeUpgrade(key) {
+    if (isBanned) return;
+    
+    const { sfxBuy } = getDomElements();
+    
+    const config = PRESTIGE_UPGRADES_CONFIG.find(u => u.id === key);
+    if (!config) return;
+    
+    const state = prestigeLevels[key];
+    if (!state) return;
+    
+    // No hay multi-buy (x10) para prestigio
+    const cost = state.cost;
+    if (cost === null) return; // Maxeado
+
+    if (prestigePoints >= cost) {
+        prestigePoints -= cost;
+        state.level += 1;
+        
+        // Actualizar coste
+        if (config.maxLevel && state.level >= config.maxLevel) {
+            state.cost = null; // Maxeado
+        } else {
+            state.cost = _MathCeil(config.initialCost * _MathPow(config.costMultiplier, state.level));
+        }
+        
+        // Recalcular stats INMEDIATAMENTE para aplicar el bonus
+        recalculateStats();
+        
+        // Reproducir sonido
+        sfxBuy.currentTime = 0;
+        sfxBuy.play().catch(e => {});
+        
+        // Actualizar las UIs
+        updateUI(); // Para PPS/PPC
+        updatePrestigeUI(); // Para la tienda de prestigio
+        
+        // Guardar el cambio
+        saveScore(false);
+    }
 }

@@ -3,432 +3,444 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Ajedrez - Dashboard</title>
+    <title>Desafío de Ajedrez ELO</title>
+    
+    <!-- 1. Hoja de estilos de chessboard.js -->
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
+    <!-- 2. Tailwind CSS para la UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
-    <!-- Iconos Lucide -->
-    <script src="https://unpkg.com/lucide-react@0.395.0/dist/umd/lucide.js"></script>
+    
+    <!-- 3. jQuery (requerido por chessboard.js) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    
+    <!-- 4. chess.js (la lógica del juego) - v0.10.3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    
+    <!-- 5. chessboard.js (el tablero visual) -->
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+    <style>
+        /* Aseguramos que el tablero sea responsivo */
+        #main-board-container {
+            width: 90vw;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        #myBoard {
+            width: 100%;
+        }
+        #myBoard .piece-417db {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Estilo para resaltar movimientos legales */
+        #myBoard .square-55d63.highlight-move {
+            background-color: rgba(20, 83, 40, 0.4);
+            box-shadow: inset 0 0 3px 3px rgba(20, 83, 40, 0.4);
+        }
+        
+        /* Estilo para el spinner de carga */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="text-white font-sans antialiased">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
 
-    <!-- Fondo dinámico -->
-    <div id="dynamic-background"></div>
+    <!-- Contenido principal del juego (inicialmente oculto) -->
+    <div id="game-container" class="w-full flex flex-col items-center" style="display: none;">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Desafío de Ajedrez</h1>
 
-    <div class="flex min-h-screen">
-        <!-- Barra Lateral de Navegación -->
-        <nav class="glass-panel w-64 p-6 hidden md:flex flex-col flex-shrink-0">
-            <h2 class="text-2xl font-bold mb-8">Ajedrez</h2>
-            <ul class="space-y-4">
-                <li>
-                    <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-white font-medium">
-                        <i data-lucide="home"></i>
-                        Inicio
-                    </a>
-                </li>
-                <li>
-                    <a href="#play" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
-                        <i data-lucide="swords"></i>
-                        Jugar
-                    </a>
-                </li>
-                <li>
-                    <a href="#puzzles" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
-                        <i data-lucide="puzzle"></i>
-                        Puzles
-                    </a>
-                </li>
-                <li>
-                    <a href="#learn" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 text-gray-300">
-                        <i data-lucide="graduation-cap"></i>
-                        Aprender
-                    </a>
-                </li>
-            </ul>
-            <button id="logout-btn" class="flex items-center gap-3 p-2 rounded-lg hover:bg-red-700/50 text-red-300 mt-auto">
-                <i data-lucide="log-out"></i>
-                Cerrar Sesión
+        <!-- Contenedor del tablero -->
+        <div id="main-board-container">
+            <div id="myBoard"></div>
+        </div>
+
+        <!-- Panel de estado e instrucciones -->
+        <div class="mt-4 p-4 bg-white rounded-lg shadow-md text-center w-full max-w-lg">
+            <p id="status" class="text-lg font-semibold text-gray-700 h-8">Turno: Blancas</p>
+            <p id="elo-status" class="text-lg font-semibold text-blue-600 mt-2">Tu ELO: 1000</p>
+            <p class="text-sm text-gray-500 mt-2">Juegas con las blancas. Arrastra las piezas para moverlas.</p>
+            <button id="reset-button" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors">
+                Reiniciar Partida
             </button>
-        </nav>
-
-        <!-- Contenido Principal del Dashboard -->
-        <main id="lobby-screen" class="flex-1 p-6">
-            <!-- Encabezado del Perfil -->
-            <div class="glass-panel p-6 mb-6">
-                <div class="flex flex-col md:flex-row justify-between items-center">
-                    <div>
-                        <h2 class="text-3xl font-bold">Bienvenido, <span id="user-display" class="text-blue-300">...</span></h2>
-                        <p class="text-gray-300 text-sm">Tu ID: <code id="user-id-display" class="bg-gray-900 bg-opacity-50 px-2 py-1 rounded-md">...</code></p>
-                    </div>
-                    <div class="flex items-center gap-6 mt-4 md:mt-0">
-                        <div class="text-center">
-                            <span class="block text-sm text-gray-400">ELO</span>
-                            <span id="user-elo-display" class="block text-4xl font-bold text-yellow-300">
-                                <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Grid del Dashboard -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <!-- Card: Jugar Online -->
-                <div class="glass-panel p-6 dashboard-card">
-                    <h3 class="text-2xl font-bold mb-4">Jugar Online</h3>
-                    <p class="text-gray-300 mb-6">Enfréntate a otros jugadores y pon a prueba tu ELO.</p>
-                    <button id="find-match-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto">
-                        <span id="find-match-text">Buscar Partida</span>
-                        <span id="find-match-spinner" class="hidden">Buscando... (Haz click para cancelar)</span>
-                    </button>
-                </div>
-
-                <!-- Card: Practicar con IA -->
-                <div class="glass-panel p-6 dashboard-card">
-                    <h3 class="text-2xl font-bold mb-4">Practicar</h3>
-                    <p class="text-gray-300 mb-6">Mejora tus habilidades contra nuestros bots.</p>
-                    <button id="ai-practice-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto">
-                        Jugar contra IA
-                    </button>
-                </div>
-                
-                <!-- Card: Jugar con Amigo (NUEVO) -->
-                <div class="glass-panel p-6 dashboard-card">
-                    <h3 class="text-2xl font-bold mb-4">Jugar con Amigo</h3>
-                    <p class="text-gray-300 mb-6">Reta a un amigo a una partida amistosa.</p>
-                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md btn-hover-effect mt-auto opacity-70 cursor-not-allowed" disabled>
-                        Crear Partida
-                    </button>
-                </div>
-
-                <!-- Card: Puzles (Placeholder - Más grande) -->
-                <div class="glass-panel p-6 dashboard-card opacity-80 lg:col-span-2">
-                    <h3 class="text-2xl font-bold mb-4">Puzle del Día</h3>
-                    <p class="text-gray-300 mb-6">Resuelve el puzle diario para agudizar tu táctica.</p>
-                    <button class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md mt-auto cursor-not-allowed" disabled>
-                        Resolver Puzle (Próximamente)
-                    </button>
-                </div>
-
-                <!-- Card: Estadísticas -->
-                <div class="glass-panel p-6 dashboard-card lg:col-span-1">
-                    <h3 class="text-2xl font-bold mb-4">Estadísticas</h3>
-                    <div class="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <span class="block text-sm text-gray-400">ELO</span>
-                            <span id="stats-elo" class="block text-2xl font-bold text-yellow-300">
-                                <span class="loading-dots sm"><span>.</span><span>.</span><span>.</span></span>
-                            </span>
-                        </div>
-                        <div>
-                            <span class="block text-sm text-gray-400">Partidas</span>
-                            <span id="stats-games" class="block text-2xl font-bold">0</span>
-                        </div>
-                        <div>
-                            <span class="block text-sm text-gray-400">Victorias</span>
-                            <span id="stats-wins" class="block text-2xl font-bold">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card: Partidas Anteriores (Placeholder) -->
-                <div class="glass-panel p-6 dashboard-card opacity-80 lg:col-span-3">
-                    <h3 class="text-2xl font-bold mb-4">Mis Partidas</h3>
-                    <p class="text-gray-300 mb-6">Revisa tus partidas guardadas para aprender de tus errores.</p>
-                    <div class="text-center text-gray-400 mt-auto py-4">
-                        Aún no has completado partidas.
-                    </div>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Modal de Práctica IA -->
-    <div id="ai-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <!-- (Contenido del modal de IA, igual que antes) -->
-        <div class="glass-panel p-6 max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-6">Elige un Oponente</h3>
-            <div id="bot-selection-list" class="flex flex-col gap-4 mb-6">
-                <button class="bot-select-btn text-left" data-level="0" data-elo="400">
-                    <h4 class="font-bold text-lg">Bronco el Principiante</h4>
-                    <p class="text-sm text-gray-300">ELO Estimado: 400</p>
-                </button>
-                <button class="bot-select-btn text-left selected" data-level="1" data-elo="800">
-                    <h4 class="font-bold text-lg">Astuta la Intermedia</h4>
-                    <p class="text-sm text-gray-300">ELO Estimado: 800</p>
-                </button>
-                <button class="bot-select-btn text-left" data-level="2" data-elo="1200">
-                    <h4 class="font-bold text-lg">Magnus el Agresivo</h4>
-                    <p class="text-sm text-gray-300">ELO Estimado: 1200</p>
-                </button>
-            </div>
-            <div class="mb-6">
-                <label for="ai-color-select" class="block text-sm font-medium text-gray-300 mb-1">Jugar como</label>
-                <select id="ai-color-select" class="w-full px-4 py-2 bg-gray-700 bg-opacity-70 border border-gray-600 rounded-md">
-                    <option value="w">Blancas</option>
-                    <option value="b">Negras</option>
-                    <option value="random">Aleatorio</option>
-                </select>
-            </div>
-            <div class="flex gap-4">
-                <button id="start-ai-game-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Jugar</button>
-                <button id="cancel-ai-modal-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancelar</button>
+    <!-- Modal de Promoción (oculto por defecto) -->
+    <div id="promotion-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl">
+            <p class="text-xl font-semibold w-full text-center mb-4">Promocionar a:</p>
+            <div class="flex space-x-4">
+                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="q"><img id="promote-q" src="https://logise1.github.io/chess/assets/wq.png" alt="Reina" class="w-16 h-16 piece-promote"></div>
+                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="r"><img id="promote-r" src="https://logise1.github.io/chess/assets/wr.png" alt="Torre" class="w-16 h-16 piece-promote"></div>
+                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="b"><img id="promote-b" src="https://logise1.github.io/chess/assets/wb.png" alt="Alfil" class="w-16 h-16 piece-promote"></div>
+                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="n"><img id="promote-n" src="https://logise1.github.io/chess/assets/wn.png" alt="Caballo" class="w-16 h-16 piece-promote"></div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            signOut
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
-            deleteDoc,
-            setLogLevel,
-            collection,
-            query,
-            where,
-            onSnapshot,
-            runTransaction,
-            getDocs,
-            setDoc,
-            serverTimestamp
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- ¡NUEVO! Modal de ELO (se muestra al inicio) -->
+    <div id="elo-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 class="text-2xl font-bold mb-4">Bienvenido</h2>
+            <p class="text-gray-600 mb-6">Ingresa tu ELO para ajustar la dificultad del bot.</p>
+            <input type="number" id="elo-input" placeholder="Ej: 1200" class="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="start-game-button" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors">
+                Comenzar a Jugar
+            </button>
+            <p class="text-xs text-gray-400 mt-4">(Si dejas en blanco, se usará 1000)</p>
+        </div>
+    </div>
 
-        // --- Configuración de Firebase ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
-            authDomain: "chess-a9347.firebaseapp.com",
-            projectId: "chess-a9347",
-            storageBucket: "chess-a99347.firebasestorage.app",
-            messagingSenderId: "950558367537",
-            appId: "1:950558367537:web:4cee83e2053262a4541a10"
-        };
 
-        // --- Inicialización de Firebase ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        setLogLevel('Debug');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
-
-        // --- Variables Globales ---
-        let currentUser = null;
-        let currentUserId = null;
-        let userElo = 300;
-        let matchmakingUnsubscribe = null;
-        let isFindingMatch = false;
-        let currentAIOpponent = { level: 1, elo: 800 }; 
-
-        // --- Referencias al DOM ---
-        const userDisplay = document.getElementById('user-display');
-        const userIdDisplay = document.getElementById('user-id-display');
-        const userEloDisplay = document.getElementById('user-elo-display');
-        const statsElo = document.getElementById('stats-elo');
-        const statsGames = document.getElementById('stats-games');
-        const statsWins = document.getElementById('stats-wins');
-        const logoutBtn = document.getElementById('logout-btn');
-        
-        const aiPracticeBtn = document.getElementById('ai-practice-btn');
-        const findMatchBtn = document.getElementById('find-match-btn');
-        const findMatchText = document.getElementById('find-match-text');
-        const findMatchSpinner = document.getElementById('find-match-spinner');
-
-        const aiModal = document.getElementById('ai-modal');
-        const botSelectButtons = document.querySelectorAll('.bot-select-btn');
-        const aiColorSelect = document.getElementById('ai-color-select');
-        const startAiGameBtn = document.getElementById('start-ai-game-btn');
-        const cancelAiModalBtn = document.getElementById('cancel-ai-modal-btn');
-        
-        // --- Lógica de Auth y Carga de Datos ---
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                currentUserId = user.uid;
-                userDisplay.textContent = user.displayName;
-                userIdDisplay.textContent = user.uid;
-                loadUserData(user.uid);
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-
-        logoutBtn.addEventListener('click', () => {
-            if (isFindingMatch) {
-                cancelMatchmaking();
-            }
-            signOut(auth);
-        });
-        
-        function getUserDocRef(uid) {
-            return doc(db, 'artifacts', appId, 'users', uid, 'profile', 'data');
-        }
-        
-        async function loadUserData(uid) {
-            const userRef = getUserDocRef(uid);
-            try {
-                const docSnap = await getDoc(userRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    userElo = data.elo || 300;
-                    userEloDisplay.textContent = userElo; // Actualiza el ELO del header
-                    statsElo.textContent = userElo; // Actualiza el ELO de stats
-                    statsGames.textContent = data.gamesPlayed || 0;
-                    statsWins.textContent = data.wins || 0;
-                    
-                    // Si es un usuario nuevo, redirigir al test
-                    if (data.needsTest === true) {
-                        alert("¡Bienvenido! Vamos a jugar una partida de prueba para estimar tu ELO inicial.");
-                        // Redirigir a play.html con parámetros de test
-                        window.location.href = `play.html?mode=ai-test&level=0`;
-                    }
-                }
-            } catch (error) {
-                console.error("Error al cargar datos de usuario:", error);
-            }
-        }
-        
-        // --- Lógica de Práctica IA ---
-        
-        aiPracticeBtn.addEventListener('click', () => {
-            aiModal.classList.remove('hidden');
-        });
-
-        cancelAiModalBtn.addEventListener('click', () => {
-            aiModal.classList.add('hidden');
-        });
-
-        botSelectButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                botSelectButtons.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                currentAIOpponent.level = parseInt(btn.dataset.level);
-                currentAIOpponent.elo = parseInt(btn.dataset.elo);
-            });
-        });
-        
-        startAiGameBtn.addEventListener('click', () => {
-            let color = aiColorSelect.value;
-            if (color === 'random') {
-                color = Math.random() < 0.5 ? 'w' : 'b';
-            }
-            aiModal.classList.add('hidden');
+    <script>
+        $(document).ready(function() {
+            // --- 1. Variables Globales ---
+            var board = null; 
+            var game = new Chess(); 
+            var $status = $('#status');
+            var $eloStatus = $('#elo-status');
+            var $board = $('#myBoard');
+            var $promotionModal = $('#promotion-modal');
+            var $eloModal = $('#elo-modal');
+            var $gameContainer = $('#game-container');
             
-            // Redirigir a play.html con parámetros de práctica
-            window.location.href = `play.html?mode=ai-practice&level=${currentAIOpponent.level}&elo=${currentAIOpponent.elo}&color=${color}`;
-        });
+            var pendingMove = null;
+            var playerElo = 1000; // Default
+            
+            // --- 2. Lógica del Bot (IA) con Minimax ---
+            
+            // Valores de las piezas (positivos para blancas, negativos para negras)
+            var pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
 
-        // --- Lógica de Matchmaking ---
+            // Tablas de evaluación posicional (simplificadas)
+            // (Mejora mucho la IA, indicando qué posiciones son buenas)
+            var pawnEval = [
+                [0,  0,  0,  0,  0,  0,  0,  0],
+                [5, 10, 10, -20,-20, 10, 10,  5],
+                [5, -5,-10,  0,  0,-10, -5,  5],
+                [0,  0,  0, 20, 20,  0,  0,  0],
+                [5,  5, 10, 25, 25, 10,  5,  5],
+                [10,10, 20, 30, 30, 20, 10, 10],
+                [50,50, 50, 50, 50, 50, 50, 50],
+                [0,  0,  0,  0,  0,  0,  0,  0]
+            ];
+            var knightEval = [
+                [-50,-40,-30,-30,-30,-30,-40,-50],
+                [-40,-20,  0,  5,  5,  0,-20,-40],
+                [-30,  5, 10, 15, 15, 10,  5,-30],
+                [-30,  0, 15, 20, 20, 15,  0,-30],
+                [-30,  5, 15, 20, 20, 15,  5,-30],
+                [-30,  0, 10, 15, 15, 10,  0,-30],
+                [-40,-20,  0,  0,  0,  0,-20,-40],
+                [-50,-40,-30,-30,-30,-30,-40,-50]
+            ];
+            // ... (se pueden añadir más para alfiles, torres, etc.)
 
-        function getMatchmakingQueueRef() {
-            return collection(db, 'artifacts', appId, 'public', 'data', 'matchmakingQueue');
-        }
-        
-        function getPublicGameRef(gameId) {
-            return doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
-        }
-
-        findMatchBtn.addEventListener('click', () => {
-            if (isFindingMatch) cancelMatchmaking();
-            else joinMatchmakingQueue();
-        });
-
-        async function joinMatchmakingQueue() {
-            if (!currentUserId) return;
-            isFindingMatch = true;
-            findMatchText.classList.add('hidden');
-            findMatchSpinner.classList.remove('hidden');
-
-            const queueRef = getMatchmakingQueueRef();
-            const playerDocRef = doc(queueRef, currentUserId);
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const q = query(queueRef, where("opponentId", "==", null), where("playerId", "!=", currentUserId));
-                    const queueSnapshot = await getDocs(q);
-                    
-                    let opponentFound = queueSnapshot.empty ? null : queueSnapshot.docs[0];
-
-                    if (opponentFound) {
-                        const opponentData = opponentFound.data();
-                        const gameId = crypto.randomUUID();
-                        const isPlayerWhite = Math.random() < 0.5;
-                        
-                        const players = {
-                            [currentUserId]: { color: isPlayerWhite ? 'w' : 'b', elo: userElo, username: currentUser.displayName },
-                            [opponentData.playerId]: { color: isPlayerWhite ? 'b' : 'w', elo: opponentData.elo, username: opponentData.username }
-                        };
-                        
-                        const gameRef = getPublicGameRef(gameId);
-                        transaction.set(gameRef, {
-                            fen: 'start', status: 'active', players: players, createdAt: serverTimestamp(), turn: 'w'
-                        });
-                        
-                        transaction.update(playerDocRef, { opponentId: opponentData.playerId, gameId: gameId });
-                        transaction.update(opponentFound.ref, { opponentId: currentUserId, gameId: gameId });
-                        
-                    } else {
-                        transaction.set(playerDocRef, {
-                            playerId: currentUserId, username: currentUser.displayName, elo: userElo,
-                            opponentId: null, gameId: null, timestamp: serverTimestamp()
-                        });
-                    }
-                });
-                
-                listenForGameStart();
-
-            } catch (error) {
-                console.error("Error al unirse a la cola:", error);
-                cancelMatchmaking();
-            }
-        }
-
-        function listenForGameStart() {
-            if (!currentUserId) return;
-            const playerDocRef = doc(getMatchmakingQueueRef(), currentUserId);
-
-            matchmakingUnsubscribe = onSnapshot(playerDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.gameId) {
-                        // ¡Partida encontrada!
-                        if(matchmakingUnsubscribe) matchmakingUnsubscribe();
-                        matchmakingUnsubscribe = null;
-                        
-                        // Redirigir a play.html con parámetros online
-                        window.location.href = `play.html?mode=online&gameId=${data.gameId}`;
+            // Evalúa el tablero
+            // Positivo = Ventaja Blanca, Negativo = Ventaja Negra
+            function evaluateBoard(board) {
+                var totalEvaluation = 0;
+                for (var i = 0; i < 8; i++) {
+                    for (var j = 0; j < 8; j++) {
+                        var piece = board[i][j];
+                        if (piece) {
+                            var value = pieceValues[piece.type];
+                            // Añadir bonus de posición
+                            if (piece.type === 'p') {
+                                value += (piece.color === 'w') ? pawnEval[i][j] : -pawnEval[7-i][j];
+                            } else if (piece.type === 'n') {
+                                value += (piece.color === 'w') ? knightEval[i][j] : -knightEval[7-i][j];
+                            }
+                            //... (añadir más evaluaciones)
+                            
+                            totalEvaluation += (piece.color === 'w' ? value : -value);
+                        }
                     }
                 }
-            }, (error) => {
-                console.error("Error escuchando la cola:", error);
-                cancelMatchmaking();
+                return totalEvaluation;
+            }
+
+            // Algoritmo Minimax
+            function minimax(depth, gameInstance, alpha, beta, isMaximizingPlayer) {
+                if (depth === 0) {
+                    return -evaluateBoard(gameInstance.board()); // Evaluar desde la perspectiva del jugador que NO acaba de mover
+                }
+
+                var possibleMoves = gameInstance.moves();
+                
+                // Si no hay movimientos (Jaque Mate o Ahogado)
+                if (possibleMoves.length === 0) {
+                    if (gameInstance.in_checkmate()) {
+                        return isMaximizingPlayer ? -Infinity : Infinity;
+                    }
+                    return 0; // Tablas
+                }
+
+                if (isMaximizingPlayer) {
+                    var bestValue = -Infinity;
+                    for (var i = 0; i < possibleMoves.length; i++) {
+                        gameInstance.move(possibleMoves[i]);
+                        bestValue = Math.max(bestValue, minimax(depth - 1, gameInstance, alpha, beta, false));
+                        gameInstance.undo();
+                        alpha = Math.max(alpha, bestValue);
+                        if (beta <= alpha) break; // Poda Alpha-Beta
+                    }
+                    return bestValue;
+                } else {
+                    var bestValue = Infinity;
+                    for (var i = 0; i < possibleMoves.length; i++) {
+                        gameInstance.move(possibleMoves[i]);
+                        bestValue = Math.min(bestValue, minimax(depth - 1, gameInstance, alpha, beta, true));
+                        gameInstance.undo();
+                        beta = Math.min(beta, bestValue);
+                        if (beta <= alpha) break; // Poda Alpha-Beta
+                    }
+                    return bestValue;
+                }
+            }
+
+            // Encuentra el mejor movimiento para el bot
+            function findBestMove() {
+                var possibleMoves = game.moves();
+                if (possibleMoves.length === 0) return;
+
+                var bestMove = null;
+                var bestValue = -Infinity;
+                
+                // Determinar profundidad según ELO
+                var searchDepth = 1;
+                if (playerElo >= 1000) searchDepth = 2;
+                if (playerElo >= 1300) searchDepth = 3;
+                if (playerElo >= 1600) searchDepth = 4; // ¡Puede ser lento!
+                
+                // Iterar sobre todos los movimientos
+                for (var i = 0; i < possibleMoves.length; i++) {
+                    var move = possibleMoves[i];
+                    game.move(move);
+                    // Llamamos a minimax para el JUGADOR (minimizando)
+                    var boardValue = minimax(searchDepth - 1, game, -Infinity, Infinity, false);
+                    game.undo();
+                    
+                    if (boardValue > bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                }
+                
+                // Hacer el movimiento encontrado
+                game.move(bestMove);
+                board.position(game.fen());
+                updateStatus();
+            }
+            
+            // Función wrapper para que el bot piense sin congelar la UI
+            function makeBotMove() {
+                $status.html('Turno: Negras <div class="loader"></div>');
+                // Usar requestAnimationFrame para no bloquear el hilo principal
+                requestAnimationFrame(function() {
+                    findBestMove();
+                });
+            }
+
+
+            // --- 3. Funciones de Evento de Chessboard.js ---
+
+            function removeGreySquares () {
+                $board.find('.square-55d63').removeClass('highlight-move');
+            }
+            function greySquare (square) {
+                $board.find('.square-' + square).addClass('highlight-move');
+            }
+
+            function onDragStart(source, piece, position, orientation) {
+                if (game.game_over()) return false;
+                if (piece.search(/^b/) !== -1) return false;
+                if (game.turn() === 'b') return false;
+
+                removeGreySquares();
+                var moves = game.moves({ square: source, verbose: true });
+                if (moves.length === 0) return false;
+                moves.forEach(move => greySquare(move.to));
+
+                var playerColor = 'w'; 
+                $promotionModal.find('.piece-promote').each(function() {
+                    var pieceType = $(this).parent().data('piece');
+                    $(this).attr('src', 'https://logise1.github.io/chess/assets/' + playerColor + pieceType + '.png');
+                });
+                return true;
+            }
+
+            function onDrop(source, target) {
+                removeGreySquares();
+
+                var piece = game.get(source).type;
+                var targetRank = target.charAt(1);
+                var isPromotion = (piece === 'p' && targetRank === '8'); // Solo blancas
+
+                var legalMoves = game.moves({ square: source, verbose: true });
+                var legalMove = legalMoves.find(m => m.to === target);
+
+                if (!legalMove) return 'snapback';
+
+                if (isPromotion) {
+                    pendingMove = { from: source, to: target };
+                    $promotionModal.removeClass('hidden');
+                    return 'snapback';
+                }
+
+                var move = game.move({ from: source, to: target });
+                if (move === null) return 'snapback';
+
+                updateStatus();
+
+                if (!game.game_over()) {
+                    window.setTimeout(makeBotMove, 250); // Dar un respiro
+                }
+            }
+            
+            $promotionModal.find('.cursor-pointer').on('click', function() {
+                var promotion = $(this).data('piece');
+                if (pendingMove) {
+                    game.move({
+                        from: pendingMove.from,
+                        to: pendingMove.to,
+                        promotion: promotion
+                    });
+                    
+                    board.position(game.fen());
+                    $promotionModal.addClass('hidden');
+                    updateStatus();
+                    
+                    if (!game.game_over()) {
+                        window.setTimeout(makeBotMove, 250);
+                    }
+                }
+                pendingMove = null;
             });
-        }
-        
-        async function cancelMatchmaking() {
-            if (matchmakingUnsubscribe) {
-                matchmakingUnsubscribe();
-                matchmakingUnsubscribe = null;
-            }
-            if (currentUserId) {
-                const playerDocRef = doc(getMatchmakingQueueRef(), currentUserId);
-                await deleteDoc(playerDocRef).catch(e => console.warn("Error al limpiar la cola", e));
-            }
-            isFindingMatch = false;
-            findMatchText.classList.remove('hidden');
-            findMatchSpinner.classList.add('hidden');
-        }
 
-        // Inicializar iconos
-        lucide.createIcons();
+            function onSnapEnd() {
+                if (!pendingMove) {
+                    board.position(game.fen());
+                }
+            }
 
+            // --- 4. Función de Estado ---
+            function updateStatus() {
+                var status = '';
+                var moveColor = (game.turn() === 'w') ? 'Blancas' : 'Negras';
+                var eloChange = 0;
+
+                if (game.in_checkmate()) {
+                    var winner = (moveColor === 'Blancas') ? 'Negras' : 'Blancas';
+                    status = '¡Jaque Mate! Ganan las ' + winner;
+                    
+                    if (winner === 'Blancas') {
+                        playerElo += 10;
+                        eloChange = 10;
+                    } else {
+                        playerElo -= 10;
+                        eloChange = -10;
+                    }
+                    localStorage.setItem('playerElo', playerElo.toString());
+                }
+                else if (game.in_draw()) {
+                    status = '¡Tablas!';
+                }
+                else {
+                    status = 'Turno: ' + moveColor;
+                    if (game.in_check()) {
+                        status += ' (¡Jaque!)';
+                    }
+                }
+
+                $status.html(status);
+                var eloText = 'Tu ELO: ' + playerElo;
+                if (eloChange > 0) {
+                    eloText += ' <span class="text-green-500">(+10)</span>';
+                } else if (eloChange < 0) {
+                    eloText += ' <span class="text-red-500">(-10)</span>';
+                }
+                $eloStatus.html(eloText);
+            }
+
+            // --- 5. Inicialización ---
+            function resetGame() {
+                game.reset(); 
+                board.start(); 
+                updateStatus(); 
+                $eloStatus.html('Tu ELO: ' + playerElo);
+            }
+            
+            // ¡NUEVO! Lógica del modal de ELO
+            function initializeGame() {
+                var storedElo = localStorage.getItem('playerElo');
+                if (storedElo) {
+                    playerElo = parseInt(storedElo);
+                    $eloStatus.html('Tu ELO: ' + playerElo);
+                    $eloModal.addClass('hidden');
+                    $gameContainer.show();
+                } else {
+                    $eloModal.removeClass('hidden');
+                    $gameContainer.hide();
+                }
+                
+                // Configuración de Chessboard
+                var config = {
+                    draggable: true,
+                    position: 'start',
+                    onDragStart: onDragStart,
+                    onDrop: onDrop,
+                    onSnapEnd: onSnapEnd,
+                    // pieceTheme: 'https://logise1.github.io/chess/assets/{piece}.png' // Plantilla simplificada (¡ESTO ERA INCORRECTO!)
+                    
+                    // ¡CORREGIDO! Usar una función para convertir a minúsculas
+                    pieceTheme: function (piece) { 
+                        // piece es 'wR', 'bK', etc.
+                        // El servidor de assets espera 'wr.png', 'bk.png'
+                        var pieceCode = piece.toLowerCase();
+                        return 'https://logise1.github.io/chess/assets/' + pieceCode + '.png';
+                    }
+                };
+                
+                board = Chessboard('myBoard', config);
+                $(window).resize(board.resize);
+                $('#reset-button').on('click', resetGame);
+                updateStatus();
+            }
+            
+            $('#start-game-button').on('click', function() {
+                var inputElo = $('#elo-input').val();
+                // Validar y fijar ELO
+                var elo = parseInt(inputElo) || 1000;
+                playerElo = Math.max(800, Math.min(2000, elo)); // Limitar ELO entre 800 y 2000
+                
+                localStorage.setItem('playerElo', playerElo.toString());
+                $eloStatus.html('Tu ELO: ' + playerElo);
+                $eloModal.addClass('hidden');
+                $gameContainer.show();
+                
+                // Redibujar el tablero por si el modal afectó el tamaño
+                $(window).trigger('resize');
+            });
+
+            // Iniciar la lógica
+            initializeGame();
+        });
     </script>
 </body>
 </html>
