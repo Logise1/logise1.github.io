@@ -2,8 +2,8 @@ import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/9.22.0
 import {
     getAuth,
     createUserWithEmailAndPassword as FBCreateUser, // Renombrar para evitar conflictos
-    signInWithEmailAndPassword as FBSignIn,       // Renombrar
-    signOut as FBSignOut,                         // Renombrar
+    signInWithEmailAndPassword as FBSignIn,        // Renombrar
+    signOut as FBSignOut,                          // Renombrar
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import {
@@ -16,8 +16,8 @@ import {
     onValue,
     get as FBGet, // Renombrar
     onDisconnect,
-    push, 
-    serverTimestamp, 
+    push,
+    serverTimestamp,
     onChildAdded
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
@@ -42,8 +42,6 @@ const GAME_FIREBASE_CONFIG = {
     measurementId: "G-XRYBFXCYPG"
 };
 
-// --- Configuración de Firebase para Chat de Voz ELIMINADA ---
-
 let gameApp;
 
 try {
@@ -54,7 +52,6 @@ try {
 
 export const auth = getAuth(gameApp);
 export const db = getDatabase(gameApp); // DB para juego principal
-// voiceDb ELIMINADO
 
 // --- CONSTANTES GLOBALES DE JUEGO ---
 export const fruits = ["🍎", "🍊", "🍋", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥝"];
@@ -236,7 +233,19 @@ export const UPGRADES_CONFIG = [
     { id: 'click_mult_6', name: 'Esencia de Clic', emoji: '👻', description: 'Clics x5', initialCost: 5e10, costMultiplier: 4.5, type: 'clickMultiplier', value: 5.0, maxLevel: 1 },
     { id: 'click_mult_7', name: 'Amplificador Total', emoji: '🔊', description: 'Clics x10', initialCost: 1e19, costMultiplier: 5, type: 'clickMultiplier', value: 10.0, maxLevel: 1 },
     { id: 'click_mult_8', name: 'Potencia Absoluta', emoji: '💯', description: 'Clics x20', initialCost: 5e21, costMultiplier: 6, type: 'clickMultiplier', value: 20.0, maxLevel: 1 },
-    { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 5e23, costMultiplier: 5, type: 'clickMultiplier', value: 50.0, maxLevel: 1 }, // Antes 7
+    { id: 'click_mult_9', name: 'Dominio Final', emoji: '🌠', description: 'Clics x50', initialCost: 5e23, costMultiplier: 5, type: 'clickMultiplier', value: 50.0, maxLevel: 1 },
+    // --- ¡Nuevos Multiplicadores de Clic! ---
+    { id: 'click_mult_10', name: 'Onda de Choque', emoji: '🌊', description: 'Clics x75', initialCost: 5e25, costMultiplier: 5.5, type: 'clickMultiplier', value: 75.0, maxLevel: 1 },
+    { id: 'click_mult_11', name: 'Explosión Pura', emoji: '💥', description: 'Clics x100', initialCost: 5e27, costMultiplier: 6.0, type: 'clickMultiplier', value: 100.0, maxLevel: 1 },
+    { id: 'click_mult_12', name: 'Múltiple Dimensional', emoji: '🌌', description: 'Clics x150', initialCost: 5e30, costMultiplier: 6.5, type: 'clickMultiplier', value: 150.0, maxLevel: 1 },
+    { id: 'click_mult_13', name: 'Trascendencia', emoji: '🧘', description: 'Clics x200', initialCost: 5e33, costMultiplier: 7.0, type: 'clickMultiplier', value: 200.0, maxLevel: 1 },
+    { id: 'click_mult_14', name: 'Clic de Época', emoji: '🕰️', description: 'Clics x300', initialCost: 5e36, costMultiplier: 7.5, type: 'clickMultiplier', value: 300.0, maxLevel: 1 },
+    { id: 'click_mult_15', name: 'Esencia Final', emoji: '✨', description: 'Clics x500', initialCost: 5e40, costMultiplier: 8.0, type: 'clickMultiplier', value: 500.0, maxLevel: 1 },
+    { id: 'click_mult_16', name: 'Hiperimpulso', emoji: '🚀', description: 'Clics x750', initialCost: 5e44, costMultiplier: 8.5, type: 'clickMultiplier', value: 750.0, maxLevel: 1 },
+    { id: 'click_mult_17', name: 'Colapso Cúbico', emoji: '🧊', description: 'Clics x1000', initialCost: 5e48, costMultiplier: 9.0, type: 'clickMultiplier', value: 1000.0, maxLevel: 1 },
+    { id: 'click_mult_18', name: 'Omniclick', emoji: '👁️', description: 'Clics x1500', initialCost: 5e52, costMultiplier: 9.5, type: 'clickMultiplier', value: 1500.0, maxLevel: 1 },
+    { id: 'click_mult_19', name: 'Big Rip', emoji: '🌀', description: 'Clics x2000', initialCost: 5e56, costMultiplier: 10.0, type: 'clickMultiplier', value: 2000.0, maxLevel: 1 },
+    { id: 'click_mult_20', name: 'Poder Primordial', emoji: '👑', description: 'Clics x5000', initialCost: 1e60, costMultiplier: 10.0, type: 'clickMultiplier', value: 5000.0, maxLevel: 1 },
 
     // Multiplicadores de Auto
     { id: 'auto_mult_1', name: 'Engranajes Precisos', emoji: '⚙️', description: 'PPS x1.1', initialCost: 2000, costMultiplier: 2.0, type: 'autoMultiplier', value: 1.1, maxLevel: 1 },
@@ -247,7 +256,19 @@ export const UPGRADES_CONFIG = [
     { id: 'auto_mult_6', name: 'Motor Perpetuo', emoji: '🤯', description: 'PPS x5', initialCost: 1e11, costMultiplier: 4.5, type: 'autoMultiplier', value: 5.0, maxLevel: 1 },
     { id: 'auto_mult_7', name: 'Acelerador Final', emoji: '⏩', description: 'PPS x10', initialCost: 1e20, costMultiplier: 5, type: 'autoMultiplier', value: 10.0, maxLevel: 1 },
     { id: 'auto_mult_8', name: 'Acelerador de Partículas', emoji: '⚛️', description: 'PPS x20', initialCost: 6e21, costMultiplier: 6, type: 'autoMultiplier', value: 20.0, maxLevel: 1 },
-    { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 6e23, costMultiplier: 5, type: 'autoMultiplier', value: 50.0, maxLevel: 1 }, // Antes 7
+    { id: 'auto_mult_9', name: 'Perpetuidad Cósmica', emoji: '♾️', description: 'PPS x50', initialCost: 6e23, costMultiplier: 5, type: 'autoMultiplier', value: 50.0, maxLevel: 1 },
+    // --- ¡Nuevos Multiplicadores de Auto! ---
+    { id: 'auto_mult_10', name: 'Reactor Avanzado', emoji: '⚙️', description: 'PPS x75', initialCost: 6e25, costMultiplier: 5.5, type: 'autoMultiplier', value: 75.0, maxLevel: 1 },
+    { id: 'auto_mult_11', name: 'Hiperflujo', emoji: '💧', description: 'PPS x100', initialCost: 6e27, costMultiplier: 6.0, type: 'autoMultiplier', value: 100.0, maxLevel: 1 },
+    { id: 'auto_mult_12', name: 'Computación Extrema', emoji: '💻', description: 'PPS x150', initialCost: 6e30, costMultiplier: 6.5, type: 'autoMultiplier', value: 150.0, maxLevel: 1 },
+    { id: 'auto_mult_13', name: 'Crono-Acelerador', emoji: '⏳', description: 'PPS x200', initialCost: 6e33, costMultiplier: 7.0, type: 'autoMultiplier', value: 200.0, maxLevel: 1 },
+    { id: 'auto_mult_14', name: 'Generador Estelar', emoji: '☀️', description: 'PPS x300', initialCost: 6e36, costMultiplier: 7.5, type: 'autoMultiplier', value: 300.0, maxLevel: 1 },
+    { id: 'auto_mult_15', name: 'Consciencia IA', emoji: '🧠', description: 'PPS x500', initialCost: 6e40, costMultiplier: 8.0, type: 'autoMultiplier', value: 500.0, maxLevel: 1 },
+    { id: 'auto_mult_16', name: 'Máquina de Mundos', emoji: '🪐', description: 'PPS x750', initialCost: 6e44, costMultiplier: 8.5, type: 'autoMultiplier', value: 750.0, maxLevel: 1 },
+    { id: 'auto_mult_17', name: 'Universo Paralelo', emoji: '🌌', description: 'PPS x1000', initialCost: 6e48, costMultiplier: 9.0, type: 'autoMultiplier', value: 1000.0, maxLevel: 1 },
+    { id: 'auto_mult_18', name: 'Cosecha de Éteres', emoji: '👻', description: 'PPS x1500', initialCost: 6e52, costMultiplier: 9.5, type: 'autoMultiplier', value: 1500.0, maxLevel: 1 },
+    { id: 'auto_mult_19', name: 'El Todo', emoji: '🌐', description: 'PPS x2000', initialCost: 6e56, costMultiplier: 10.0, type: 'autoMultiplier', value: 2000.0, maxLevel: 1 },
+    { id: 'auto_mult_20', name: 'Fuente Primordial', emoji: '⛲', description: 'PPS x5000', initialCost: 1.5e60, costMultiplier: 10.0, type: 'autoMultiplier', value: 5000.0, maxLevel: 1 },
 
     // Sinergias (Especiales)
     { id: 'synergy_1', name: 'Sinergia Inicial', emoji: '🤝', description: '+0.1% PPS por nivel de Dedos Ágiles', initialCost: 5000, costMultiplier: 1.5, type: 'synergy', value: 0.001, targetUpgrade: 'click_1', targetStat: 'autoClickValue' },
