@@ -11,14 +11,15 @@ import {
     getUserId, getCurrentUsername, setAuthState, setIsShiftPressed, setIsGameLoaded, autoSaveInterval, 
     currentSkin, coins, skinsState, upgradeLevels, globalPresence, banExpiresAt, setGlobalPresence, 
     
-    prestigePoints, prestigeLevels, // NUEVO: Importar estado de prestigio
+    prestigePoints, prestigeLevels, startprestige, // NUEVO: Importar estado de prestigio
+    totalClickMultiplier, totalAutoMultiplier, // NUEVO: Importar multiplicadores totales
     
     resetGameState, recalculateStats, calculateMultiBuyCost, 
     handleManualClick, gameLoop, loadGameState, saveScore, loadLeaderboard,
     formatNumber, formatTime, initializeChat, triggerBan, checkBanStatus, buyUpgrade,
     setCurrentSkin, setCoins, updateSkinsState, spendCoins, sendChatMessage,
 
-    calculatePrestigeGain, performPrestige, buyPrestigeUpgrade // NUEVO: Importar funciones de prestigio
+    calculatePrestigeGain, performPrestige, buyPrestigeUpgrade, startPrestigeProcess // NUEVO: Importar funciones de prestigio
 
 } from './game_logic.js';
 
@@ -50,6 +51,7 @@ const DOM = {
     prestigePointsDisplay: document.getElementById('prestige-points-amount'),
     prestigeStoreContainer: document.getElementById('prestige-store-container'),
     prestigeButton: document.getElementById('prestige-button'),
+    prestigeStartButton: document.getElementById('prestige-start-button'), // NUEVO BOTÓN
     prestigeModalOverlay: document.getElementById('prestige-modal-overlay'),
     prestigeModalGain: document.getElementById('prestige-modal-gain'),
     prestigeModalTotalScore: document.getElementById('prestige-modal-total-score'),
@@ -190,8 +192,8 @@ export function updateUI() {
     levelDisplay.textContent = `Nivel: ${level} (x${levelMultiplier.toFixed(2)})`;
     xpBar.style.width = `${(xp / xpToNextLevel) * 100}%`;
 
-    // --- NUEVO: Actualizar botón de Prestigio ---
-    if (prestigeButton) {
+    // --- MODIFICADO: Actualizar botón de Prestigio (ahora depende de 'startprestige') ---
+    if (prestigeButton && startprestige === 1) { // Solo mostrar si el prestigio ha comenzado
         if (totalScore >= PRESTIGE_REQUIREMENT) {
             const gain = calculatePrestigeGain();
             prestigeButton.textContent = `¡Prestigio! (+${formatNumber(gain)} Pipas PIP)
@@ -205,8 +207,10 @@ export function updateUI() {
             prestigeButton.style.display = 'block';
             prestigeButton.classList.remove('affordable');
         }
+    } else if (prestigeButton) {
+        prestigeButton.style.display = 'none'; // Ocultar si startprestige no es 1
     }
-    // ------------------------------------------
+    // --------------------------------------------------------------------------
 
     UPGRADES_CONFIG.forEach(config => {
         const state = upgradeLevels[config.id];
@@ -234,6 +238,19 @@ export function updateUI() {
                  finalAmount = _MathMin(amountToBuy, remainingLevels);
             }
 
+            // --- NUEVO: Descripción dinámica de ganancia ---
+            let descriptionText = config.description;
+            if (config.type === 'clickValue') {
+                // Muestra la ganancia real por nivel (config.value) multiplicada por los multiplicadores
+                const gainPerLevel = config.value * totalClickMultiplier * levelMultiplier;
+                descriptionText = `+${formatNumber(gainPerLevel)} por clic`;
+            } else if (config.type === 'autoClickValue') {
+                // Muestra la ganancia real por nivel (config.value) multiplicada por los multiplicadores
+                const gainPerLevel = config.value * totalAutoMultiplier * levelMultiplier;
+                descriptionText = `+${formatNumber(gainPerLevel)} pps`;
+            }
+            // ----------------------------------------------
+
             // Actualizar descripción y nivel
             let levelText = `Nivel: ${currentLevel}`;
             if (config.maxLevel) {
@@ -242,7 +259,7 @@ export function updateUI() {
             if (isMaxed) {
                 levelText = "¡MAX!";
             }
-            statsEl.textContent = `${config.description} | ${levelText}`;
+            statsEl.textContent = `${descriptionText} | ${levelText}`; // Usar descripción dinámica
 
             // Actualizar coste y estado del botón
             if (isMaxed) {
@@ -316,6 +333,7 @@ export function initializeStore() {
         if (config.maxLevel) {
             levelText = `Nivel: ${state.level} / ${config.maxLevel}`;
         }
+        // La descripción dinámica se aplicará en updateUI
         statsSpan.textContent = `${config.description} | ${levelText}`;
 
         infoDiv.appendChild(nameStrong);
@@ -405,12 +423,28 @@ export function initializePrestigeStore() {
  * Actualiza la UI de la tienda de prestigio (costos, niveles, pipas).
  */
 export function updatePrestigeUI() {
-    const { prestigePointsDisplay } = DOM;
+    const { prestigePointsDisplay, prestigeStartButton, prestigeButton, prestigeStoreContainer } = DOM;
     
     if (prestigePointsDisplay) {
         prestigePointsDisplay.textContent = formatNumber(prestigePoints);
     }
     
+    // --- NUEVA LÓGICA: Mostrar/Ocultar basado en startprestige ---
+    if (startprestige === 0) {
+        // Aún no ha reseteado por primera vez
+        if (prestigeStartButton) prestigeStartButton.style.display = 'block';
+        if (prestigeButton) prestigeButton.style.display = 'none';
+        if (prestigeStoreContainer) prestigeStoreContainer.style.display = 'none';
+        if (prestigePointsDisplay) prestigePointsDisplay.style.display = 'none';
+    } else {
+        // Ya reseteó, mostrar la tienda de prestigio
+        if (prestigeStartButton) prestigeStartButton.style.display = 'none';
+        // (El botón de prestigiar se maneja en updateUI())
+        if (prestigeStoreContainer) prestigeStoreContainer.style.display = 'block';
+        if (prestigePointsDisplay) prestigePointsDisplay.style.display = 'block';
+    }
+    // -----------------------------------------------------------
+
     PRESTIGE_UPGRADES_CONFIG.forEach(config => {
         const state = prestigeLevels[config.id];
         if (!state) return;
@@ -948,7 +982,7 @@ function initializeEventListeners() {
     const { clickButton, tabButtons, mobileTabButtons, subTabButtons, registerBtn, loginBtn, logoutBtn, saveScoreBtn, modalBtnLater, modalBtnGo, modalBtnClose, musicToggleBtn, skinsGrid, chatSendBtn, chatInput, joinVoiceChatBtn, 
     
     // --- NUEVO: Listeners de Prestigio ---
-    prestigeButton, prestigeStoreContainer, modalBtnPrestigeCancel, modalBtnPrestigeConfirm
+    prestigeButton, prestigeStartButton, prestigeStoreContainer, modalBtnPrestigeCancel, modalBtnPrestigeConfirm
     
     } = DOM;
 
@@ -1039,6 +1073,7 @@ function initializeEventListeners() {
     });
 
     // --- NUEVO: Listeners de Modal de Prestigio ---
+    if (prestigeStartButton) prestigeStartButton.addEventListener('click', startPrestigeProcess); // NUEVO
     if (prestigeButton) prestigeButton.addEventListener('click', showPrestigeModal);
     if (modalBtnPrestigeCancel) modalBtnPrestigeCancel.addEventListener('click', hidePrestigeModal);
     if (modalBtnPrestigeConfirm) modalBtnPrestigeConfirm.addEventListener('click', () => {

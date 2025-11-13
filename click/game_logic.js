@@ -36,7 +36,13 @@ export let globalPresence = {};
 export let prestigePoints = 0; // "Pipas de Prestigio"
 export let totalPrestigePoints = 0; // Pipas totales ganadas (histórico)
 export let prestigeLevels = {}; // Niveles de las mejoras de prestigio
+export let startprestige = 0; // NUEVO: Flag para el reseteo inicial
 // ----------------------------------------------
+
+// --- NUEVO: Multiplicadores totales para la UI de la tienda ---
+export let totalClickMultiplier = 1; 
+export let totalAutoMultiplier = 1; 
+// -----------------------------------------------------------
 
 // Estas variables serán modificadas mediante funciones exportadas
 let internalUserId = null;
@@ -206,6 +212,7 @@ export function resetGameState(isLogout = false) {
         skinsState = JSON.parse(JSON.stringify(SKINS_CONFIG)); // Resetea skins
         currentSkin = 'default';
         coins = 0; // Un logout resetea las monedas
+        startprestige = 0; // NUEVO: Resetea el flag de inicio de prestigio
     }
     
     // Inicializar mejoras de prestigio si no existen (primera carga o post-logout)
@@ -345,31 +352,35 @@ export function recalculateStats() {
         }
     });
     
-    // 3. Aplicar todos los multiplicadores
-    let finalClickPower = (newClickPower);
-    finalClickPower *= (1 + clickMultiplierBonus);
-    finalClickPower *= (1 + synergyClickBonus);
-    finalClickPower *= (1 + levelClickBonus);
-    
-    let finalPPS = (newPPS);
-    finalPPS *= (1 + autoMultiplierBonus);
-    finalPPS *= (1 + synergyAutoBonus);
-    finalPPS *= (1 + levelAutoBonus);
+    // 3. --- NUEVO: Calcular Multiplicadores Totales ---
+    let prestigeClickMult = 1;
+    let prestigeAutoMult = 1;
 
-    // --- NUEVO: Aplicar Multiplicadores Globales de Prestigio ---
     if (Object.keys(prestigeLevels).length > 0) {
         PRESTIGE_UPGRADES_CONFIG.forEach(config => {
             const state = prestigeLevels[config.id];
             if (state && state.level > 0) {
                 if (config.type === 'globalClickMultiplier') {
-                    finalClickPower *= _MathPow(config.value, state.level);
+                    prestigeClickMult *= _MathPow(config.value, state.level);
                 } else if (config.type === 'globalAutoMultiplier') {
-                    finalPPS *= _MathPow(config.value, state.level);
+                    prestigeAutoMult *= _MathPow(config.value, state.level);
                 }
             }
         });
     }
-    // --------------------------------------------------------
+
+    // Multiplicador total para la UI (No incluye el levelMultiplier, que se muestra separado)
+    totalClickMultiplier = (1 + clickMultiplierBonus) * (1 + synergyClickBonus) * (1 + levelClickBonus) * prestigeClickMult;
+    totalAutoMultiplier = (1 + autoMultiplierBonus) * (1 + synergyAutoBonus) * (1 + levelAutoBonus) * prestigeAutoMult;
+    // ----------------------------------------------------
+
+
+    // 4. Aplicar todos los multiplicadores
+    let finalClickPower = (newClickPower);
+    finalClickPower *= totalClickMultiplier; // Usar el multiplicador total
+    
+    let finalPPS = (newPPS);
+    finalPPS *= totalAutoMultiplier; // Usar el multiplicador total
 
     // Asignar valores finales
     pps = finalPPS;
@@ -765,6 +776,7 @@ export async function loadGameState() {
             coins = savedState.coins || 0;
             currentSkin = savedState.currentSkin || 'default';
             banExpiresAt = savedState.banExpiresAt || 0;
+            startprestige = savedState.startprestige || 0; // NUEVO: Cargar flag
 
             // --- NUEVO: Cargar datos de Prestigio ---
             prestigePoints = savedState.prestigePoints || 0;
@@ -906,6 +918,7 @@ export async function saveScore(manual = false) {
         prestigePoints: prestigePoints, // NUEVO
         totalPrestigePoints: totalPrestigePoints, // NUEVO
         prestigeLevels: prestigeLevels, // NUEVO
+        startprestige: startprestige, // NUEVO: Guardar flag
         
         lastSeen: now
     };
@@ -963,7 +976,7 @@ export function initializeChat() {
         // Sin embargo, si Firebase procesa la suscripción ANTES de que termine 'get',
         // puede haber duplicados. Un patrón más robusto es usar onValue y un tracker de ID.
         // Para simplificar y mejorar la intensidad, usaremos onChildAdded para los nuevos,
-        // asumiendo que los mensajes históricos iniciales ya fueron mostrados.
+        A       // asumiendo que los mensajes históricos iniciales ya fueron mostrados.
         // Para evitar duplicados, solo usamos onChildAdded para mensajes con timestamp reciente.
         onChildAdded(chatRef, (snapshot) => {
              const data = snapshot.val();
@@ -1085,6 +1098,9 @@ export function loadLeaderboard() {
 
 // --- NUEVA SECCIÓN: LÓGICA DE PRESTIGIO ---
 
+// NUEVO: Límite máximo de ganancia de prestigio (respetando tu cambio)
+const MAX_PRESTIGE_GAIN = 1000; 
+
 /**
  * Calcula cuántas "Pipas de Prestigio" ganará el jugador.
  * @returns {number} - La cantidad de pipas a ganar.
@@ -1094,14 +1110,15 @@ export function calculatePrestigeGain() {
         return 0;
     }
     
-    // Fórmula: 1 Pipa por cada raíz cuadrada de (totalScore / Requisito)
-    // A 1T (req), ganas 1. A 4T, ganas 2. A 9T, ganas 3.
-    // Esto escala bien y recompensa la progresión exponencial.
-    const gain = _MathFloor(_MathSqrt(totalScore / PRESTIGE_REQUIREMENT));
+    // Fórmula MODIFICADA: 5 * (score / req) ^ 0.7
+    // Esto da más puntos que la raíz cuadrada (sqrt, ^0.5)
+    // pero sigue teniendo rendimientos decrecientes (menos de ^1).
+    const gain = _MathFloor(5 * _MathPow(totalScore / PRESTIGE_REQUIREMENT, 0.7));
     
-    // (Aquí se podrían añadir bonus futuros, ej: gain *= (1 + bonusPipas))
+    // Aplicar el máximo
+    const finalGain = _MathMin(gain, MAX_PRESTIGE_GAIN);
     
-    return _MathMax(1, gain); // Garantiza al menos 1 si cumples el requisito
+    return _MathMax(1, finalGain); // Garantiza al menos 1 si cumples el requisito
 }
 
 /**
@@ -1125,6 +1142,21 @@ export function performPrestige() {
     saveScore(false);
     
     // Actualizar la UI (la función la crearemos en ui_handlers.js)
+    updateUI();
+    updatePrestigeUI();
+    initializeStore(); // Reinicializar la tienda normal (costos reseteados)
+}
+
+/**
+ * NUEVO: Resetea el juego para HABILITAR el prestigio.
+ * Esta función es llamada por el nuevo botón.
+ */
+export function startPrestigeProcess() {
+    resetGameState(false); // Resetea puntos, mejoras, nivel
+    startprestige = 1;     // Pone la flag
+    saveScore(false);      // Guarda el estado
+    
+    // Actualiza la UI para mostrar la tienda de prestigio
     updateUI();
     updatePrestigeUI();
     initializeStore(); // Reinicializar la tienda normal (costos reseteados)

@@ -1068,6 +1068,28 @@
             opacity: 0.7;
             animation: none;
         }
+        
+        /* --- NUEVO: Estilo para el botón de inicio de prestigio --- */
+        #prestige-start-button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            background-color: #dc3545; /* Rojo de advertencia */
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            line-height: 1.4;
+            margin-bottom: 10px; /* Espacio antes del siguiente botón */
+        }
+        #prestige-start-button:hover {
+            background-color: #c82333;
+        }
+        /* --- FIN Estilos Prestigio --- */
+        
         #prestige-store-container {
             flex-grow: 1;
             overflow-y: auto;
@@ -1307,6 +1329,9 @@
                 <div id="prestige-content">
                     <h2>Prestigio (WIP)</h2>
                     <p id="prestige-points-display">Pipas de Prestigio: <span id="prestige-points-amount">0</span></p>
+                    
+                    <!-- === NUEVO: Botón de inicio de Prestigio === -->
+                    <button id="prestige-start-button" style="display: none;">Debes reiniciar tus puntos para empezar a prestigiar</button>
                     
                     <button id="prestige-button" disabled>Alcanza 1T Puntos</button>
                     
