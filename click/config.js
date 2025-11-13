@@ -306,64 +306,255 @@ export const PRESTIGE_REQUIREMENT = 1e12;
  * - 'xpGain': Multiplica la ganancia de XP.
  */
 export const PRESTIGE_UPGRADES_CONFIG = [
+    // --- TIER 1 (Costs 100M - 300M) ---
     { 
         id: 'prestige_click_1', 
         name: 'Pipa de Poder', 
         emoji: '💥', 
-        description: 'Multiplica x2 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 1, 
-        costMultiplier: 2.0, 
+        description: 'Multiplica x1.5 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e8, // 100M
+        costMultiplier: 1.5,
         type: 'globalClickMultiplier', 
-        value: 2 
+        value: 1.5
     },
     { 
         id: 'prestige_auto_1', 
         name: 'Pipa de Flujo', 
         emoji: '🌊', 
-        description: 'Multiplica x2 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 1, 
-        costMultiplier: 2.0, 
+        description: 'Multiplica x1.5 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1e8, // 100M
+        costMultiplier: 1.5,
         type: 'globalAutoMultiplier', 
-        value: 2 
-    },
-    { 
-        id: 'prestige_xp_1', 
-        name: 'Pipa de Sabiduría', 
-        emoji: '🧠', 
-        description: 'Ganas un 50% más de XP de todas las fuentes.', 
-        initialCost: 3, 
-        costMultiplier: 2.5, 
-        type: 'xpGain', 
-        value: 1.5 
+        value: 1.5
     },
     { 
         id: 'prestige_start_coins_1', 
         name: 'Bolsa de Monedas', 
         emoji: '💰', 
-        description: 'Empiezas cada reseteo con 100 monedas.', 
-        initialCost: 2, 
-        costMultiplier: 1.8, 
+        description: 'Empiezas cada reseteo con 1M monedas.', 
+        initialCost: 2e8, // 200M
+        costMultiplier: 1.6, 
         type: 'startingCoins', 
-        value: 100 
+        value: 1e6 // 1M
     },
+    { 
+        id: 'prestige_xp_1', 
+        name: 'Pipa de Sabiduría', 
+        emoji: '🧠', 
+        description: 'Ganas un 25% más de XP de todas las fuentes.', 
+        initialCost: 3e8, // 300M
+        costMultiplier: 1.7, 
+        type: 'xpGain', 
+        value: 1.25
+    },
+
+    // --- TIER 2 (Costs 1B - 5B) ---
     { 
         id: 'prestige_click_2', 
         name: 'Pipa de Poder II', 
         emoji: '🚀', 
-        description: 'Multiplica x3 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 10, 
-        costMultiplier: 2.2, 
+        description: 'Multiplica x2 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e9, // 1B
+        costMultiplier: 1.6,
         type: 'globalClickMultiplier', 
-        value: 3 
+        value: 2
     },
     { 
         id: 'prestige_auto_2', 
         name: 'Pipa de Flujo II', 
         emoji: '🌌', 
+        description: 'Multiplica x2 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1e9, // 1B
+        costMultiplier: 1.6,
+        type: 'globalAutoMultiplier', 
+        value: 2
+    },
+    { 
+        id: 'prestige_start_coins_2', 
+        name: 'Mochila de Monedas', 
+        emoji: '🎒', 
+        description: 'Empiezas con 100M monedas más.', 
+        initialCost: 2.5e9, // 2.5B
+        costMultiplier: 1.7, 
+        type: 'startingCoins', 
+        value: 1e8 // 100M
+    },
+    { 
+        id: 'prestige_xp_2', 
+        name: 'Pipa de Sabiduría II', 
+        emoji: '🎓', 
+        description: 'Ganas un 50% más de XP de todas las fuentes.', 
+        initialCost: 5e9, // 5B
+        costMultiplier: 1.8, 
+        type: 'xpGain', 
+        value: 1.5 
+    },
+
+    // --- TIER 3 (Costs 100B - 500B) ---
+    { 
+        id: 'prestige_click_3', 
+        name: 'Pipa de Poder III', 
+        emoji: '🌠', 
+        description: 'Multiplica x2.5 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e11, // 100B
+        costMultiplier: 1.8, 
+        type: 'globalClickMultiplier', 
+        value: 2.5 
+    },
+    { 
+        id: 'prestige_auto_3', 
+        name: 'Pipa de Flujo III', 
+        emoji: '✨', 
+        description: 'Multiplica x2.5 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1e11, // 100B
+        costMultiplier: 1.8, 
+        type: 'globalAutoMultiplier', 
+        value: 2.5 
+    },
+    { 
+        id: 'prestige_start_coins_3', 
+        name: 'Cofre de Monedas', 
+        emoji: '📦', 
+        description: 'Empiezas con 10B monedas más.', 
+        initialCost: 2.5e11, // 250B
+        costMultiplier: 1.9, 
+        type: 'startingCoins', 
+        value: 1e10 // 10B
+    },
+    { 
+        id: 'prestige_xp_3', 
+        name: 'Pipa de Sabiduría III', 
+        emoji: '📚', 
+        description: 'Ganas un 75% más de XP de todas las fuentes.', 
+        initialCost: 5e11, // 500B
+        costMultiplier: 2.0, 
+        type: 'xpGain', 
+        value: 1.75 
+    },
+
+    // --- TIER 4 (Costs 10T - 100T) ---
+    { 
+        id: 'prestige_click_4', 
+        name: 'Pipa de Poder IV', 
+        emoji: '⚡', 
+        description: 'Multiplica x3 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e13, // 10T
+        costMultiplier: 2.0, 
+        type: 'globalClickMultiplier', 
+        value: 3 
+    },
+    { 
+        id: 'prestige_auto_4', 
+        name: 'Pipa de Flujo IV', 
+        emoji: '💫', 
         description: 'Multiplica x3 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 10, 
-        costMultiplier: 2.2, 
+        initialCost: 1e13, // 10T
+        costMultiplier: 2.0, 
         type: 'globalAutoMultiplier', 
         value: 3 
     },
+    { 
+        id: 'prestige_start_coins_4', 
+        name: 'Bóveda de Monedas', 
+        emoji: '🏦', 
+        description: 'Empiezas con 1T monedas más.', 
+        initialCost: 5e13, // 50T
+        costMultiplier: 2.1, 
+        type: 'startingCoins', 
+        value: 1e12 // 1T
+    },
+    { 
+        id: 'prestige_xp_4', 
+        name: 'Pipa de Sabiduría IV', 
+        emoji: '🧘', 
+        description: 'Ganas un 100% (x2) más de XP de todas las fuentes.', 
+        initialCost: 1e14, // 100T
+        costMultiplier: 2.2, 
+        type: 'xpGain', 
+        value: 2 
+    },
+
+    // --- TIER 5 (Costs 10Qa - 100Qa) ---
+    { 
+        id: 'prestige_click_5', 
+        name: 'Pipa de Poder V', 
+        emoji: '👑', 
+        description: 'Multiplica x4 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e16, // 10Qa
+        costMultiplier: 2.2, 
+        type: 'globalClickMultiplier', 
+        value: 4 
+    },
+    { 
+        id: 'prestige_auto_5', 
+        name: 'Pipa de Flujo V', 
+        emoji: '💎', 
+        description: 'Multiplica x4 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1e16, // 10Qa
+        costMultiplier: 2.2, 
+        type: 'globalAutoMultiplier', 
+        value: 4 
+    },
+    { 
+        id: 'prestige_start_coins_5', 
+        name: 'Tesoro del Dragón', 
+        emoji: '🐉', 
+        description: 'Empiezas con 100T monedas más.', 
+        initialCost: 5e16, // 50Qa
+        costMultiplier: 2.3, 
+        type: 'startingCoins', 
+        value: 1e14 // 100T
+    },
+    { 
+        id: 'prestige_xp_5', 
+        name: 'Pipa de Sabiduría V', 
+        emoji: '🕉️', 
+        description: 'Ganas un 150% (x2.5) más de XP.', 
+        initialCost: 1e17, // 100Qa
+        costMultiplier: 2.4, 
+        type: 'xpGain', 
+        value: 2.5 
+    },
+
+    // --- TIER 6 (Costs 10Qi - 100Sx) ---
+    { 
+        id: 'prestige_click_6', 
+        name: 'Pipa de Poder VI', 
+        emoji: '🔥', 
+        description: 'Multiplica x5 tu poder de clic (PPC) permanentemente.', 
+        initialCost: 1e19, // 10Qi
+        costMultiplier: 2.5, 
+        type: 'globalClickMultiplier', 
+        value: 5 
+    },
+    { 
+        id: 'prestige_auto_6', 
+        name: 'Pipa de Flujo VI', 
+        emoji: '🪐', 
+        description: 'Multiplica x5 tu producción pasiva (PPS) permanentemente.', 
+        initialCost: 1e19, // 10Qi
+        costMultiplier: 2.5, 
+        type: 'globalAutoMultiplier', 
+        value: 5 
+    },
+    { 
+        id: 'prestige_start_coins_6', 
+        name: 'Fortuna Divina', 
+        emoji: '🙏', 
+        description: 'Empiezas con 100Qa monedas más.', 
+        initialCost: 5e20, // 500Qi
+        costMultiplier: 2.5, 
+        type: 'startingCoins', 
+        value: 1e17 // 100Qa
+    },
+    { 
+        id: 'prestige_xp_6', 
+        name: 'Pipa de Sabiduría VI', 
+        emoji: '👁️', 
+        description: 'Ganas un 200% (x3) más de XP.', 
+        initialCost: 1e23, // 100Sx (0.1Y)
+        costMultiplier: 3.0, 
+        type: 'xpGain', 
+        value: 3 
+    }
 ];
