@@ -3,7 +3,7 @@ import {
     PRESTIGE_REQUIREMENT, PRESTIGE_UPGRADES_CONFIG, // NUEVO: Importar config de prestigio
     auth, db, ref, set, query, orderByChild, limitToLast, onValue, get, onDisconnect, // voiceDb import REMOVED
     push, serverTimestamp, onChildAdded, 
-    _DateNow, _MathSqrt, _MathPow, _MathCeil, _MathRandom, _MathFloor, _MathAbs, _MathMin, _MathPI, _MathSin, _MathCos,
+    _DateNow, _MathSqrt, _MathPow, _MathCeil, _MathRandom, _MathFloor, _MathAbs, _MathMin, _MathMax, _MathPI, _MathSin, _MathCos, // <--- LÍNEA CORREGIDA
     bgPatternTemplates
 } from './config.js';
 import { 

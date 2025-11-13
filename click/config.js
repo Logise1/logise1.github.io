@@ -80,6 +80,7 @@ export const _MathRandom = Math.random;
 export const _MathFloor = Math.floor;
 export const _MathAbs = Math.abs;
 export const _MathMin = Math.min;
+export const _MathMax = Math.max; // <--- LÍNEA CORREGIDA (AÑADIDA)
 export const _MathPI = Math.PI;
 export const _MathSin = Math.sin;
 export const _MathCos = Math.cos;
