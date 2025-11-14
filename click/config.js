@@ -312,8 +312,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder', 
         emoji: '💥', 
         description: 'Multiplica x1.5 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 10, // Antes: 1e8
-        costMultiplier: 1.8, // Antes: 1.5
+        initialCost: 10, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 1.5
     },
@@ -322,8 +322,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo', 
         emoji: '🌊', 
         description: 'Multiplica x1.5 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 10, // Antes: 1e8
-        costMultiplier: 1.8, // Antes: 1.5
+        initialCost: 10, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 1.5
     },
@@ -332,18 +332,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Bolsa de Monedas', 
         emoji: '💰', 
         description: 'Empiezas cada reseteo con 1M monedas.', 
-        initialCost: 25, // Antes: 2e8
-        costMultiplier: 2.0, // Antes: 1.6
+        initialCost: 25, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e6 // 1M
+        value: 1e6
     },
     { 
         id: 'prestige_xp_1', 
         name: 'Pipa de Sabiduría', 
         emoji: '🧠', 
         description: 'Ganas un 25% más de XP de todas las fuentes.', 
-        initialCost: 50, // Antes: 3e8
-        costMultiplier: 2.2, // Antes: 1.7
+        initialCost: 50, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 1.25
     },
@@ -354,8 +354,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder II', 
         emoji: '🚀', 
         description: 'Multiplica x2 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 100, // Antes: 1e9
-        costMultiplier: 2.0, // Antes: 1.6
+        initialCost: 100, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 2
     },
@@ -364,8 +364,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo II', 
         emoji: '🌌', 
         description: 'Multiplica x2 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 100, // Antes: 1e9
-        costMultiplier: 2.0, // Antes: 1.6
+        initialCost: 100, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 2
     },
@@ -374,18 +374,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Mochila de Monedas', 
         emoji: '🎒', 
         description: 'Empiezas con 100M monedas más.', 
-        initialCost: 250, // Antes: 2.5e9
-        costMultiplier: 2.2, // Antes: 1.7
+        initialCost: 250, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e8 // 100M
+        value: 1e8
     },
     { 
         id: 'prestige_xp_2', 
         name: 'Pipa de Sabiduría II', 
         emoji: '🎓', 
         description: 'Ganas un 50% más de XP de todas las fuentes.', 
-        initialCost: 500, // Antes: 5e9
-        costMultiplier: 2.5, // Antes: 1.8
+        initialCost: 500, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 1.5 
     },
@@ -396,8 +396,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder III', 
         emoji: '🌠', 
         description: 'Multiplica x2.5 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 1000, // Antes: 1e11
-        costMultiplier: 2.2, // Antes: 1.8
+        initialCost: 1000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 2.5 
     },
@@ -406,8 +406,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo III', 
         emoji: '✨', 
         description: 'Multiplica x2.5 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 1000, // Antes: 1e11
-        costMultiplier: 2.2, // Antes: 1.8
+        initialCost: 1000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 2.5 
     },
@@ -416,18 +416,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Cofre de Monedas', 
         emoji: '📦', 
         description: 'Empiezas con 10B monedas más.', 
-        initialCost: 2500, // Antes: 2.5e11
-        costMultiplier: 2.5, // Antes: 1.9
+        initialCost: 2500, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e10 // 10B
+        value: 1e10
     },
     { 
         id: 'prestige_xp_3', 
         name: 'Pipa de Sabiduría III', 
         emoji: '📚', 
         description: 'Ganas un 75% más de XP de todas las fuentes.', 
-        initialCost: 5000, // Antes: 5e11
-        costMultiplier: 2.8, // Antes: 2.0
+        initialCost: 5000, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 1.75 
     },
@@ -438,8 +438,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder IV', 
         emoji: '⚡', 
         description: 'Multiplica x3 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 10000, // Antes: 1e13
-        costMultiplier: 2.5, // Antes: 2.0
+        initialCost: 10000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 3 
     },
@@ -448,8 +448,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo IV', 
         emoji: '💫', 
         description: 'Multiplica x3 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 10000, // Antes: 1e13
-        costMultiplier: 2.5, // Antes: 2.0
+        initialCost: 10000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 3 
     },
@@ -458,18 +458,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Bóveda de Monedas', 
         emoji: '🏦', 
         description: 'Empiezas con 1T monedas más.', 
-        initialCost: 50000, // Antes: 5e13
-        costMultiplier: 2.8, // Antes: 2.1
+        initialCost: 50000, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e12 // 1T
+        value: 1e12
     },
     { 
         id: 'prestige_xp_4', 
         name: 'Pipa de Sabiduría IV', 
         emoji: '🧘', 
         description: 'Ganas un 100% (x2) más de XP de todas las fuentes.', 
-        initialCost: 100000, // Antes: 1e14
-        costMultiplier: 3.0, // Antes: 2.2
+        initialCost: 100000, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 2 
     },
@@ -480,8 +480,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder V', 
         emoji: '👑', 
         description: 'Multiplica x4 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 150000, // Antes: 1e16
-        costMultiplier: 3.0, // Antes: 2.2
+        initialCost: 150000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 4 
     },
@@ -490,8 +490,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo V', 
         emoji: '💎', 
         description: 'Multiplica x4 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 150000, // Antes: 1e16
-        costMultiplier: 3.0, // Antes: 2.2
+        initialCost: 150000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 4 
     },
@@ -500,18 +500,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Tesoro del Dragón', 
         emoji: '🐉', 
         description: 'Empiezas con 100T monedas más.', 
-        initialCost: 500000, // Antes: 5e16
-        costMultiplier: 3.2, // Antes: 2.3
+        initialCost: 500000, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e14 // 100T
+        value: 1e14
     },
     { 
         id: 'prestige_xp_5', 
         name: 'Pipa de Sabiduría V', 
         emoji: '🕉️', 
         description: 'Ganas un 150% (x2.5) más de XP.', 
-        initialCost: 1000000, // 1M // Antes: 1e17
-        costMultiplier: 3.5, // Antes: 2.4
+        initialCost: 1000000, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 2.5 
     },
@@ -522,8 +522,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Poder VI', 
         emoji: '🔥', 
         description: 'Multiplica x5 tu poder de clic (PPC) permanentemente.', 
-        initialCost: 2000000, // 2M // Antes: 1e19
-        costMultiplier: 3.5, // Antes: 2.5
+        initialCost: 2000000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalClickMultiplier', 
         value: 5 
     },
@@ -532,8 +532,8 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Pipa de Flujo VI', 
         emoji: '🪐', 
         description: 'Multiplica x5 tu producción pasiva (PPS) permanentemente.', 
-        initialCost: 2000000, // 2M // Antes: 1e19
-        costMultiplier: 3.5, // Antes: 2.5
+        initialCost: 2000000, 
+        costMultiplier: 5.0, // Updated
         type: 'globalAutoMultiplier', 
         value: 5 
     },
@@ -542,18 +542,18 @@ export const PRESTIGE_UPGRADES_CONFIG = [
         name: 'Fortuna Divina', 
         emoji: '🙏', 
         description: 'Empiezas con 100Qa monedas más.', 
-        initialCost: 5000000, // 5M // Antes: 5e20
-        costMultiplier: 4.0, // Antes: 2.5
+        initialCost: 5000000, 
+        costMultiplier: 5.0, // Updated
         type: 'startingCoins', 
-        value: 1e17 // 100Qa
+        value: 1e17
     },
     { 
         id: 'prestige_xp_6', 
         name: 'Pipa de Sabiduría VI', 
         emoji: '👁️', 
         description: 'Ganas un 200% (x3) más de XP.', 
-        initialCost: 10000000, // 10M // Antes: 1e23
-        costMultiplier: 5.0, // Antes: 3.0
+        initialCost: 10000000, 
+        costMultiplier: 5.0, // Updated
         type: 'xpGain', 
         value: 3 
     }

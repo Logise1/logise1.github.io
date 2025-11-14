@@ -976,7 +976,7 @@ export function initializeChat() {
         // Sin embargo, si Firebase procesa la suscripción ANTES de que termine 'get',
         // puede haber duplicados. Un patrón más robusto es usar onValue y un tracker de ID.
         // Para simplificar y mejorar la intensidad, usaremos onChildAdded para los nuevos,
-        A       // asumiendo que los mensajes históricos iniciales ya fueron mostrados.
+        // asumiendo que los mensajes históricos iniciales ya fueron mostrados.
         // Para evitar duplicados, solo usamos onChildAdded para mensajes con timestamp reciente.
         onChildAdded(chatRef, (snapshot) => {
              const data = snapshot.val();
