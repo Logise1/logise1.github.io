@@ -16,84 +16,180 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos CSS (Compartidos) -->
+    <!-- Estilos CSS (Modo Oscuro y Rediseño) -->
     <style>
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #27293d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --border-color: #444455;
+            --primary-accent: #885fff;
+            --secondary-accent: #00e6a1;
+            --warning-accent: #ff8c00;
+            --purple-accent: #c56eff;
+            --danger-accent: #ff5572;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            color: #333;
             padding: 10px;
             box-sizing: border-box;
         }
-        h1 { color: #2c3e50; font-weight: 700; text-align: center; }
-        h3, h4 { color: #34495e; margin-bottom: 5px; }
+
+        h1, h3, h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+        }
         
         .view-container {
             width: 100%;
             max-width: 620px;
-            padding: 20px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            display: none; /* Oculto por defecto */
+            padding: 25px;
+            background-color: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
             flex-direction: column;
             align-items: center;
         }
+        
         #loginView { text-align: center; }
-        #loginError { color: #e74c3c; margin-top: 15px; min-height: 1.2em; font-size: 0.9rem; }
-        .login-input { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; box-sizing: border-box; }
-        .login-label { margin-top: 10px; display: block; text-align: left; font-weight: 600; color: #555; }
-        #dashboardView { text-align: center; }
-        #authStatus { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 15px; word-break: break-all; line-height: 1.4; }
-        .menu-buttons { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; }
-        .menu-buttons button {
-            background-color: #3498db; color: white; border: none; padding: 15px 30px; font-size: 1.2rem;
-            font-weight: 600; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        
+        #loginError {
+            color: var(--danger-accent);
+            margin-top: 15px;
+            min-height: 1.2em;
+            font-size: 0.9rem;
         }
-        .menu-buttons button:hover { background-color: #2980b9; }
-        .menu-buttons button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        .menu-buttons button#playAiButton { background-color: #1abc9c; }
-        .menu-buttons button#playAiButton:hover { background-color: #16a085; }
-        .menu-buttons button#playMatchmakingButton { background-color: #e67e22; }
-        .menu-buttons button#playMatchmakingButton:hover { background-color: #d35400; }
-        .menu-buttons button#playPuzzlesButton { background-color: #9b59b6; }
-        .menu-buttons button#playPuzzlesButton:hover { background-color: #8e44ad; }
-        .menu-buttons button#friendsButton { background-color: #34495e; }
-        .menu-buttons button#friendsButton:hover { background-color: #2c3e50; }
+        
+        .login-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 8px;
+            margin-top: 8px;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(136, 95, 255, 0.3);
+        }
+        
+        .login-label {
+            margin-top: 15px;
+            display: block;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        #dashboardView { text-align: center; }
+        
+        #authStatus {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        #authStatus strong {
+            color: var(--text-primary);
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 320px;
+        }
+        
+        button {
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--primary-accent);
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            background-color: #555;
+            color: #999;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .menu-buttons button {
+            font-size: 1.2rem;
+            padding: 16px 30px;
+        }
+        .menu-buttons button#playAiButton { background-color: var(--secondary-accent); color: #1e1e2e; }
+        .menu-buttons button#playMatchmakingButton { background-color: var(--warning-accent); color: #1e1e2e;}
+        .menu-buttons button#playPuzzlesButton { background-color: var(--purple-accent); }
+        .menu-buttons button#friendsButton { background-color: #5a6a8a; }
         
         #friendsView { text-align: center; }
         .setup-section { width: 100%; margin-top: 15px; }
-        .setup-section input[type="text"] { width: 90%; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; }
-        .setup-section button { background-color: #2ecc71; margin-top: 15px; }
-        .setup-section button:hover { background-color: #27ae60; }
+        
+        .setup-section input[type="text"] {
+            width: 90%;
+            padding: 12px;
+            font-size: 1rem;
+        }
+        .setup-section button {
+            background-color: var(--secondary-accent);
+            color: var(--bg-primary);
+            margin-top: 15px;
+        }
         
         .list-container {
-            width: 90%; max-height: 200px; overflow-y: auto; border: 1px solid #eee;
-            border-radius: 8px; margin-top: 15px; padding: 10px;
+            width: 90%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: var(--bg-primary);
         }
         .list-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px; border-bottom: 1px solid #f4f4f4; cursor: pointer; transition: background-color 0.2s;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
         }
         .list-item:last-child { border-bottom: none; }
-        .list-item:hover { background-color: #f9f9f9; }
-        .list-item span { font-weight: 600; color: #555; }
+        .list-item:hover { background-color: var(--bg-secondary); }
+        .list-item span { font-weight: 600; color: var(--text-primary); }
         
-        button {
-            background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 1rem;
-            font-weight: 600; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            margin-top: 10px; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        .back-button, #logoutButton {
+            background-color: var(--danger-accent);
         }
-        button:hover { background-color: #2980b9; }
-        .back-button { background-color: #e74c3c; margin-top: 20px; }
-        .back-button:hover { background-color: #c0392b; }
     </style>
 </head>
 <body>
@@ -110,7 +206,7 @@
         <div id="loginError"></div>
         <div class="menu-buttons" style="margin-top: 20px; flex-direction: row; justify-content: space-around; max-width: 350px;">
             <button id="loginButton" style="font-size: 1rem; padding: 12px 20px;">Iniciar Sesión</button>
-            <button id="registerButton" style="font-size: 1rem; padding: 12px 20px; background-color: #2ecc71;">Registrarse</button>
+            <button id="registerButton" style="font-size: 1rem; padding: 12px 20px; background-color: var(--secondary-accent); color: var(--bg-primary);">Registrarse</button>
         </div>
     </div>
 
@@ -124,7 +220,7 @@
             <button id="playPuzzlesButton" disabled>Jugar Problemas</button>
             <button id="friendsButton" disabled>Amigos</button>
         </div>
-        <button id="logoutButton" style="background-color: #e74c3c; margin-top: 20px; font-size: 0.9rem; padding: 10px 15px;">Cerrar Sesión</button>
+        <button id="logoutButton" style="margin-top: 20px; font-size: 0.9rem; padding: 10px 15px;">Cerrar Sesión</button>
     </div>
     
     <!-- Vista de Amigos -->
@@ -132,11 +228,11 @@
         <h1>Amigos</h1>
         <div class="setup-section" style="width: 90%;">
             <h4>Añadir Amigo por Usuario</h4>
-            <input type="text" id="addFriendUsernameInput" placeholder="Nombre de usuario del amigo">
+            <input type="text" id="addFriendUsernameInput" placeholder="Nombre de usuario del amigo" class="login-input" style="width:100%">
             <button id="addFriendButton">Añadir</button>
             <div id="addFriendStatus" style="font-size: 0.9rem; margin-top: 10px;"></div>
         </div>
-        <hr style="width:90%; margin: 20px 0; border: 1px solid #f0f2f5;">
+        <hr style="width:90%; margin: 20px 0; border: 1px solid var(--border-color);">
         <h4>Mi Lista de Amigos</h4>
         <div id="friendsListContainer" class="list-container">
             <!-- Los amigos se cargarán aquí dinámicamente -->
@@ -241,7 +337,7 @@
             friendsUnsubscribe = onSnapshot(friendsRef, (snapshot) => {
                 $list.empty();
                 if (snapshot.empty) {
-                    $list.html('<p style="color: #999;">No tienes amigos añadidos.</p>');
+                    $list.html('<p style="color: var(--text-secondary);">No tienes amigos añadidos.</p>');
                     return;
                 }
                 snapshot.forEach((doc) => {
@@ -259,15 +355,15 @@
             const $status = $('#addFriendStatus');
             
             if (!friendUsername) {
-                $status.text('Introduce un nombre de usuario.').removeClass('correct').addClass('incorrect');
+                $status.text('Introduce un nombre de usuario.').css('color', 'var(--danger-accent)');
                 return;
             }
             if (friendUsername === username) {
-                $status.text('No puedes añadirte a ti mismo.').removeClass('correct').addClass('incorrect');
+                $status.text('No puedes añadirte a ti mismo.').css('color', 'var(--danger-accent)');
                 return;
             }
             
-            $status.text('Buscando usuario...').removeClass('correct incorrect');
+            $status.text('Buscando usuario...').css('color', 'var(--text-secondary)');
             
             try {
                 const profilesRef = collection(db, 'artifacts', appId, 'public/data', 'userProfiles');
@@ -275,7 +371,7 @@
                 const querySnapshot = await getDocs(q);
                 
                 if (querySnapshot.empty) {
-                    $status.text('Usuario no encontrado.').removeClass('correct').addClass('incorrect');
+                    $status.text('Usuario no encontrado.').css('color', 'var(--danger-accent)');
                     return;
                 }
                 
@@ -289,12 +385,12 @@
                     addedAt: serverTimestamp()
                 });
                 
-                $status.text(`¡${friendUsername} añadido!`).removeClass('incorrect').addClass('correct');
+                $status.text(`¡${friendUsername} añadido!`).css('color', 'var(--secondary-accent)');
                 $('#addFriendUsernameInput').val('');
                 
             } catch (e) {
                 console.error("Error al añadir amigo:", e);
-                $status.text('Error al añadir amigo.').removeClass('correct').addClass('incorrect');
+                $status.text('Error al añadir amigo.').css('color', 'var(--danger-accent)');
             }
         }
         

@@ -16,32 +16,49 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos CSS (Compartidos) -->
+    <!-- Estilos CSS (Modo Oscuro y Rediseño) -->
     <style>
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #27293d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --border-color: #444455;
+            --primary-accent: #885fff;
+            --secondary-accent: #00e6a1;
+            --warning-accent: #ff8c00;
+            --danger-accent: #ff5572;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            color: #333;
             padding: 10px;
             box-sizing: border-box;
         }
-        h1 { color: #2c3e50; font-weight: 700; text-align: center; }
-        h3, h4 { color: #34495e; margin-bottom: 5px; }
+
+        h1, h3, h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+        }
         
         .view-container {
             width: 100%;
             max-width: 620px;
-            padding: 20px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            display: none; /* Oculto por defecto */
+            padding: 25px;
+            background-color: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
             flex-direction: column;
             align-items: center;
         }
@@ -51,51 +68,138 @@
         
         /* Slider de ELO */
         #eloSlider {
-            -webkit-appearance: none; width: 90%; height: 15px; border-radius: 5px;   
-            background: #d3d3d3; outline: none; opacity: 0.7;
-            -webkit-transition: .2s; transition: opacity .2s; margin-top: 10px;
+            -webkit-appearance: none;
+            width: 90%;
+            height: 10px;
+            border-radius: 5px;   
+            background: var(--bg-primary);
+            outline: none;
+            opacity: 0.8;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
         }
         #eloSlider:hover { opacity: 1; }
         #eloSlider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 25px; height: 25px;
-            border-radius: 50%; background: #1abc9c; cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%; 
+            background: var(--secondary-accent);
+            cursor: pointer;
+            border: 3px solid var(--bg-secondary);
+            box-shadow: 0 0 10px rgba(0, 230, 161, 0.5);
         }
         #eloSlider::-moz-range-thumb {
-            width: 25px; height: 25px; border-radius: 50%;
-            background: #1abc9c; cursor: pointer;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--secondary-accent);
+            cursor: pointer;
+            border: 3px solid var(--bg-secondary);
+            box-shadow: 0 0 10px rgba(0, 230, 161, 0.5);
+        }
+        #eloValue {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary-accent);
+            margin-top: 10px;
         }
         
         /* Matchmaking */
-        #matchmakingStatus { font-size: 1.2rem; font-weight: 600; color: #e67e22; margin: 20px 0; }
+        #matchmakingStatus {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--warning-accent);
+            margin: 20px 0;
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spinner {
-            border: 4px solid #f3f3f3; border-top: 4px solid #e67e22; border-radius: 50%;
-            width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px 0;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--warning-accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px 0;
         }
 
         /* --- Estilos del Juego --- */
         #gameView { width: 100%; }
         .board-container {
-            width: 100%; max-width: 600px; margin: 10px auto;
-            border: 2px solid #333; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            margin: 10px auto;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden; /* Para que el borde redondeado afecte al tablero */
         }
         #myBoard { width: 100%; border-radius: 6px; }
-        .status-container { margin-top: 15px; text-align: center; }
-        #status { font-size: 1.2rem; font-weight: 600; color: #16a085; min-height: 1.5rem; }
+        
+        .status-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        #status {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--secondary-accent);
+            min-height: 1.5rem;
+            margin-bottom: 10px;
+        }
         
         #pgn {
-            width: 95%; max-width: 600px; height: 80px; margin-top: 10px; font-family: monospace;
-            font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; padding: 5px;
+            width: 95%;
+            max-width: 600px;
+            height: 80px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
         }
+        
         button {
-            background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 1rem;
-            font-weight: 600; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            margin-top: 10px; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--primary-accent);
+            margin-top: 10px;
         }
-        button:hover { background-color: #2980b9; }
-        .game-info { text-align: center; font-size: 0.9rem; color: #7f8c8d; word-break: break-all; }
-        #backButton, .back-button { background-color: #e74c3c; margin-top: 20px; }
-        #backButton:hover, .back-button:hover { background-color: #c0392b; }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        #startAiGameButton {
+             background-color: var(--secondary-accent);
+             color: var(--bg-primary);
+        }
+        
+        .game-info {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+        
+        #backButton, .back-button {
+            background-color: var(--danger-accent);
+        }
+        
     </style>
 </head>
 <body>
@@ -104,9 +208,9 @@
     <div id="aiSetupView" class="view-container">
         <h1>Configurar Partida vs IA</h1>
         <div class="setup-section">
-            <h4>ELO (800 - 2800)</h4>
+            <h4>ELO</h4>
             <input type="range" id="eloSlider" min="800" max="2800" value="1500" step="100">
-            <span id="eloValue">1500</span>
+            <div id="eloValue">1500</div>
         </div>
         <button id="startAiGameButton">Empezar Partida</button>
         <button id="backButtonAi" class="back-button">Volver</button>
@@ -132,7 +236,7 @@
         <div class="status-container">
             <h3>Estado: <span id="status">Cargando...</span></h3>
             <div id="aiOnlineButtons">
-                <button id="newGameButton">Juego Nuevo</button>
+                <button id="newGameButton" style="background-color: #5a6a8a; font-size: 0.9rem; padding: 10px 15px;">Juego Nuevo</button>
             </div>
             <h4>Movimientos (PGN):</h4>
             <textarea id="pgn" readonly></textarea>
@@ -306,9 +410,13 @@
                 if (currentGameMode === 'online') {
                     if (game.turn() === playerColor) {
                         status += ' - ¡Es tu turno!';
+                        $status.css('color', 'var(--secondary-accent)');
                     } else {
                         status += ' - Turno del oponente.';
+                        $status.css('color', 'var(--warning-accent)');
                     }
+                } else {
+                    $status.css('color', 'var(--text-primary)');
                 }
             }
             $status.text(status);

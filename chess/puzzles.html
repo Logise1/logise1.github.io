@@ -16,99 +16,128 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos CSS (Compartidos) -->
+    <!-- Estilos CSS (Modo Oscuro y Rediseño) -->
     <style>
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #27293d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --border-color: #444455;
+            --primary-accent: #885fff;
+            --secondary-accent: #00e6a1;
+            --warning-accent: #ffc107; /* Amarillo para Pista */
+            --danger-accent: #ff5572;
+            --correct-accent: #2ecc71; /* Verde para correcto */
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            color: #333;
             padding: 10px;
             box-sizing: border-box;
         }
-        h1 { color: #2c3e50; font-weight: 700; text-align: center; }
-        h3, h4 { color: #34495e; margin-bottom: 5px; }
+
+        h1, h3, h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+        }
         
         .view-container {
             width: 100%;
             max-width: 620px;
-            padding: 20px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            display: none; /* Oculto por defecto */
+            padding: 25px;
+            background-color: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex; /* Modificado: Mostrar por defecto */
             flex-direction: column;
             align-items: center;
         }
 
-        #puzzlesView { text-align: center; }
-        
-        /* Listas (Problemas) */
-        .list-container {
-            width: 90%;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            margin-top: 15px;
-            padding: 10px;
-        }
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #f4f4f4;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .list-item:last-child { border-bottom: none; }
-        .list-item:hover { background-color: #f9f9f9; }
-        .list-item span { font-weight: 600; color: #555; }
-        
         /* --- Estilos del Juego --- */
         #gameView { width: 100%; }
         .board-container {
-            width: 100%; max-width: 600px; margin: 10px auto;
-            border: 2px solid #333; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            margin: 10px auto;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
         #myBoard { width: 100%; border-radius: 6px; }
-        .status-container { margin-top: 15px; text-align: center; }
-        #status { font-size: 1.2rem; font-weight: 600; color: #16a085; min-height: 1.5rem; }
-        #puzzleStatus {
-            font-size: 1.1rem; font-weight: 600;
-            min-height: 1.4rem; margin-top: 10px;
+        
+        .status-container {
+            margin-top: 15px;
+            text-align: center;
         }
-        #puzzleStatus.correct { color: #2ecc71; }
-        #puzzleStatus.incorrect { color: #e74c3c; }
+        #status {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-height: 1.5rem;
+            margin-bottom: 10px;
+        }
+        #puzzleStatus {
+            font-size: 1.1rem;
+            font-weight: 600;
+            min-height: 1.4rem;
+            margin-top: 10px;
+        }
+        #puzzleStatus.correct { color: var(--correct-accent); }
+        #puzzleStatus.incorrect { color: var(--danger-accent); }
         
         button {
-            background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 1rem;
-            font-weight: 600; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            margin-top: 10px; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--primary-accent);
+            margin-top: 10px;
         }
-        button:hover { background-color: #2980b9; }
-        #backButton, .back-button { background-color: #e74c3c; margin-top: 20px; }
-        #backButton:hover, .back-button:hover { background-color: #c0392b; }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        #backButton, .back-button {
+            background-color: var(--danger-accent);
+        }
+        
+        /* --- NUEVO: Botón de Pista --- */
+        #hintButton {
+            background-color: var(--warning-accent);
+            color: var(--bg-primary);
+            font-size: 1rem;
+            padding: 10px 18px;
+            margin: 10px 0;
+        }
+        
+        /* --- NUEVO: Resaltado de Pista --- */
+        .highlight-hint {
+            /* Usar un brillo amarillo para la pista */
+            box-shadow: inset 0 0 15px 5px rgba(255, 193, 7, 0.7) !important;
+        }
+        
     </style>
 </head>
 <body>
     
-    <!-- Vista de Problemas -->
-    <div id="puzzlesView" class="view-container">
-        <h1>Problemas de Ajedrez</h1>
-        <h4>Selecciona un problema</h4>
-        <div id="puzzleListContainer" class="list-container">
-            <!-- Los problemas se cargarán aquí -->
-        </div>
-        <button id="backButtonPuzzles" class="back-button">Volver</button>
-    </div>
-
     <!-- Vista del Juego (para Problemas) -->
     <div id="gameView" class="view-container">
         <h1 id="gameTitle">Problema</h1>
@@ -118,11 +147,10 @@
         <div class="status-container">
             <h3>Estado: <span id="status">Cargando...</span></h3>
             <div id="puzzleStatus"></div>
-            <div id="puzzleButtons" style="display: none;">
-                <button id="nextPuzzleButton" style="background-color: #2ecc71;">Siguiente Problema</button>
-            </div>
+            <!-- NUEVO: Botón de Pista añadido -->
+            <button id="hintButton" style="display: none;">Pedir Pista</button>
         </div>
-        <button id="backButton">Volver a la Lista</button>
+        <button id="backButton">Volver al Menú</button>
     </div>
 
     <!-- SDKs de Firebase (v11.6.1) -->
@@ -139,6 +167,9 @@
         var playerColor = 'w';
 
         var auth;
+        
+        var stockfish = null;
+        var stockfishReady = false;
         
         var firebaseConfig = {
             apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
@@ -167,13 +198,13 @@
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                getFirestore(app); // Inicializar Firestore, aunque no se use mucho aquí
+                getFirestore(app); // Inicializar Firestore
                 setLogLevel('Debug'); 
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         console.log("Usuario autenticado, cargando puzzles.");
-                        loadPuzzlesListAndShow();
+                        initStockfish(startRandomPuzzle);
                     } else {
                         console.log("Sin usuario, redirigiendo a login.");
                         window.location.href = 'index.html';
@@ -185,7 +216,90 @@
                 window.location.href = 'index.html';
             }
         }
+        
+        /**
+         * Inicializa el motor de Stockfish para calcular soluciones
+         */
+        async function initStockfish(readyCallback) {
+            if (stockfish) {
+                stockfish.postMessage('ucinewgame');
+                if (readyCallback) readyCallback();
+                return;
+            }
+            try {
+                console.log('Cargando motor de IA...');
+                
+                const response = await fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+                if (!response.ok) throw new Error(`Error al descargar stockfish.js: ${response.statusText}`);
+                const scriptText = await response.text();
+                const blob = new Blob([scriptText], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                stockfish = new Worker(blobUrl);
+                
+                stockfish.onmessage = function(event) {
+                    var message = event.data;
+                    console.log("Stockfish (Puzzles):", message);
 
+                    if (message === 'uciok') {
+                        stockfish.postMessage('isready');
+                    } else if (message === 'readyok') {
+                        console.log('Motor listo para puzzles.');
+                        stockfishReady = true;
+                        if (readyCallback) readyCallback();
+                    }
+                };
+                stockfish.postMessage('uci');
+            } catch (e) {
+                console.error("No se pudo inicializar Stockfish:", e);
+                alert("Error al cargar la IA para resolver problemas.");
+            }
+        }
+
+        /**
+         * Pide a Stockfish el mejor movimiento para un FEN
+         */
+        function getBestMove(fen, callback) {
+            if (!stockfishReady) {
+                console.error("Stockfish no está listo.");
+                $status.text("Error: La IA no está lista.");
+                return;
+            }
+            
+            const moveCallback = (event) => {
+                 var message = event.data;
+                 if (message.startsWith('bestmove')) {
+                    var bestmove = message.split(' ')[1];
+                    stockfish.removeEventListener('message', moveCallback);
+                    callback(bestmove);
+                 }
+            };
+            
+            stockfish.addEventListener('message', moveCallback);
+            stockfish.postMessage('ucinewgame');
+            stockfish.postMessage('position fen ' + fen);
+            stockfish.postMessage('go depth 15');
+        }
+        
+        // --- NUEVA FUNCIÓN: Mostrar Pista ---
+        function showHint() {
+            if (!currentPuzzle || currentPuzzle.solution.length === 0) {
+                $('#puzzleStatus').text('La pista no está lista (IA calculando).').addClass('incorrect');
+                return;
+            }
+            
+            const fromSquare = currentPuzzle.solution[0].substring(0, 2);
+            // Encontrar la casilla usando la clase específica de chessboard.js
+            const $squareEl = $('#myBoard .square-' + fromSquare);
+            
+            $squareEl.addClass('highlight-hint');
+            
+            // Quitar la pista después de un tiempo
+            setTimeout(() => {
+                $squareEl.removeClass('highlight-hint');
+            }, 1000); // 1 segundo de pista
+        }
+        
         function updateStatus() {
             var status = '';
             var moveColor = (game.turn() === 'w') ? 'Blancas' : 'Negras';
@@ -195,9 +309,13 @@
             } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition() || game.insufficient_material()) {
                 status = 'Tablas';
             } else {
-                status = `Problema: ${currentPuzzle.name}. Mueven ${moveColor}`;
-                if (game.in_check()) {
-                    status += ' (¡Jaque!)';
+                if (currentPuzzle) {
+                    status = `Problema #${currentPuzzle.index + 1}. Mueven ${moveColor}`;
+                    if (game.in_check()) {
+                        status += ' (¡Jaque!)';
+                    }
+                } else {
+                    status = 'Cargando problema...';
                 }
             }
             $status.text(status);
@@ -210,7 +328,10 @@
         }
 
         async function onDrop(source, target) {
-            if (!currentPuzzle) return 'snapback';
+            if (!currentPuzzle || currentPuzzle.solution.length === 0) {
+                $puzzleStatus.text('Espera a que la IA calcule la solución...').addClass('incorrect');
+                return 'snapback';
+            }
             
             var moveNotation = source + target;
             const $puzzleStatus = $('#puzzleStatus');
@@ -222,22 +343,12 @@
                 currentPuzzleStep++;
                 
                 if (currentPuzzleStep === currentPuzzle.solution.length) {
-                    $puzzleStatus.text('¡Correcto! Problema resuelto.').removeClass('incorrect').addClass('correct');
+                    $puzzleStatus.text('¡Correcto! Cargando siguiente problema...').removeClass('incorrect').addClass('correct');
                     makingMove = true;
-                    $('#nextPuzzleButton').show();
-                } else {
-                    $puzzleStatus.text('¡Correcto!').removeClass('incorrect').addClass('correct');
-                    makingMove = true;
-                    
-                    setTimeout(() => {
-                        const opponentMove = currentPuzzle.solution[currentPuzzleStep];
-                        game.move(opponentMove, { sloppy: true });
-                        board.position(game.fen());
-                        currentPuzzleStep++;
-                        makingMove = false;
-                        updateStatus();
-                    }, 500);
-                }
+                    $('#hintButton').hide(); // Ocultar pista al resolver
+                    setTimeout(startRandomPuzzle, 1500); 
+                } 
+                
             } else {
                 $puzzleStatus.text('Movimiento incorrecto. Inténtalo de nuevo.').removeClass('correct').addClass('incorrect');
                 return 'snapback';
@@ -260,7 +371,6 @@
         }
         
         function initGame(options = {}) {
-            showView('gameView');
             
             if (board === null) {
                 board = Chessboard('myBoard', config);
@@ -270,10 +380,12 @@
             game.reset();
             makingMove = false;
             $('#puzzleStatus').text('').removeClass('correct incorrect');
+            $('#hintButton').show(); // Mostrar botón de pista
 
             if (options.puzzleIndex >= puzzles.length) {
                 console.error("Índice de problema fuera de rango");
-                showView('puzzlesView');
+                alert('Error: No se pueden cargar problemas.');
+                window.location.href = 'index.html';
                 return;
             }
             
@@ -285,23 +397,53 @@
             board.position(currentPuzzle.fen);
             board.orientation(playerColor === 'w' ? 'white' : 'black');
             
-            $('#gameTitle').text('Problema de Ajedrez');
-            $('#puzzleButtons').show();
-            $('#nextPuzzleButton').hide();
+            $('#gameTitle').text(`Problema #${currentPuzzle.index + 1}`);
             
-            updateStatus();
+            if (!stockfishReady) {
+                $status.text("La IA aún está cargando. Por favor, espera...");
+                setTimeout(() => initGame(options), 1000);
+                return;
+            }
+            
+            makingMove = true;
+            $status.text(`Calculando solución para ${currentPuzzle.name}...`);
+            $('#hintButton').prop('disabled', true); // Desactivar pista mientras se calcula
+
+            getBestMove(currentPuzzle.fen, (bestmove) => {
+                console.log(`Solución calculada para ${currentPuzzle.name}: ${bestmove}`);
+                currentPuzzle.solution = [bestmove];
+                makingMove = false;
+                $('#hintButton').prop('disabled', false); // Activar pista
+                updateStatus();
+            });
         }
         
+        /**
+         * Carga los problemas desde la URL externa
+         */
         async function fetchPuzzles() {
             if (puzzles.length > 0) return; 
 
             try {
-                const response = await fetch('https://logise1.github.io/chess/problems.array');
+                const response = await fetch('https://logise1.github.io/chess/puzzles.fen');
                 if (!response.ok) {
-                    throw new Error('No se pudo cargar la lista de problemas.');
+                    throw new Error('No se pudo cargar la lista de problemas (puzzles.fen).');
                 }
-                const data = await response.json();
-                puzzles = data;
+                const data = await response.text();
+                
+                puzzles = data.split('\n')
+                              .filter(fen => fen.trim() !== '')
+                              .map((fen, index) => {
+                                  const turn = fen.split(' ')[1] || 'w';
+                                  return { 
+                                      name: `Problema #${index + 1}`,
+                                      index: index,
+                                      fen: fen, 
+                                      turn: turn, 
+                                      solution: []
+                                  };
+                              });
+                
                 console.log('Problemas cargados:', puzzles.length);
             } catch (error) {
                 console.error('Error al cargar problemas:', error);
@@ -309,58 +451,47 @@
             }
         }
         
-        function loadPuzzlesList() {
-            const $list = $('#puzzleListContainer');
-            $list.empty();
-            
+        /**
+         * Inicia el bucle de puzzles aleatorios
+         */
+        async function startRandomPuzzle() {
+            if (!stockfishReady) {
+                $status.text("Iniciando IA...");
+                initStockfish(startRandomPuzzle);
+                return;
+            }
+
             if (puzzles.length === 0) {
-                 $list.html('<p style="color: #999;">No hay problemas disponibles o error al cargar.</p>');
-                 return;
+                $status.text("Cargando problemas...");
+                await fetchPuzzles();
+            }
+
+            if (puzzles.length === 0) {
+                $status.text("Error al cargar problemas.");
+                alert("No se pudieron cargar los problemas. Volviendo al menú.");
+                window.location.href = 'index.html';
+                return;
             }
             
-            puzzles.forEach((puzzle, index) => {
-                $list.append(`
-                    <div class="list-item" data-puzzle-index="${index}">
-                        <span>${puzzle.name}</span>
-                        <small>${puzzle.fen.split(' ')[1] === 'w' ? 'Juegan Blancas' : 'Juegan Negras'}</small>
-                    </div>
-                `);
-            });
+            // Mostrar la vista del juego (ya debería estar visible)
+            showView('gameView');
+
+            const randomIndex = Math.floor(Math.random() * puzzles.length);
             
-            // Añadir listener
-            $('.list-item[data-puzzle-index]').off('click').on('click', function() {
-                const index = $(this).data('puzzle-index');
-                initGame({ puzzleIndex: index });
-            });
+            initGame({ puzzleIndex: randomIndex });
         }
         
-        async function loadPuzzlesListAndShow() {
-            const $list = $('#puzzleListContainer');
-            $list.html('<p style="color: #999;">Cargando problemas...</p>');
-            showView('puzzlesView');
-            await fetchPuzzles();
-            loadPuzzlesList();
-        }
-
         $(document).ready(function() {
             
             initFirebase();
             
             // Botones "Volver"
-            $('#backButtonPuzzles').on('click', () => window.location.href = 'index.html');
-            
             $('#backButton').on('click', () => {
-                loadPuzzlesListAndShow();
+                window.location.href = 'index.html';
             });
             
-            $('#nextPuzzleButton').on('click', () => {
-                let nextIndex = puzzles.indexOf(currentPuzzle) + 1;
-                if (nextIndex >= puzzles.length) {
-                    showView('puzzlesView');
-                } else {
-                    initGame({ puzzleIndex: nextIndex });
-                }
-            });
+            // --- NUEVO: Listener para el botón de pista ---
+            $('#hintButton').on('click', showHint);
         });
 
     </script>
