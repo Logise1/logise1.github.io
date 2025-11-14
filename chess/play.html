@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jugar al Ajedrez</title>
+    
+    <!-- CSS de Chessboard.js (Corregido 'xintegrity' a 'integrity') -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
+          xintegrity="sha384-q94tEGFzGMnEmBVSgTRkVgPjwitM/ltLMgSviRrkCklbciTrHEISjeJydPxL/mHk"
+          crossorigin="anonymous">
+    
+    <!-- Biblioteca de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos CSS (Compartidos) -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        h1 { color: #2c3e50; font-weight: 700; text-align: center; }
+        h3, h4 { color: #34495e; margin-bottom: 5px; }
+        
+        .view-container {
+            width: 100%;
+            max-width: 620px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #aiSetupView, #matchmakingView { text-align: center; }
+        .setup-section { width: 100%; margin-top: 15px; }
+        
+        /* Slider de ELO */
+        #eloSlider {
+            -webkit-appearance: none; width: 90%; height: 15px; border-radius: 5px;   
+            background: #d3d3d3; outline: none; opacity: 0.7;
+            -webkit-transition: .2s; transition: opacity .2s; margin-top: 10px;
+        }
+        #eloSlider:hover { opacity: 1; }
+        #eloSlider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 25px; height: 25px;
+            border-radius: 50%; background: #1abc9c; cursor: pointer;
+        }
+        #eloSlider::-moz-range-thumb {
+            width: 25px; height: 25px; border-radius: 50%;
+            background: #1abc9c; cursor: pointer;
+        }
+        
+        /* Matchmaking */
+        #matchmakingStatus { font-size: 1.2rem; font-weight: 600; color: #e67e22; margin: 20px 0; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid #e67e22; border-radius: 50%;
+            width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px 0;
+        }
+
+        /* --- Estilos del Juego --- */
+        #gameView { width: 100%; }
+        .board-container {
+            width: 100%; max-width: 600px; margin: 10px auto;
+            border: 2px solid #333; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        #myBoard { width: 100%; border-radius: 6px; }
+        .status-container { margin-top: 15px; text-align: center; }
+        #status { font-size: 1.2rem; font-weight: 600; color: #16a085; min-height: 1.5rem; }
+        
+        #pgn {
+            width: 95%; max-width: 600px; height: 80px; margin-top: 10px; font-family: monospace;
+            font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; padding: 5px;
+        }
+        button {
+            background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 1rem;
+            font-weight: 600; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 10px; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        button:hover { background-color: #2980b9; }
+        .game-info { text-align: center; font-size: 0.9rem; color: #7f8c8d; word-break: break-all; }
+        #backButton, .back-button { background-color: #e74c3c; margin-top: 20px; }
+        #backButton:hover, .back-button:hover { background-color: #c0392b; }
+    </style>
+</head>
+<body>
+
+    <!-- Vista de Configuración IA -->
+    <div id="aiSetupView" class="view-container">
+        <h1>Configurar Partida vs IA</h1>
+        <div class="setup-section">
+            <h4>ELO (800 - 2800)</h4>
+            <input type="range" id="eloSlider" min="800" max="2800" value="1500" step="100">
+            <span id="eloValue">1500</span>
+        </div>
+        <button id="startAiGameButton">Empezar Partida</button>
+        <button id="backButtonAi" class="back-button">Volver</button>
+    </div>
+
+    <!-- Vista de Matchmaking -->
+    <div id="matchmakingView" class="view-container">
+        <h1>Buscando Partida</h1>
+        <div id="matchmakingStatus">Buscando oponente...</div>
+        <div class="spinner"></div>
+        <button id="cancelMatchmakingButton" class="back-button">Cancelar Búsqueda</button>
+    </div>
+
+    <!-- Vista del Juego (Reutilizada para IA y Online) -->
+    <div id="gameView" class="view-container">
+        <h1 id="gameTitle">Ajedrez</h1>
+        <div class="game-info">
+            <span id="gameIdDisplay"></span>
+        </div>
+        <div class="board-container">
+            <div id="myBoard"></div>
+        </div>
+        <div class="status-container">
+            <h3>Estado: <span id="status">Cargando...</span></h3>
+            <div id="aiOnlineButtons">
+                <button id="newGameButton">Juego Nuevo</button>
+            </div>
+            <h4>Movimientos (PGN):</h4>
+            <textarea id="pgn" readonly></textarea>
+        </div>
+        <button id="backButton">Volver al Menú</button>
+    </div>
+
+    <!-- SDKs de Firebase (v11.6.1) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, updateDoc, onSnapshot, collection,
+            query, where, getDocs, addDoc, deleteDoc, runTransaction,
+            limit, serverTimestamp, setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Variables Globales ---
+        var board = null;
+        var game = new Chess();
+        var $status = $('#status');
+        var $pgn = $('#pgn');
+        var stockfish = null;
+        var makingMove = false;
+        var currentGameMode = null; // 'ai', 'online'
+        var playerColor = 'w';
+        var currentGameRef = null;
+
+        var db, auth;
+        var appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        var userId;
+        var username;
+        
+        var firebaseConfig = {
+            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
+            authDomain: "chess-a9347.firebaseapp.com",
+            projectId: "chess-a9347",
+            storageBucket: "chess-a9347.firebasestorage.app",
+            messagingSenderId: "950558367537",
+            appId: "1:950558367537:web:4cee83e2053262a4541a10",
+            measurementId: "G-Z3KNSZBL2F"
+        };
+        
+        var gameUnsubscribe = null; 
+        var matchmakingUnsubscribe = null;
+        var myMatchmakingDocRef = null;
+
+        var config = {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd,
+            pieceTheme: getPieceTheme
+        };
+
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug'); 
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        username = user.email ? user.email.split('@')[0] : 'Usuario';
+                        console.log("Usuario autenticado:", userId, username);
+                        
+                        // Iniciar modo de juego
+                        const mode = getUrlParameter('mode');
+                        if (mode === 'ai') {
+                            showView('aiSetupView');
+                        } else if (mode === 'online') {
+                            startMatchmaking();
+                        } else {
+                            window.location.href = 'index.html'; // Modo no válido
+                        }
+                    } else {
+                        console.log("Sin usuario, redirigiendo a login.");
+                        window.location.href = 'index.html';
+                    }
+                });
+            } catch (e) {
+                console.error("Error al inicializar Firebase:", e);
+                alert('Error al cargar Firebase. Volviendo al inicio.');
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function initStockfish(elo) {
+            let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 800) / 100)));
+            console.log(`Iniciando Stockfish con ELO: ${elo} (Nivel: ${skillLevel})`);
+            
+            if (stockfish) {
+                stockfish.postMessage('ucinewgame');
+                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+                return;
+            }
+            
+            try {
+                $status.text('Cargando motor de IA...');
+                const response = await fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+                if (!response.ok) throw new Error(`Error al descargar stockfish.js: ${response.statusText}`);
+                const scriptText = await response.text();
+                const blob = new Blob([scriptText], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                stockfish = new Worker(blobUrl);
+
+                stockfish.onmessage = function(event) {
+                    var message = event.data;
+                    console.log("Stockfish:", message);
+
+                    if (message === 'uciok') {
+                        stockfish.postMessage('isready');
+                    } else if (message === 'readyok') {
+                        $status.text('Motor listo. ¡Juegas tú!');
+                        stockfish.postMessage('ucinewgame');
+                        stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+                    } else if (message.startsWith('bestmove')) {
+                        var bestmove = message.split(' ')[1];
+                        game.move(bestmove, { sloppy: true });
+                        board.position(game.fen());
+                        updateStatus();
+                        makingMove = false;
+                    }
+                };
+                stockfish.postMessage('uci');
+            } catch (e) {
+                console.error("No se pudo inicializar Stockfish:", e);
+                $status.text("Error al cargar la IA.");
+            }
+        }
+
+        function getBestMove() {
+            if (game.game_over()) return;
+            makingMove = true;
+            $status.text('La IA está pensando...');
+            stockfish.postMessage('position fen ' + game.fen());
+            stockfish.postMessage('go depth 15');
+        }
+
+        function updateStatus() {
+            var status = '';
+            var moveColor = (game.turn() === 'w') ? 'Blancas' : 'Negras';
+
+            if (game.in_checkmate()) {
+                status = '¡Jaque Mate! Ganaron las ' + (game.turn() === 'w' ? 'Negras' : 'Blancas');
+            } else if (game.in_draw()) {
+                status = 'Tablas (Empate)';
+            } else if (game.in_stalemate()) {
+                status = 'Tablas (Ahogado)';
+            } else if (game.in_threefold_repetition()) {
+                status = 'Tablas (Repetición)';
+            } else if (game.insufficient_material()) {
+                status = 'Tablas (Material insuficiente)';
+            } else {
+                status = 'Mueven las ' + moveColor;
+                if (game.in_check()) {
+                    status += ' (¡Jaque!)';
+                }
+                
+                if (currentGameMode === 'online') {
+                    if (game.turn() === playerColor) {
+                        status += ' - ¡Es tu turno!';
+                    } else {
+                        status += ' - Turno del oponente.';
+                    }
+                }
+            }
+            $status.text(status);
+            $pgn.val(game.pgn({ max_width: 5, newline_char: '\n' }));
+            $pgn.scrollTop($pgn[0].scrollHeight);
+        }
+
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+            if (makingMove) return false;
+
+            if (currentGameMode === 'ai') {
+                if (piece.search(playerColor) === -1) return false;
+            } else if (currentGameMode === 'online') {
+                if (game.turn() !== playerColor) return false;
+                if (piece.search(playerColor) === -1) return false;
+            }
+        }
+
+        async function onDrop(source, target) {
+            var move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            updateStatus(); 
+
+            if (currentGameMode === 'ai') {
+                window.setTimeout(getBestMove, 250);
+            } else if (currentGameMode === 'online') {
+                makingMove = true; 
+                try {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public/data', 'games', currentGameRef.id), {
+                        fen: game.fen(),
+                        pgn: game.pgn(),
+                        turn: game.turn()
+                    });
+                } catch (e) {
+                    console.error("Error al actualizar la partida:", e);
+                    $status.text("Error de conexión al mover.");
+                    game.undo();
+                }
+            }
+        }
+
+        function onSnapEnd() {
+            board.position(game.fen());
+        }
+
+        function getPieceTheme(piece) {
+            var pieceName = piece.toLowerCase(); 
+            return 'https://logise1.github.io/chess/assets/' + pieceName + '.png';
+        }
+        
+        function showView(viewId) {
+            $('.view-container').hide();
+            $('#' + viewId).css('display', 'flex');
+        }
+        
+        function initGame(mode, options = {}) {
+            currentGameMode = mode;
+            showView('gameView');
+            
+            if (board === null) {
+                board = Chessboard('myBoard', config);
+                $(window).resize(board.resize);
+            }
+            
+            game.reset();
+            makingMove = false;
+
+            if (gameUnsubscribe) gameUnsubscribe();
+            if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+            if (myMatchmakingDocRef) myMatchmakingDocRef = null;
+
+            if (mode === 'ai') {
+                playerColor = 'w';
+                board.orientation('white');
+                $('#gameTitle').text('Partida contra IA');
+                $('#gameIdDisplay').hide();
+                initStockfish(options.skillLevel || 1500);
+                game.reset();
+                board.start();
+                $status.text('Juego contra IA. Mueves tú (Blancas).');
+                
+            } else if (mode === 'online') {
+                const { gameId, color } = options;
+                playerColor = color; 
+                board.orientation(playerColor === 'w' ? 'white' : 'black');
+                
+                $('#gameTitle').text('Partida Online');
+                $('#gameIdDisplay').text(`ID Partida: ${gameId}`).show();
+                
+                const gameDocRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
+                currentGameRef = gameDocRef;
+                
+                gameUnsubscribe = onSnapshot(gameDocRef, (doc) => {
+                    if (!doc.exists()) {
+                        console.error("La partida no existe.");
+                        $status.text("Error: La partida no existe.");
+                        return;
+                    }
+                    
+                    const gameData = doc.data();
+                    const newFen = gameData.fen === 'start' ? game.fen() : gameData.fen;
+                    
+                    if (newFen !== game.fen()) {
+                        game.load(newFen);
+                        board.position(newFen);
+                    }
+                    
+                    makingMove = (gameData.turn !== playerColor);
+                    updateStatus();
+                });
+            }
+            updateStatus();
+        }
+
+        async function startMatchmaking() {
+            showView('matchmakingView');
+            $('#matchmakingStatus').text('Buscando oponente...');
+            
+            const matchmakingQueueRef = collection(db, 'artifacts', appId, 'public/data', 'matchmakingQueue');
+            
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const q = query(matchmakingQueueRef, where("status", "==", "waiting"), limit(1));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        console.log("No hay oponentes, uniéndose a la cola...");
+                        myMatchmakingDocRef = await addDoc(matchmakingQueueRef, {
+                            userId: userId,
+                            username: username,
+                            status: 'waiting',
+                            createdAt: serverTimestamp()
+                        });
+                        
+                    } else {
+                        const waitingPlayerDoc = querySnapshot.docs[0];
+                        const waitingPlayer = waitingPlayerDoc.data();
+                        
+                        console.log(`Oponente encontrado: ${waitingPlayer.username}`);
+                        
+                        const gameId = crypto.randomUUID().substring(0, 8);
+                        const newGameRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
+                        
+                        transaction.set(newGameRef, {
+                            fen: 'start', pgn: '', status: 'active',
+                            playerWhite: waitingPlayer.userId,
+                            playerBlack: userId,
+                            turn: 'w', createdAt: serverTimestamp()
+                        });
+                        
+                        transaction.update(waitingPlayerDoc.ref, {
+                            status: 'matched',
+                            gameId: gameId,
+                            opponentId: userId
+                        });
+                        
+                        return { gameId: gameId, color: 'b' };
+                    }
+                }).then((result) => {
+                    if (result) {
+                        initGame('online', { gameId: result.gameId, color: result.color });
+                    } else {
+                        if (!myMatchmakingDocRef) return;
+                        
+                        matchmakingUnsubscribe = onSnapshot(myMatchmakingDocRef, (doc) => {
+                            const data = doc.data();
+                            if (data && data.status === 'matched' && data.gameId) {
+                                if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+                                matchmakingUnsubscribe = null;
+                                initGame('online', { gameId: data.gameId, color: 'w' });
+                            }
+                        });
+                    }
+                });
+                
+            } catch (e) {
+                console.error("Error en el matchmaking:", e);
+                $('#matchmakingStatus').text("Error al buscar partida.");
+            }
+        }
+        
+        async function cancelMatchmaking() {
+            if (matchmakingUnsubscribe) {
+                matchmakingUnsubscribe();
+                matchmakingUnsubscribe = null;
+            }
+            if (myMatchmakingDocRef) {
+                try {
+                    await deleteDoc(myMatchmakingDocRef);
+                } catch (e) {
+                    console.error("Error al cancelar matchmaking:", e);
+                }
+                myMatchmakingDocRef = null;
+            }
+            window.location.href = 'index.html';
+        }
+
+        $(document).ready(function() {
+            
+            initFirebase();
+            
+            // Botones "Volver"
+            $('#backButtonAi').on('click', () => window.location.href = 'index.html');
+            $('#cancelMatchmakingButton').on('click', cancelMatchmaking);
+            
+            $('#backButton').on('click', () => {
+                currentGameMode = null;
+                if (gameUnsubscribe) gameUnsubscribe();
+                if (stockfish) stockfish.postMessage('stop');
+                window.location.href = 'index.html';
+            });
+
+            // --- Controladores de Configuración ---
+            $('#eloSlider').on('input', function() {
+                $('#eloValue').text($(this).val());
+            });
+            
+            $('#startAiGameButton').on('click', () => {
+                const skillLevel = $('#eloSlider').val();
+                initGame('ai', { skillLevel: skillLevel });
+            });
+
+            // --- Controlador del Juego ---
+            $('#newGameButton').on('click', () => {
+                if (currentGameMode === 'ai') {
+                    initGame('ai', { skillLevel: $('#eloSlider').val() });
+                }
+            });
+        });
+
+    </script>
+    
+    <!-- Bibliotecas JS (jQuery, Chessboard, Chess.js) -->
+    <!-- jQuery (Corregido 'xintegrity' a 'integrity') -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+            xintegrity="sha384-ZvpUoO/+PpLzWDNGbKOSMmkOWMwSKEASBbSlogoMObxKkyVj51DaoKqrqaSNOuK6"
+            crossorigin="anonymous"></script>
+    
+    <!-- Chessboard.js (Corregido 'xintegrity' a 'integrity') -->
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
+            xintegrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUgJitwyksISJqCCGmyNFN2bZqXQcUlSKSfG8"
+            crossorigin="anonymous"></script>
+
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+
+</body>
+</html>

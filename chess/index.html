@@ -3,444 +3,420 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desafío de Ajedrez ELO</title>
+    <title>Ajedrez Online - Inicio</title>
     
-    <!-- 1. Hoja de estilos de chessboard.js -->
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <!-- CSS de Chessboard.js (Corregido 'xintegrity' a 'integrity') -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
+          xintegrity="sha384-q94tEGFzGMnEmBVSgTRkVgPjwitM/ltLMgSviRrkCklbciTrHEISjeJydPxL/mHk"
+          crossorigin="anonymous">
     
-    <!-- 2. Tailwind CSS para la UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 3. jQuery (requerido por chessboard.js) -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    
-    <!-- 4. chess.js (la lógica del juego) - v0.10.3 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    
-    <!-- 5. chessboard.js (el tablero visual) -->
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <!-- Biblioteca de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
+    <!-- Estilos CSS (Compartidos) -->
     <style>
-        /* Aseguramos que el tablero sea responsivo */
-        #main-board-container {
-            width: 90vw;
-            max-width: 600px;
-            margin: 0 auto;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+            padding: 10px;
+            box-sizing: border-box;
         }
-        #myBoard {
-            width: 100%;
-        }
-        #myBoard .piece-417db {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Estilo para resaltar movimientos legales */
-        #myBoard .square-55d63.highlight-move {
-            background-color: rgba(20, 83, 40, 0.4);
-            box-shadow: inset 0 0 3px 3px rgba(20, 83, 40, 0.4);
-        }
+        h1 { color: #2c3e50; font-weight: 700; text-align: center; }
+        h3, h4 { color: #34495e; margin-bottom: 5px; }
         
-        /* Estilo para el spinner de carga */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-left: 10px;
+        .view-container {
+            width: 100%;
+            max-width: 620px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            align-items: center;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        #loginView { text-align: center; }
+        #loginError { color: #e74c3c; margin-top: 15px; min-height: 1.2em; font-size: 0.9rem; }
+        .login-input { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; box-sizing: border-box; }
+        .login-label { margin-top: 10px; display: block; text-align: left; font-weight: 600; color: #555; }
+        #dashboardView { text-align: center; }
+        #authStatus { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 15px; word-break: break-all; line-height: 1.4; }
+        .menu-buttons { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; }
+        .menu-buttons button {
+            background-color: #3498db; color: white; border: none; padding: 15px 30px; font-size: 1.2rem;
+            font-weight: 600; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
         }
+        .menu-buttons button:hover { background-color: #2980b9; }
+        .menu-buttons button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .menu-buttons button#playAiButton { background-color: #1abc9c; }
+        .menu-buttons button#playAiButton:hover { background-color: #16a085; }
+        .menu-buttons button#playMatchmakingButton { background-color: #e67e22; }
+        .menu-buttons button#playMatchmakingButton:hover { background-color: #d35400; }
+        .menu-buttons button#playPuzzlesButton { background-color: #9b59b6; }
+        .menu-buttons button#playPuzzlesButton:hover { background-color: #8e44ad; }
+        .menu-buttons button#friendsButton { background-color: #34495e; }
+        .menu-buttons button#friendsButton:hover { background-color: #2c3e50; }
+        
+        #friendsView { text-align: center; }
+        .setup-section { width: 100%; margin-top: 15px; }
+        .setup-section input[type="text"] { width: 90%; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 5px; margin-top: 5px; }
+        .setup-section button { background-color: #2ecc71; margin-top: 15px; }
+        .setup-section button:hover { background-color: #27ae60; }
+        
+        .list-container {
+            width: 90%; max-height: 200px; overflow-y: auto; border: 1px solid #eee;
+            border-radius: 8px; margin-top: 15px; padding: 10px;
+        }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; border-bottom: 1px solid #f4f4f4; cursor: pointer; transition: background-color 0.2s;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:hover { background-color: #f9f9f9; }
+        .list-item span { font-weight: 600; color: #555; }
+        
+        button {
+            background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 1rem;
+            font-weight: 600; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 10px; box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        button:hover { background-color: #2980b9; }
+        .back-button { background-color: #e74c3c; margin-top: 20px; }
+        .back-button:hover { background-color: #c0392b; }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+<body>
 
-    <!-- Contenido principal del juego (inicialmente oculto) -->
-    <div id="game-container" class="w-full flex flex-col items-center" style="display: none;">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Desafío de Ajedrez</h1>
-
-        <!-- Contenedor del tablero -->
-        <div id="main-board-container">
-            <div id="myBoard"></div>
+    <!-- Vista de Login -->
+    <div id="loginView" class="view-container">
+        <h1>Ajedrez Online</h1>
+        <div class="setup-section" style="width: 90%;">
+            <label for="loginUsername" class="login-label">Usuario:</label>
+            <input type="text" id="loginUsername" placeholder="tu-usuario" class="login-input">
+            <label for="loginPassword" class="login-label">Contraseña:</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" class="login-input">
         </div>
-
-        <!-- Panel de estado e instrucciones -->
-        <div class="mt-4 p-4 bg-white rounded-lg shadow-md text-center w-full max-w-lg">
-            <p id="status" class="text-lg font-semibold text-gray-700 h-8">Turno: Blancas</p>
-            <p id="elo-status" class="text-lg font-semibold text-blue-600 mt-2">Tu ELO: 1000</p>
-            <p class="text-sm text-gray-500 mt-2">Juegas con las blancas. Arrastra las piezas para moverlas.</p>
-            <button id="reset-button" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors">
-                Reiniciar Partida
-            </button>
+        <div id="loginError"></div>
+        <div class="menu-buttons" style="margin-top: 20px; flex-direction: row; justify-content: space-around; max-width: 350px;">
+            <button id="loginButton" style="font-size: 1rem; padding: 12px 20px;">Iniciar Sesión</button>
+            <button id="registerButton" style="font-size: 1rem; padding: 12px 20px; background-color: #2ecc71;">Registrarse</button>
         </div>
     </div>
 
-    <!-- Modal de Promoción (oculto por defecto) -->
-    <div id="promotion-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl">
-            <p class="text-xl font-semibold w-full text-center mb-4">Promocionar a:</p>
-            <div class="flex space-x-4">
-                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="q"><img id="promote-q" src="https://logise1.github.io/chess/assets/wq.png" alt="Reina" class="w-16 h-16 piece-promote"></div>
-                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="r"><img id="promote-r" src="https://logise1.github.io/chess/assets/wr.png" alt="Torre" class="w-16 h-16 piece-promote"></div>
-                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="b"><img id="promote-b" src="https://logise1.github.io/chess/assets/wb.png" alt="Alfil" class="w-16 h-16 piece-promote"></div>
-                <div class="cursor-pointer p-2 rounded hover:bg-gray-200" data-piece="n"><img id="promote-n" src="https://logise1.github.io/chess/assets/wn.png" alt="Caballo" class="w-16 h-16 piece-promote"></div>
-            </div>
+    <!-- Vista del Dashboard (Menú Principal) -->
+    <div id="dashboardView" class="view-container">
+        <h1>Bienvenido al Ajedrez</h1>
+        <div id="authStatus">Conectando a Firebase...</div>
+        <div class="menu-buttons">
+            <button id="playAiButton" disabled>Jugar contra IA</button>
+            <button id="playMatchmakingButton" disabled>Buscar Partida Online</button>
+            <button id="playPuzzlesButton" disabled>Jugar Problemas</button>
+            <button id="friendsButton" disabled>Amigos</button>
         </div>
+        <button id="logoutButton" style="background-color: #e74c3c; margin-top: 20px; font-size: 0.9rem; padding: 10px 15px;">Cerrar Sesión</button>
+    </div>
+    
+    <!-- Vista de Amigos -->
+    <div id="friendsView" class="view-container">
+        <h1>Amigos</h1>
+        <div class="setup-section" style="width: 90%;">
+            <h4>Añadir Amigo por Usuario</h4>
+            <input type="text" id="addFriendUsernameInput" placeholder="Nombre de usuario del amigo">
+            <button id="addFriendButton">Añadir</button>
+            <div id="addFriendStatus" style="font-size: 0.9rem; margin-top: 10px;"></div>
+        </div>
+        <hr style="width:90%; margin: 20px 0; border: 1px solid #f0f2f5;">
+        <h4>Mi Lista de Amigos</h4>
+        <div id="friendsListContainer" class="list-container">
+            <!-- Los amigos se cargarán aquí dinámicamente -->
+        </div>
+        <button id="backButtonFriends" class="back-button">Volver</button>
     </div>
 
-    <!-- ¡NUEVO! Modal de ELO (se muestra al inicio) -->
-    <div id="elo-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
-            <h2 class="text-2xl font-bold mb-4">Bienvenido</h2>
-            <p class="text-gray-600 mb-6">Ingresa tu ELO para ajustar la dificultad del bot.</p>
-            <input type="number" id="elo-input" placeholder="Ej: 1200" class="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button id="start-game-button" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors">
-                Comenzar a Jugar
-            </button>
-            <p class="text-xs text-gray-400 mt-4">(Si dejas en blanco, se usará 1000)</p>
-        </div>
-    </div>
+    <!-- SDKs de Firebase (v11.6.1) -->
+    <script type="module">
+        // Importar funciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            onSnapshot, 
+            collection,
+            query,
+            where,
+            getDocs,
+            limit,
+            serverTimestamp,
+            setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Firebase y Variables de Entorno
+        var db, auth;
+        var appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        var userId;
+        var username; // Nombre de usuario local
+        
+        // Configuración de Firebase (Hardcodeada)
+        var firebaseConfig = {
+            apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
+            authDomain: "chess-a9347.firebaseapp.com",
+            projectId: "chess-a9347",
+            storageBucket: "chess-a9347.firebasestorage.app",
+            messagingSenderId: "950558367537",
+            appId: "1:950558367537:web:4cee83e2053262a4541a10",
+            measurementId: "G-Z3KNSZBL2F"
+        };
+        
+        var friendsUnsubscribe = null;
 
-    <script>
-        $(document).ready(function() {
-            // --- 1. Variables Globales ---
-            var board = null; 
-            var game = new Chess(); 
-            var $status = $('#status');
-            var $eloStatus = $('#elo-status');
-            var $board = $('#myBoard');
-            var $promotionModal = $('#promotion-modal');
-            var $eloModal = $('#elo-modal');
-            var $gameContainer = $('#game-container');
-            
-            var pendingMove = null;
-            var playerElo = 1000; // Default
-            
-            // --- 2. Lógica del Bot (IA) con Minimax ---
-            
-            // Valores de las piezas (positivos para blancas, negativos para negras)
-            var pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
+        /**
+         * Inicializa Firebase y autentica al usuario
+         */
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug'); 
 
-            // Tablas de evaluación posicional (simplificadas)
-            // (Mejora mucho la IA, indicando qué posiciones son buenas)
-            var pawnEval = [
-                [0,  0,  0,  0,  0,  0,  0,  0],
-                [5, 10, 10, -20,-20, 10, 10,  5],
-                [5, -5,-10,  0,  0,-10, -5,  5],
-                [0,  0,  0, 20, 20,  0,  0,  0],
-                [5,  5, 10, 25, 25, 10,  5,  5],
-                [10,10, 20, 30, 30, 20, 10, 10],
-                [50,50, 50, 50, 50, 50, 50, 50],
-                [0,  0,  0,  0,  0,  0,  0,  0]
-            ];
-            var knightEval = [
-                [-50,-40,-30,-30,-30,-30,-40,-50],
-                [-40,-20,  0,  5,  5,  0,-20,-40],
-                [-30,  5, 10, 15, 15, 10,  5,-30],
-                [-30,  0, 15, 20, 20, 15,  0,-30],
-                [-30,  5, 15, 20, 20, 15,  5,-30],
-                [-30,  0, 10, 15, 15, 10,  0,-30],
-                [-40,-20,  0,  0,  0,  0,-20,-40],
-                [-50,-40,-30,-30,-30,-30,-40,-50]
-            ];
-            // ... (se pueden añadir más para alfiles, torres, etc.)
-
-            // Evalúa el tablero
-            // Positivo = Ventaja Blanca, Negativo = Ventaja Negra
-            function evaluateBoard(board) {
-                var totalEvaluation = 0;
-                for (var i = 0; i < 8; i++) {
-                    for (var j = 0; j < 8; j++) {
-                        var piece = board[i][j];
-                        if (piece) {
-                            var value = pieceValues[piece.type];
-                            // Añadir bonus de posición
-                            if (piece.type === 'p') {
-                                value += (piece.color === 'w') ? pawnEval[i][j] : -pawnEval[7-i][j];
-                            } else if (piece.type === 'n') {
-                                value += (piece.color === 'w') ? knightEval[i][j] : -knightEval[7-i][j];
-                            }
-                            //... (añadir más evaluaciones)
-                            
-                            totalEvaluation += (piece.color === 'w' ? value : -value);
-                        }
-                    }
-                }
-                return totalEvaluation;
-            }
-
-            // Algoritmo Minimax
-            function minimax(depth, gameInstance, alpha, beta, isMaximizingPlayer) {
-                if (depth === 0) {
-                    return -evaluateBoard(gameInstance.board()); // Evaluar desde la perspectiva del jugador que NO acaba de mover
-                }
-
-                var possibleMoves = gameInstance.moves();
-                
-                // Si no hay movimientos (Jaque Mate o Ahogado)
-                if (possibleMoves.length === 0) {
-                    if (gameInstance.in_checkmate()) {
-                        return isMaximizingPlayer ? -Infinity : Infinity;
-                    }
-                    return 0; // Tablas
-                }
-
-                if (isMaximizingPlayer) {
-                    var bestValue = -Infinity;
-                    for (var i = 0; i < possibleMoves.length; i++) {
-                        gameInstance.move(possibleMoves[i]);
-                        bestValue = Math.max(bestValue, minimax(depth - 1, gameInstance, alpha, beta, false));
-                        gameInstance.undo();
-                        alpha = Math.max(alpha, bestValue);
-                        if (beta <= alpha) break; // Poda Alpha-Beta
-                    }
-                    return bestValue;
-                } else {
-                    var bestValue = Infinity;
-                    for (var i = 0; i < possibleMoves.length; i++) {
-                        gameInstance.move(possibleMoves[i]);
-                        bestValue = Math.min(bestValue, minimax(depth - 1, gameInstance, alpha, beta, true));
-                        gameInstance.undo();
-                        beta = Math.min(beta, bestValue);
-                        if (beta <= alpha) break; // Poda Alpha-Beta
-                    }
-                    return bestValue;
-                }
-            }
-
-            // Encuentra el mejor movimiento para el bot
-            function findBestMove() {
-                var possibleMoves = game.moves();
-                if (possibleMoves.length === 0) return;
-
-                var bestMove = null;
-                var bestValue = -Infinity;
-                
-                // Determinar profundidad según ELO
-                var searchDepth = 1;
-                if (playerElo >= 1000) searchDepth = 2;
-                if (playerElo >= 1300) searchDepth = 3;
-                if (playerElo >= 1600) searchDepth = 4; // ¡Puede ser lento!
-                
-                // Iterar sobre todos los movimientos
-                for (var i = 0; i < possibleMoves.length; i++) {
-                    var move = possibleMoves[i];
-                    game.move(move);
-                    // Llamamos a minimax para el JUGADOR (minimizando)
-                    var boardValue = minimax(searchDepth - 1, game, -Infinity, Infinity, false);
-                    game.undo();
-                    
-                    if (boardValue > bestValue) {
-                        bestValue = boardValue;
-                        bestMove = move;
-                    }
-                }
-                
-                // Hacer el movimiento encontrado
-                game.move(bestMove);
-                board.position(game.fen());
-                updateStatus();
-            }
-            
-            // Función wrapper para que el bot piense sin congelar la UI
-            function makeBotMove() {
-                $status.html('Turno: Negras <div class="loader"></div>');
-                // Usar requestAnimationFrame para no bloquear el hilo principal
-                requestAnimationFrame(function() {
-                    findBestMove();
-                });
-            }
-
-
-            // --- 3. Funciones de Evento de Chessboard.js ---
-
-            function removeGreySquares () {
-                $board.find('.square-55d63').removeClass('highlight-move');
-            }
-            function greySquare (square) {
-                $board.find('.square-' + square).addClass('highlight-move');
-            }
-
-            function onDragStart(source, piece, position, orientation) {
-                if (game.game_over()) return false;
-                if (piece.search(/^b/) !== -1) return false;
-                if (game.turn() === 'b') return false;
-
-                removeGreySquares();
-                var moves = game.moves({ square: source, verbose: true });
-                if (moves.length === 0) return false;
-                moves.forEach(move => greySquare(move.to));
-
-                var playerColor = 'w'; 
-                $promotionModal.find('.piece-promote').each(function() {
-                    var pieceType = $(this).parent().data('piece');
-                    $(this).attr('src', 'https://logise1.github.io/chess/assets/' + playerColor + pieceType + '.png');
-                });
-                return true;
-            }
-
-            function onDrop(source, target) {
-                removeGreySquares();
-
-                var piece = game.get(source).type;
-                var targetRank = target.charAt(1);
-                var isPromotion = (piece === 'p' && targetRank === '8'); // Solo blancas
-
-                var legalMoves = game.moves({ square: source, verbose: true });
-                var legalMove = legalMoves.find(m => m.to === target);
-
-                if (!legalMove) return 'snapback';
-
-                if (isPromotion) {
-                    pendingMove = { from: source, to: target };
-                    $promotionModal.removeClass('hidden');
-                    return 'snapback';
-                }
-
-                var move = game.move({ from: source, to: target });
-                if (move === null) return 'snapback';
-
-                updateStatus();
-
-                if (!game.game_over()) {
-                    window.setTimeout(makeBotMove, 250); // Dar un respiro
-                }
-            }
-            
-            $promotionModal.find('.cursor-pointer').on('click', function() {
-                var promotion = $(this).data('piece');
-                if (pendingMove) {
-                    game.move({
-                        from: pendingMove.from,
-                        to: pendingMove.to,
-                        promotion: promotion
-                    });
-                    
-                    board.position(game.fen());
-                    $promotionModal.addClass('hidden');
-                    updateStatus();
-                    
-                    if (!game.game_over()) {
-                        window.setTimeout(makeBotMove, 250);
-                    }
-                }
-                pendingMove = null;
-            });
-
-            function onSnapEnd() {
-                if (!pendingMove) {
-                    board.position(game.fen());
-                }
-            }
-
-            // --- 4. Función de Estado ---
-            function updateStatus() {
-                var status = '';
-                var moveColor = (game.turn() === 'w') ? 'Blancas' : 'Negras';
-                var eloChange = 0;
-
-                if (game.in_checkmate()) {
-                    var winner = (moveColor === 'Blancas') ? 'Negras' : 'Blancas';
-                    status = '¡Jaque Mate! Ganan las ' + winner;
-                    
-                    if (winner === 'Blancas') {
-                        playerElo += 10;
-                        eloChange = 10;
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        username = user.email ? user.email.split('@')[0] : 'Usuario';
+                        console.log("Usuario autenticado:", userId, username);
+                        $('#authStatus').html(`Conectado como: <strong>${username}</strong>`);
+                        $('#playAiButton, #playMatchmakingButton, #playPuzzlesButton, #friendsButton').prop('disabled', false);
+                        showView('dashboardView');
+                        loadFriends(); // Cargar amigos al iniciar sesión
                     } else {
-                        playerElo -= 10;
-                        eloChange = -10;
+                        userId = null;
+                        username = null;
+                        console.log("Sin usuario, mostrando login.");
+                        $('#authStatus').text('No autenticado.');
+                        $('#playAiButton, #playMatchmakingButton, #playPuzzlesButton, #friendsButton').prop('disabled', true);
+                        showView('loginView');
+                        
+                        if (friendsUnsubscribe) friendsUnsubscribe();
                     }
-                    localStorage.setItem('playerElo', playerElo.toString());
-                }
-                else if (game.in_draw()) {
-                    status = '¡Tablas!';
-                }
-                else {
-                    status = 'Turno: ' + moveColor;
-                    if (game.in_check()) {
-                        status += ' (¡Jaque!)';
-                    }
-                }
+                });
+            } catch (e) {
+                console.error("Error al inicializar Firebase:", e);
+                $('#authStatus').text('Error al cargar Firebase.');
+            }
+        }
 
-                $status.html(status);
-                var eloText = 'Tu ELO: ' + playerElo;
-                if (eloChange > 0) {
-                    eloText += ' <span class="text-green-500">(+10)</span>';
-                } else if (eloChange < 0) {
-                    eloText += ' <span class="text-red-500">(-10)</span>';
-                }
-                $eloStatus.html(eloText);
-            }
+        function showView(viewId) {
+            $('.view-container').hide();
+            $('#' + viewId).css('display', 'flex');
+        }
 
-            // --- 5. Inicialización ---
-            function resetGame() {
-                game.reset(); 
-                board.start(); 
-                updateStatus(); 
-                $eloStatus.html('Tu ELO: ' + playerElo);
-            }
+        /**
+         * Carga la lista de amigos del usuario
+         */
+        function loadFriends() {
+            if (friendsUnsubscribe) friendsUnsubscribe(); // Detener listener anterior
             
-            // ¡NUEVO! Lógica del modal de ELO
-            function initializeGame() {
-                var storedElo = localStorage.getItem('playerElo');
-                if (storedElo) {
-                    playerElo = parseInt(storedElo);
-                    $eloStatus.html('Tu ELO: ' + playerElo);
-                    $eloModal.addClass('hidden');
-                    $gameContainer.show();
-                } else {
-                    $eloModal.removeClass('hidden');
-                    $gameContainer.hide();
+            const friendsRef = collection(db, 'artifacts', appId, 'users', userId, 'friends');
+            const $list = $('#friendsListContainer');
+            
+            friendsUnsubscribe = onSnapshot(friendsRef, (snapshot) => {
+                $list.empty();
+                if (snapshot.empty) {
+                    $list.html('<p style="color: #999;">No tienes amigos añadidos.</p>');
+                    return;
                 }
-                
-                // Configuración de Chessboard
-                var config = {
-                    draggable: true,
-                    position: 'start',
-                    onDragStart: onDragStart,
-                    onDrop: onDrop,
-                    onSnapEnd: onSnapEnd,
-                    // pieceTheme: 'https://logise1.github.io/chess/assets/{piece}.png' // Plantilla simplificada (¡ESTO ERA INCORRECTO!)
-                    
-                    // ¡CORREGIDO! Usar una función para convertir a minúsculas
-                    pieceTheme: function (piece) { 
-                        // piece es 'wR', 'bK', etc.
-                        // El servidor de assets espera 'wr.png', 'bk.png'
-                        var pieceCode = piece.toLowerCase();
-                        return 'https://logise1.github.io/chess/assets/' + pieceCode + '.png';
-                    }
-                };
-                
-                board = Chessboard('myBoard', config);
-                $(window).resize(board.resize);
-                $('#reset-button').on('click', resetGame);
-                updateStatus();
-            }
-            
-            $('#start-game-button').on('click', function() {
-                var inputElo = $('#elo-input').val();
-                // Validar y fijar ELO
-                var elo = parseInt(inputElo) || 1000;
-                playerElo = Math.max(800, Math.min(2000, elo)); // Limitar ELO entre 800 y 2000
-                
-                localStorage.setItem('playerElo', playerElo.toString());
-                $eloStatus.html('Tu ELO: ' + playerElo);
-                $eloModal.addClass('hidden');
-                $gameContainer.show();
-                
-                // Redibujar el tablero por si el modal afectó el tamaño
-                $(window).trigger('resize');
+                snapshot.forEach((doc) => {
+                    const friend = doc.data();
+                    $list.append(`<div class="list-item"><span>${friend.username}</span></div>`);
+                });
             });
+        }
+        
+        /**
+         * Añade un amigo por su nombre de usuario
+         */
+        async function addFriend() {
+            const friendUsername = $('#addFriendUsernameInput').val().trim();
+            const $status = $('#addFriendStatus');
+            
+            if (!friendUsername) {
+                $status.text('Introduce un nombre de usuario.').removeClass('correct').addClass('incorrect');
+                return;
+            }
+            if (friendUsername === username) {
+                $status.text('No puedes añadirte a ti mismo.').removeClass('correct').addClass('incorrect');
+                return;
+            }
+            
+            $status.text('Buscando usuario...').removeClass('correct incorrect');
+            
+            try {
+                const profilesRef = collection(db, 'artifacts', appId, 'public/data', 'userProfiles');
+                const q = query(profilesRef, where("username", "==", friendUsername), limit(1));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    $status.text('Usuario no encontrado.').removeClass('correct').addClass('incorrect');
+                    return;
+                }
+                
+                const friendDoc = querySnapshot.docs[0];
+                const friendId = friendDoc.id;
+                
+                // Añadir a la subcolección de amigos del usuario actual
+                const friendRef = doc(db, 'artifacts', appId, 'users', userId, 'friends', friendId);
+                await setDoc(friendRef, {
+                    username: friendUsername,
+                    addedAt: serverTimestamp()
+                });
+                
+                $status.text(`¡${friendUsername} añadido!`).removeClass('incorrect').addClass('correct');
+                $('#addFriendUsernameInput').val('');
+                
+            } catch (e) {
+                console.error("Error al añadir amigo:", e);
+                $status.text('Error al añadir amigo.').removeClass('correct').addClass('incorrect');
+            }
+        }
+        
+        /**
+         * Maneja el inicio de sesión
+         */
+        async function handleLogin() {
+            const username = $('#loginUsername').val().trim();
+            const password = $('#loginPassword').val().trim();
+            if (!username || !password) {
+                $('#loginError').text('Por favor, introduce usuario y contraseña.');
+                return;
+            }
+            const email = username + '@email.com';
+            $('#loginError').text('Iniciando sesión...');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                $('#loginError').text('');
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error.message);
+                $('#loginError').text(getFirebaseAuthErrorMessage(error));
+            }
+        }
 
-            // Iniciar la lógica
-            initializeGame();
+        /**
+         * Maneja el registro
+         */
+        async function handleRegister() {
+            const username = $('#loginUsername').val().trim();
+            const password = $('#loginPassword').val().trim();
+            if (!username || !password) {
+                $('#loginError').text('Por favor, introduce usuario y contraseña.');
+                return;
+            }
+            if (password.length < 6) {
+                $('#loginError').text('La contraseña debe tener al menos 6 caracteres.');
+                return;
+            }
+            
+            const email = username + '@email.com';
+            $('#loginError').text('Registrando...');
+            
+            try {
+                // 1. Crear el usuario
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const newUser = userCredential.user;
+
+                // 2. Crear el perfil público de usuario
+                const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', newUser.uid);
+                await setDoc(profileRef, {
+                    username: username,
+                    joinedAt: serverTimestamp()
+                });
+                
+                $('#loginError').text('');
+            } catch (error) {
+                console.error("Error al registrar:", error.message);
+                $('#loginError').text(getFirebaseAuthErrorMessage(error));
+            }
+        }
+
+        /**
+         * Maneja el cierre de sesión
+         */
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error.message);
+            }
+        }
+
+        function getFirebaseAuthErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/invalid-email': return 'El formato del usuario no es válido.';
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential': return 'Usuario o contraseña incorrectos.';
+                case 'auth/email-already-in-use': return 'Este nombre de usuario ya está en uso.';
+                case 'auth/weak-password': return 'La contraseña es demasiado débil (mín. 6 caracteres).';
+                default: return 'Error: ' + error.message.replace('Firebase: ', '');
+            }
+        }
+
+        // --- Inicialización del Documento ---
+        $(document).ready(function() {
+            
+            initFirebase();
+            
+            // --- Controladores de Login/Registro ---
+            $('#loginButton').on('click', handleLogin);
+            $('#registerButton').on('click', handleRegister);
+            $('#logoutButton').on('click', handleLogout);
+
+            // --- Controladores de Navegación ---
+            $('#playAiButton').on('click', () => {
+                window.location.href = 'play.html?mode=ai';
+            });
+            $('#playMatchmakingButton').on('click', () => {
+                window.location.href = 'play.html?mode=online';
+            });
+            $('#playPuzzlesButton').on('click', () => {
+                 window.location.href = 'puzzles.html';
+            });
+            $('#friendsButton').on('click', () => {
+                $('#addFriendStatus').text('');
+                showView('friendsView');
+            });
+            
+            // Botones "Volver"
+            $('#backButtonFriends').on('click', () => showView('dashboardView'));
+            
+            // --- Controladores de Amigos ---
+            $('#addFriendButton').on('click', addFriend);
         });
+
     </script>
+    
+    <!-- jQuery (Corregido 'xintegrity' a 'integrity') -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+            xintegrity="sha384-ZvpUoO/+PpLzWDNGbKOSMmkOWMwSKEASBbSlogoMObxKkyVj51DaoKqrqaSNOuK6"
+            crossorigin="anonymous"></script>
+
 </body>
 </html>
