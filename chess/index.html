@@ -373,8 +373,19 @@
             border: 2px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            /* MODIFICACIÓN: Se eliminó 'overflow: hidden;' que causaba que las piezas desaparecieran al arrastrar */
         }
         #myBoard, #reviewBoard { width: 100%; border-radius: 6px; }
+        /* Asegurar que las piezas arrastradas sean visibles */
+/* Asegurar que las piezas sean visibles */
+#myBoard img, #reviewBoard img {
+    z-index: 100 !important;
+}
+
+/* Pieza durante el arrastre */
+.piece-417db {
+    z-index: 9999 !important;
+}
         
         .status-container { margin-top: 15px; text-align: center; }
         #status { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); min-height: 1.5rem; margin-bottom: 10px; }
@@ -422,7 +433,11 @@
             background-color: var(--danger-accent);
         }
         
-        .highlight-hint { box-shadow: inset 0 0 15px 5px rgba(255, 193, 7, 0.7) !important; }
+        /* MODIFICADO: Cambiado a 'outline' para no tapar la pieza */
+        .highlight-hint { 
+            outline: 4px solid rgba(255, 193, 7, 0.9) !important;
+            outline-offset: -4px; /* Dibuja el borde hacia adentro */
+        }
         
         #backToMenuButton, #backToMenuFromReviewButton {
             background-color: var(--danger-accent);
@@ -906,8 +921,11 @@
             onDrop: onDrop,
             onSnapEnd: onSnapEnd,
             pieceTheme: getPieceTheme,
-            snapSpeed: 200,      // Velocidad de la animación al soltar
-            moveSpeed: 'slow', // Velocidad de animación de la IA (se usa en board.position(fen, true))
+            snapSpeed: 200,
+            moveSpeed: 'medium',
+            appearSpeed: 200,
+            trashSpeed: 200,
+            sparePieces: false
         };
 
         // --- 1. Inicialización ---
