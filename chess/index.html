@@ -493,7 +493,8 @@
             position: fixed;
             font-size: 3rem;
             opacity: 0;
-            display: none;
+            /* MODIFICADO: display: none; es correcto, jQuery lo maneja */
+            display: none; 
             z-index: 1000;
             text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
@@ -1240,7 +1241,8 @@
                 }
                 
                 $('#gameTitle').text('Partida Rápida');
-                $('#gameIdDisplay').text('5 min vs Bot').show();
+                // --- MODIFICADO: Cambiado el texto ---
+                $('#gameIdDisplay').text('5 min').show();
                 $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
                 
                 stockfish.postMessage('ucinewgame');
@@ -1392,7 +1394,10 @@
             // porque chessboard.js lo hace automáticamente al soltar.
             // PERO, si el movimiento es inválido (snapback), chess.js lo revierte,
             // así que SÍ necesitamos actualizar el tablero a la posición de game.fen().
-            board.position(game.fen(), true); // Forzar animación
+            
+            // --- MODIFICADO: No forzar animación aquí, solo sincronizar estado ---
+            // board.position(game.fen(), true); // Esto causaba doble animación
+            board.position(game.fen());
             updateStatus();
         }
 
