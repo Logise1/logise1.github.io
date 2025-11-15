@@ -493,7 +493,6 @@
             position: fixed;
             font-size: 3rem;
             opacity: 0;
-            /* MODIFICADO: display: none; es correcto, jQuery lo maneja */
             display: none; 
             z-index: 1000;
             text-shadow: 0 0 10px rgba(0,0,0,0.5);
@@ -530,6 +529,7 @@
             justify-content: center;
             gap: 10px;
             color: var(--text-primary);
+            min-height: 28px; /* Para que no salte al cargar */
         }
         .eval-icon {
             width: 28px;
@@ -1390,13 +1390,7 @@
         }
 
         function onSnapEnd() {
-            // No es necesario llamar a board.position() aquí
-            // porque chessboard.js lo hace automáticamente al soltar.
-            // PERO, si el movimiento es inválido (snapback), chess.js lo revierte,
-            // así que SÍ necesitamos actualizar el tablero a la posición de game.fen().
-            
-            // --- MODIFICADO: No forzar animación aquí, solo sincronizar estado ---
-            // board.position(game.fen(), true); // Esto causaba doble animación
+            // Sincronizar el tablero con el estado del juego
             board.position(game.fen());
             updateStatus();
         }
@@ -1781,6 +1775,83 @@
         }
 
         // --- 6. Nuevas Funciones de Juego y Revisión ---
+
+        /**
+         * NUEVO: Obtiene la evaluación de una posición FEN de Stockfish
+         * @param {string} fen - La posición FEN a evaluar
+         * @returns {Promise<number>} - La evaluación en centipawns (CP)
+         */
+        function getStockfishEval(fen) {
+            return new Promise((resolve, reject) => {
+                if (!stockfishReady) {
+                    reject("Stockfish no está listo");
+                    return;
+                }
+                
+                let eval_cp = 0;
+                let mate_in = 0;
+
+                const evalListener = (event) => {
+                    const message = event.data;
+                    
+                    if (message.startsWith('info depth') && message.includes('score cp')) {
+                        const parts = message.split(' ');
+                        const cpIndex = parts.indexOf('cp');
+                        if (cpIndex > -1) {
+                            eval_cp = parseInt(parts[cpIndex + 1], 10);
+                        }
+                    } else if (message.startsWith('info depth') && message.includes('score mate')) {
+                        const parts = message.split(' ');
+                        const mateIndex = parts.indexOf('mate');
+                        if (mateIndex > -1) {
+                            mate_in = parseInt(parts[mateIndex + 1], 10);
+                            // Convertir mate a un valor de CP muy alto
+                            eval_cp = (mate_in > 0) ? (30000 - mate_in) : (-30000 + mate_in);
+                        }
+                    }
+
+                    if (message.startsWith('bestmove')) {
+                        stockfish.removeEventListener('message', evalListener);
+                        // Si hay mate, la eval_cp ya está ajustada
+                        resolve(eval_cp);
+                    }
+                };
+                
+                stockfish.addEventListener('message', evalListener);
+                stockfish.postMessage('position fen ' + fen);
+                // Usamos un tiempo fijo para la evaluación para que sea rápido
+                stockfish.postMessage('go movetime 1000'); 
+            });
+        }
+        
+        /**
+         * NUEVO: Calcula la pérdida de CP de una jugada
+         */
+        function calculateEvalLoss(eval_before, eval_after, color) {
+            let loss = 0;
+            if (color === 'w') {
+                // Para blancas, una eval más baja es peor
+                loss = eval_before - eval_after;
+            } else {
+                // Para negras, una eval más alta es peor (más positiva para blancas)
+                loss = eval_after - eval_before;
+            }
+            // Si la pérdida es negativa, significa que la jugada fue buena
+            return loss;
+        }
+
+        /**
+         * NUEVO: Devuelve el nombre de la evaluación basado en la pérdida
+         */
+        function getEvaluationNameFromLoss(cp_loss) {
+            if (cp_loss <= 5) return "best"; // Casi perfecto
+            if (cp_loss <= 25) return "excellent";
+            if (cp_loss <= 60) return "ok";
+            if (cp_loss <= 120) return "inaccuracy";
+            if (cp_loss <= 250) return "mistake";
+            return "blunder";
+        }
+
         
         function handleResign() {
             if (currentGameMode !== 'bot_match' && currentGameMode !== 'ai' && currentGameMode !== 'online') {
@@ -1898,7 +1969,8 @@
             reviewGame.reset(); // Volver al inicio
             
             $('#reviewPgn').val(pgn);
-            $('#reviewMoveEval').text('Inicio de la partida');
+            // MODIFICADO: Llamar a la función de evaluación con -1
+            showMoveEvaluationAsync(-1);
         }
 
         function navigateReview(direction) {
@@ -1924,29 +1996,61 @@
 
             reviewMoveIndex = newIndex;
             reviewBoard.position(reviewGame.fen(), true); // Animar movimiento
-            showMoveEvaluation();
+            // MODIFICADO: Llamar a la nueva función asíncrona
+            showMoveEvaluationAsync(reviewMoveIndex);
         }
 
-        function showMoveEvaluation() {
-            if (reviewMoveIndex < 0) {
+        // MODIFICADO: Convertida a función asíncrona
+        async function showMoveEvaluationAsync(moveIndex) {
+            if (moveIndex < 0) {
                 $('#reviewMoveEval').html('<span>Inicio de la partida</span>');
                 return;
             }
-
-            // Simulación de análisis
-            const moveEvals = ["best", "excellent", "book", "ok", "inaccuracy", "mistake", "blunder"];
-            const randomEval = moveEvals[Math.floor(Math.random() * moveEvals.length)];
-            const move = reviewHistory[reviewMoveIndex];
             
-            const moveColor = move.color === 'w' ? 'Blancas' : 'Negras';
-            const moveNumber = Math.floor(reviewMoveIndex / 2) + 1;
+            const move = reviewHistory[moveIndex];
+            const moveNumber = Math.floor(moveIndex / 2) + 1;
             const dots = (move.color === 'b') ? '...' : '';
 
+            // Mostrar "Analizando..."
             $('#reviewMoveEval').html(`
                 <span>${moveNumber}. ${dots}${move.san}</span>
-                <img src="https://logise1.github.io/chess/assets/ratings/${randomEval}.png" class="eval-icon" alt="${randomEval}">
-                <span style="text-transform: capitalize;">(${randomEval})</span>
+                <span class="eval-icon" style="font-size: 1rem; color: var(--text-secondary);">...</span>
+                <span>(Analizando...)</span>
             `);
+
+            try {
+                // Crear FEN anterior
+                const tempGame = new Chess();
+                for (let i = 0; i < moveIndex; i++) {
+                    tempGame.move(reviewHistory[i].san);
+                }
+                const fen_before = tempGame.fen();
+                
+                // FEN actual ya está en reviewGame
+                const fen_after = reviewGame.fen();
+
+                // Obtener evaluaciones (esto toma tiempo)
+                const eval_before = await getStockfishEval(fen_before);
+                const eval_after = await getStockfishEval(fen_after);
+                
+                // Calcular pérdida y nombre
+                const cp_loss = calculateEvalLoss(eval_before, eval_after, move.color);
+                const eval_name = getEvaluationNameFromLoss(cp_loss);
+                
+                // Actualizar UI con la evaluación real
+                $('#reviewMoveEval').html(`
+                    <span>${moveNumber}. ${dots}${move.san}</span>
+                    <img src="https://logise1.github.io/chess/assets/ratings/${eval_name}.png" class="eval-icon" alt="${eval_name}">
+                    <span style="text-transform: capitalize;">(${eval_name})</span>
+                `);
+                
+            } catch (e) {
+                console.error("Error al evaluar:", e);
+                $('#reviewMoveEval').html(`
+                    <span>${moveNumber}. ${dots}${move.san}</span>
+                    <span style="color: var(--danger-accent);">(Error de análisis)</span>
+                `);
+            }
         }
 
 
@@ -1976,7 +2080,7 @@
             $('#eloSlider').on('input', function() {
                 $('#eloValue').text($(this).val());
             });
-            $('#startAiGameButton').on('click', () => {
+            $('#startAiButton').on('click', () => {
                 initGame('ai', { skillLevel: $('#eloSlider').val() });
             });
             $('#backButtonSetup').on('click', () => showView('mainAppView'));
