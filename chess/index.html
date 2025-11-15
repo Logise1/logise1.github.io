@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ajedrez Online</title>
+    <title>Chess & Chill</title>
     
-    <!-- CSS de Chessboard.js (CORREGIDO 'integrity' a 'integrity') -->
+    <!-- CSS de Chessboard.js -->
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     
     <!-- Biblioteca de Google Fonts -->
@@ -231,7 +231,7 @@
         .menu-buttons button#playMatchmakingButton { background-color: var(--warning-accent); color: #1e1e2e; font-size: 1rem; padding: 14px 20px;}
         
         #puzzlesView { text-align: center; padding-top: 20px; }
-        #puzzlesView p { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.6; }
+        #puzzlesView p { font-size: 1.1rem; color: var(--text-primary); line-height: 1.6; }
         #startPuzzleButton { background-color: var(--purple-accent); font-size: 1.3rem; padding: 20px 40px; }
 
         #friendsView { text-align: center; }
@@ -581,10 +581,52 @@
             #emoji-display-opponent { top: 15%; }
             #emoji-display-player { bottom: 15%; }
         }
+
+        /* Video de fondo */
+        #background-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1; /* Detrás de todo el contenido */
+            filter: brightness(50%); /* Oscurecer el video */
+        }
+
+        /* Asegurar que el contenido esté encima del video */
+        body {
+            position: relative;
+            z-index: 1;
+        }
         
     </style>
 </head>
 <body>
+
+    <!-- Video de fondo -->
+    <!-- NOTA: El video se muestra por defecto, pero se oculta en showView('loginView') -->
+    <video id="background-video" autoplay muted loop>
+        <source src="bg.mp4" type="video/mp4">
+        Tu navegador no soporta la etiqueta de video.
+    </video>
+
+    <!-- Botón para activar/desactivar el sonido del video -->
+    <!-- NOTA: Está fuera de las vistas para ser un elemento flotante, visible si el video está visible. -->
+    <button id="toggleSoundButton" style="
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background-color: rgba(39, 41, 61, 0.8); /* Semi-transparente */
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    ">🔊 Activar Sonido</button>
 
     <!-- Vista de Login -->
     <div id="loginView" class="app-view">
@@ -611,7 +653,7 @@
             
             <!-- Pestaña 1: Jugar (Dashboard) -->
             <div id="dashboardView" class="tab-view active">
-                <h1>Bienvenido al Ajedrez</h1>
+                <h1>🌿 Chess & Chill</h1>
                 <div id="authStatus">Conectando...</div>
                 <div class="menu-buttons">
                     <button id="playQuickMatchButton">Jugar partida (5min)</button>
@@ -680,7 +722,7 @@
         <!-- Barra de Navegación Inferior -->
         <nav id="bottomNav">
             <button id="navPlay" class="nav-button active">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0v2h12v-2Z"/><path d="M18 10v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6"/><path d="M12 10v2"/><path d="M12 14v2"/><path d="m15 12-3-3-3 3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0v-2h12v2Z"/><path d="M18 10v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6"/><path d="M12 10v2"/><path d="M12 14v2"/><path d="m15 12-3-3-3 3"/></svg>
                 <span>Jugar</span>
             </button>
             <button id="navPuzzles" class="nav-button">
@@ -867,7 +909,7 @@
         var currentOpponentName = "Oponente";
         var fakeMatchmakingTimer = null;
         const ELO_K_FACTOR = 32;
-        const botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm", "Kasparov_v2", "PawnSlayer", "BishopBot", "TheGrandmaster", "Enigma", "Maestro", "Furia", "Quantum", "ElTactico", "NekoBot", "ReyDelCaos"];
+        var botNames = []; // Load dynamically from usernames.json
         
         // --- GLOBALES PARA EL TEMPORIZADOR ---
         var playerTime = 300; // 5 minutos
@@ -1022,11 +1064,26 @@
         // --- 2. Lógica de Vistas y Navegación ---
         
         function showView(viewId) {
-            $('.app-view').hide();
-            $('#' + viewId).css('display', 'flex');
+            // Asegurar que el video de fondo esté visible para TODAS las vistas excepto Login
+            const backgroundVideo = document.getElementById('background-video');
+            const toggleSoundButton = document.getElementById('toggleSoundButton'); // Nuevo
+
+            if (viewId !== 'loginView') {
+                backgroundVideo.style.display = 'block';
+                toggleSoundButton.style.display = 'block'; // Mostrar el botón
+            } else {
+                backgroundVideo.style.display = 'none';
+                toggleSoundButton.style.display = 'none'; // Ocultar el botón
+            }
+
+            // Mostrar la vista solicitada
+            document.querySelectorAll('.app-view').forEach(view => view.style.display = 'none');
+            document.getElementById(viewId).style.display = 'flex';
         }
         
         function showTabView(tabId) {
+            // La visibilidad del video ya es manejada por showView('mainAppView')
+            
             $('.tab-view').removeClass('active');
             $('#' + tabId).addClass('active');
             
@@ -1147,29 +1204,64 @@
                 board = Chessboard('myBoard', config);
             }
 
-            if (mode === 'ai') {
-                playerColor = 'w';
-                board.orientation('white');
-                $('#gameTitle').text('Partida contra IA');
-                $('#pgn, #newGameButton, #drawButton, #resignButton').show();
-                $('#newGameButton').text('Juego Nuevo').off('click').on('click', () => {
-                    initGame('ai', { skillLevel: $('#eloSlider').val() });
-                });
+            if (mode === 'bot_match' || mode === 'ai') {
+                // Ensure minimum ELO is 100
+                currentOpponentElo = Math.max(100, options.opponentElo || options.skillLevel); // Usar skillLevel si no hay opponentElo
+                playerColor = options.playerColor || 'w';
+                board.orientation(playerColor === 'w' ? 'white' : 'black');
+                
+                const playerEloDisplay = Math.round(userElo);
+                const opponentEloDisplay = Math.round(currentOpponentElo);
 
-                // Nombres
-                const aiElo = options.skillLevel || 100;
-                $('#playerName').text(username || 'Jugador');
-                $('#opponentName').text(`IA (ELO ${aiElo})`);
+                // Nombres y ELO
+                if (playerColor === 'w') {
+                    $('#playerName').text(`${username} (ELO: ${playerEloDisplay})`);
+                    $('#opponentName').text(`${currentOpponentName} (ELO: ${opponentEloDisplay})`);
+                } else {
+                    $('#playerName').text(`${username} (ELO: ${playerEloDisplay})`);
+                    $('#opponentName').text(`${currentOpponentName} (ELO: ${opponentEloDisplay})`);
+                }
+                
+                $('#gameTitle').text('Partida Rápida');
+                $('#gameIdDisplay').text('5 min').show();
+                $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
                 
                 stockfish.postMessage('ucinewgame');
-                let elo = parseFloat(aiElo);
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
-                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
+                // --- MODIFICACIÓN CLAVE: Ajustar Skill Level y Profundidad ---
+                let elo = parseFloat(options.skillLevel) || 100;
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
+                
+                // Nivel de profundidad de búsqueda: 
+                // Bajo ELO (< 1000): Profundidad de 1 a 4 para forzar errores.
+                // ELO medio (1000 - 1800): Profundidad de 10 a 15.
+                // ELO alto (> 1800): Profundidad de 20 (máximo).
+                let maxDepth = 20;
+                if (elo <= 1000) {
+                    maxDepth = 1 + Math.round((elo - 100) / 900 * 3); // De 100 a 1000 -> Profundidad 1 a 4
+                } else if (elo <= 1800) {
+                    maxDepth = 5 + Math.round((elo - 1000) / 800 * 10); // De 1000 a 1800 -> Profundidad 5 a 15
+                }
+                maxDepth = Math.max(1, Math.min(20, maxDepth));
+                
+                console.log(`Configurando IA: ELO ${elo}, Skill Level ${skillLevel}, Max Depth ${maxDepth}`);
+                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+
                 game.reset();
                 board.start();
+                startGameTimer();
                 playSound('audioGameStart');
-                
+
+                if (playerColor === 'b') {
+                    makingMove = true;
+                    $status.text('Oponente está pensando...');
+                    setTimeout(() => {
+                        stockfish.postMessage('position fen ' + game.fen());
+                        // Usar la profundidad ajustada
+                        stockfish.postMessage('go depth ' + maxDepth);
+                    }, 1500);
+                }
+
             } else if (mode === 'online') {
                 const { gameId, color } = options;
                 playerColor = color; 
@@ -1177,12 +1269,12 @@
                 
                 $('#gameTitle').text('Partida Online');
                 $('#gameIdDisplay').text(`ID Partida: ${gameId}`).show();
-                $('#pgn, #drawButton, #resignButton, .emoji-bar').show(); // MOSTRAR EMOJIS
-                
+                $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
+
                 const gameDocRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
                 currentGameRef = gameDocRef;
 
-                // Nombres
+                // Nombres y ELO
                 const gameDataForNames = await getDoc(gameDocRef);
                 if (gameDataForNames.exists()) {
                     const data = gameDataForNames.data();
@@ -1192,18 +1284,19 @@
                         const oppProfileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', opponentId);
                         const oppDoc = await getDoc(oppProfileRef);
                         const opponentUsername = oppDoc.exists() ? oppDoc.data().username : 'Oponente';
-                        
+                        const opponentElo = oppDoc.exists() ? Math.round(oppDoc.data().elo || 100) : 100;
+
                         if (playerColor === 'w') {
-                            $('#playerName').text(username);
-                            $('#opponentName').text(opponentUsername);
+                            $('#playerName').text(`${username} (ELO: ${Math.round(userElo)})`);
+                            $('#opponentName').text(`${opponentUsername} (ELO: ${opponentElo})`);
                         } else {
-                            $('#playerName').text(username);
-                            $('#opponentName').text(opponentUsername);
+                            $('#playerName').text(`${username} (ELO: ${Math.round(userElo)})`);
+                            $('#opponentName').text(`${opponentUsername} (ELO: ${opponentElo})`);
                         }
                     } catch(e) {
                         console.error("Error fetching opponent name", e);
-                        $('#playerName').text(username);
-                        $('#opponentName').text('Oponente');
+                        $('#playerName').text(`${username} (ELO: ${Math.round(userElo)})`);
+                        $('#opponentName').text('Oponente (ELO: 100)');
                     }
                 }
                 
@@ -1224,60 +1317,8 @@
                     
                     makingMove = (game.turn() !== playerColor);
                     updateStatus();
-
-                    // --- NUEVO: Escuchar Emojis ---
-                    const opponentEmojiData = (playerColor === 'w') ? gameData.playerBlackEmoji : gameData.playerWhiteEmoji;
-                    if (opponentEmojiData && opponentEmojiData.sentAt && 
-                        (!lastOpponentEmojiTimestamp || opponentEmojiData.sentAt.toMillis() > lastOpponentEmojiTimestamp.toMillis())) 
-                    {
-                        lastOpponentEmojiTimestamp = opponentEmojiData.sentAt;
-                        // Mostrar emoji del oponente
-                        $('#emoji-display-opponent').text(opponentEmojiData.emoji).stop().fadeIn(200).delay(1500).fadeOut(300);
-                    }
-                    // --- FIN NUEVO ---
                 });
                 playSound('audioGameStart');
-            
-            } else if (mode === 'bot_match') {
-                playerColor = options.playerColor;
-                board.orientation(playerColor === 'w' ? 'white' : 'black');
-                
-                const playerEloDisplay = Math.round(userElo);
-                const opponentEloDisplay = Math.round(options.opponentElo);
-
-                // Nombres
-                if (playerColor === 'w') {
-                    $('#playerName').text(username);
-                    $('#opponentName').text(currentOpponentName);
-                } else {
-                    $('#playerName').text(username);
-                    $('#opponentName').text(currentOpponentName);
-                }
-                
-                $('#gameTitle').text('Partida Rápida');
-                // --- MODIFICADO: Cambiado el texto ---
-                $('#gameIdDisplay').text('5 min').show();
-                $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
-                
-                stockfish.postMessage('ucinewgame');
-                let elo = parseFloat(options.skillLevel) || 100;
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
-                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
-                
-                game.reset();
-                board.start();
-                startGameTimer();
-                playSound('audioGameStart');
-
-                if (playerColor === 'b') {
-                    makingMove = true;
-                    $status.text('Oponente está pensando...');
-                    setTimeout(() => {
-                        stockfish.postMessage('position fen ' + game.fen());
-                        stockfish.postMessage('go depth 15');
-                    }, 1500);
-                }
-
             } else if (mode === 'puzzle') {
                 if (options.puzzleIndex >= puzzles.length) {
                     console.error("Índice de problema fuera de rango");
@@ -1382,9 +1423,21 @@
             if (currentGameMode === 'ai' || currentGameMode === 'bot_match') {
                 makingMove = true;
                 $status.text('Oponente está pensando...');
+
+                // Recalcular la profundidad de búsqueda
+                let elo = currentOpponentElo;
+                let maxDepth = 20;
+                if (elo <= 1000) {
+                    maxDepth = 1 + Math.round((elo - 100) / 900 * 3);
+                } else if (elo <= 1800) {
+                    maxDepth = 5 + Math.round((elo - 1000) / 800 * 10);
+                }
+                maxDepth = Math.max(1, Math.min(20, maxDepth));
+                
                 setTimeout(() => {
                     stockfish.postMessage('position fen ' + game.fen());
-                    stockfish.postMessage('go depth 15');
+                    // Usar la profundidad ajustada
+                    stockfish.postMessage('go depth ' + maxDepth);
                 }, 1500 + Math.random() * 500); // Delay más humano
                 
             } else if (currentGameMode === 'online') {
@@ -1585,7 +1638,8 @@
             showView('fakeMatchmakingView');
             const delay = Math.random() * 2000 + 2000;
             fakeMatchmakingTimer = setTimeout(() => {
-                currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50;
+                // Modificado: El ELO del bot ahora es más cercano al ELO del jugador por defecto.
+                currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50; 
                 currentOpponentElo = Math.max(100, currentOpponentElo); 
                 const playerStartsAs = (Math.random() > 0.5) ? 'w' : 'b';
                 currentOpponentName = botNames[Math.floor(Math.random() * botNames.length)];
@@ -1661,7 +1715,8 @@
             stockfish.addEventListener('message', moveCallback);
             stockfish.postMessage('ucinewgame');
             stockfish.postMessage('position fen ' + fullFen);
-            stockfish.postMessage('go depth 15');
+            // Stockfish siempre debe buscar la mejor jugada para los problemas
+            stockfish.postMessage('go depth 15'); 
         }
         
         function showHint() {
@@ -1698,7 +1753,7 @@
                 return;
             }
             if (friendUsername === username) {
-                $status.text('No puedes añadirte a ti mismo.').css('color', 'var(--danger-accent)');
+                $status.text('No puedes añadarte a ti mismo.').css('color', 'var(--danger-accent)');
                 return;
             }
             $status.text('Buscando usuario...').css('color', 'var(--text-secondary)');
@@ -1751,6 +1806,7 @@
             }
             const email = username + '@email.com';
             $('#loginError').text('Registrando...');
+
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const newUser = userCredential.user;
@@ -1833,7 +1889,7 @@
                 
                 stockfish.addEventListener('message', evalListener);
                 stockfish.postMessage('position fen ' + fen);
-                // Usamos un tiempo fijo para la evaluación para que sea rápido
+                // Usamos un tiempo fijo para la evaluación para que sea rápido (1 segundo)
                 stockfish.postMessage('go movetime 1000'); 
             });
         }
@@ -2067,9 +2123,19 @@
             }
         }
 
+        // --- Cargar nombres de bots desde usernames.json ---
+        async function loadBotNames() {
+            try {
+                const response = await fetch('usernames.json');
+                if (!response.ok) throw new Error('Error al cargar usernames.json');
+                botNames = await response.json();
+                console.log('Bot names loaded:', botNames);
+            } catch (error) {
+                console.error('Error loading bot names:', error);
+                botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm"]; // Fallback names
+            }
+        }
 
-        // --- 7. Event Listeners del DOM ---
-        
         $(document).ready(function() {
             $status = $('#status');
             $pgn = $('#pgn');
@@ -2091,8 +2157,9 @@
 
             $('#addFriendButton').on('click', addFriend);
             
+            $('#eloSlider').attr('min', 100); // Set minimum ELO to 100
             $('#eloSlider').on('input', function() {
-                $('#eloValue').text($(this).val());
+                $('#eloValue').text(Math.max(100, $(this).val())); // Ensure minimum ELO is 100
             });
             $('#startAiGameButton').on('click', () => {
                 initGame('ai', { skillLevel: $('#eloSlider').val() });
@@ -2126,19 +2193,31 @@
             $('#reviewFirstBtn').on('click', () => navigateReview('first'));
             $('#reviewLastBtn').on('click', () => navigateReview('last'));
             $('#backToMenuFromReviewButton').on('click', backToMenu);
+
+            // Cargar nombres de bots al iniciar
+            loadBotNames();
+            $('#toggleSoundButton').on('click', function() {
+                const video = document.getElementById('background-video');
+                if (video.muted) {
+                    video.muted = false;
+                    $(this).text('🔇 Silenciar');
+                } else {
+                    video.muted = true;
+                    $(this).text('🔊 Activar Sonido');
+                }
+            });
         });
 
     </script>
     
     <!-- Bibliotecas JS (jQuery, Chessboard, Chess.js) -->
-    <!-- jQuery (CORREGIDO 'integrity' a 'integrity') -->
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     
-    <!-- Chessboard.js (CORREGIDO 'integrity' a 'integrity') -->
+    <!-- Chessboard.js -->
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
     <!-- Chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
-
 </body>
 </html>
