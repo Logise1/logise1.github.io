@@ -378,7 +378,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             overflow: hidden;
         }
-        #myBoard { width: 100%; border-radius: 6px; }
+        #myBoard, #reviewBoard { width: 100%; border-radius: 6px; }
         
         .status-container { margin-top: 15px; text-align: center; }
         #status { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); min-height: 1.5rem; margin-bottom: 10px; }
@@ -386,7 +386,7 @@
         #puzzleStatus.correct { color: var(--correct-accent); }
         #puzzleStatus.incorrect { color: var(--danger-accent); }
         
-        #pgn {
+        #pgn, #reviewPgn {
             width: 100%;
             height: 300px; /* Más alto */
             max-height: 40vh;
@@ -400,6 +400,7 @@
             color: var(--text-secondary);
             box-sizing: border-box;
         }
+        #reviewPgn { height: 200px; max-height: 200px; }
         
         /* Contenedor para botones de juego */
         .game-actions {
@@ -427,7 +428,7 @@
         
         .highlight-hint { box-shadow: inset 0 0 15px 5px rgba(255, 193, 7, 0.7) !important; }
         
-        #backToMenuButton {
+        #backToMenuButton, #backToMenuFromReviewButton {
             background-color: var(--danger-accent);
             margin-top: 20px;
         }
@@ -442,12 +443,96 @@
             border: 1px solid var(--border-color);
             width: 120px;
             text-align: center;
-            margin: 10px 0;
+            margin: 5px 0;
             display: none;
         }
         .timer-display.active-timer {
             color: var(--warning-accent);
             box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+
+        /* Nombres de Jugadores */
+        .player-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 10px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #opponentName { margin-bottom: 5px; }
+        #playerName { margin-top: 5px; }
+
+        /* Barra de Emojis */
+        .emoji-bar {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+        }
+        .emoji-bar h4 { margin: 0 0 10px 0; }
+        .emoji-buttons { display: flex; justify-content: space-around; }
+        .emoji-btn {
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            margin: 0;
+            box-shadow: none;
+            transition: transform 0.2s;
+        }
+        .emoji-btn:hover { transform: scale(1.2); }
+        
+        #emoji-display-opponent, #emoji-display-player {
+            position: fixed;
+            font-size: 3rem;
+            opacity: 0;
+            display: none;
+            z-index: 1000;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        /* Posiciones de Emojis (Ajustar según sea necesario) */
+        #emoji-display-opponent { top: 20%; left: 50%; transform: translateX(-50%); }
+        #emoji-display-player { bottom: 20%; left: 50%; transform: translateX(-50%); }
+
+        /* Vista de Revisión */
+        #reviewView {
+            background-color: var(--bg-primary);
+            justify-content: center;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 150;
+        }
+        .review-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .review-controls button {
+            font-size: 1.2rem;
+            padding: 10px 15px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+        #reviewMoveEval {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+        .eval-icon {
+            width: 28px;
+            height: 28px;
         }
         
         /* Diseño Responsivo para el juego */
@@ -462,7 +547,7 @@
                 flex: 1;
                 box-sizing: border-box;
             }
-            #pgn {
+            #pgn, #reviewPgn {
                 height: 100px; /* Más pequeño en móvil */
                 max-height: 100px;
             }
@@ -474,12 +559,15 @@
                 width: auto;
                 font-size: 0.9rem;
             }
-            #gameView {
+            #gameView, #reviewView {
                 justify-content: flex-start; /* Alinear al principio */
             }
             #backToMenuButton {
                 margin-top: 10px;
             }
+            .review-controls button { font-size: 1rem; padding: 8px 10px; }
+            #emoji-display-opponent { top: 15%; }
+            #emoji-display-player { bottom: 15%; }
         }
         
     </style>
@@ -631,17 +719,20 @@
 
     <!-- Vista de Juego (Pantalla Completa) -->
     <div id="gameView" class="app-view">
-        <!-- NUEVO: Layout de 2 Columnas -->
         <div class="game-layout">
             
             <!-- Columna Izquierda: Tablero y Timers -->
             <div class="game-column-left">
                 <h1 id="gameTitle">Ajedrez</h1>
+                <!-- NUEVO: Nombre Oponente -->
+                <div class="player-name" id="opponentName">Oponente</div>
                 <div class="timer-display" id="opponentTimer">5:00</div>
                 <div class="game-info"><span id="gameIdDisplay"></span></div>
                 <div class="board-container">
                     <div id="myBoard"></div>
                 </div>
+                <!-- NUEVO: Nombre Jugador -->
+                <div class="player-name" id="playerName">Jugador</div>
                 <div class="timer-display" id="playerTimer">5:00</div>
             </div>
             
@@ -656,16 +747,60 @@
                 
                 <div class="game-actions">
                     <button id="hintButton" style="display: none;">Pista</button>
+                    <!-- MODIFICADO: El texto se cambiará por JS -->
                     <button id="newGameButton" style="display: none; background-color: #5a6a8a;">Juego Nuevo</button>
                     <button id="drawButton" style="display: none;">Pedir Tablas</button>
                     <button id="resignButton" style="display: none;">Rendirse</button>
                 </div>
+
+                <!-- NUEVO: Barra de Emojis -->
+                <div class="emoji-bar" style="display: none;">
+                    <h4>Reacciones</h4>
+                    <div class="emoji-buttons">
+                        <button class="emoji-btn" data-emoji="👍">👍</button>
+                        <button class="emoji-btn" data-emoji="😂">😂</button>
+                        <button class="emoji-btn" data-emoji="🔥">🔥</button>
+                        <button class="emoji-btn" data-emoji="🤔">🤔</button>
+                        <button class="emoji-btn" data-emoji="👎">👎</button>
+                    </div>
+                </div>
+
             </div>
             
         </div>
         
         <button id="backToMenuButton">Abandonar y Volver</button>
     </div>
+
+    <!-- NUEVA VISTA: Revisión de Partida -->
+    <div id="reviewView" class="app-view">
+        <div class="game-layout">
+            <div class="game-column-left">
+                <h1 id="reviewGameTitle">Revisión de Partida</h1>
+                <div class="board-container">
+                    <div id="reviewBoard"></div>
+                </div>
+                <!-- NUEVO: Evaluación de Jugada -->
+                <h3 id="reviewMoveEval"></h3>
+            </div>
+            <div class="game-column-right">
+                <h3>Movimientos (PGN)</h3>
+                <textarea id="reviewPgn" readonly></textarea>
+                <!-- NUEVO: Controles de Revisión -->
+                <div class="review-controls">
+                    <button id="reviewFirstBtn">⏮</button>
+                    <button id="reviewPrevBtn">⏪</button>
+                    <button id="reviewNextBtn">⏩</button>
+                    <button id="reviewLastBtn">⏭</button>
+                </div>
+                <button id="backToMenuFromReviewButton">Volver al Menú</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NUEVO: Contenedores de Emojis (globales) -->
+    <div id="emoji-display-opponent"></div>
+    <div id="emoji-display-player"></div>
 
     <!-- Pre-carga de Sonidos -->
     <audio id="audioGameStart" src="https://logise1.github.io/chess/assets/audio/game-start.mp3" preload="auto"></audio>
@@ -720,7 +855,6 @@
         var currentOpponentName = "Oponente";
         var fakeMatchmakingTimer = null;
         const ELO_K_FACTOR = 32;
-        // --- MODIFICADO: Más nombres ---
         const botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm", "Kasparov_v2", "PawnSlayer", "BishopBot", "TheGrandmaster", "Enigma", "Maestro", "Furia", "Quantum", "ElTactico", "NekoBot", "ReyDelCaos"];
         
         // --- GLOBALES PARA EL TEMPORIZADOR ---
@@ -750,12 +884,22 @@
         var matchmakingUnsubscribe = null;
         var friendsUnsubscribe = null;
         var myMatchmakingDocRef = null;
-        var currentGameRef = null; // Guardar referencia a la partida actual
+        var currentGameRef = null;
         
         // Puzzles
         let puzzles = []; 
         var currentPuzzle = null;
         var currentPuzzleStep = 0;
+
+        // --- Variables de Revisión ---
+        var reviewBoard = null;
+        var reviewGame = new Chess();
+        var reviewHistory = [];
+        var reviewMoveIndex = -1;
+        var finalPgn = '';
+
+        // --- NUEVO: Variables de Emojis Online ---
+        var lastOpponentEmojiTimestamp = null;
         
         // Configuración del tablero
         var config = {
@@ -765,15 +909,12 @@
             onDrop: onDrop,
             onSnapEnd: onSnapEnd,
             pieceTheme: getPieceTheme,
-            moveSpeed: 'slow',
-            snapSpeed: 'fast'
+            snapSpeed: 200,      // Velocidad de la animación al soltar
+            moveSpeed: 'slow', // Velocidad de animación de la IA (se usa en board.position(fen, true))
         };
 
         // --- 1. Inicialización ---
 
-        /**
-         * Inicializa Firebase y la autenticación
-         */
         async function initFirebase() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -816,9 +957,6 @@
             }
         }
         
-        /**
-         * Inicializa el motor de Stockfish (una sola vez)
-         */
         async function initStockfish(readyCallback) {
             if (stockfishReady) {
                 if (readyCallback) readyCallback();
@@ -836,7 +974,6 @@
                 
                 stockfish.onmessage = function(event) {
                     var message = event.data;
-                    // console.log("Stockfish:", message); 
 
                     if (message === 'uciok') {
                         stockfish.postMessage('isready');
@@ -853,8 +990,8 @@
                             else playSound('audioMove');
                         }
                         
-                        // config.position = game.fen();
-                        board.position(game.fen()); // Animar el movimiento
+                        // --- MODIFICADO: Añadido 'true' para forzar animación ---
+                        board.position(game.fen(), true); 
                         
                         switchTimer();
                         updateStatus();
@@ -869,7 +1006,6 @@
 
         // --- 2. Lógica de Vistas y Navegación ---
         
-        // --- INICIO DEL CÓDIGO RESTAURADO ---
         function showView(viewId) {
             $('.app-view').hide();
             $('#' + viewId).css('display', 'flex');
@@ -950,7 +1086,6 @@
             $('#playerTimer').text(formatTime(playerTime));
             $('#opponentTimer').text(formatTime(opponentTime));
         }
-        // --- FIN DEL CÓDIGO RESTAURADO ---
 
         function switchTimer() {
             if (game.game_over()) {
@@ -971,17 +1106,20 @@
 
         // --- 4. Lógica de Juego (Principal) ---
         
-        function initGame(mode, options = {}) {
+        async function initGame(mode, options = {}) {
             currentGameMode = mode;
             showView('gameView');
             
             game.reset();
             makingMove = false;
             playerColor = 'w';
+            finalPgn = '';
+            lastOpponentEmojiTimestamp = null; // Resetear timestamp de emoji
             
             $('#pgn, #newGameButton, #hintButton, #playerTimer, #opponentTimer, #drawButton, #resignButton').hide();
             $('#puzzleStatus').text('').removeClass('correct incorrect');
             $('#gameIdDisplay').hide();
+            $('.emoji-bar').hide();
             
             if (gameUnsubscribe) gameUnsubscribe();
             if (matchmakingUnsubscribe) matchmakingUnsubscribe();
@@ -989,8 +1127,7 @@
 
             config.position = 'start';
             if (board) {
-                // No destruir, solo actualizar posición para evitar recarga
-                board.position('start');
+                board.position('start', false); // Sin animación al resetear
             } else {
                 board = Chessboard('myBoard', config);
             }
@@ -1000,9 +1137,17 @@
                 board.orientation('white');
                 $('#gameTitle').text('Partida contra IA');
                 $('#pgn, #newGameButton, #drawButton, #resignButton').show();
+                $('#newGameButton').text('Juego Nuevo').off('click').on('click', () => {
+                    initGame('ai', { skillLevel: $('#eloSlider').val() });
+                });
+
+                // Nombres
+                const aiElo = options.skillLevel || 100;
+                $('#playerName').text(username || 'Jugador');
+                $('#opponentName').text(`IA (ELO ${aiElo})`);
                 
                 stockfish.postMessage('ucinewgame');
-                let elo = parseFloat(options.skillLevel) || 100;
+                let elo = parseFloat(aiElo);
                 let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
@@ -1017,10 +1162,35 @@
                 
                 $('#gameTitle').text('Partida Online');
                 $('#gameIdDisplay').text(`ID Partida: ${gameId}`).show();
-                $('#pgn, #drawButton, #resignButton').show();
+                $('#pgn, #drawButton, #resignButton, .emoji-bar').show(); // MOSTRAR EMOJIS
                 
                 const gameDocRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
                 currentGameRef = gameDocRef;
+
+                // Nombres
+                const gameDataForNames = await getDoc(gameDocRef);
+                if (gameDataForNames.exists()) {
+                    const data = gameDataForNames.data();
+                    const opponentId = playerColor === 'w' ? data.playerBlack : data.playerWhite;
+                    
+                    try {
+                        const oppProfileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', opponentId);
+                        const oppDoc = await getDoc(oppProfileRef);
+                        const opponentUsername = oppDoc.exists() ? oppDoc.data().username : 'Oponente';
+                        
+                        if (playerColor === 'w') {
+                            $('#playerName').text(username);
+                            $('#opponentName').text(opponentUsername);
+                        } else {
+                            $('#playerName').text(username);
+                            $('#opponentName').text(opponentUsername);
+                        }
+                    } catch(e) {
+                        console.error("Error fetching opponent name", e);
+                        $('#playerName').text(username);
+                        $('#opponentName').text('Oponente');
+                    }
+                }
                 
                 gameUnsubscribe = onSnapshot(gameDocRef, (doc) => {
                     if (!doc.exists()) {
@@ -1034,11 +1204,22 @@
                     
                     if (newFen !== currentFen) {
                         game.load(newFen);
-                        board.position(game.fen());
+                        board.position(game.fen(), true); // Animación
                     }
                     
                     makingMove = (game.turn() !== playerColor);
                     updateStatus();
+
+                    // --- NUEVO: Escuchar Emojis ---
+                    const opponentEmojiData = (playerColor === 'w') ? gameData.playerBlackEmoji : gameData.playerWhiteEmoji;
+                    if (opponentEmojiData && opponentEmojiData.sentAt && 
+                        (!lastOpponentEmojiTimestamp || opponentEmojiData.sentAt.toMillis() > lastOpponentEmojiTimestamp.toMillis())) 
+                    {
+                        lastOpponentEmojiTimestamp = opponentEmojiData.sentAt;
+                        // Mostrar emoji del oponente
+                        $('#emoji-display-opponent').text(opponentEmojiData.emoji).stop().fadeIn(200).delay(1500).fadeOut(300);
+                    }
+                    // --- FIN NUEVO ---
                 });
                 playSound('audioGameStart');
             
@@ -1049,9 +1230,18 @@
                 const playerEloDisplay = Math.round(userElo);
                 const opponentEloDisplay = Math.round(options.opponentElo);
 
-                $('#gameTitle').text(`${username} (${playerEloDisplay}) vs ${currentOpponentName} (${opponentEloDisplay})`);
-                $('#gameIdDisplay').text('Partida Rápida (5 min)').show();
-                $('#pgn, #drawButton, #resignButton').show();
+                // Nombres
+                if (playerColor === 'w') {
+                    $('#playerName').text(username);
+                    $('#opponentName').text(currentOpponentName);
+                } else {
+                    $('#playerName').text(username);
+                    $('#opponentName').text(currentOpponentName);
+                }
+                
+                $('#gameTitle').text('Partida Rápida');
+                $('#gameIdDisplay').text('5 min vs Bot').show();
+                $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
                 
                 stockfish.postMessage('ucinewgame');
                 let elo = parseFloat(options.skillLevel) || 100;
@@ -1069,7 +1259,7 @@
                     setTimeout(() => {
                         stockfish.postMessage('position fen ' + game.fen());
                         stockfish.postMessage('go depth 15');
-                    }, 500);
+                    }, 1500);
                 }
 
             } else if (mode === 'puzzle') {
@@ -1091,13 +1281,16 @@
                 }
                 
                 config.position = currentPuzzle.fen;
-                // board = Chessboard('myBoard', config);
-                board.position(currentPuzzle.fen);
+                board.position(currentPuzzle.fen, true); // Animación
                 board.orientation(playerColor === 'w' ? 'white' : 'black');
                 
                 $('#gameTitle').text(`Problema #${currentPuzzle.index + 1}`);
                 $('#gameIdDisplay').hide();
                 $('#hintButton').show().prop('disabled', true);
+                
+                // Nombres
+                $('#playerName').text(username);
+                $('#opponentName').text('Problema');
                 
                 makingMove = true;
                 getSolutionMove(fullFen, (bestmove) => {
@@ -1153,8 +1346,7 @@
                     $puzzleStatus.text('Movimiento incorrecto. Inténtalo de nuevo.').removeClass('correct').addClass('incorrect');
                     return 'snapback';
                 }
-                // updateStatus() se llama en onSnapEnd
-                return;
+                return; // onSnapEnd se encargará de actualizar
             }
 
             // --- Lógica de IA y Online ---
@@ -1177,7 +1369,7 @@
                 setTimeout(() => {
                     stockfish.postMessage('position fen ' + game.fen());
                     stockfish.postMessage('go depth 15');
-                }, 250);
+                }, 1500 + Math.random() * 500); // Delay más humano
                 
             } else if (currentGameMode === 'online') {
                 makingMove = true; 
@@ -1196,7 +1388,11 @@
         }
 
         function onSnapEnd() {
-            board.position(game.fen());
+            // No es necesario llamar a board.position() aquí
+            // porque chessboard.js lo hace automáticamente al soltar.
+            // PERO, si el movimiento es inválido (snapback), chess.js lo revierte,
+            // así que SÍ necesitamos actualizar el tablero a la posición de game.fen().
+            board.position(game.fen(), true); // Forzar animación
             updateStatus();
         }
 
@@ -1223,6 +1419,15 @@
             if (gameOver) {
                 stopGameTimer();
                 playSound('audioGameEnd');
+                $('.emoji-bar').hide();
+                finalPgn = game.pgn();
+                
+                // Botón de Revisión
+                $('#newGameButton').text('Revisar Partida')
+                    .show()
+                    .off('click') // Limpiar listener anterior
+                    .on('click', () => initReview(finalPgn));
+
                 
                 if (currentGameMode === 'bot_match' && result !== null) {
                     const newElo = calculateElo(userElo, currentOpponentElo, result);
@@ -1234,6 +1439,12 @@
                     $('#userClassicElo').text(Math.round(userElo));
                     updateEloInFirebase(newElo);
                     
+                    currentGameMode = null;
+                }
+                
+                // Limpiar referencia de partida online
+                if (currentGameMode === 'online') {
+                    currentGameRef = null;
                     currentGameMode = null;
                 }
             } else {
@@ -1306,12 +1517,22 @@
                     } else {
                         const waitingPlayerDoc = querySnapshot.docs[0];
                         const waitingPlayer = waitingPlayerDoc.data();
+                        
+                        if (waitingPlayer.userId === userId) {
+                            console.log("Esperando a otro jugador...");
+                            myMatchmakingDocRef = await addDoc(matchmakingQueueRef, {
+                                userId: userId, username: username, status: 'waiting', createdAt: serverTimestamp()
+                            });
+                            return;
+                        }
+
                         const gameId = crypto.randomUUID().substring(0, 8);
                         const newGameRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
                         transaction.set(newGameRef, {
                             fen: 'start', pgn: '', status: 'active',
                             playerWhite: waitingPlayer.userId, playerBlack: userId,
-                            turn: 'w', createdAt: serverTimestamp()
+                            turn: 'w', createdAt: serverTimestamp(),
+                            playerWhiteEmoji: null, playerBlackEmoji: null // NUEVO
                         });
                         transaction.update(waitingPlayerDoc.ref, {
                             status: 'matched', gameId: gameId, opponentId: userId
@@ -1352,7 +1573,6 @@
             const delay = Math.random() * 2000 + 2000;
             fakeMatchmakingTimer = setTimeout(() => {
                 currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50;
-                // MODIFICADO: Mínimo de 100 ELO
                 currentOpponentElo = Math.max(100, currentOpponentElo); 
                 const playerStartsAs = (Math.random() > 0.5) ? 'w' : 'b';
                 currentOpponentName = botNames[Math.floor(Math.random() * botNames.length)];
@@ -1405,7 +1625,6 @@
             }
             if (puzzles.length === 0) {
                 $status.text("Error al cargar problemas.");
-                // alert("No se pudieron cargar los problemas."); // No usar alert
                 showView('mainAppView');
                 return;
             }
@@ -1556,7 +1775,7 @@
             }
         }
 
-        // --- 6. Nuevas Funciones de Juego ---
+        // --- 6. Nuevas Funciones de Juego y Revisión ---
         
         function handleResign() {
             if (currentGameMode !== 'bot_match' && currentGameMode !== 'ai' && currentGameMode !== 'online') {
@@ -1586,9 +1805,14 @@
             
             $status.text(status);
             playSound('audioGameEnd');
-            currentGameMode = null;
+            finalPgn = game.pgn(); // Guardar PGN al rendirse
             
-            setTimeout(backToMenu, 2500);
+            $('#newGameButton').text('Revisar Partida')
+                .show()
+                .off('click')
+                .on('click', () => initReview(finalPgn));
+
+            currentGameMode = null;
         }
         
         function backToMenu() {
@@ -1604,9 +1828,122 @@
             myMatchmakingDocRef = null;
             currentGameMode = null;
             
+            if (reviewBoard) {
+                reviewBoard.destroy();
+                reviewBoard = null;
+            }
+            
             showView('mainAppView');
             showTabView('dashboardView');
         }
+
+        // --- Funciones de Emojis ---
+        async function handleEmojiClick() {
+            const emoji = $(this).data('emoji');
+            
+            // Mostrar emoji del jugador
+            $('#emoji-display-player').text(emoji).stop().fadeIn(200).delay(1500).fadeOut(300);
+
+            if (currentGameMode === 'bot_match') {
+                setTimeout(botEmojiReaction, 1000 + Math.random() * 1500);
+            } else if (currentGameMode === 'online' && currentGameRef) {
+                // Enviar emoji a Firebase
+                try {
+                    const fieldToUpdate = (playerColor === 'w') ? 'playerWhiteEmoji' : 'playerBlackEmoji';
+                    await updateDoc(currentGameRef, { 
+                        [fieldToUpdate]: { 
+                            emoji: emoji, 
+                            sentAt: serverTimestamp() 
+                        } 
+                    });
+                } catch (e) {
+                    console.error("Error al enviar emoji:", e);
+                }
+            }
+        }
+
+        function botEmojiReaction() {
+            const emojis = ['👍', '😂', '🤔', '🔥', '😮', '👎'];
+            const botEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            // Mostrar emoji del oponente
+            $('#emoji-display-opponent').text(botEmoji).stop().fadeIn(200).delay(1500).fadeOut(300);
+        }
+
+        // --- Funciones de Revisión de Partida ---
+        function initReview(pgn) {
+            showView('reviewView');
+            reviewHistory = [];
+            reviewMoveIndex = -1;
+            finalPgn = pgn; // Asegurarse de que esté guardado
+
+            if (reviewBoard) {
+                reviewBoard.destroy();
+            }
+            
+            const reviewConfig = {
+                position: 'start',
+                pieceTheme: getPieceTheme,
+                snapSpeed: 100,
+                moveSpeed: 300
+            };
+            reviewBoard = Chessboard('reviewBoard', reviewConfig);
+            
+            reviewGame.load_pgn(pgn);
+            reviewHistory = reviewGame.history({ verbose: true });
+            reviewGame.reset(); // Volver al inicio
+            
+            $('#reviewPgn').val(pgn);
+            $('#reviewMoveEval').text('Inicio de la partida');
+        }
+
+        function navigateReview(direction) {
+            let newIndex = reviewMoveIndex;
+
+            if (direction === 'first') {
+                newIndex = -1;
+                reviewGame.reset();
+            } else if (direction === 'last') {
+                newIndex = reviewHistory.length - 1;
+                reviewGame.load_pgn(finalPgn); // Cargar todo el PGN
+            } else if (direction === 1) { // Next
+                if (reviewMoveIndex < reviewHistory.length - 1) {
+                    newIndex++;
+                    reviewGame.move(reviewHistory[newIndex].san);
+                }
+            } else if (direction === -1) { // Prev
+                if (reviewMoveIndex > -1) {
+                    newIndex--;
+                    reviewGame.undo();
+                }
+            }
+
+            reviewMoveIndex = newIndex;
+            reviewBoard.position(reviewGame.fen(), true); // Animar movimiento
+            showMoveEvaluation();
+        }
+
+        function showMoveEvaluation() {
+            if (reviewMoveIndex < 0) {
+                $('#reviewMoveEval').html('<span>Inicio de la partida</span>');
+                return;
+            }
+
+            // Simulación de análisis
+            const moveEvals = ["best", "excellent", "book", "ok", "inaccuracy", "mistake", "blunder"];
+            const randomEval = moveEvals[Math.floor(Math.random() * moveEvals.length)];
+            const move = reviewHistory[reviewMoveIndex];
+            
+            const moveColor = move.color === 'w' ? 'Blancas' : 'Negras';
+            const moveNumber = Math.floor(reviewMoveIndex / 2) + 1;
+            const dots = (move.color === 'b') ? '...' : '';
+
+            $('#reviewMoveEval').html(`
+                <span>${moveNumber}. ${dots}${move.san}</span>
+                <img src="https://logise1.github.io/chess/assets/ratings/${randomEval}.png" class="eval-icon" alt="${randomEval}">
+                <span style="text-transform: capitalize;">(${randomEval})</span>
+            `);
+        }
+
 
         // --- 7. Event Listeners del DOM ---
         
@@ -1646,7 +1983,7 @@
             
             // Botones de Juego
             $('#backToMenuButton').on('click', () => {
-                if (currentGameMode === 'bot_match' && !game.game_over()) {
+                if ((currentGameMode === 'bot_match' || currentGameMode === 'online') && !game.game_over()) {
                     handleResign();
                 } else {
                     backToMenu();
@@ -1656,12 +1993,16 @@
             $('#drawButton').on('click', () => {
                 $status.text('El oponente no acepta las tablas.');
             });
-            $('#newGameButton').on('click', () => {
-                if (currentGameMode === 'ai') {
-                    initGame('ai', { skillLevel: $('#eloSlider').val() });
-                }
-            });
+            // 'newGameButton' se maneja en updateStatus y initGame
             $('#hintButton').on('click', showHint);
+
+            // Listeners de Emojis y Revisión
+            $('.emoji-btn').on('click', handleEmojiClick);
+            $('#reviewNextBtn').on('click', () => navigateReview(1));
+            $('#reviewPrevBtn').on('click', () => navigateReview(-1));
+            $('#reviewFirstBtn').on('click', () => navigateReview('first'));
+            $('#reviewLastBtn').on('click', () => navigateReview('last'));
+            $('#backToMenuFromReviewButton').on('click', backToMenu);
         });
 
     </script>
