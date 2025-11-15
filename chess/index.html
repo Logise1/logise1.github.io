@@ -750,6 +750,7 @@
         var matchmakingUnsubscribe = null;
         var friendsUnsubscribe = null;
         var myMatchmakingDocRef = null;
+        var currentGameRef = null; // Guardar referencia a la partida actual
         
         // Puzzles
         let puzzles = []; 
@@ -852,67 +853,55 @@
                             else playSound('audioMove');
                         }
                         
-                        config.position = game.fen();
-                        board = Chessboard('myBoard', config);
+                        // config.position = game.fen();
+                        board.position(game.fen()); // Animar el movimiento
                         
                         switchTimer();
                         updateStatus();
                         makingMove = false;
                     }
-                };
+                }
                 stockfish.postMessage('uci');
             } catch (e) {
                 console.error("No se pudo inicializar Stockfish:", e);
-                alert("Error al cargar la IA.");
             }
         }
 
         // --- 2. Lógica de Vistas y Navegación ---
         
+        // --- INICIO DEL CÓDIGO RESTAURADO ---
         function showView(viewId) {
             $('.app-view').hide();
             $('#' + viewId).css('display', 'flex');
         }
         
-        function showTabView(tabViewId) {
+        function showTabView(tabId) {
             $('.tab-view').removeClass('active');
-            $('#' + tabViewId).addClass('active');
+            $('#' + tabId).addClass('active');
             
             $('.nav-button').removeClass('active');
-            if (tabViewId === 'dashboardView') {
-                $('#navPlay').addClass('active');
-            } else if (tabViewId === 'puzzlesView') {
-                $('#navPuzzles').addClass('active');
-            } else if (tabViewId === 'friendsView') {
-                $('#navFriends').addClass('active');
-            }
+            if (tabId === 'dashboardView') $('#navPlay').addClass('active');
+            else if (tabId === 'puzzlesView') $('#navPuzzles').addClass('active');
+            else if (tabId === 'friendsView') $('#navFriends').addClass('active');
         }
-        
-        // --- 3. Lógica de Sonido y Temporizador ---
+
+        // --- 3. Lógica Auxiliar (Sonidos, Timers) ---
 
         function playSound(soundId) {
-            const sound = document.getElementById(soundId);
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.log("Fallo al reproducir sonido (requiere interacción del usuario)"));
+            const audio = document.getElementById(soundId);
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.warn("Error al reproducir sonido:", e));
             }
         }
-        
-        function formatTime(seconds) {
-            const min = Math.floor(seconds / 60);
-            const sec = seconds % 60;
-            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        }
-        
+
         function startGameTimer() {
-            stopGameTimer();
             playerTime = 300;
             opponentTime = 300;
+            updateTimerDisplay();
+            $('#playerTimer, #opponentTimer').show();
+            
             activeTimer = 'w';
-            
-            $('#playerTimer').text(formatTime(playerTime)).css('display', 'block');
-            $('#opponentTimer').text(formatTime(opponentTime)).css('display', 'block');
-            
             if (playerColor === 'w') {
                 $('#playerTimer').addClass('active-timer');
                 $('#opponentTimer').removeClass('active-timer');
@@ -920,63 +909,53 @@
                 $('#opponentTimer').addClass('active-timer');
                 $('#playerTimer').removeClass('active-timer');
             }
-            
-            gameTimerInterval = setInterval(updateTimer, 1000);
+
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            gameTimerInterval = setInterval(() => {
+                if (game.game_over() || !currentGameMode) {
+                    stopGameTimer();
+                    return;
+                }
+
+                if (activeTimer === playerColor) {
+                    playerTime--;
+                    if (playerTime <= 0) {
+                        playerTime = 0;
+                        updateStatus(0); // Derrota por tiempo
+                    }
+                } else {
+                    opponentTime--;
+                    if (opponentTime <= 0) {
+                        opponentTime = 0;
+                        updateStatus(1); // Victoria por tiempo
+                    }
+                }
+                updateTimerDisplay();
+            }, 1000);
         }
 
         function stopGameTimer() {
             if (gameTimerInterval) clearInterval(gameTimerInterval);
             gameTimerInterval = null;
+            activeTimer = null;
             $('#playerTimer, #opponentTimer').removeClass('active-timer');
         }
 
-        function updateTimer() {
-            if (game.game_over()) {
-                stopGameTimer();
-                return;
-            }
-            
-            let timeOver = false;
-            let loser = null;
-            
-            if (activeTimer === playerColor) {
-                playerTime--;
-                $('#playerTimer').text(formatTime(playerTime));
-                if (playerTime <= 0) {
-                    timeOver = true;
-                    loser = playerColor;
-                }
-            } else {
-                opponentTime--;
-                $('#opponentTimer').text(formatTime(opponentTime));
-                if (opponentTime <= 0) {
-                    timeOver = true;
-                    loser = (playerColor === 'w' ? 'b' : 'w');
-                }
-            }
-            
-            if (timeOver) {
-                game.load(game.fen());
-                game.turn = () => loser;
-                game.in_checkmate = () => false;
-                game.in_stalemate = () => true;
-                game.game_over = () => true;
-                
-                if (currentGameMode === 'bot_match') {
-                    const result = (loser === playerColor) ? 0 : 1;
-                    stopGameTimer();
-                    updateStatus(result);
-                } else {
-                    stopGameTimer();
-                    updateStatus();
-                }
-            }
+        function updateTimerDisplay() {
+            const formatTime = (time) => {
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            };
+            $('#playerTimer').text(formatTime(playerTime));
+            $('#opponentTimer').text(formatTime(opponentTime));
         }
+        // --- FIN DEL CÓDIGO RESTAURADO ---
 
         function switchTimer() {
             if (game.game_over()) {
-                 stopGameTimer();
-                 return;
+                stopGameTimer();
+                return;
             }
             
             activeTimer = (activeTimer === 'w') ? 'b' : 'w';
@@ -1002,6 +981,7 @@
             
             $('#pgn, #newGameButton, #hintButton, #playerTimer, #opponentTimer, #drawButton, #resignButton').hide();
             $('#puzzleStatus').text('').removeClass('correct incorrect');
+            $('#gameIdDisplay').hide();
             
             if (gameUnsubscribe) gameUnsubscribe();
             if (matchmakingUnsubscribe) matchmakingUnsubscribe();
@@ -1009,21 +989,21 @@
 
             config.position = 'start';
             if (board) {
-                board.destroy();
+                // No destruir, solo actualizar posición para evitar recarga
+                board.position('start');
+            } else {
+                board = Chessboard('myBoard', config);
             }
-            board = Chessboard('myBoard', config);
 
             if (mode === 'ai') {
                 playerColor = 'w';
                 board.orientation('white');
                 $('#gameTitle').text('Partida contra IA');
-                $('#gameIdDisplay').hide();
                 $('#pgn, #newGameButton, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                // --- MODIFICADO: Nueva fórmula de ELO ---
                 let elo = parseFloat(options.skillLevel) || 100;
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700)))); // Mapeo lineal 100-2800 -> 0-20
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1049,13 +1029,15 @@
                         return;
                     }
                     const gameData = doc.data();
-                    const newFen = gameData.fen === 'start' ? game.fen() : gameData.fen;
-                    if (newFen !== game.fen()) game.load(newFen);
+                    const currentFen = game.fen();
+                    const newFen = (gameData.fen === 'start' || !gameData.fen) ? 'start' : gameData.fen;
                     
-                    config.position = game.fen();
-                    board = Chessboard('myBoard', config);
+                    if (newFen !== currentFen) {
+                        game.load(newFen);
+                        board.position(game.fen());
+                    }
                     
-                    makingMove = (gameData.turn !== playerColor);
+                    makingMove = (game.turn() !== playerColor);
                     updateStatus();
                 });
                 playSound('audioGameStart');
@@ -1064,17 +1046,16 @@
                 playerColor = options.playerColor;
                 board.orientation(playerColor === 'w' ? 'white' : 'black');
                 
-                const playerEloDisplay = Math.round(playerColor === 'w' ? userElo : options.opponentElo);
-                const opponentEloDisplay = Math.round(playerColor === 'w' ? options.opponentElo : userElo);
+                const playerEloDisplay = Math.round(userElo);
+                const opponentEloDisplay = Math.round(options.opponentElo);
 
                 $('#gameTitle').text(`${username} (${playerEloDisplay}) vs ${currentOpponentName} (${opponentEloDisplay})`);
                 $('#gameIdDisplay').text('Partida Rápida (5 min)').show();
                 $('#pgn, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                // --- MODIFICADO: Nueva fórmula de ELO ---
                 let elo = parseFloat(options.skillLevel) || 100;
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700)))); // Mapeo lineal 100-2800 -> 0-20
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700))));
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1110,7 +1091,8 @@
                 }
                 
                 config.position = currentPuzzle.fen;
-                board = Chessboard('myBoard', config);
+                // board = Chessboard('myBoard', config);
+                board.position(currentPuzzle.fen);
                 board.orientation(playerColor === 'w' ? 'white' : 'black');
                 
                 $('#gameTitle').text(`Problema #${currentPuzzle.index + 1}`);
@@ -1389,19 +1371,19 @@
                 if (!response.ok) throw new Error('No se pudo cargar puzzles.fen');
                 const data = await response.text();
                 puzzles = data.split('\n')
-                              .filter(fen => fen.trim() !== '')
-                              .map((fen, index) => {
-                                  const parts = fen.split(' ');
-                                  const piecePlacement = parts[0];
-                                  const turn = parts[1] || 'w';
-                                  return { 
-                                      name: `Problema #${index + 1}`, 
-                                      index: index, 
-                                      fen: piecePlacement,
-                                      turn: turn, 
-                                      solution: []
-                                  };
-                              });
+                                .filter(fen => fen.trim() !== '')
+                                .map((fen, index) => {
+                                    const parts = fen.split(' ');
+                                    const piecePlacement = parts[0];
+                                    const turn = parts[1] || 'w';
+                                    return { 
+                                        name: `Problema #${index + 1}`, 
+                                        index: index, 
+                                        fen: piecePlacement,
+                                        turn: turn, 
+                                        solution: []
+                                    };
+                                });
                 console.log('Problemas cargados:', puzzles.length);
             } catch (error) {
                 console.error('Error al cargar problemas:', error);
@@ -1423,7 +1405,7 @@
             }
             if (puzzles.length === 0) {
                 $status.text("Error al cargar problemas.");
-                alert("No se pudieron cargar los problemas.");
+                // alert("No se pudieron cargar los problemas."); // No usar alert
                 showView('mainAppView');
                 return;
             }
@@ -1437,12 +1419,12 @@
                 return;
             }
             const moveCallback = (event) => {
-                 var message = event.data;
-                 if (message.startsWith('bestmove')) {
+                var message = event.data;
+                if (message.startsWith('bestmove')) {
                     var bestmove = message.split(' ')[1];
                     stockfish.removeEventListener('message', moveCallback);
                     callback(bestmove);
-                 }
+                }
             };
             stockfish.addEventListener('message', moveCallback);
             stockfish.postMessage('ucinewgame');
@@ -1540,7 +1522,7 @@
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const newUser = userCredential.user;
-                const profileRef = doc(db, 'artifacts', appId, 'public/g/userProfiles', newUser.uid);
+                const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', newUser.uid);
                 await setDoc(profileRef, { 
                     username: username, 
                     joinedAt: serverTimestamp(),
