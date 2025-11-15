@@ -720,7 +720,8 @@
         var currentOpponentName = "Oponente";
         var fakeMatchmakingTimer = null;
         const ELO_K_FACTOR = 32;
-        const botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm", "Kasparov_v2", "PawnSlayer", "BishopBot", "TheGrandmaster"];
+        // --- MODIFICADO: Más nombres ---
+        const botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm", "Kasparov_v2", "PawnSlayer", "BishopBot", "TheGrandmaster", "Enigma", "Maestro", "Furia", "Quantum", "ElTactico", "NekoBot", "ReyDelCaos"];
         
         // --- GLOBALES PARA EL TEMPORIZADOR ---
         var playerTime = 300; // 5 minutos
@@ -1020,8 +1021,9 @@
                 $('#pgn, #newGameButton, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                // MODIFICADO: Nueva fórmula de ELO
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 100) / 100)));
+                // --- MODIFICADO: Nueva fórmula de ELO ---
+                let elo = parseFloat(options.skillLevel) || 100;
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700)))); // Mapeo lineal 100-2800 -> 0-20
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1070,8 +1072,9 @@
                 $('#pgn, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                // MODIFICADO: Nueva fórmula de ELO
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 100) / 100)));
+                // --- MODIFICADO: Nueva fórmula de ELO ---
+                let elo = parseFloat(options.skillLevel) || 100;
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (elo - 100) * (20 / 2700)))); // Mapeo lineal 100-2800 -> 0-20
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1537,7 +1540,7 @@
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const newUser = userCredential.user;
-                const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', newUser.uid);
+                const profileRef = doc(db, 'artifacts', appId, 'public/g/userProfiles', newUser.uid);
                 await setDoc(profileRef, { 
                     username: username, 
                     joinedAt: serverTimestamp(),
