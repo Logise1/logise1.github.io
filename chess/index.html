@@ -765,7 +765,8 @@
     <div id="fakeMatchmakingView" class="app-view">
         <div class="card-container">
             <h1>Buscando Partida</h1>
-            <div id="fakeMatchmakingStatus">Buscando oponente...</div>
+            <!-- Se actualiza con el ELO simulado -->
+            <div id="fakeMatchmakingStatus">Buscando oponente con ELO: <span id="fakeOpponentEloDisplay">...</span></div>
             <div class="spinner"></div>
             <button id="cancelFakeMatchmakingButton" class="back-button">Cancelar Búsqueda</button>
         </div>
@@ -989,7 +990,8 @@
                         const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', userId);
                         getDoc(profileRef).then(docSnap => {
                             if (docSnap.exists()) {
-                                userElo = docSnap.data().elo || 100;
+                                // Asegurar que el ELO del usuario nunca sea menor a 100
+                                userElo = Math.max(100, docSnap.data().elo || 100);
                             } else {
                                 userElo = 100;
                             }
@@ -1178,13 +1180,14 @@
 
         // --- Función para determinar la profundidad de Stockfish ---
         function calculateMaxDepth(elo) {
+            // Se asegura de que el ELO mínimo sea 100
             elo = Math.max(100, Math.min(2800, parseFloat(elo) || 100));
             
             // Para ELOs muy bajos (100 - 500) -> Profundidad 1 a 2.
             if (elo <= 500) {
-                // 100 ELO -> Profundidad 1
+                // 100 ELO -> Profundidad 1 (Mínimo absoluto para garantizar errores)
                 // 500 ELO -> Profundidad 2
-                return 1 + Math.round((elo - 100) / 400 * 1); 
+                return Math.max(1, 1 + Math.round((elo - 100) / 400 * 1)); 
             }
             
             // Para ELOs bajos/medios (500 - 1500) -> Profundidad 2 a 10.
@@ -1206,7 +1209,7 @@
             
             game.reset();
             makingMove = false;
-            playerColor = 'w';
+            playerColor = options.playerColor || 'w';
             finalPgn = '';
             lastOpponentEmojiTimestamp = null; // Resetear timestamp de emoji
             
@@ -1228,8 +1231,7 @@
 
             if (mode === 'bot_match' || mode === 'ai') {
                 // Ensure minimum ELO is 100
-                currentOpponentElo = Math.max(100, options.opponentElo || options.skillLevel); // Usar skillLevel si no hay opponentElo
-                playerColor = options.playerColor || 'w';
+                currentOpponentElo = Math.max(100, options.opponentElo || options.skillLevel); 
                 board.orientation(playerColor === 'w' ? 'white' : 'black');
                 
                 const playerEloDisplay = Math.round(userElo);
@@ -1238,13 +1240,17 @@
                 // Nombres y ELO
                 if (playerColor === 'w') {
                     $('#playerName').text(`${username} (ELO: ${playerEloDisplay})`);
-                    $('#opponentName').text(`${currentOpponentName} (ELO: ${opponentEloDisplay})`);
+                    // Cambiamos el nombre para que el modo "Jugar contra IA" parezca más una IA ajustable
+                    currentOpponentName = (mode === 'ai') ? `Stockfish ELO ${opponentEloDisplay}` : currentOpponentName;
+                    $('#opponentName').text(`${currentOpponentName}`);
                 } else {
                     $('#playerName').text(`${username} (ELO: ${playerEloDisplay})`);
-                    $('#opponentName').text(`${currentOpponentName} (ELO: ${opponentEloDisplay})`);
+                    currentOpponentName = (mode === 'ai') ? `Stockfish ELO ${opponentEloDisplay}` : currentOpponentName;
+                    $('#opponentName').text(`${currentOpponentName}`);
                 }
                 
-                $('#gameTitle').text('Partida Rápida');
+                // CORRECCIÓN: Usar el título correcto
+                $('#gameTitle').text((mode === 'ai') ? 'Partida vs. IA' : 'Partida Rápida');
                 $('#gameIdDisplay').text('5 min').show();
                 $('#pgn, #drawButton, #resignButton, .emoji-bar').show();
                 
@@ -1295,7 +1301,8 @@
                         const oppProfileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', opponentId);
                         const oppDoc = await getDoc(oppProfileRef);
                         const opponentUsername = oppDoc.exists() ? oppDoc.data().username : 'Oponente';
-                        const opponentElo = oppDoc.exists() ? Math.round(oppDoc.data().elo || 100) : 100;
+                        // Asegurar ELO mínimo de 100
+                        const opponentElo = oppDoc.exists() ? Math.round(Math.max(100, oppDoc.data().elo || 100)) : 100;
 
                         if (playerColor === 'w') {
                             $('#playerName').text(`${username} (ELO: ${Math.round(userElo)})`);
@@ -1553,19 +1560,21 @@
 
         function calculateElo(playerElo, opponentElo, result) {
             const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
-            return playerElo + ELO_K_FACTOR * (result - expectedScore);
+            // Se asegura de que el ELO resultante nunca sea menor a 100
+            return Math.max(100, playerElo + ELO_K_FACTOR * (result - expectedScore));
         }
         
         async function updateEloInFirebase(newElo) {
             if (!userId) return;
             const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', userId);
             try {
-                await updateDoc(profileRef, { elo: newElo });
+                // Asegurar ELO mínimo al guardar
+                await updateDoc(profileRef, { elo: Math.max(100, newElo) });
                 console.log("ELO actualizado en Firebase:", newElo);
             } catch (e) {
                 console.error("Error al actualizar ELO, intentando crear/setear:", e);
                 try {
-                    await setDoc(profileRef, { elo: newElo, username: username }, { merge: true });
+                    await setDoc(profileRef, { elo: Math.max(100, newElo), username: username }, { merge: true });
                 } catch (e2) {
                      console.error("Error fatal al guardar ELO:", e2);
                 }
@@ -1611,7 +1620,7 @@
                     }
                 }).then((result) => {
                     if (result) {
-                        initGame('online', { gameId: result.gameId, color: result.color });
+                        initGame('online', { gameId: result.gameId, color: result.color, playerColor: 'b' }); // Jugador es Negras
                     } else {
                         if (!myMatchmakingDocRef) return;
                         matchmakingUnsubscribe = onSnapshot(myMatchmakingDocRef, (doc) => {
@@ -1619,7 +1628,7 @@
                             if (data && data.status === 'matched' && data.gameId) {
                                 if (matchmakingUnsubscribe) matchmakingUnsubscribe();
                                 matchmakingUnsubscribe = null;
-                                initGame('online', { gameId: data.gameId, color: 'w' });
+                                initGame('online', { gameId: data.gameId, color: 'w', playerColor: 'w' }); // Jugador es Blancas
                             }
                         });
                     }
@@ -1640,11 +1649,16 @@
 
         function startFakeMatchmaking() {
             showView('fakeMatchmakingView');
+            // El ELO del bot ahora es más cercano al ELO del jugador por defecto.
+            let opponentElo = userElo + Math.floor(Math.random() * 100) - 50; 
+            // Asegurar que el ELO sea al menos 100
+            currentOpponentElo = Math.max(100, opponentElo); 
+            
+            // Actualizar la vista con el ELO
+            $('#fakeOpponentEloDisplay').text(Math.round(currentOpponentElo));
+
             const delay = Math.random() * 2000 + 2000;
             fakeMatchmakingTimer = setTimeout(() => {
-                // Modificado: El ELO del bot ahora es más cercano al ELO del jugador por defecto.
-                currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50; 
-                currentOpponentElo = Math.max(100, currentOpponentElo); 
                 const playerStartsAs = (Math.random() > 0.5) ? 'w' : 'b';
                 currentOpponentName = botNames[Math.floor(Math.random() * botNames.length)];
                 initGame('bot_match', {
@@ -1948,6 +1962,7 @@
                 const newElo = calculateElo(userElo, currentOpponentElo, result);
                 const eloChange = Math.round(newElo - userElo);
                 status += ` (ELO: ${Math.round(userElo)} ${eloChange} -> ${Math.round(newElo)})`;
+                // El ELO del usuario ya está asegurado como mínimo 100 en calculateElo
                 userElo = newElo;
                 $('#userClassicElo').text(Math.round(userElo));
                 updateEloInFirebase(newElo);
@@ -2154,7 +2169,11 @@
             $('#navFriends').on('click', () => showTabView('friendsView'));
             
             $('#playQuickMatchButton').on('click', startFakeMatchmaking);
-            $('#playAiButton').on('click', () => showView('gameSetupView'));
+            // CORRECCIÓN: El botón de IA siempre debe ir a la vista de configuración
+            $('#playAiButton').on('click', () => {
+                showView('gameSetupView');
+                currentOpponentName = "Stockfish"; // Nombre por defecto para la IA
+            });
             $('#playMatchmakingButton').on('click', startMatchmaking);
             
             $('#startPuzzleButton').on('click', startRandomPuzzle);
@@ -2166,7 +2185,11 @@
                 $('#eloValue').text(Math.max(100, $(this).val())); // Ensure minimum ELO is 100
             });
             $('#startAiGameButton').on('click', () => {
-                initGame('ai', { skillLevel: $('#eloSlider').val() });
+                initGame('ai', { 
+                    skillLevel: $('#eloSlider').val(),
+                    // Asignar color aleatorio al jugador
+                    playerColor: (Math.random() > 0.5) ? 'w' : 'b'
+                });
             });
             $('#backButtonSetup').on('click', () => showView('mainAppView'));
             $('#cancelMatchmakingButton').on('click', cancelMatchmaking);
@@ -2177,7 +2200,7 @@
             
             // Botones de Juego
             $('#backToMenuButton').on('click', () => {
-                if ((currentGameMode === 'bot_match' || currentGameMode === 'online') && !game.game_over()) {
+                if ((currentGameMode === 'bot_match' || currentGameMode === 'online' || currentGameMode === 'ai') && !game.game_over()) {
                     handleResign();
                 } else {
                     backToMenu();
