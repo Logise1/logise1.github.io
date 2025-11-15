@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ajedrez Online</title>
     
-    <!-- CSS de Chessboard.js (CORREGIDO 'xintegrity' a 'integrity') -->
+    <!-- CSS de Chessboard.js (CORREGIDO 'integrity' a 'integrity') -->
     <link rel="stylesheet"
           href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
-          xintegrity="sha384-q94tEGFzGMnEmBVSgTRkVgPjwitM/ltLMgSviRrkCklbciTrHEISjeJydPxL/mHk"
+          integrity="sha384-q94tEGFzGMnEmBVSgTRkVgPjwitM/ltLMgSviRrkCklbciTrHEISjeJydPxL/mHk"
           crossorigin="anonymous">
     
     <!-- Biblioteca de Google Fonts -->
@@ -2080,7 +2080,7 @@
             $('#eloSlider').on('input', function() {
                 $('#eloValue').text($(this).val());
             });
-            $('#startAiButton').on('click', () => {
+            $('#startAiGameButton').on('click', () => {
                 initGame('ai', { skillLevel: $('#eloSlider').val() });
             });
             $('#backButtonSetup').on('click', () => showView('mainAppView'));
@@ -2117,14 +2117,14 @@
     </script>
     
     <!-- Bibliotecas JS (jQuery, Chessboard, Chess.js) -->
-    <!-- jQuery (CORREGIDO 'xintegrity' a 'integrity') -->
+    <!-- jQuery (CORREGIDO 'integrity' a 'integrity') -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"
-            xintegrity="sha384-ZvpUoO/+PpLzWDNGbKOSMmkOWMwSKEASBbSlogoMObxKkyVj51DaoKqrqaSNOuK6"
+            integrity="sha384-ZvpUoO/+PpLzWDNGbKOSMmkOWMwSKEASBbSlogoMObxKkyVj51DaoKqrqaSNOuK6"
             crossorigin="anonymous"></script>
     
-    <!-- Chessboard.js (CORREGIDO 'xintegrity' a 'integrity') -->
+    <!-- Chessboard.js (CORREGIDO 'integrity' a 'integrity') -->
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-            xintegrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUgJitwyksISJqCCGmyNFN2bZqXQcUlSKSfG8"
+            integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUgJitwyksISJqCCGmyNFN2bZqXQcUlSKSfG8"
             crossorigin="anonymous"></script>
 
     <!-- Chess.js -->
