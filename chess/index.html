@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ajedrez Online - Inicio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ajedrez Online</title>
     
-    <!-- CSS de Chessboard.js (Corregido 'xintegrity' a 'integrity') -->
+    <!-- CSS de Chessboard.js (CORREGIDO 'xintegrity' a 'integrity') -->
     <link rel="stylesheet"
           href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
           xintegrity="sha384-q94tEGFzGMnEmBVSgTRkVgPjwitM/ltLMgSviRrkCklbciTrHEISjeJydPxL/mHk"
@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos CSS (Modo Oscuro y Rediseño) -->
+    <!-- Estilos CSS (Modo Oscuro y Rediseño SPA) -->
     <style>
         :root {
             --bg-primary: #1e1e2e;
@@ -26,9 +26,16 @@
             --border-color: #444455;
             --primary-accent: #885fff;
             --secondary-accent: #00e6a1;
-            --warning-accent: #ff8c00;
+            --warning-accent: #ffc107;
             --purple-accent: #c56eff;
             --danger-accent: #ff5572;
+            --correct-accent: #2ecc71;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Evitar scroll en la app principal */
         }
 
         body {
@@ -39,19 +46,32 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 10px;
             box-sizing: border-box;
         }
 
-        h1, h3, h4 {
+        h1, h2, h3, h4 {
             color: var(--text-primary);
             font-weight: 700;
             text-align: center;
         }
         
-        .view-container {
+        /* Contenedor Base de Vistas */
+        .app-view {
+            width: 100%;
+            height: 100%;
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Contenedor de Tarjeta (Login, Setup) */
+        .card-container {
             width: 100%;
             max-width: 620px;
             padding: 25px;
@@ -59,12 +79,15 @@
             border-radius: 16px;
             border: 1px solid var(--border-color);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            display: none;
+            display: flex;
             flex-direction: column;
             align-items: center;
+            margin: 20px;
         }
         
-        #loginView { text-align: center; }
+        #loginView {
+            display: flex; /* Mostrar por defecto */
+        }
         
         #loginError {
             color: var(--danger-accent);
@@ -99,27 +122,6 @@
             color: var(--text-secondary);
         }
         
-        #dashboardView { text-align: center; }
-        
-        #authStatus {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-            word-break: break-all;
-            line-height: 1.5;
-        }
-        #authStatus strong {
-            color: var(--text-primary);
-        }
-        
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 100%;
-            max-width: 320px;
-        }
-        
         button {
             color: white;
             border: none;
@@ -144,33 +146,105 @@
             transform: none;
             box-shadow: none;
         }
-        
-        .menu-buttons button {
-            font-size: 1.2rem;
-            padding: 16px 30px;
+
+        /* --- Vista Principal de la App (Post-Login) --- */
+        #mainAppView {
+            justify-content: flex-start;
         }
-        .menu-buttons button#playAiButton { background-color: var(--secondary-accent); color: #1e1e2e; }
-        .menu-buttons button#playMatchmakingButton { background-color: var(--warning-accent); color: #1e1e2e;}
-        .menu-buttons button#playPuzzlesButton { background-color: var(--purple-accent); }
-        .menu-buttons button#friendsButton { background-color: #5a6a8a; }
+
+        /* Área de Contenido de Pestañas */
+        #mainContentArea {
+            width: 100%;
+            height: calc(100% - 70px); /* Altura total menos la barra de navegación */
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         
+        /* Cada Pestaña individual */
+        .tab-view {
+            display: none; /* Ocultas por defecto */
+            width: 100%;
+            max-width: 600px;
+        }
+        .tab-view.active {
+            display: block;
+        }
+
+        /* --- Barra de Navegación Inferior --- */
+        #bottomNav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .nav-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 8px;
+            border-radius: 8px;
+            width: 80px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+        .nav-button svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--text-secondary);
+            transition: stroke 0.2s;
+            margin-bottom: 4px;
+        }
+        .nav-button:hover {
+            background-color: var(--border-color);
+        }
+        .nav-button.active {
+            color: var(--primary-accent);
+        }
+        .nav-button.active svg {
+            stroke: var(--primary-accent);
+        }
+
+        /* --- Estilos de Pestañas --- */
+        #dashboardView { text-align: center; }
+        #authStatus { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px; word-break: break-all; line-height: 1.5; }
+        #authStatus strong { color: var(--text-primary); }
+        .menu-buttons { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px; margin: 0 auto; }
+        .menu-buttons button { font-size: 1.2rem; padding: 16px 30px; }
+        
+        .menu-buttons button#playQuickMatchButton { background-color: var(--primary-accent); }
+        .menu-buttons button#playAiButton { background-color: var(--secondary-accent); color: #1e1e2e; font-size: 1rem; padding: 14px 20px;}
+        .menu-buttons button#playMatchmakingButton { background-color: var(--warning-accent); color: #1e1e2e; font-size: 1rem; padding: 14px 20px;}
+        
+        #puzzlesView { text-align: center; padding-top: 20px; }
+        #puzzlesView p { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.6; }
+        #startPuzzleButton { background-color: var(--purple-accent); font-size: 1.3rem; padding: 20px 40px; }
+
         #friendsView { text-align: center; }
         .setup-section { width: 100%; margin-top: 15px; }
-        
-        .setup-section input[type="text"] {
-            width: 90%;
-            padding: 12px;
-            font-size: 1rem;
-        }
-        .setup-section button {
-            background-color: var(--secondary-accent);
-            color: var(--bg-primary);
-            margin-top: 15px;
-        }
+        .setup-section input[type="text"] { width: 100%; padding: 12px; font-size: 1rem; }
+        .setup-section button { background-color: var(--secondary-accent); color: var(--bg-primary); margin-top: 15px; }
         
         .list-container {
-            width: 90%;
-            max-height: 200px;
+            width: 100%;
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -178,67 +252,355 @@
             padding: 10px;
             background-color: var(--bg-primary);
         }
-        .list-item {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.2s;
-        }
+        .list-item { padding: 12px; border-bottom: 1px solid var(--border-color); }
         .list-item:last-child { border-bottom: none; }
-        .list-item:hover { background-color: var(--bg-secondary); }
         .list-item span { font-weight: 600; color: var(--text-primary); }
         
-        .back-button, #logoutButton {
-            background-color: var(--danger-accent);
+        /* --- Contenido Pestañas --- */
+        .tab-icon {
+            width: 60px;
+            height: 60px;
+            stroke: var(--purple-accent);
+            margin: 10px auto;
         }
+        .how-to-list {
+            text-align: left;
+            color: var(--text-secondary);
+            background-color: var(--bg-primary);
+            padding: 15px 20px 15px 40px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .how-to-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .stats-container {
+            width: 100%;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            box-sizing: border-box;
+        }
+        .stats-container h2 {
+            margin-top: 0;
+            color: var(--text-primary);
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-item span:last-child { font-weight: 600; color: var(--text-primary); }
+
+
+        /* --- Vistas de Superposición (Game, Setup, Matchmaking) --- */
+        #gameSetupView, #matchmakingView, #fakeMatchmakingView {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+        }
+
+        /* Slider de ELO */
+        #eloSlider {
+            -webkit-appearance: none; width: 90%; height: 10px; border-radius: 5px;   
+            background: var(--bg-primary); outline: none; opacity: 0.8;
+            -webkit-transition: .2s; transition: opacity .2s; margin-top: 10px;
+            border: 1px solid var(--border-color);
+        }
+        #eloSlider:hover { opacity: 1; }
+        #eloSlider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 24px; height: 24px;
+            border-radius: 50%; background: var(--secondary-accent); cursor: pointer;
+            border: 3px solid var(--bg-secondary); box-shadow: 0 0 10px rgba(0, 230, 161, 0.5);
+        }
+        #eloValue { font-size: 1.1rem; font-weight: 600; color: var(--secondary-accent); margin-top: 10px; }
+        #startAiGameButton { background-color: var(--secondary-accent); color: var(--bg-primary); }
+
+        /* Matchmaking */
+        #matchmakingStatus, #fakeMatchmakingStatus { 
+            font-size: 1.2rem; font-weight: 600; color: var(--warning-accent); margin: 20px 0; 
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner {
+            border: 4px solid var(--border-color); border-top: 4px solid var(--warning-accent);
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 20px 0;
+        }
+
+        /* --- Vista de Juego (Pantalla Completa) --- */
+        #gameView {
+            background-color: var(--bg-primary);
+            justify-content: center;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 150;
+        }
+        .game-layout {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .board-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 10px auto;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        #myBoard { width: 100%; border-radius: 6px; }
+        .status-container { margin-top: 15px; text-align: center; }
+        #status { font-size: 1.2rem; font-weight: 600; color: var(--text-primary); min-height: 1.5rem; margin-bottom: 10px; }
+        #puzzleStatus { font-size: 1.1rem; font-weight: 600; min-height: 1.4rem; margin-top: 10px; }
+        #puzzleStatus.correct { color: var(--correct-accent); }
+        #puzzleStatus.incorrect { color: var(--danger-accent); }
+        
+        #pgn {
+            width: 100%;
+            max-width: 600px;
+            height: 80px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            box-sizing: border-box;
+        }
+        
+        #hintButton {
+            background-color: var(--warning-accent);
+            color: var(--bg-primary);
+            font-size: 1rem;
+            padding: 10px 18px;
+            margin: 10px 0;
+        }
+        .highlight-hint { box-shadow: inset 0 0 15px 5px rgba(255, 193, 7, 0.7) !important; }
+        
+        #backButton, .back-button { background-color: var(--danger-accent); }
+        
+        /* --- NUEVO: Estilos del Temporizador --- */
+        .timer-display {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            background-color: var(--bg-secondary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            width: 120px;
+            text-align: center;
+            margin: 10px 0;
+            display: none; /* Oculto por defecto */
+        }
+        .timer-display.active-timer {
+            color: var(--warning-accent);
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+        }
+        
     </style>
 </head>
 <body>
 
     <!-- Vista de Login -->
-    <div id="loginView" class="view-container">
-        <h1>Ajedrez Online</h1>
-        <div class="setup-section" style="width: 90%;">
-            <label for="loginUsername" class="login-label">Usuario:</label>
-            <input type="text" id="loginUsername" placeholder="tu-usuario" class="login-input">
-            <label for="loginPassword" class="login-label">Contraseña:</label>
-            <input type="password" id="loginPassword" placeholder="••••••••" class="login-input">
-        </div>
-        <div id="loginError"></div>
-        <div class="menu-buttons" style="margin-top: 20px; flex-direction: row; justify-content: space-around; max-width: 350px;">
-            <button id="loginButton" style="font-size: 1rem; padding: 12px 20px;">Iniciar Sesión</button>
-            <button id="registerButton" style="font-size: 1rem; padding: 12px 20px; background-color: var(--secondary-accent); color: var(--bg-primary);">Registrarse</button>
+    <div id="loginView" class="app-view">
+        <div class="card-container">
+            <h1>Ajedrez Online</h1>
+            <div class="setup-section" style="width: 90%;">
+                <label for="loginUsername" class="login-label">Usuario:</label>
+                <input type="text" id="loginUsername" placeholder="tu-usuario" class="login-input">
+                <label for="loginPassword" class="login-label">Contraseña:</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" class="login-input">
+            </div>
+            <div id="loginError"></div>
+            <div style="margin-top: 20px; display: flex; justify-content: space-around; width: 90%;">
+                <button id="loginButton" style="font-size: 1rem; padding: 12px 20px;">Iniciar Sesión</button>
+                <button id="registerButton" style="font-size: 1rem; padding: 12px 20px; background-color: var(--secondary-accent); color: var(--bg-primary);">Registrarse</button>
+            </div>
         </div>
     </div>
 
-    <!-- Vista del Dashboard (Menú Principal) -->
-    <div id="dashboardView" class="view-container">
-        <h1>Bienvenido al Ajedrez</h1>
-        <div id="authStatus">Conectando a Firebase...</div>
-        <div class="menu-buttons">
-            <button id="playAiButton" disabled>Jugar contra IA</button>
-            <button id="playMatchmakingButton" disabled>Buscar Partida Online</button>
-            <button id="playPuzzlesButton" disabled>Jugar Problemas</button>
-            <button id="friendsButton" disabled>Amigos</button>
+    <!-- Vista Principal de la App (con Pestañas) -->
+    <div id="mainAppView" class="app-view">
+        <!-- Contenido de la Pestaña -->
+        <div id="mainContentArea">
+            
+            <!-- Pestaña 1: Jugar (Dashboard) -->
+            <div id="dashboardView" class="tab-view active">
+                <h1>Bienvenido al Ajedrez</h1>
+                <div id="authStatus">Conectando...</div>
+                <div class="menu-buttons">
+                    <button id="playQuickMatchButton">Jugar partida (5min)</button>
+                    <button id="playAiButton">Jugar contra IA</button>
+                    <button id="playMatchmakingButton">Buscar Partida (Lento)</button>
+                </div>
+                
+                <!-- Sección de Estadísticas (Ahora dinámica) -->
+                <div class="stats-container">
+                    <h2>Tus Estadísticas</h2>
+                    <div class="stat-item">
+                        <span>ELO (Clásico)</span>
+                        <span id="userClassicElo">1200</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>ELO (Problemas)</span>
+                        <span>1450</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Victorias</span>
+                        <span>0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Derrotas</span>
+                        <span>0</span>
+                    </div>
+                </div>
+                
+                <button id="logoutButton" style="margin-top: 30px; font-size: 0.9rem; padding: 10px 15px;">Cerrar Sesión</button>
+            </div>
+
+            <!-- Pestaña 2: Problemas -->
+            <div id="puzzlesView" class="tab-view">
+                <h1>Problemas de Ajedrez</h1>
+                
+                <!-- Icono SVG -->
+                <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21h-6a2 2 0 0 1-2-2v-2h10v2a2 2 0 0 1-2 2z"/><path d="M12 11V3"/><path d="M12 3l-2.5 2.5"/><path d="M12 3l2.5 2.5"/><path d="M12 11h-4a2.83 2.83 0 0 0-3 3v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2a2.83 2.83 0 0 0-3-3h-4z"/></svg>
+
+                <p>Resuelve problemas aleatorios de una base de datos de más de 10,000. ¡Encuentra la mejor jugada!</p>
+                <button id="startPuzzleButton">Comenzar Problemas</button>
+                
+                <!-- Sección "Cómo Funciona" -->
+                <div class="stats-container" style="margin-top: 20px;">
+                    <h2 style="margin-top: 0;">Cómo Funciona</h2>
+                    <ul class="how-to-list">
+                        <li>Se cargará un problema aleatorio de nuestra base de datos.</li>
+                        <li>Tu objetivo es encontrar el **único movimiento ganador**.</li>
+                        <li>Si aciertas, se cargará un nuevo problema al instante.</li>
+                        <li>¡Usa el botón de pista si te quedas atascado!</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Pestaña 3: Amigos -->
+            <div id="friendsView" class="tab-view">
+                <h1>Amigos</h1>
+                <div class="setup-section">
+                    <h4>Añadir Amigo por Usuario</h4>
+                    <input type="text" id="addFriendUsernameInput" placeholder="Nombre de usuario del amigo" class="login-input" style="width:100%">
+                    <button id="addFriendButton">Añadir</button>
+                    <div id="addFriendStatus" style="font-size: 0.9rem; margin-top: 10px;"></div>
+                </div>
+                <hr style="width:100%; margin: 20px 0; border: 1px solid var(--border-color);">
+                <h4>Mi Lista de Amigos</h4>
+                <div id="friendsListContainer" class="list-container">
+                    <!-- Los amigos se cargarán aquí dinámicamente -->
+                </div>
+            </div>
+
         </div>
-        <button id="logoutButton" style="margin-top: 20px; font-size: 0.9rem; padding: 10px 15px;">Cerrar Sesión</button>
+
+        <!-- Barra de Navegación Inferior -->
+        <nav id="bottomNav">
+            <button id="navPlay" class="nav-button active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0v2h12v-2Z"/><path d="M18 10v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6"/><path d="M12 10v2"/><path d="M12 14v2"/><path d="m15 12-3-3-3 3"/></svg>
+                <span>Jugar</span>
+            </button>
+            <button id="navPuzzles" class="nav-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/></svg>
+                <span>Problemas</span>
+            </button>
+            <button id="navFriends" class="nav-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Amigos</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Vista de Configuración IA (Superposición) -->
+    <div id="gameSetupView" class="app-view">
+        <div class="card-container">
+            <h1>Configurar Partida vs IA</h1>
+            <div class="setup-section" style="width: 100%; text-align: center;">
+                <h4>ELO</h4>
+                <input type="range" id="eloSlider" min="800" max="2800" value="1500" step="100">
+                <div id="eloValue">1500</div>
+            </div>
+            <button id="startAiGameButton">Empezar Partida</button>
+            <button id="backButtonSetup" class="back-button">Cancelar</button>
+        </div>
     </div>
     
-    <!-- Vista de Amigos -->
-    <div id="friendsView" class="view-container">
-        <h1>Amigos</h1>
-        <div class="setup-section" style="width: 90%;">
-            <h4>Añadir Amigo por Usuario</h4>
-            <input type="text" id="addFriendUsernameInput" placeholder="Nombre de usuario del amigo" class="login-input" style="width:100%">
-            <button id="addFriendButton">Añadir</button>
-            <div id="addFriendStatus" style="font-size: 0.9rem; margin-top: 10px;"></div>
+    <!-- Vista de Matchmaking (Superposición) -->
+    <div id="matchmakingView" class="app-view">
+        <div class="card-container">
+            <h1>Buscando Partida</h1>
+            <div id="matchmakingStatus">Buscando oponente...</div>
+            <div class="spinner"></div>
+            <button id="cancelMatchmakingButton" class="back-button">Cancelar Búsqueda</button>
         </div>
-        <hr style="width:90%; margin: 20px 0; border: 1px solid var(--border-color);">
-        <h4>Mi Lista de Amigos</h4>
-        <div id="friendsListContainer" class="list-container">
-            <!-- Los amigos se cargarán aquí dinámicamente -->
-        </div>
-        <button id="backButtonFriends" class="back-button">Volver</button>
     </div>
+    
+    <!-- NUEVA VISTA: Fake Matchmaking (Superposición) -->
+    <div id="fakeMatchmakingView" class="app-view">
+        <div class="card-container">
+            <h1>Buscando Partida</h1>
+            <div id="fakeMatchmakingStatus">Buscando oponente...</div>
+            <div class="spinner"></div>
+            <button id="cancelFakeMatchmakingButton" class="back-button">Cancelar Búsqueda</button>
+        </div>
+    </div>
+
+    <!-- Vista de Juego (Pantalla Completa) -->
+    <div id="gameView" class="app-view">
+        <div class="game-layout">
+            <h1 id="gameTitle">Ajedrez</h1>
+            
+            <!-- NUEVO: Temporizador Oponente -->
+            <div class="timer-display" id="opponentTimer">5:00</div>
+            
+            <div class="game-info">
+                <span id="gameIdDisplay"></span>
+            </div>
+            <div class="board-container">
+                <div id="myBoard"></div>
+            </div>
+            
+            <!-- NUEVO: Temporizador Jugador -->
+            <div class="timer-display" id="playerTimer">5:00</div>
+            
+            <div class="status-container">
+                <h3>Estado: <span id="status">Cargando...</span></h3>
+                <div id="puzzleStatus"></div>
+                
+                <!-- Botones específicos del modo -->
+                <button id="hintButton" style="display: none;">Pedir Pista</button>
+                <button id="newGameButton" style="display: none; background-color: #5a6a8a; font-size: 0.9rem; padding: 10px 15px;">Juego Nuevo</button>
+
+                <textarea id="pgn" readonly style="display: none;"></textarea>
+            </div>
+            <button id="backButton">Abandonar y Volver</button>
+        </div>
+    </div>
+
+    <!-- NUEVO: Pre-carga de Sonidos -->
+    <audio id="audioGameStart" src="https://logise1.github.io/chess/assets/audio/game-start.mp3" preload="auto"></audio>
+    <audio id="audioMove" src="https://logise1.github.io/chess/assets/audio/move-self.mp3" preload="auto"></audio>
+    <audio id="audioCapture" src="https://logise1.github.io/chess/assets/audio/capture.mp3" preload="auto"></audio>
+    <audio id="audioCastle" src="https://logise1.github.io/chess/assets/audio/castle.mp3" preload="auto"></audio>
+    <audio id="audioGameEnd" src="https://logise1.github.io/chess/assets/audio/game-end.mp3" preload="auto"></audio>
 
     <!-- SDKs de Firebase (v11.6.1) -->
     <script type="module">
@@ -254,24 +616,52 @@
         import { 
             getFirestore, 
             doc, 
+            getDoc,
             setDoc, 
+            updateDoc,
             onSnapshot, 
             collection,
             query,
             where,
             getDocs,
+            addDoc,
+            deleteDoc,
+            runTransaction,
             limit,
             serverTimestamp,
             setLogLevel 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase y Variables de Entorno
+        // --- Variables Globales de la App ---
+        var board = null;
+        var game = new Chess();
+        var $status, $pgn;
+        var stockfish = null;
+        var stockfishReady = false;
+        var makingMove = false;
+        var currentGameMode = null; // 'ai', 'online', 'puzzle', 'bot_match'
+        var playerColor = 'w';
+        
+        // --- GLOBALES PARA ELO Y BOT ---
+        var userElo = 1200;
+        var currentOpponentElo = 0;
+        var currentOpponentName = "Oponente";
+        var fakeMatchmakingTimer = null;
+        const ELO_K_FACTOR = 32;
+        const botNames = ["AlphaZero", "DeepBot", "Checkmate", "RookStorm", "Kasparov_v2", "PawnSlayer", "BishopBot", "TheGrandmaster"];
+        
+        // --- GLOBALES PARA EL TEMPORIZADOR ---
+        var playerTime = 300; // 5 minutos
+        var opponentTime = 300;
+        var gameTimerInterval = null;
+        var activeTimer = null; // 'w' o 'b'
+
+        // Firebase
         var db, auth;
         var appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         var userId;
-        var username; // Nombre de usuario local
+        var username;
         
-        // Configuración de Firebase (Hardcodeada)
         var firebaseConfig = {
             apiKey: "AIzaSyDWGEMpfCF7OvBiM68uthumbOeDHwWai6M",
             authDomain: "chess-a9347.firebaseapp.com",
@@ -282,10 +672,31 @@
             measurementId: "G-Z3KNSZBL2F"
         };
         
+        // Listeners de Firebase
+        var gameUnsubscribe = null; 
+        var matchmakingUnsubscribe = null;
         var friendsUnsubscribe = null;
+        var myMatchmakingDocRef = null;
+        
+        // Puzzles
+        let puzzles = []; 
+        var currentPuzzle = null;
+        var currentPuzzleStep = 0;
+        
+        // Configuración del tablero
+        var config = {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd,
+            pieceTheme: getPieceTheme
+        };
+
+        // --- 1. Inicialización ---
 
         /**
-         * Inicializa Firebase y autentica al usuario
+         * Inicializa Firebase y la autenticación
          */
         async function initFirebase() {
             try {
@@ -300,17 +711,26 @@
                         username = user.email ? user.email.split('@')[0] : 'Usuario';
                         console.log("Usuario autenticado:", userId, username);
                         $('#authStatus').html(`Conectado como: <strong>${username}</strong>`);
-                        $('#playAiButton, #playMatchmakingButton, #playPuzzlesButton, #friendsButton').prop('disabled', false);
-                        showView('dashboardView');
-                        loadFriends(); // Cargar amigos al iniciar sesión
+                        
+                        const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', userId);
+                        getDoc(profileRef).then(docSnap => {
+                            if (docSnap.exists()) {
+                                userElo = docSnap.data().elo || 1200;
+                            } else {
+                                userElo = 1200;
+                            }
+                            $('#userClassicElo').text(Math.round(userElo));
+                        });
+
+                        showView('mainAppView');
+                        showTabView('dashboardView');
+                        loadFriends();
+                        initStockfish();
                     } else {
                         userId = null;
                         username = null;
                         console.log("Sin usuario, mostrando login.");
-                        $('#authStatus').text('No autenticado.');
-                        $('#playAiButton, #playMatchmakingButton, #playPuzzlesButton, #friendsButton').prop('disabled', true);
                         showView('loginView');
-                        
                         if (friendsUnsubscribe) friendsUnsubscribe();
                     }
                 });
@@ -319,18 +739,677 @@
                 $('#authStatus').text('Error al cargar Firebase.');
             }
         }
+        
+        /**
+         * Inicializa el motor de Stockfish (una sola vez)
+         */
+        async function initStockfish(readyCallback) {
+            if (stockfishReady) {
+                if (readyCallback) readyCallback();
+                return;
+            }
+            try {
+                console.log('Cargando motor de IA...');
+                const response = await fetch("https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js");
+                if (!response.ok) throw new Error(`Error al descargar stockfish.js: ${response.statusText}`);
+                const scriptText = await response.text();
+                const blob = new Blob([scriptText], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                stockfish = new Worker(blobUrl);
+                
+                stockfish.onmessage = function(event) {
+                    var message = event.data;
+                    // console.log("Stockfish:", message); 
 
+                    if (message === 'uciok') {
+                        stockfish.postMessage('isready');
+                    } else if (message === 'readyok') {
+                        console.log('Motor listo.');
+                        stockfishReady = true;
+                        if (readyCallback) readyCallback();
+                    } else if (message.startsWith('bestmove') && (currentGameMode === 'ai' || currentGameMode === 'bot_match')) {
+                        var bestmove = message.split(' ')[1];
+                        // --- SONIDO: Movimiento del Oponente ---
+                        const move = game.move(bestmove, { sloppy: true });
+                        if (move) {
+                            if (move.flags.includes('c')) playSound('audioCapture');
+                            else if (move.flags.includes('k') || move.flags.includes('q')) playSound('audioCastle');
+                            else playSound('audioMove');
+                        }
+                        
+                        board.position(game.fen());
+                        switchTimer(); // Cambiar temporizador
+                        updateStatus();
+                        makingMove = false;
+                    }
+                };
+                stockfish.postMessage('uci');
+            } catch (e) {
+                console.error("No se pudo inicializar Stockfish:", e);
+                alert("Error al cargar la IA.");
+            }
+        }
+
+        // --- 2. Lógica de Vistas y Navegación ---
+        
         function showView(viewId) {
-            $('.view-container').hide();
+            $('.app-view').hide();
             $('#' + viewId).css('display', 'flex');
+        }
+        
+        function showTabView(tabViewId) {
+            $('.tab-view').removeClass('active');
+            $('#' + tabViewId).addClass('active');
+            
+            $('.nav-button').removeClass('active');
+            if (tabViewId === 'dashboardView') {
+                $('#navPlay').addClass('active');
+            } else if (tabViewId === 'puzzlesView') {
+                $('#navPuzzles').addClass('active');
+            } else if (tabViewId === 'friendsView') {
+                $('#navFriends').addClass('active');
+            }
+        }
+        
+        // --- 3. Lógica de Sonido y Temporizador ---
+
+        /**
+         * Reproduce un sonido
+         */
+        function playSound(soundId) {
+            const sound = document.getElementById(soundId);
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Fallo al reproducir sonido (requiere interacción del usuario)"));
+            }
+        }
+        
+        /**
+         * Formatea segundos a M:SS
+         */
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+        
+        /**
+         * Inicia el temporizador de la partida
+         */
+        function startGameTimer() {
+            stopGameTimer(); // Limpiar anterior
+            playerTime = 300; // 5 minutos
+            opponentTime = 300;
+            activeTimer = 'w'; // Blancas siempre empiezan
+            
+            $('#playerTimer').text(formatTime(playerTime)).css('display', 'block');
+            $('#opponentTimer').text(formatTime(opponentTime)).css('display', 'block');
+            
+            if (playerColor === 'w') {
+                $('#playerTimer').addClass('active-timer');
+                $('#opponentTimer').removeClass('active-timer');
+            } else {
+                $('#opponentTimer').addClass('active-timer');
+                $('#playerTimer').removeClass('active-timer');
+            }
+            
+            gameTimerInterval = setInterval(updateTimer, 1000);
         }
 
         /**
-         * Carga la lista de amigos del usuario
+         * Detiene el temporizador
          */
-        function loadFriends() {
-            if (friendsUnsubscribe) friendsUnsubscribe(); // Detener listener anterior
+        function stopGameTimer() {
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            gameTimerInterval = null;
+            $('#playerTimer, #opponentTimer').removeClass('active-timer');
+        }
+
+        /**
+         * Actualiza el temporizador activo cada segundo
+         */
+        function updateTimer() {
+            if (game.game_over()) {
+                stopGameTimer();
+                return;
+            }
             
+            if (activeTimer === playerColor) {
+                playerTime--;
+                $('#playerTimer').text(formatTime(playerTime));
+                if (playerTime <= 0) {
+                    game.load(game.fen()); // Truco para forzar el estado
+                    game.turn = () => playerColor; // Forzar que sea mi turno
+                    game.in_checkmate = () => false; // No es jaque mate
+                    game.in_stalemate = () => false; // No es ahogado
+                    game.game_over = () => true; // Se acabó
+                    
+                    stopGameTimer();
+                    updateStatus(); // Llamar a updateStatus para manejar la derrota por tiempo
+                }
+            } else {
+                opponentTime--;
+                $('#opponentTimer').text(formatTime(opponentTime));
+                if (opponentTime <= 0) {
+                    game.load(game.fen());
+                    game.turn = () => (playerColor === 'w' ? 'b' : 'w'); // Forzar turno del oponente
+                    game.in_checkmate = () => false;
+                    game.in_stalemate = () => false;
+                    game.game_over = () => true;
+
+                    stopGameTimer();
+                    updateStatus(); // Manejar victoria por tiempo
+                }
+            }
+        }
+
+        /**
+         * Cambia el temporizador activo
+         */
+        function switchTimer() {
+            if (game.game_over()) {
+                 stopGameTimer();
+                 return;
+            }
+            
+            activeTimer = (activeTimer === 'w') ? 'b' : 'w';
+            
+            if (activeTimer === playerColor) {
+                $('#playerTimer').addClass('active-timer');
+                $('#opponentTimer').removeClass('active-timer');
+            } else {
+                $('#opponentTimer').addClass('active-timer');
+                $('#playerTimer').removeClass('active-timer');
+            }
+        }
+
+        // --- 4. Lógica de Juego (Principal) ---
+        
+        function initGame(mode, options = {}) {
+            currentGameMode = mode;
+            showView('gameView');
+            
+            if (board === null) {
+                board = Chessboard('myBoard', config);
+                $(window).resize(board.resize);
+            }
+            
+            game.reset();
+            makingMove = false;
+            playerColor = 'w';
+            
+            $('#pgn, #newGameButton, #hintButton, #playerTimer, #opponentTimer').hide();
+            $('#puzzleStatus').text('').removeClass('correct incorrect');
+            
+            if (gameUnsubscribe) gameUnsubscribe();
+            if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+            if (myMatchmakingDocRef) myMatchmakingDocRef = null;
+
+            if (mode === 'ai') {
+                playerColor = 'w';
+                board.orientation('white');
+                $('#gameTitle').text('Partida contra IA');
+                $('#gameIdDisplay').hide();
+                $('#pgn, #newGameButton').show();
+                
+                stockfish.postMessage('ucinewgame');
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 800) / 100)));
+                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+                
+                game.reset();
+                board.start();
+                playSound('audioGameStart');
+                
+            } else if (mode === 'online') {
+                const { gameId, color } = options;
+                playerColor = color; 
+                board.orientation(playerColor === 'w' ? 'white' : 'black');
+                
+                $('#gameTitle').text('Partida Online');
+                $('#gameIdDisplay').text(`ID Partida: ${gameId}`).show();
+                $('#pgn').show();
+                
+                const gameDocRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
+                currentGameRef = gameDocRef;
+                
+                gameUnsubscribe = onSnapshot(gameDocRef, (doc) => {
+                    if (!doc.exists()) {
+                        console.error("La partida no existe.");
+                        $status.text("Error: La partida no existe.");
+                        return;
+                    }
+                    const gameData = doc.data();
+                    const newFen = gameData.fen === 'start' ? game.fen() : gameData.fen;
+                    if (newFen !== game.fen()) game.load(newFen);
+                    board.position(newFen);
+                    makingMove = (gameData.turn !== playerColor);
+                    updateStatus();
+                });
+                playSound('audioGameStart');
+            
+            } else if (mode === 'bot_match') {
+                playerColor = options.playerColor;
+                board.orientation(playerColor === 'w' ? 'white' : 'black');
+                
+                const playerEloDisplay = Math.round(playerColor === 'w' ? userElo : options.opponentElo);
+                const opponentEloDisplay = Math.round(playerColor === 'w' ? options.opponentElo : userElo);
+
+                $('#gameTitle').text(`${username} (${playerEloDisplay}) vs ${currentOpponentName} (${opponentEloDisplay})`);
+                $('#gameIdDisplay').text('Partida Rápida (5 min)').show();
+                $('#pgn').show();
+                
+                stockfish.postMessage('ucinewgame');
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 800) / 100)));
+                stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
+                
+                game.reset();
+                board.start();
+                startGameTimer(); // Iniciar temporizador
+                playSound('audioGameStart');
+
+                if (playerColor === 'b') {
+                    makingMove = true;
+                    $status.text('Oponente está pensando...');
+                    // Retraso para el primer movimiento del bot
+                    setTimeout(() => {
+                        stockfish.postMessage('position fen ' + game.fen());
+                        stockfish.postMessage('go depth 15');
+                    }, 500);
+                }
+
+            } else if (mode === 'puzzle') {
+                if (options.puzzleIndex >= puzzles.length) {
+                    console.error("Índice de problema fuera de rango");
+                    startRandomPuzzle();
+                    return;
+                }
+                
+                currentPuzzle = puzzles[options.puzzleIndex];
+                currentPuzzleStep = 0;
+                playerColor = currentPuzzle.turn;
+
+                const fullFen = `${currentPuzzle.fen} ${currentPuzzle.turn} - - 0 1`;
+                if (!game.load(fullFen)) {
+                    console.error("Error al cargar FEN del problema:", fullFen);
+                    alert("Error al cargar el problema. Intentando con otro.");
+                    startRandomPuzzle();
+                    return;
+                }
+                
+                board.position(currentPuzzle.fen);
+                board.orientation(playerColor === 'w' ? 'white' : 'black');
+                $('#gameTitle').text(`Problema #${currentPuzzle.index + 1}`);
+                $('#gameIdDisplay').hide();
+                $('#hintButton').show().prop('disabled', true);
+                
+                makingMove = true;
+                getSolutionMove(fullFen, (bestmove) => {
+                    console.log(`Solución calculada para ${currentPuzzle.name}: ${bestmove}`);
+                    currentPuzzle.solution = [bestmove];
+                    makingMove = false;
+                    $('#hintButton').prop('disabled', false);
+                    updateStatus();
+                });
+            }
+            updateStatus();
+        }
+
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+            if (makingMove) return false;
+            
+            if (currentGameMode === 'puzzle') {
+                return piece.search(playerColor) !== -1;
+            } else {
+                if (game.turn() !== playerColor) return false;
+                return piece.search(playerColor) === 0;
+            }
+        }
+
+        async function onDrop(source, target) {
+            // --- Lógica de Problemas ---
+            if (currentGameMode === 'puzzle') {
+                if (!currentPuzzle || currentPuzzle.solution.length === 0) {
+                    $('#puzzleStatus').text('Espera a que la IA calcule la solución...').addClass('incorrect');
+                    return 'snapback';
+                }
+                
+                const $puzzleStatus = $('#puzzleStatus');
+                const solutionMove = currentPuzzle.solution[currentPuzzleStep];
+                const move = game.move({ from: source, to: target, promotion: 'q' });
+
+                if (move === null) return 'snapback';
+                
+                if (move.from + move.to === solutionMove) {
+                    // SONIDO: Movimiento correcto en puzzle
+                    if (move.flags.includes('c')) playSound('audioCapture');
+                    else playSound('audioMove');
+
+                    board.position(game.fen());
+                    currentPuzzleStep++;
+                    if (currentPuzzleStep === currentPuzzle.solution.length) {
+                        $puzzleStatus.text('¡Correcto! Cargando siguiente problema...').removeClass('incorrect').addClass('correct');
+                        makingMove = true;
+                        $('#hintButton').hide();
+                        setTimeout(startRandomPuzzle, 1500); 
+                    } 
+                } else {
+                    game.undo();
+                    $puzzleStatus.text('Movimiento incorrecto. Inténtalo de nuevo.').removeClass('correct').addClass('incorrect');
+                    return 'snapback';
+                }
+                updateStatus();
+                return;
+            }
+
+            // --- Lógica de IA y Online ---
+            var move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+            
+            // --- SONIDO: Movimiento del Jugador ---
+            if (move.flags.includes('c')) playSound('audioCapture');
+            else if (move.flags.includes('k') || move.flags.includes('q')) playSound('audioCastle');
+            else playSound('audioMove');
+            
+            // Cambiar temporizador INMEDIATAMENTE después del movimiento
+            if (currentGameMode === 'bot_match') {
+                switchTimer();
+            }
+            
+            updateStatus(); 
+
+            if (currentGameMode === 'ai' || currentGameMode === 'bot_match') {
+                makingMove = true;
+                $status.text('Oponente está pensando...');
+                // Añadir un ligero retraso para que la animación del jugador termine
+                setTimeout(() => {
+                    stockfish.postMessage('position fen ' + game.fen());
+                    stockfish.postMessage('go depth 15');
+                }, 250); // 250ms de retraso
+                
+            } else if (currentGameMode === 'online') {
+                makingMove = true; 
+                try {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public/data', 'games', currentGameRef.id), {
+                        fen: game.fen(),
+                        pgn: game.pgn(),
+                        turn: game.turn()
+                    });
+                } catch (e) {
+                    console.error("Error al actualizar la partida:", e);
+                    $status.text("Error de conexión al mover.");
+                    game.undo();
+                }
+            }
+        }
+
+        function onSnapEnd() {
+            // Esta función se asegura de que la vista del tablero sea la correcta
+            // según la lógica interna del juego.
+            // Con la corrección de 'xintegrity', esto debería funcionar como se espera.
+            board.position(game.fen());
+        }
+
+        function updateStatus() {
+            var status = '';
+            var moveColor = (game.turn() === 'w') ? 'Blancas' : 'Negras';
+            var gameOver = game.game_over();
+
+            if (gameOver) {
+                stopGameTimer(); // Detener temporizadores
+                playSound('audioGameEnd'); // Sonido de fin de partida
+
+                if (currentGameMode === 'bot_match') {
+                    let result;
+                    if (game.in_checkmate()) {
+                        result = (game.turn() === playerColor) ? 0 : 1;
+                        status = `¡Jaque Mate! ${result === 1 ? "Ganaste" : "Perdiste"}.`;
+                    } else {
+                        // Empate (ahogado, repetición, material, 50 mov)
+                        result = 0.5; 
+                        status = "¡Tablas!";
+                    }
+                    
+                    const newElo = calculateElo(userElo, currentOpponentElo, result);
+                    const eloChange = Math.round(newElo - userElo);
+                    
+                    status += ` (ELO: ${Math.round(userElo)} ${eloChange >= 0 ? '+' : ''}${eloChange} -> ${Math.round(newElo)})`;
+                    
+                    userElo = newElo;
+                    $('#userClassicElo').text(Math.round(userElo));
+                    updateEloInFirebase(newElo);
+                    
+                    currentGameMode = null; // Detener el juego
+                    
+                } else if (game.in_checkmate()) {
+                    status = '¡Jaque Mate! ' + (game.turn() === 'w' ? 'Ganan Negras' : 'Ganan Blancas');
+                } else {
+                    status = 'Tablas (Empate)';
+                }
+            
+            // --- COMPROBACIÓN DE TIEMPO (añadida a updateTimer) ---
+            
+            } else {
+                // Juego no terminado
+                if (currentGameMode === 'puzzle') {
+                    status = `Problema #${currentPuzzle.index + 1}. Mueven ${moveColor}`;
+                    $status.css('color', 'var(--text-primary)');
+                } else if (currentGameMode === 'online' || currentGameMode === 'bot_match') {
+                    if (game.turn() === playerColor) {
+                        status = '¡Es tu turno! (Mueven ' + moveColor + ')';
+                        $status.css('color', 'var(--secondary-accent)');
+                    } else {
+                        status = 'Turno del oponente (Mueven ' + moveColor + ')';
+                        $status.css('color', 'var(--warning-accent)');
+                    }
+                } else if (currentGameMode === 'ai') {
+                    status = 'Mueven las ' + moveColor;
+                    $status.css('color', 'var(--text-primary)');
+                }
+                
+                if (game.in_check()) {
+                    status += ' (¡Jaque!)';
+                }
+            }
+            
+            $status.text(status);
+            $pgn.val(game.pgn({ max_width: 5, newline_char: '\n' }));
+            $pgn.scrollTop($pgn[0].scrollHeight);
+        }
+
+        function getPieceTheme(piece) {
+            var pieceName = piece.toLowerCase(); 
+            return 'https://logise1.github.io/chess/assets/' + pieceName + '.png';
+        }
+
+        // --- 5. Lógica de Modos Específicos ---
+
+        function calculateElo(playerElo, opponentElo, result) {
+            const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
+            return playerElo + ELO_K_FACTOR * (result - expectedScore);
+        }
+        
+        async function updateEloInFirebase(newElo) {
+            if (!userId) return;
+            const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', userId);
+            try {
+                await updateDoc(profileRef, { elo: newElo });
+                console.log("ELO actualizado en Firebase:", newElo);
+            } catch (e) {
+                console.error("Error al actualizar ELO, intentando crear/setear:", e);
+                try {
+                    await setDoc(profileRef, { elo: newElo, username: username }, { merge: true });
+                } catch (e2) {
+                     console.error("Error fatal al guardar ELO:", e2);
+                }
+            }
+        }
+
+        // -- Online --
+        async function startMatchmaking() {
+            showView('matchmakingView');
+            $('#matchmakingStatus').text('Buscando oponente...');
+            
+            const matchmakingQueueRef = collection(db, 'artifacts', appId, 'public/data', 'matchmakingQueue');
+            
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const q = query(matchmakingQueueRef, where("status", "==", "waiting"), limit(1));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        console.log("No hay oponentes, uniéndose a la cola...");
+                        myMatchmakingDocRef = await addDoc(matchmakingQueueRef, {
+                            userId: userId, username: username, status: 'waiting', createdAt: serverTimestamp()
+                        });
+                    } else {
+                        const waitingPlayerDoc = querySnapshot.docs[0];
+                        const waitingPlayer = waitingPlayerDoc.data();
+                        console.log(`Oponente encontrado: ${waitingPlayer.username}`);
+                        const gameId = crypto.randomUUID().substring(0, 8);
+                        const newGameRef = doc(db, 'artifacts', appId, 'public/data', 'games', gameId);
+                        
+                        transaction.set(newGameRef, {
+                            fen: 'start', pgn: '', status: 'active',
+                            playerWhite: waitingPlayer.userId, playerBlack: userId,
+                            turn: 'w', createdAt: serverTimestamp()
+                        });
+                        transaction.update(waitingPlayerDoc.ref, {
+                            status: 'matched', gameId: gameId, opponentId: userId
+                        });
+                        return { gameId: gameId, color: 'b' };
+                    }
+                }).then((result) => {
+                    if (result) {
+                        initGame('online', { gameId: result.gameId, color: result.color });
+                    } else {
+                        if (!myMatchmakingDocRef) return;
+                        matchmakingUnsubscribe = onSnapshot(myMatchmakingDocRef, (doc) => {
+                            const data = doc.data();
+                            if (data && data.status === 'matched' && data.gameId) {
+                                if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+                                matchmakingUnsubscribe = null;
+                                initGame('online', { gameId: data.gameId, color: 'w' });
+                            }
+                        });
+                    }
+                });
+            } catch (e) {
+                console.error("Error en el matchmaking:", e);
+                $('#matchmakingStatus').text("Error al buscar partida.");
+            }
+        }
+        
+        async function cancelMatchmaking() {
+            if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+            if (myMatchmakingDocRef) await deleteDoc(myMatchmakingDocRef).catch(e => console.error(e));
+            matchmakingUnsubscribe = null;
+            myMatchmakingDocRef = null;
+            showView('mainAppView');
+        }
+
+        // -- Matchmaking Falso --
+        function startFakeMatchmaking() {
+            showView('fakeMatchmakingView');
+            const delay = Math.random() * 2000 + 2000; // 2-4 segundos
+
+            fakeMatchmakingTimer = setTimeout(() => {
+                currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50;
+                currentOpponentElo = Math.max(800, currentOpponentElo);
+                const playerStartsAs = (Math.random() > 0.5) ? 'w' : 'b';
+                currentOpponentName = botNames[Math.floor(Math.random() * botNames.length)]; // Asignar nombre
+
+                initGame('bot_match', {
+                    skillLevel: currentOpponentElo,
+                    opponentElo: currentOpponentElo,
+                    playerColor: playerStartsAs
+                });
+            }, delay);
+        }
+
+        // -- Puzzles --
+        async function fetchPuzzles() {
+            if (puzzles.length > 0) return; 
+            try {
+                const response = await fetch('https://logise1.github.io/chess/puzzles.fen');
+                if (!response.ok) throw new Error('No se pudo cargar puzzles.fen');
+                const data = await response.text();
+                puzzles = data.split('\n')
+                              .filter(fen => fen.trim() !== '')
+                              .map((fen, index) => {
+                                  const parts = fen.split(' ');
+                                  const piecePlacement = parts[0];
+                                  const turn = parts[1] || 'w';
+                                  return { 
+                                      name: `Problema #${index + 1}`, 
+                                      index: index, 
+                                      fen: piecePlacement,
+                                      turn: turn, 
+                                      solution: []
+                                  };
+                              });
+                console.log('Problemas cargados:', puzzles.length);
+            } catch (error) {
+                console.error('Error al cargar problemas:', error);
+                puzzles = [];
+            }
+        }
+        
+        async function startRandomPuzzle() {
+            if (!stockfishReady) {
+                console.log("Iniciando IA para problemas...");
+                showView('gameView'); 
+                $status.text("Iniciando IA..."); 
+                initStockfish(startRandomPuzzle);
+                return;
+            }
+            if (puzzles.length === 0) {
+                showView('gameView'); 
+                $status.text("Cargando problemas...");
+                await fetchPuzzles();
+            }
+            if (puzzles.length === 0) {
+                $status.text("Error al cargar problemas.");
+                alert("No se pudieron cargar los problemas.");
+                showView('mainAppView');
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * puzzles.length);
+            initGame('puzzle', { puzzleIndex: randomIndex });
+        }
+        
+        function getSolutionMove(fullFen, callback) {
+            if (!stockfishReady) {
+                console.error("Stockfish no está listo.");
+                return;
+            }
+            const moveCallback = (event) => {
+                 var message = event.data;
+                 if (message.startsWith('bestmove')) {
+                    var bestmove = message.split(' ')[1];
+                    stockfish.removeEventListener('message', moveCallback);
+                    callback(bestmove);
+                 }
+            };
+            stockfish.addEventListener('message', moveCallback);
+            stockfish.postMessage('ucinewgame');
+            stockfish.postMessage('position fen ' + fullFen);
+            stockfish.postMessage('go depth 15');
+        }
+        
+        function showHint() {
+            if (!currentPuzzle || currentPuzzle.solution.length === 0) return;
+            const fromSquare = currentPuzzle.solution[0].substring(0, 2);
+            const $squareEl = $('#myBoard .square-' + fromSquare);
+            $squareEl.addClass('highlight-hint');
+            setTimeout(() => $squareEl.removeClass('highlight-hint'), 1000);
+        }
+
+        // -- Amigos --
+        function loadFriends() {
+            if (friendsUnsubscribe) friendsUnsubscribe();
             const friendsRef = collection(db, 'artifacts', appId, 'users', userId, 'friends');
             const $list = $('#friendsListContainer');
             
@@ -347,12 +1426,10 @@
             });
         }
         
-        /**
-         * Añade un amigo por su nombre de usuario
-         */
         async function addFriend() {
             const friendUsername = $('#addFriendUsernameInput').val().trim();
             const $status = $('#addFriendStatus');
+            $status.text('');
             
             if (!friendUsername) {
                 $status.text('Introduce un nombre de usuario.').css('color', 'var(--danger-accent)');
@@ -366,8 +1443,7 @@
             $status.text('Buscando usuario...').css('color', 'var(--text-secondary)');
             
             try {
-                const profilesRef = collection(db, 'artifacts', appId, 'public/data', 'userProfiles');
-                const q = query(profilesRef, where("username", "==", friendUsername), limit(1));
+                const q = query(collection(db, 'artifacts', appId, 'public/data', 'userProfiles'), where("username", "==", friendUsername), limit(1));
                 const querySnapshot = await getDocs(q);
                 
                 if (querySnapshot.empty) {
@@ -375,15 +1451,9 @@
                     return;
                 }
                 
-                const friendDoc = querySnapshot.docs[0];
-                const friendId = friendDoc.id;
-                
-                // Añadir a la subcolección de amigos del usuario actual
+                const friendId = querySnapshot.docs[0].id;
                 const friendRef = doc(db, 'artifacts', appId, 'users', userId, 'friends', friendId);
-                await setDoc(friendRef, {
-                    username: friendUsername,
-                    addedAt: serverTimestamp()
-                });
+                await setDoc(friendRef, { username: friendUsername, addedAt: serverTimestamp() });
                 
                 $status.text(`¡${friendUsername} añadido!`).css('color', 'var(--secondary-accent)');
                 $('#addFriendUsernameInput').val('');
@@ -394,9 +1464,7 @@
             }
         }
         
-        /**
-         * Maneja el inicio de sesión
-         */
+        // -- Auth --
         async function handleLogin() {
             const username = $('#loginUsername').val().trim();
             const password = $('#loginPassword').val().trim();
@@ -415,9 +1483,6 @@
             }
         }
 
-        /**
-         * Maneja el registro
-         */
         async function handleRegister() {
             const username = $('#loginUsername').val().trim();
             const password = $('#loginPassword').val().trim();
@@ -434,17 +1499,15 @@
             $('#loginError').text('Registrando...');
             
             try {
-                // 1. Crear el usuario
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const newUser = userCredential.user;
-
-                // 2. Crear el perfil público de usuario
                 const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', newUser.uid);
-                await setDoc(profileRef, {
-                    username: username,
-                    joinedAt: serverTimestamp()
+                await setDoc(profileRef, { 
+                    username: username, 
+                    joinedAt: serverTimestamp(),
+                    elo: 1200 
                 });
-                
+                userElo = 1200;
                 $('#loginError').text('');
             } catch (error) {
                 console.error("Error al registrar:", error.message);
@@ -452,9 +1515,6 @@
             }
         }
 
-        /**
-         * Maneja el cierre de sesión
-         */
         async function handleLogout() {
             try {
                 await signOut(auth);
@@ -475,44 +1535,91 @@
             }
         }
 
-        // --- Inicialización del Documento ---
+        // --- 5. Event Listeners del DOM ---
+        
         $(document).ready(function() {
+            // Cachear elementos del DOM
+            $status = $('#status');
+            $pgn = $('#pgn');
             
             initFirebase();
             
-            // --- Controladores de Login/Registro ---
+            // --- Login/Logout ---
             $('#loginButton').on('click', handleLogin);
             $('#registerButton').on('click', handleRegister);
             $('#logoutButton').on('click', handleLogout);
 
-            // --- Controladores de Navegación ---
-            $('#playAiButton').on('click', () => {
-                window.location.href = 'play.html?mode=ai';
-            });
-            $('#playMatchmakingButton').on('click', () => {
-                window.location.href = 'play.html?mode=online';
-            });
-            $('#playPuzzlesButton').on('click', () => {
-                 window.location.href = 'puzzles.html';
-            });
-            $('#friendsButton').on('click', () => {
-                $('#addFriendStatus').text('');
-                showView('friendsView');
-            });
+            // --- Navegación por Pestañas ---
+            $('#navPlay').on('click', () => showTabView('dashboardView'));
+            $('#navPuzzles').on('click', () => showTabView('puzzlesView'));
+            $('#navFriends').on('click', () => showTabView('friendsView'));
             
-            // Botones "Volver"
-            $('#backButtonFriends').on('click', () => showView('dashboardView'));
+            // --- Pestaña Jugar ---
+            $('#playQuickMatchButton').on('click', startFakeMatchmaking);
+            $('#playAiButton').on('click', () => showView('gameSetupView'));
+            $('#playMatchmakingButton').on('click', startMatchmaking);
             
-            // --- Controladores de Amigos ---
+            // --- Pestaña Puzzles ---
+            $('#startPuzzleButton').on('click', startRandomPuzzle);
+
+            // --- Pestaña Amigos ---
             $('#addFriendButton').on('click', addFriend);
+            
+            // --- Vistas de Superposición (Setup, Matchmaking) ---
+            $('#eloSlider').on('input', function() {
+                $('#eloValue').text($(this).val());
+            });
+            $('#startAiGameButton').on('click', () => {
+                initGame('ai', { skillLevel: $('#eloSlider').val() });
+            });
+            $('#backButtonSetup').on('click', () => showView('mainAppView'));
+            $('#cancelMatchmakingButton').on('click', cancelMatchmaking);
+            $('#cancelFakeMatchmakingButton').on('click', () => {
+                clearTimeout(fakeMatchmakingTimer);
+                showView('mainAppView');
+            });
+            
+            // --- Vista de Juego ---
+            $('#backButton').on('click', () => {
+                // Limpiar estado de juego
+                if (stockfish) stockfish.postMessage('stop');
+                if (gameUnsubscribe) gameUnsubscribe();
+                if (matchmakingUnsubscribe) matchmakingUnsubscribe();
+                if (myMatchmakingDocRef) deleteDoc(myMatchmakingDocRef);
+                if (fakeMatchmakingTimer) clearTimeout(fakeMatchmakingTimer);
+                
+                stopGameTimer(); // Detener temporizadores
+                gameUnsubscribe = null;
+                matchmakingUnsubscribe = null;
+                myMatchmakingDocRef = null;
+                currentGameMode = null;
+                
+                showView('mainAppView'); // Volver al menú principal
+                showTabView('dashboardView'); // Volver a la pestaña por defecto
+            });
+            $('#newGameButton').on('click', () => {
+                if (currentGameMode === 'ai') {
+                    initGame('ai', { skillLevel: $('#eloSlider').val() });
+                }
+            });
+            $('#hintButton').on('click', showHint);
         });
 
     </script>
     
-    <!-- jQuery (Corregido 'xintegrity' a 'integrity') -->
+    <!-- Bibliotecas JS (jQuery, Chessboard, Chess.js) -->
+    <!-- jQuery (CORREGIDO 'xintegrity' a 'integrity') -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"
             xintegrity="sha384-ZvpUoO/+PpLzWDNGbKOSMmkOWMwSKEASBbSlogoMObxKkyVj51DaoKqrqaSNOuK6"
             crossorigin="anonymous"></script>
+    
+    <!-- Chessboard.js (CORREGIDO 'xintegrity' a 'integrity') -->
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
+            xintegrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUgJitwyksISJqCCGmyNFN2bZqXQcUlSKSfG8"
+            crossorigin="anonymous"></script>
+
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
 
 </body>
 </html>
