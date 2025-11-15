@@ -344,7 +344,6 @@
             z-index: 150;
         }
         
-        /* NUEVO: Layout de Juego de 2 Columnas */
         .game-layout {
             display: flex;
             flex-direction: row;
@@ -524,7 +523,7 @@
                     <h2>Tus Estadísticas</h2>
                     <div class="stat-item">
                         <span>ELO (Clásico)</span>
-                        <span id="userClassicElo">100</span> <!-- CAMBIADO A 100 -->
+                        <span id="userClassicElo">100</span>
                     </div>
                     <div class="stat-item">
                         <span>ELO (Problemas)</span>
@@ -601,8 +600,9 @@
             <h1>Configurar Partida vs IA</h1>
             <div class="setup-section" style="width: 100%; text-align: center;">
                 <h4>ELO</h4>
-                <input type="range" id="eloSlider" min="800" max="2800" value="1500" step="100">
-                <div id="eloValue">1500</div>
+                <!-- MODIFICADO: min="100" y value="500" -->
+                <input type="range" id="eloSlider" min="100" max="2800" value="500" step="100">
+                <div id="eloValue">500</div>
             </div>
             <button id="startAiGameButton">Empezar Partida</button>
             <button id="backButtonSetup" class="back-button">Cancelar</button>
@@ -669,7 +669,7 @@
 
     <!-- Pre-carga de Sonidos -->
     <audio id="audioGameStart" src="https://logise1.github.io/chess/assets/audio/game-start.mp3" preload="auto"></audio>
-    <audio id="audioMove" src="https://logise1.github.io/chess/assetsa/udio/move-self.mp3" preload="auto"></audio>
+    <audio id="audioMove" src="https://logise1.github.io/chess/assets/audio/move-self.mp3" preload="auto"></audio>
     <audio id="audioCapture" src="https://logise1.github.io/chess/assets/audio/capture.mp3" preload="auto"></audio>
     <audio id="audioCastle" src="https://logise1.github.io/chess/assets/audio/castle.mp3" preload="auto"></audio>
     <audio id="audioGameEnd" src="https://logise1.github.io/chess/assets/audio/game-end.mp3" preload="auto"></audio>
@@ -715,7 +715,7 @@
         var playerColor = 'w';
         
         // --- GLOBALES PARA ELO Y BOT ---
-        var userElo = 100; // CAMBIADO A 100
+        var userElo = 100;
         var currentOpponentElo = 0;
         var currentOpponentName = "Oponente";
         var fakeMatchmakingTimer = null;
@@ -789,9 +789,9 @@
                         const profileRef = doc(db, 'artifacts', appId, 'public/data', 'userProfiles', userId);
                         getDoc(profileRef).then(docSnap => {
                             if (docSnap.exists()) {
-                                userElo = docSnap.data().elo || 100; // CAMBIADO A 100
+                                userElo = docSnap.data().elo || 100;
                             } else {
-                                userElo = 100; // CAMBIADO A 100
+                                userElo = 100;
                             }
                             $('#userClassicElo').text(Math.round(userElo));
                         });
@@ -1020,7 +1020,8 @@
                 $('#pgn, #newGameButton, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 800) / 100)));
+                // MODIFICADO: Nueva fórmula de ELO
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 100) / 100)));
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1069,7 +1070,8 @@
                 $('#pgn, #drawButton, #resignButton').show();
                 
                 stockfish.postMessage('ucinewgame');
-                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 800) / 100)));
+                // MODIFICADO: Nueva fórmula de ELO
+                let skillLevel = Math.round(Math.max(0, Math.min(20, (options.skillLevel - 100) / 100)));
                 stockfish.postMessage('setoption name Skill Level value ' + skillLevel);
                 
                 game.reset();
@@ -1365,7 +1367,8 @@
             const delay = Math.random() * 2000 + 2000;
             fakeMatchmakingTimer = setTimeout(() => {
                 currentOpponentElo = userElo + Math.floor(Math.random() * 100) - 50;
-                currentOpponentElo = Math.max(800, currentOpponentElo);
+                // MODIFICADO: Mínimo de 100 ELO
+                currentOpponentElo = Math.max(100, currentOpponentElo); 
                 const playerStartsAs = (Math.random() > 0.5) ? 'w' : 'b';
                 currentOpponentName = botNames[Math.floor(Math.random() * botNames.length)];
                 initGame('bot_match', {
@@ -1538,9 +1541,9 @@
                 await setDoc(profileRef, { 
                     username: username, 
                     joinedAt: serverTimestamp(),
-                    elo: 100 // CAMBIADO A 100
+                    elo: 100
                 });
-                userElo = 100; // CAMBIADO A 100
+                userElo = 100;
                 $('#loginError').text('');
             } catch (error) {
                 console.error("Error al registrar:", error.message);
