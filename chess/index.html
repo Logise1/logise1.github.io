@@ -1207,7 +1207,7 @@
             currentGameMode = mode;
             showView('gameView');
             
-            game.reset();
+            game.reset(); // Asegurar reinicio del juego
             makingMove = false;
             playerColor = options.playerColor || 'w';
             finalPgn = '';
@@ -1487,9 +1487,27 @@
                 if (game.in_checkmate()) {
                     result = (game.turn() === playerColor) ? 0 : 1;
                     status = `¡Jaque Mate! ${result === 1 ? "Ganaste" : "Perdiste"}.`;
-                } else {
+                } 
+                // CORRECCIÓN CLAVE: Ser específico sobre el tipo de tablas
+                else if (game.in_draw()) {
                     result = 0.5;
-                    status = "¡Tablas!";
+                    
+                    if (game.in_stalemate()) {
+                        status = "¡Tablas por Ahogado!";
+                    } else if (game.in_threefold_repetition()) {
+                        status = "¡Tablas por Triple Repetición!";
+                    } else if (game.insufficient_material()) {
+                        status = "¡Tablas por Material Insuficiente!";
+                    } else if (game.half_moves() >= 100) { // 50 movimientos = 100 half-moves
+                        status = "¡Tablas por la Regla de 50 Movimientos!";
+                    } else {
+                        status = "¡Tablas!"; // Caso de respaldo, aunque in_draw debería cubrir los casos de arriba
+                    }
+                } else {
+                    // Si game.game_over() es true, pero no es jaque mate ni tablas... ¡Esto nunca debería pasar con chess.js!
+                    // Pero si pasa, tratamos la posición como un empate.
+                    result = 0.5;
+                    status = "¡Tablas! (Estado Indefinido)";
                 }
             }
             
@@ -1528,7 +1546,7 @@
                 if (currentGameMode === 'puzzle') {
                     status = `Problema #${currentPuzzle.index + 1}. Mueven ${moveColor}`;
                     $status.css('color', 'var(--text-primary)');
-                } else if (currentGameMode === 'online' || currentGameMode === 'bot_match') {
+                } else if (currentGameMode === 'online' || currentGameMode === 'bot_match' || currentGameMode === 'ai') {
                     if (game.turn() === playerColor) {
                         status = '¡Es tu turno! (Mueven ' + moveColor + ')';
                         $status.css('color', 'var(--secondary-accent)');
@@ -1536,9 +1554,6 @@
                         status = 'Turno del oponente (Mueven ' + moveColor + ')';
                         $status.css('color', 'var(--warning-accent)');
                     }
-                } else if (currentGameMode === 'ai') {
-                    status = 'Mueven las ' + moveColor;
-                    $status.css('color', 'var(--text-primary)');
                 }
                 
                 if (game.in_check()) {
