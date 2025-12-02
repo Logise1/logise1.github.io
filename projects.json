@@ -44,5 +44,10 @@
     "image": "/assets/towerdefense.png",
     "alt": "TowerDefense",
     "link": "/towerdefense"
+  },
+  {
+    "image": "/assets/tradeator.png",
+    "alt": "Tradeator",
+    "link": "/tradeator"
   }
 ]
