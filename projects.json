@@ -39,5 +39,10 @@
     "image": "/assets/impostor.png",
     "alt": "El Impostor",
     "link": "/impostor"
-  }
+  },
+  {
+    "image": "/assets/towerdefense.png",
+    "alt": "TowerDefense",
+    "link": "/towerdefense"
+  },
 ]
