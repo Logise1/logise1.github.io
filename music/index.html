@@ -16,187 +16,267 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@400;700;900&display=swap');
         
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f13;
             color: white;
             overflow: hidden;
             touch-action: none;
         }
         
-        .pixel-font {
-            font-family: 'Press Start 2P', cursive;
+        .title-font {
+            font-family: 'Audiowide', cursive;
         }
 
         .hidden { display: none !important; }
 
-        /* Estados del semáforo */
-        .bg-safe { background-color: #16a34a; }
-        .bg-danger { background-color: #dc2626; }
-        .bg-measuring { background-color: #eab308; } /* Amarillo para medir */
+        /* Gradientes y efectos */
+        .bg-gradient-main { background: radial-gradient(circle at center, #1f1f2e 0%, #000000 100%); }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass-panel { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+        /* Estados del juego */
+        .state-safe { background: radial-gradient(circle at center, #15803d 0%, #052e16 100%); }
+        .state-danger { background: radial-gradient(circle at center, #b91c1c 0%, #450a0a 100%); }
+        .state-measuring { background: radial-gradient(circle at center, #ca8a04 0%, #422006 100%); }
         
-        .pulse-green { animation: pulse-g 1s infinite; }
-        .pulse-red { animation: pulse-r 0.5s infinite; }
+        /* Animaciones */
+        @keyframes pulse-glow { 0% { box-shadow: 0 0 20px currentColor; } 50% { box-shadow: 0 0 50px currentColor; } 100% { box-shadow: 0 0 20px currentColor; } }
+        .glow-text { text-shadow: 0 0 20px currentColor; }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .animate-shake { animation: shake 0.5s infinite; }
 
-        @keyframes pulse-g { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
-        @keyframes pulse-r { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
-
-        /* Animación barra de tiempo */
-        .score-bar { transition: width 1s ease-out; }
+        .score-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Transiciones suaves */
+        .fade-enter { opacity: 0; transform: translateY(20px); }
+        .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.5s, transform 0.5s; }
     </style>
 </head>
-<body>
+<body class="bg-gradient-main text-white h-screen w-screen overflow-hidden">
 
     <!-- VISTA: SELECCIÓN DE ROL -->
-    <div id="view-landing" class="h-screen w-full flex flex-col items-center justify-center p-4 space-y-8">
-        <h1 class="text-4xl md:text-6xl font-bold text-center pixel-font text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-red-500 mb-8 leading-tight">
-            LUZ ROJA<br>MUSICAL
-        </h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-            <button onclick="app.setRole('screen')" class="flex flex-col items-center justify-center p-8 bg-neutral-800 border-2 border-pink-500 rounded-xl hover:bg-neutral-700 transition-all hover:scale-105">
-                <i data-lucide="monitor" class="w-16 h-16 text-pink-500 mb-4"></i>
-                <span class="text-2xl font-bold">PANTALLA</span>
-                <span class="text-sm text-gray-400 mt-2">Para TV / PC</span>
+    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 space-y-12 relative z-10">
+        <!-- Decoración de fondo -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-600 rounded-full blur-[128px]"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[128px]"></div>
+        </div>
+
+        <div class="text-center space-y-2 z-10">
+            <h1 class="text-5xl md:text-7xl font-black title-font text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 drop-shadow-lg tracking-wider">
+                RED LIGHT
+            </h1>
+            <h2 class="text-2xl md:text-3xl font-bold tracking-[0.5em] text-gray-400">CHALLENGE</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl z-10">
+            <button onclick="app.setRole('screen')" class="group relative flex flex-col items-center justify-center p-10 glass rounded-2xl hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-pink-500/50">
+                <div class="absolute inset-0 bg-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <i data-lucide="monitor" class="w-20 h-20 text-pink-500 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] transition-all"></i>
+                <span class="text-3xl font-bold title-font">PANTALLA</span>
+                <span class="text-sm text-gray-400 mt-2 font-mono uppercase tracking-widest">Host del Juego</span>
             </button>
-            <button onclick="app.setRole('player')" class="flex flex-col items-center justify-center p-8 bg-neutral-800 border-2 border-green-500 rounded-xl hover:bg-neutral-700 transition-all hover:scale-105">
-                <i data-lucide="smartphone" class="w-16 h-16 text-green-500 mb-4"></i>
-                <span class="text-2xl font-bold">JUGADOR</span>
-                <span class="text-sm text-gray-400 mt-2">Para Móvil</span>
+
+            <button onclick="app.setRole('player')" class="group relative flex flex-col items-center justify-center p-10 glass rounded-2xl hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-green-500/50">
+                <div class="absolute inset-0 bg-green-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <i data-lucide="smartphone" class="w-20 h-20 text-green-500 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(34,197,94,0.8)] transition-all"></i>
+                <span class="text-3xl font-bold title-font">JUGADOR</span>
+                <span class="text-sm text-gray-400 mt-2 font-mono uppercase tracking-widest">Unirse con Móvil</span>
             </button>
         </div>
     </div>
 
     <!-- VISTA: PANTALLA (HOST) -->
-    <div id="view-screen" class="hidden h-screen w-full flex flex-col relative bg-neutral-900">
+    <div id="view-screen" class="hidden h-full w-full flex flex-col relative bg-neutral-900">
         <!-- Header -->
-        <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-neutral-900/90 backdrop-blur border-b border-white/10">
-            <div class="text-2xl font-bold text-pink-500 pixel-font">SALA: <span id="host-session-code" class="text-white">...</span></div>
-            <div class="flex space-x-6 text-xl font-bold">
-                <div class="flex items-center text-green-400"><i data-lucide="activity" class="mr-2"></i> <span id="host-alive-count">0</span></div>
-                <div class="flex items-center text-red-500"><i data-lucide="skull" class="mr-2"></i> <span id="host-dead-count">0</span></div>
+        <div class="absolute top-0 w-full p-6 flex justify-between items-center z-20 glass-panel border-b-0 rounded-b-2xl mx-auto max-w-[95%] left-0 right-0 mt-2">
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-400 font-mono text-sm uppercase">Código de Sala</span>
+                <span id="host-session-code" class="text-4xl font-black title-font text-pink-500 tracking-widest glow-text">...</span>
+            </div>
+            <div class="flex space-x-8 text-2xl font-bold font-mono">
+                <div class="flex items-center text-green-400 bg-green-900/20 px-4 py-2 rounded-lg border border-green-500/30">
+                    <i data-lucide="activity" class="mr-3"></i> <span id="host-alive-count">0</span>
+                </div>
+                <div class="flex items-center text-red-500 bg-red-900/20 px-4 py-2 rounded-lg border border-red-500/30">
+                    <i data-lucide="skull" class="mr-3"></i> <span id="host-dead-count">0</span>
+                </div>
             </div>
         </div>
 
         <!-- Contenido Central Host -->
-        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full">
+        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full z-10">
             
             <!-- Estado: LOBBY -->
-            <div id="host-lobby" class="text-center flex flex-col items-center w-full">
-                <div class="bg-white p-4 rounded-xl shadow-2xl mb-6">
-                    <img id="host-qr-img" src="" alt="QR Code" class="w-64 h-64 object-contain">
+            <div id="host-lobby" class="flex flex-col items-center justify-center w-full animate-fade-in">
+                <div class="relative group">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                    <div class="relative bg-white p-4 rounded-2xl">
+                        <img id="host-qr-img" src="" alt="QR Code" class="w-72 h-72 object-contain rounded-lg">
+                    </div>
                 </div>
-                <h2 class="text-3xl font-bold mb-2">Escanea para unirte</h2>
-                <p class="text-gray-400 mb-8 text-xl">Jugadores listos: <span id="host-lobby-count">0</span></p>
-                <button id="btn-start-game" onclick="host.startGame()" disabled class="px-10 py-5 bg-gradient-to-r from-pink-600 to-red-600 rounded-full text-2xl font-bold hover:scale-105 disabled:opacity-50 disabled:grayscale transition-all shadow-lg shadow-pink-900/50">
+                <h2 class="text-4xl font-bold mt-8 mb-2 title-font">ESCANEA PARA UNIRTE</h2>
+                <p class="text-gray-400 mb-10 text-xl font-mono">Jugadores en sala: <span id="host-lobby-count" class="text-white font-bold">0</span></p>
+                <button id="btn-start-game" onclick="host.startGame()" disabled class="px-12 py-6 bg-pink-600 hover:bg-pink-500 rounded-xl text-3xl font-black title-font transition-all transform hover:scale-105 hover:shadow-[0_0_30px_rgba(219,39,119,0.5)] disabled:opacity-50 disabled:grayscale disabled:pointer-events-none">
                     EMPEZAR JUEGO
                 </button>
             </div>
 
             <!-- Estado: JUEGO (Semáforo) -->
             <div id="host-game" class="hidden w-full h-full flex items-center justify-center flex-col">
-                <div id="traffic-light" class="w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-neutral-800 border-neutral-600">
-                    <!-- Icono dinámico se inyecta aquí -->
+                <!-- Luz principal -->
+                <div id="traffic-light-container" class="relative">
+                    <div class="absolute inset-0 rounded-full blur-[100px] opacity-50 transition-colors duration-200" id="light-glow"></div>
+                    <div id="traffic-light" class="relative w-96 h-96 rounded-full flex items-center justify-center border-[12px] transition-all duration-300 bg-neutral-900 border-neutral-700 shadow-2xl">
+                        <!-- Icono dinámico -->
+                    </div>
                 </div>
-                <h2 id="host-status-text" class="text-5xl font-black mt-8 tracking-wider">PREPARADOS</h2>
+                
+                <h2 id="host-status-text" class="text-8xl font-black mt-12 tracking-widest title-font drop-shadow-2xl transition-colors duration-300">PREPARADOS</h2>
             </div>
 
             <!-- Estado: RESULTADOS RONDA (Leaderboard) -->
-            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-20">
-                <h2 class="text-4xl font-bold mb-8 text-yellow-400 pixel-font">TIEMPOS DE REACCIÓN</h2>
-                <div id="results-grid" class="w-full max-w-4xl grid grid-cols-1 gap-4 overflow-y-auto max-h-[60vh] px-4">
-                    <!-- Barras de resultados -->
+            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-32 px-4">
+                <h2 class="text-5xl font-black mb-12 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 title-font tracking-widest">
+                    TIEMPOS DE REACCIÓN
+                </h2>
+                
+                <div id="results-grid" class="w-full max-w-5xl grid grid-cols-1 gap-3 overflow-y-auto max-h-[65vh] px-2 pb-20">
+                    <!-- Filas generadas por JS -->
                 </div>
-                <div id="eliminated-msg" class="mt-8 text-3xl font-black text-red-500 animate-pulse hidden">
-                    ELIMINADO: <span id="eliminated-name">...</span>
+
+                <!-- Overlay de Eliminación -->
+                <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm hidden">
+                    <div class="text-center animate-shake">
+                        <i data-lucide="skull" class="w-48 h-48 text-red-600 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"></i>
+                        <h2 class="text-7xl font-black text-red-600 title-font tracking-tighter mb-4">ELIMINADO</h2>
+                        <div id="eliminated-name" class="text-5xl font-bold text-white font-mono border-2 border-red-600 px-8 py-4 inline-block bg-red-900/30 rounded-lg">
+                            JUGADOR 1
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Estado: GANADOR -->
-            <div id="host-winner" class="hidden text-center animate-bounce">
-                <i data-lucide="trophy" class="w-40 h-40 text-yellow-400 mx-auto mb-4"></i>
-                <h2 class="text-4xl text-yellow-400 font-bold mb-2">GANADOR</h2>
-                <div id="winner-name" class="text-6xl font-black text-white mb-8">NOMBRE</div>
-                <p class="text-gray-400 mt-4">Reiniciando juego en breve...</p>
+            <div id="host-winner" class="hidden flex flex-col items-center justify-center animate-fade-in-up">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-yellow-500 rounded-full blur-[100px] opacity-30"></div>
+                    <i data-lucide="trophy" class="relative w-64 h-64 text-yellow-400 mb-8 drop-shadow-[0_0_30px_rgba(250,204,21,0.6)]"></i>
+                </div>
+                <h2 class="text-5xl font-bold text-yellow-500 mb-4 title-font tracking-[0.2em]">GANADOR SUPREMO</h2>
+                <div id="winner-name" class="text-8xl font-black text-white mb-12 title-font glow-text">NOMBRE</div>
+                <div class="bg-white/10 px-6 py-3 rounded-full flex items-center space-x-3">
+                    <div class="w-3 h-3 bg-white rounded-full animate-bounce"></div>
+                    <p class="text-gray-300 font-mono">Reiniciando sistema...</p>
+                </div>
             </div>
         </div>
 
         <!-- Footer Jugadores -->
-        <div class="h-auto max-h-48 min-h-[5rem] bg-neutral-800 border-t border-neutral-700 p-4 overflow-y-auto">
-            <div id="host-players-list" class="flex flex-wrap gap-3 justify-center">
+        <div class="absolute bottom-0 w-full bg-black/80 backdrop-blur-md border-t border-white/5 p-6 z-20">
+            <div id="host-players-list" class="flex flex-wrap gap-3 justify-center max-h-32 overflow-y-auto">
                 <!-- Chips de jugadores -->
             </div>
         </div>
     </div>
 
     <!-- VISTA: JUGADOR (LOGIN) -->
-    <div id="view-player-join" class="hidden h-screen w-full flex flex-col items-center justify-center p-6 space-y-6 bg-black">
-        <div class="text-center mb-4">
-            <h1 class="text-3xl font-bold text-pink-500 pixel-font mb-2">UNIRSE</h1>
-            <p class="text-gray-400">Introduce tus datos</p>
+    <div id="view-player-join" class="hidden h-full w-full flex flex-col items-center justify-center p-6 bg-neutral-900 relative">
+        <div class="w-full max-w-md space-y-8 z-10">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-pink-500 title-font mb-2 glow-text">UNIRSE</h1>
+                <p class="text-gray-400 font-mono">Introduce tus credenciales</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-50 group-hover:opacity-75 transition duration-200"></div>
+                    <input type="text" id="inp-player-name" placeholder="TU NOMBRE" maxlength="10" class="relative w-full bg-black border border-white/10 p-5 rounded-lg text-center text-2xl font-bold text-white uppercase focus:outline-none placeholder-gray-700 font-mono">
+                </div>
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-50 group-hover:opacity-75 transition duration-200"></div>
+                    <input type="text" id="inp-session-code" placeholder="CÓDIGO SALA" maxlength="4" class="relative w-full bg-black border border-white/10 p-5 rounded-lg text-center text-2xl font-bold text-white uppercase focus:outline-none placeholder-gray-700 font-mono tracking-[0.5em]">
+                </div>
+            </div>
+
+            <button onclick="player.join()" class="w-full bg-green-600 hover:bg-green-500 p-5 rounded-lg font-black text-2xl shadow-lg shadow-green-900/50 transition-all transform active:scale-95 title-font tracking-wider">
+                ENTRAR AL JUEGO
+            </button>
         </div>
-        <input type="text" id="inp-player-name" placeholder="TU NOMBRE" maxlength="10" class="w-full max-w-xs bg-neutral-800 border-2 border-neutral-600 p-4 rounded text-center text-xl text-white uppercase focus:border-pink-500 outline-none">
-        <input type="text" id="inp-session-code" placeholder="CÓDIGO SALA" maxlength="4" class="w-full max-w-xs bg-neutral-800 border-2 border-neutral-600 p-4 rounded text-center text-xl text-white uppercase focus:border-pink-500 outline-none">
-        <button onclick="player.join()" class="w-full max-w-xs bg-green-600 hover:bg-green-500 p-4 rounded font-bold text-xl shadow-lg shadow-green-900/50 transition-transform active:scale-95">
-            ENTRAR
-        </button>
     </div>
 
-    <!-- VISTA: JUGADOR (PERMISO SENSORES) -->
-    <div id="view-player-sensor" class="hidden h-screen w-full flex flex-col items-center justify-center p-6 text-center bg-black">
-        <i data-lucide="smartphone" class="w-20 h-20 text-yellow-500 mb-6 animate-pulse"></i>
-        <h2 class="text-2xl font-bold mb-4">Activa los Sensores</h2>
-        <p class="text-gray-400 mb-8 max-w-xs mx-auto">El juego necesita acceso al acelerómetro para saber si te mueves.</p>
-        <button onclick="player.requestPermissions()" class="bg-yellow-500 text-black px-8 py-4 rounded-full font-bold text-xl shadow-lg shadow-yellow-500/20">
+    <!-- VISTA: JUGADOR (PERMISO) -->
+    <div id="view-player-sensor" class="hidden h-full w-full flex flex-col items-center justify-center p-8 text-center bg-black">
+        <div class="p-8 bg-yellow-500/10 rounded-full mb-8 animate-pulse">
+            <i data-lucide="smartphone" class="w-24 h-24 text-yellow-500"></i>
+        </div>
+        <h2 class="text-3xl font-bold mb-4 font-mono text-yellow-500">ACCESO SENSORES</h2>
+        <p class="text-gray-400 mb-12 max-w-xs mx-auto leading-relaxed">Necesitamos acceder al acelerómetro para detectar si te mueves. Pulsa el botón para autorizar.</p>
+        <button onclick="player.requestPermissions()" class="bg-yellow-500 hover:bg-yellow-400 text-black px-10 py-5 rounded-xl font-bold text-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all">
             ACTIVAR Y JUGAR
         </button>
     </div>
 
     <!-- VISTA: JUGADOR (JUEGO) -->
-    <div id="view-player-game" class="hidden h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-neutral-900 relative overflow-hidden">
+    <div id="view-player-game" class="hidden h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-500">
         
-        <!-- Pantalla: ESPERANDO (Lobby) -->
-        <div id="p-screen-waiting" class="text-center">
-            <!-- FIX: Eje centrado -->
-            <div class="flex items-center justify-center mb-6">
-                <div class="animate-spin w-16 h-16 flex items-center justify-center">
-                    <i data-lucide="loader" class="w-16 h-16 text-blue-500"></i>
-                </div>
+        <!-- Pantalla: ESPERANDO -->
+        <div id="p-screen-waiting" class="text-center z-10">
+            <div class="relative mb-8 mx-auto w-24 h-24">
+                <div class="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <i data-lucide="hourglass" class="absolute inset-0 m-auto w-10 h-10 text-blue-400"></i>
             </div>
-            <h2 class="text-3xl font-bold mb-2">Esperando al Host...</h2>
-            <p class="text-blue-300">Mantente preparado</p>
+            <h2 class="text-3xl font-bold mb-2 title-font tracking-wider">EN ESPERA</h2>
+            <p class="text-blue-300/80 font-mono text-sm">El Host iniciará la ronda...</p>
         </div>
 
-        <!-- Pantalla: ACTIVO (Corre/Quieto/Midiendo) -->
-        <div id="p-screen-active" class="hidden text-center w-full h-full flex flex-col items-center justify-center relative">
+        <!-- Pantalla: ACTIVO -->
+        <div id="p-screen-active" class="hidden absolute inset-0 flex flex-col items-center justify-center z-10">
             
             <!-- ALERTA MUEVETE -->
-            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-orange-600/90 flex flex-col items-center justify-center animate-pulse">
-                <i data-lucide="footprints" class="w-40 h-40 text-white mb-4"></i>
-                <h1 class="text-6xl font-black text-white italic transform -rotate-6">¡MUÉVETE!</h1>
-                <p class="text-2xl text-white font-bold mt-4">¡Debes andar!</p>
+            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-orange-600 flex flex-col items-center justify-center animate-pulse">
+                <i data-lucide="footprints" class="w-48 h-48 text-white mb-8 transform rotate-12"></i>
+                <h1 class="text-7xl font-black text-white italic transform -rotate-6 title-font drop-shadow-lg">¡MUÉVETE!</h1>
+                <p class="text-3xl text-white font-bold mt-6 tracking-widest">¡DEBES ANDAR!</p>
             </div>
 
-            <div id="p-icon-container" class="mb-6 transform transition-transform duration-200">
-                <!-- Icono -->
+            <div id="p-icon-container" class="mb-10 transform transition-all duration-300 p-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                <!-- Icono inyectado -->
             </div>
-            <h1 id="p-status-text" class="text-6xl font-black text-white drop-shadow-lg">...</h1>
-            <p id="p-sub-text" class="text-xl mt-4 font-bold opacity-80">...</p>
+            
+            <h1 id="p-status-text" class="text-7xl font-black text-white drop-shadow-2xl title-font tracking-widest text-center">...</h1>
+            <p id="p-sub-text" class="text-2xl mt-4 font-bold opacity-80 font-mono tracking-widest uppercase text-center">...</p>
+
+            <!-- Barra de progreso para medir -->
+            <div id="p-measure-bar-container" class="hidden w-64 h-2 bg-black/50 rounded-full mt-12 overflow-hidden border border-white/20">
+                <div id="p-measure-bar" class="h-full bg-yellow-400 w-full origin-left"></div>
+            </div>
         </div>
 
         <!-- Pantalla: MUERTO -->
-        <div id="p-screen-dead" class="hidden text-center animate-pulse bg-red-950 absolute inset-0 flex flex-col items-center justify-center z-50">
-            <i data-lucide="skull" class="w-32 h-32 text-red-500 mb-4"></i>
-            <h1 class="text-5xl font-black text-red-500 mb-2">ELIMINADO</h1>
-            <p class="text-red-300">Fuiste el más lento</p>
+        <div id="p-screen-dead" class="hidden absolute inset-0 z-50 bg-red-950 flex flex-col items-center justify-center">
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/noise.png')] opacity-20 pointer-events-none"></div>
+            <div class="animate-shake text-center">
+                <i data-lucide="skull" class="w-40 h-40 text-red-500 mx-auto mb-8 drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]"></i>
+                <h1 class="text-6xl font-black text-red-500 mb-4 title-font tracking-tighter">ELIMINADO</h1>
+                <p class="text-red-300 font-mono text-xl">Has sido detectado</p>
+                <div class="mt-8 px-6 py-2 border border-red-500/30 rounded bg-red-900/50 text-red-400 font-mono">
+                    ESPERA AL SIGUIENTE JUEGO
+                </div>
+            </div>
         </div>
 
         <!-- Pantalla: VICTORIA -->
-        <div id="p-screen-win" class="hidden text-center bg-yellow-900 absolute inset-0 flex flex-col items-center justify-center z-50">
-            <i data-lucide="trophy" class="w-32 h-32 text-yellow-400 mb-4 animate-bounce"></i>
-            <h1 class="text-5xl font-black text-yellow-400 mb-2">¡VICTORIA!</h1>
-            <p class="text-yellow-100">Has sobrevivido</p>
+        <div id="p-screen-win" class="hidden absolute inset-0 z-50 bg-yellow-900 flex flex-col items-center justify-center">
+            <div class="absolute inset-0 bg-yellow-500/20 mix-blend-overlay"></div>
+            <i data-lucide="trophy" class="w-40 h-40 text-yellow-400 mb-8 animate-bounce drop-shadow-[0_0_30px_rgba(250,204,21,0.6)]"></i>
+            <h1 class="text-6xl font-black text-yellow-400 mb-4 title-font">¡VICTORIA!</h1>
+            <p class="text-yellow-100 font-mono text-xl tracking-wider">SOBREVIVISTE</p>
         </div>
     </div>
 
@@ -217,8 +297,6 @@
         // --- UTILIDADES ---
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
-        
-        // Sonidos
         const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3']; 
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
         const WIN_URL = "https://library.penguinmod.com/files/sounds/win3.mp3";
@@ -226,22 +304,17 @@
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
-        // Audio Objects
         let currentMusic = null;
         const gunshotAudio = new Audio(GUNSHOT_URL);
         const winAudio = new Audio(WIN_URL);
 
-        // Desbloqueo de audio para móviles (Safari/Chrome policies)
         const unlockAudio = () => {
             [gunshotAudio, winAudio].forEach(audio => {
-                audio.play().then(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                }).catch(e => {}); // Ignorar error si ya estaba desbloqueado o falló
+                audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
             });
         };
 
-        // --- LÓGICA DE APLICACIÓN CENTRAL ---
+        // --- APP CONTROLLER ---
         const app = {
             role: null,
             sessionId: null,
@@ -254,9 +327,7 @@
                 if (urlSession && urlRole) {
                     this.sessionId = urlSession.toUpperCase();
                     this.setRole(urlRole);
-                    if (urlRole === 'player') {
-                        $('inp-session-code').value = this.sessionId;
-                    }
+                    if (urlRole === 'player') $('inp-session-code').value = this.sessionId;
                 } else {
                     this.showView('view-landing');
                 }
@@ -265,11 +336,8 @@
 
             setRole: function(role) {
                 this.role = role;
-                if (role === 'screen') {
-                    host.init();
-                } else {
-                    player.init();
-                }
+                if (role === 'screen') host.init();
+                else player.init();
             },
 
             showView: function(viewId) {
@@ -278,7 +346,7 @@
             }
         };
 
-        // --- LÓGICA DEL HOST (PANTALLA) ---
+        // --- HOST LOGIC ---
         const host = {
             players: {},
             gameState: 'waiting', 
@@ -286,20 +354,17 @@
             timers: [],
 
             init: function() {
-                // Host click habilita sonidos (por si acaso tiene altavoces)
                 document.body.addEventListener('click', unlockAudio, { once: true });
-
                 if (!app.sessionId) {
                     app.sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
                     const newUrl = `?session=${app.sessionId}&role=screen`;
                     window.history.replaceState(null, '', newUrl);
                 }
-                
                 $('host-session-code').innerText = app.sessionId;
                 app.showView('view-screen');
 
                 const joinUrl = `${window.location.origin}${window.location.pathname}?session=${app.sessionId}&role=player`;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(joinUrl)}&bgcolor=ffffff&color=000000&margin=10`;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(joinUrl)}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
 
                 this.setupListeners();
@@ -307,18 +372,12 @@
             },
 
             wait: function(fn, delay) {
-                const id = setTimeout(() => {
-                    fn();
-                    this.timers = this.timers.filter(t => t !== id);
-                }, delay);
+                const id = setTimeout(() => { fn(); this.timers = this.timers.filter(t => t !== id); }, delay);
                 this.timers.push(id);
                 return id;
             },
 
-            clearTimers: function() {
-                this.timers.forEach(id => clearTimeout(id));
-                this.timers = [];
-            },
+            clearTimers: function() { this.timers.forEach(id => clearTimeout(id)); this.timers = []; },
 
             resetDB: function() {
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
@@ -334,9 +393,7 @@
                     const allPlayers = snap.val() || {};
                     this.players = {};
                     Object.entries(allPlayers).forEach(([key, p]) => {
-                        if (p.sessionId === app.sessionId) {
-                            this.players[key] = p;
-                        }
+                        if (p.sessionId === app.sessionId) this.players[key] = p;
                     });
                     this.renderPlayers();
                 });
@@ -363,24 +420,26 @@
                 
                 $('host-alive-count').innerText = alive;
                 $('host-dead-count').innerText = dead;
-
                 $('btn-start-game').disabled = playersArr.length === 0;
 
                 playersArr.forEach(p => {
                     const div = document.createElement('div');
-                    div.className = `px-3 py-1 rounded-full text-sm font-bold flex items-center border ${p.isAlive ? 'bg-green-900 text-green-300 border-green-600' : 'bg-red-900/50 text-red-500 border-red-800 line-through opacity-60'}`;
+                    // Mostrar eliminados diferentes
+                    const statusClass = p.isAlive ? 'bg-green-900/50 text-green-400 border-green-500/30' : 'bg-red-900/30 text-red-500/50 border-red-500/10 line-through grayscale';
+                    div.className = `px-4 py-2 rounded-lg font-mono font-bold flex items-center border ${statusClass} backdrop-blur-sm`;
                     div.innerText = p.name;
                     list.appendChild(div);
                 });
             },
 
             startGame: function() {
-                unlockAudio(); // Desbloquear al empezar por si acaso
+                unlockAudio();
                 this.clearTimers(); 
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
+                    // Reset score to NULL to verify who plays
+                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null; 
                 });
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
@@ -391,16 +450,30 @@
                 this.scheduleStop();
             },
 
+            // --- Lógica del Ciclo de Juego ---
+
+            startNewRound: function() {
+                // Borrar tiempos anteriores de TODOS (vivos y muertos)
+                // Esto garantiza que los muertos no tengan un 'lastScore' valido en la DB
+                const updates = {};
+                Object.keys(this.players).forEach(pid => {
+                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
+                });
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
+                
+                db.ref().update(updates);
+                this.startMusic();
+                this.scheduleStop();
+            },
+
             scheduleStop: function() {
                 if (this.gameState !== 'playing') return;
-
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
                 let min = 5000, max = 12000;
+                if (aliveCount <= 2) { min = 10000; max = 20000; } // Showdown
                 
-                if (aliveCount <= 2) { min = 10000; max = 20000; }
-
                 const duration = Math.random() * (max - min) + min;
-
                 this.wait(() => {
                     if (this.gameState !== 'playing' || !this.musicPlaying) return;
                     this.stopRound();
@@ -409,58 +482,67 @@
 
             stopRound: function() {
                 this.stopMusic();
-                const updates = {
+                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     musicPlaying: false,
                     state: 'measuring', 
                     lastStop: firebase.database.ServerValue.TIMESTAMP
-                };
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
-
+                });
+                // 3 segundos para que los jugadores envíen sus tiempos
                 this.wait(() => this.calculateRoundResults(), 3000);
             },
 
             calculateRoundResults: function() {
                 if (this.gameState !== 'measuring') return;
 
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
-                    state: 'round_result'
-                });
+                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({ state: 'round_result' });
                 
                 const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
                 
+                // Win Condition Check
                 if (alivePlayers.length <= 1 && Object.keys(this.players).length > 1) {
                      const winner = alivePlayers.length === 1 ? alivePlayers[0][1].name : 'NADIE';
                      this.endGame(winner);
                      return;
                 }
 
+                // Encontrar al peor DE LOS QUE JUGARON (lastScore != null)
                 let worstPlayerId = null;
                 let maxScore = -1;
 
                 alivePlayers.forEach(([pid, p]) => {
-                    const score = p.lastScore || 0;
+                    // Si lastScore es null, significa que no envió dato (error de conexión?), asumimos 0 por seguridad o ignoramos
+                    // Si ponemos 0 es seguro.
+                    const score = (p.lastScore === null || p.lastScore === undefined) ? 0 : p.lastScore;
                     if (score > maxScore) {
                         maxScore = score;
                         worstPlayerId = pid;
                     }
                 });
 
-                // Suspense extra en la última ronda (2 jugadores)
-                const isFinalShowdown = alivePlayers.length <= 2;
-                const revealDelay = isFinalShowdown ? 6000 : 3000; // Más lento si son pocos
+                // Suspense
+                const isSuspense = alivePlayers.length <= 2;
+                const revealDelay = isSuspense ? 5000 : 3000;
 
                 this.wait(() => {
+                    // Eliminar si se movió (umbral 0.05s)
                     if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
+                        // Efecto visual en host
+                        const loserName = this.players[worstPlayerId].name;
+                        $('eliminated-name').innerText = loserName;
+                        $('eliminated-overlay').classList.remove('hidden');
+                        
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
+                        gunshotAudio.play().catch(()=>{});
                     }
 
                     this.wait(() => {
-                        // Recalcular
+                        $('eliminated-overlay').classList.add('hidden');
+                        // Recalcular Vivos
                         let currentAliveCount = 0;
                         let lastSurvivorName = "";
                         
                         Object.entries(this.players).forEach(([pid, p]) => {
-                            if (pid === worstPlayerId && maxScore > 0.05) return;
+                            if (pid === worstPlayerId && maxScore > 0.05) return; // Ya está muerto lógicamente
                             if (p.isAlive) {
                                 currentAliveCount++;
                                 lastSurvivorName = p.name;
@@ -471,57 +553,38 @@
                             const wName = currentAliveCount === 1 ? lastSurvivorName : 'NADIE';
                             this.endGame(wName);
                         } else {
-                            const updates = { state: 'playing', musicPlaying: true };
-                            db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
-                            this.startMusic();
-                            this.scheduleStop();
+                            this.startNewRound(); // Ciclo nuevo limpiando scores
                         }
-                    }, 3000); 
-                }, revealDelay);
+                    }, 4000); // Tiempo viendo al muerto
+                }, revealDelay); // Tiempo viendo la tabla
             },
+
+            // --- UI & Helpers ---
 
             startMusic: function() {
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
-                let songToPlay;
+                const songToPlay = (aliveCount <= 2) ? 'song3.mp3' : SONGS[Math.floor(Math.random() * SONGS.length)];
                 
-                if (aliveCount <= 2) {
-                    songToPlay = 'song3.mp3';
-                } else {
-                    songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
-                }
-                
-                if (currentMusic) {
-                    currentMusic.pause();
-                    currentMusic = null;
-                }
+                if (currentMusic) { currentMusic.pause(); currentMusic = null; }
                 currentMusic = new Audio(songToPlay);
                 currentMusic.loop = true;
-                currentMusic.play().catch(e => console.log("Audio error (posiblemente bloqueado)", e));
+                currentMusic.play().catch(e => console.log("Audio block", e));
             },
 
             stopMusic: function() {
-                if (currentMusic) {
-                    currentMusic.pause();
-                    currentMusic.currentTime = 0;
-                }
+                if (currentMusic) { currentMusic.pause(); currentMusic.currentTime = 0; }
             },
 
             endGame: function(winnerName) {
                 this.clearTimers();
-                
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     state: 'ended',
                     musicPlaying: false,
                     winner: winnerName
                 });
                 this.stopMusic();
-                
-                // Reproducir victoria si es posible en el host
                 winAudio.play().catch(()=>{});
-
-                this.wait(() => {
-                    this.resetGame();
-                }, 8000);
+                this.wait(() => this.resetGame(), 8000);
             },
 
             resetGame: function() {
@@ -529,37 +592,39 @@
                 const updates = {};
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
-                
                 Object.keys(this.players).forEach(pid => {
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
+                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
                 });
                 db.ref().update(updates);
             },
 
             updateUI: function() {
-                $('host-lobby').classList.add('hidden');
-                $('host-game').classList.add('hidden');
-                $('host-round-results').classList.add('hidden');
-                $('host-winner').classList.add('hidden');
+                ['host-lobby', 'host-game', 'host-round-results', 'host-winner'].forEach(id => $(id).classList.add('hidden'));
 
                 if (this.gameState === 'waiting') {
                     $('host-lobby').classList.remove('hidden');
                 } else if (this.gameState === 'playing' || this.gameState === 'measuring') {
                     $('host-game').classList.remove('hidden');
                     const light = $('traffic-light');
+                    const glow = $('light-glow');
                     const text = $('host-status-text');
+                    const container = $('traffic-light-container');
 
                     if (this.musicPlaying) {
-                        light.className = "w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-green-600 border-green-400 pulse-green shadow-[0_0_50px_rgba(34,197,94,0.6)]";
-                        light.innerHTML = `<i data-lucide="play" class="w-40 h-40 text-white"></i>`;
+                        // VERDE
+                        light.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-300 bg-green-600 border-green-400 shadow-[0_0_100px_rgba(34,197,94,0.5)] scale-110";
+                        glow.className = "absolute inset-0 rounded-full bg-green-500 blur-[80px] opacity-40 animate-pulse";
+                        light.innerHTML = `<i data-lucide="play" class="w-48 h-48 text-white fill-current"></i>`;
                         text.innerText = "¡CORRE!";
-                        text.className = "text-5xl font-black mt-8 tracking-wider text-green-500";
+                        text.className = "text-9xl font-black mt-12 tracking-widest title-font text-green-500 drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]";
                     } else {
-                        light.className = "w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_50px_rgba(234,179,8,0.6)]";
-                        light.innerHTML = `<i data-lucide="activity" class="w-40 h-40 text-white animate-pulse"></i>`;
-                        text.innerText = "MIDIENDO...";
-                        text.className = "text-5xl font-black mt-8 tracking-wider text-yellow-500";
+                        // ROJO / MIDIENDO
+                        light.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_100px_rgba(234,179,8,0.5)] scale-100";
+                        glow.className = "absolute inset-0 rounded-full bg-yellow-500 blur-[80px] opacity-40";
+                        light.innerHTML = `<i data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>`;
+                        text.innerText = "MIDIENDO";
+                        text.className = "text-8xl font-black mt-12 tracking-widest title-font text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]";
                     }
                 } else if (this.gameState === 'round_result') {
                     $('host-round-results').classList.remove('hidden');
@@ -576,59 +641,53 @@
             renderResultsBoard: function() {
                 const grid = $('results-grid');
                 grid.innerHTML = '';
-                $('eliminated-msg').classList.add('hidden');
+                $('eliminated-overlay').classList.add('hidden');
 
-                const players = Object.values(this.players).filter(p => p.isAlive || (p.lastScore > 0)); 
+                // FILTRADO CLAVE: Solo mostrar jugadores vivos Y que hayan enviado score (no null)
+                // Los muertos tienen lastScore = null porque lo reseteamos al inicio de la ronda y ellos no enviaron nada.
+                const players = Object.values(this.players).filter(p => p.isAlive && p.lastScore !== null && p.lastScore !== undefined); 
                 players.sort((a, b) => b.lastScore - a.lastScore);
 
-                // Determinar si hay suspense
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
                 const isSuspense = aliveCount <= 2;
 
                 players.forEach((p, index) => {
-                    const score = p.lastScore ? p.lastScore.toFixed(2) : "0.00";
-                    const isWorst = index === 0 && parseFloat(score) > 0.05; 
+                    const score = p.lastScore ? parseFloat(p.lastScore).toFixed(2) : "0.00";
                     
-                    let barColor = 'bg-green-600';
-                    if (parseFloat(score) > 1.0) barColor = 'bg-red-600';
-                    else if (parseFloat(score) > 0.5) barColor = 'bg-yellow-500';
+                    // Colores barra
+                    let barColor = 'bg-gradient-to-r from-emerald-500 to-green-600';
+                    let numScore = parseFloat(score);
+                    if (numScore > 1.0) barColor = 'bg-gradient-to-r from-red-600 to-red-800'; // Peligro
+                    else if (numScore > 0.5) barColor = 'bg-gradient-to-r from-yellow-400 to-orange-500'; // Warning
 
-                    const widthPercent = Math.min(100, (parseFloat(score) / 3.0) * 100);
+                    // Ancho relativo (Max 3s)
+                    const widthPercent = Math.min(100, (numScore / 2.5) * 100); 
 
                     const item = document.createElement('div');
-                    item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg opacity-0 transition-opacity duration-500";
+                    item.className = "flex items-center space-x-6 p-4 rounded-xl glass-panel opacity-0 fade-enter transition-all duration-500 mb-2";
                     item.innerHTML = `
-                        <div class="w-32 font-bold truncate text-right">${p.name}</div>
-                        <div class="flex-1 bg-neutral-700 h-8 rounded-full overflow-hidden relative">
-                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-2 font-mono font-bold" style="width: 0%">
+                        <div class="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 font-bold font-mono text-xl text-gray-400">#${index + 1}</div>
+                        <div class="w-48 font-bold truncate text-right text-2xl font-mono text-white">${p.name}</div>
+                        <div class="flex-1 h-10 bg-black/50 rounded-full overflow-hidden relative border border-white/10 shadow-inner">
+                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-3 font-mono font-bold text-lg text-white shadow-lg" style="width: 0%">
                                 ${score}s
                             </div>
                         </div>
                     `;
                     grid.appendChild(item);
 
-                    // Animación de aparición en cascada
+                    // Cascada
                     setTimeout(() => {
-                        item.classList.remove('opacity-0');
-                        const bar = item.querySelector('.score-bar');
-                        bar.style.width = `${widthPercent}%`;
-                    }, index * (isSuspense ? 1000 : 200)); // Más lento si hay suspense
-
-                    if (isWorst) {
-                        const revealDelay = isSuspense ? 5000 : 3000;
-                        this.wait(() => {
-                            $('eliminated-msg').classList.remove('hidden');
-                            $('eliminated-name').innerText = p.name;
-                        }, revealDelay);
-                    }
+                        item.classList.remove('opacity-0', 'fade-enter');
+                        item.querySelector('.score-bar').style.width = `${Math.max(5, widthPercent)}%`; // Minimo 5% visual
+                    }, index * (isSuspense ? 800 : 150));
                 });
             }
         };
 
-        // --- LÓGICA DEL JUGADOR ---
+        // --- PLAYER LOGIC ---
         const player = {
             isAlive: true,
-            inactivityTimer: null,
             lastActivityTime: 0,
 
             init: function() {
@@ -639,40 +698,21 @@
             join: function() {
                 const name = $('inp-player-name').value.trim().toUpperCase();
                 const code = $('inp-session-code').value.trim().toUpperCase();
-
                 if (!name || !code) return alert("Rellena todos los campos");
-
-                // CRÍTICO: Desbloquear audio al pulsar el botón
                 unlockAudio();
-
                 app.sessionId = code;
                 
                 db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).set({
-                    name: name,
-                    sessionId: code,
-                    isAlive: true,
-                    lastScore: 0,
+                    name: name, sessionId: code, isAlive: true, lastScore: null,
                     joinedAt: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => {
-                    app.showView('view-player-sensor');
-                }).catch(e => {
-                    alert("Error conexión: " + e.message);
-                });
+                }).then(() => app.showView('view-player-sensor')).catch(alert);
             },
 
             requestPermissions: function() {
-                // También desbloquear aquí por si acaso
                 unlockAudio();
-
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                    DeviceMotionEvent.requestPermission()
-                        .then(response => {
-                            if (response === 'granted') this.enterGame();
-                            else alert("Permiso denegado.");
-                        }).catch(console.error);
-                } else {
-                    this.enterGame();
-                }
+                    DeviceMotionEvent.requestPermission().then(r => r==='granted' ? this.enterGame() : alert("Permiso requerido")).catch(console.error);
+                } else this.enterGame();
             },
 
             enterGame: function() {
@@ -685,60 +725,37 @@
                 db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).on('value', s => {
                     const p = s.val();
                     if (p) {
-                        if (this.isAlive && !p.isAlive) {
-                            this.dieLocal();
-                        }
+                        if (this.isAlive && !p.isAlive) this.dieLocal();
                         this.isAlive = p.isAlive;
                         this.updateScreen();
                     }
                 });
-
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
                     const sess = s.val();
                     if (sess) {
                         this.sessionData = sess;
                         this.updateScreen();
-                        
-                        if (sess.state === 'measuring') {
-                            this.measureReaction();
-                        }
+                        if (sess.state === 'measuring') this.measureReaction();
                     }
                 });
             },
 
-            // Monitor constante de movimiento para la alerta "MUÉVETE"
             startMotionMonitor: function() {
                 this.lastActivityTime = Date.now();
-                
-                window.addEventListener('devicemotion', (event) => {
-                    let acc = 0;
-                    if (event.acceleration) {
-                        acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
-                    }
-                    // Umbral bajo para considerar "actividad"
-                    if (acc > 0.5) {
-                        this.lastActivityTime = Date.now();
-                    }
+                window.addEventListener('devicemotion', (e) => {
+                    let acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
+                    if (acc > 0.5) this.lastActivityTime = Date.now();
                 });
-
-                // Comprobador cada 500ms
                 setInterval(() => {
                     if (!this.sessionData || !this.isAlive) return;
-                    
-                    // Solo si la música suena Y no estoy en fase de espera
                     if (this.sessionData.state === 'playing' && this.sessionData.musicPlaying) {
-                        const inactiveTime = Date.now() - this.lastActivityTime;
-                        const warning = $('p-move-warning');
-                        
-                        if (inactiveTime > 2000) {
-                            warning.classList.remove('hidden');
+                        const inactive = Date.now() - this.lastActivityTime;
+                        const warn = $('p-move-warning');
+                        if (inactive > 2000) {
+                            warn.classList.remove('hidden');
                             if(navigator.vibrate) navigator.vibrate(200);
-                        } else {
-                            warning.classList.add('hidden');
-                        }
-                    } else {
-                        $('p-move-warning').classList.add('hidden');
-                    }
+                        } else warn.classList.add('hidden');
+                    } else $('p-move-warning').classList.add('hidden');
                 }, 500);
             },
 
@@ -746,72 +763,70 @@
                 const startTime = Date.now();
                 let lastMoveTimestamp = 0; 
                 const THRESHOLD = 2.0;
+                
+                // Animación barra
+                const bar = $('p-measure-bar');
+                bar.style.transition = 'none';
+                bar.style.transform = 'scaleX(1)';
+                // Force reflow
+                void bar.offsetWidth;
+                bar.style.transition = 'transform 2s linear'; // 2s duration matches host wait (aprox)
+                bar.style.transform = 'scaleX(0)';
 
-                const handler = (event) => {
+                const handler = (e) => {
                     let acc = 0;
-                    if (event.acceleration) {
-                        acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
-                    } else if (event.accelerationIncludingGravity) {
-                        const g = event.accelerationIncludingGravity;
+                    if (e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
+                    else if (e.accelerationIncludingGravity) {
+                        const g = e.accelerationIncludingGravity;
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
-                    
-                    if (acc > THRESHOLD) {
-                        lastMoveTimestamp = Date.now() - startTime;
-                    }
+                    if (acc > THRESHOLD) lastMoveTimestamp = Date.now() - startTime;
                 };
 
                 window.addEventListener('devicemotion', handler);
-
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', handler);
-                    let finalScore = lastMoveTimestamp / 1000;
-                    
                     if (this.isAlive) {
-                        db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({
-                            lastScore: finalScore
-                        });
+                        db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({ lastScore: lastMoveTimestamp / 1000 });
                     }
                 }, 2000);
             },
 
             dieLocal: function() {
-                gunshotAudio.play().catch(e => console.log("Gunshot error", e));
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                gunshotAudio.play().catch(e => {});
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
             },
 
             updateScreen: function() {
                 const sess = this.sessionData;
                 const container = $('view-player-game');
                 
+                // Reset basic classes
+                container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300";
                 $('p-screen-waiting').classList.add('hidden');
                 $('p-screen-active').classList.add('hidden');
                 $('p-screen-dead').classList.add('hidden');
                 $('p-screen-win').classList.add('hidden');
-                
-                // Limpiar clases de fondo
-                container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 relative overflow-hidden";
 
                 if (!sess) return;
 
                 if (sess.state === 'ended') {
                     if (sess.winner !== 'NADIE') {
                          $('p-screen-win').classList.remove('hidden');
-                         winAudio.play().catch(()=>{}); // Reproducir sonido victoria también en móvil
+                         winAudio.play().catch(()=>{});
                     }
                     else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
-                if (sess.state === 'waiting') {
-                    container.classList.add('bg-neutral-900');
-                    $('p-screen-waiting').classList.remove('hidden');
+                if (!this.isAlive) {
+                    $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
-                if (!this.isAlive) {
+                if (sess.state === 'waiting') {
+                    $('p-screen-waiting').classList.remove('hidden');
                     container.classList.add('bg-neutral-900');
-                    $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
@@ -820,23 +835,28 @@
                     const icon = $('p-icon-container');
                     const mainText = $('p-status-text');
                     const subText = $('p-sub-text');
+                    const barContainer = $('p-measure-bar-container');
 
                     if (sess.musicPlaying) {
-                        container.classList.add('bg-safe');
-                        icon.innerHTML = `<i data-lucide="play" class="w-32 h-32 text-white"></i>`;
-                        mainText.innerText = "CORRE";
-                        subText.innerText = "La música suena";
+                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-safe transition-colors duration-300";
+                        icon.innerHTML = `<i data-lucide="footprints" class="w-32 h-32 text-white fill-current animate-bounce"></i>`;
+                        mainText.innerText = "¡CORRE!";
+                        subText.innerText = "MANTENTE EN MOVIMIENTO";
+                        barContainer.classList.add('hidden');
                     } else if (sess.state === 'measuring') {
-                         container.classList.add('bg-measuring');
-                        icon.innerHTML = `<i data-lucide="activity" class="w-32 h-32 text-white animate-pulse"></i>`;
-                        mainText.innerText = "MIDIENDO";
-                        subText.innerText = "¡No te muevas!";
+                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-measuring transition-colors duration-100";
+                        icon.innerHTML = `<i data-lucide="eye" class="w-32 h-32 text-white animate-pulse"></i>`;
+                        mainText.innerText = "QUIETO";
+                        subText.innerText = "NO TE MUEVAS";
+                        barContainer.classList.remove('hidden');
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        container.classList.add('bg-neutral-800');
-                        icon.innerHTML = `<i data-lucide="monitor" class="w-32 h-32 text-white"></i>`;
+                        // Resultados
+                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-neutral-900";
+                        icon.innerHTML = `<i data-lucide="bar-chart-2" class="w-32 h-32 text-gray-400"></i>`;
                         mainText.innerText = "RESULTADOS";
-                        subText.innerText = "Mira la pantalla";
+                        subText.innerText = "MIRA LA PANTALLA PRINCIPAL";
+                        barContainer.classList.add('hidden');
                     }
                     lucide.createIcons();
                 }
@@ -844,7 +864,6 @@
         };
 
         app.init();
-
     </script>
 </body>
 </html>
