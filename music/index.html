@@ -35,12 +35,16 @@
         /* Estados del semáforo */
         .bg-safe { background-color: #16a34a; }
         .bg-danger { background-color: #dc2626; }
+        .bg-measuring { background-color: #eab308; } /* Amarillo para medir */
         
         .pulse-green { animation: pulse-g 1s infinite; }
         .pulse-red { animation: pulse-r 0.5s infinite; }
 
         @keyframes pulse-g { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
         @keyframes pulse-r { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
+
+        /* Animación barra de tiempo */
+        .score-bar { transition: width 1s ease-out; }
     </style>
 </head>
 <body>
@@ -76,10 +80,10 @@
         </div>
 
         <!-- Contenido Central Host -->
-        <div class="flex-1 flex flex-col items-center justify-center p-4">
+        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full">
             
             <!-- Estado: LOBBY -->
-            <div id="host-lobby" class="text-center flex flex-col items-center">
+            <div id="host-lobby" class="text-center flex flex-col items-center w-full">
                 <div class="bg-white p-4 rounded-xl shadow-2xl mb-6">
                     <img id="host-qr-img" src="" alt="QR Code" class="w-64 h-64 object-contain">
                 </div>
@@ -90,12 +94,23 @@
                 </button>
             </div>
 
-            <!-- Estado: JUEGO -->
+            <!-- Estado: JUEGO (Semáforo) -->
             <div id="host-game" class="hidden w-full h-full flex items-center justify-center flex-col">
                 <div id="traffic-light" class="w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-neutral-800 border-neutral-600">
                     <!-- Icono dinámico se inyecta aquí -->
                 </div>
                 <h2 id="host-status-text" class="text-5xl font-black mt-8 tracking-wider">PREPARADOS</h2>
+            </div>
+
+            <!-- Estado: RESULTADOS RONDA (Leaderboard) -->
+            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-20">
+                <h2 class="text-4xl font-bold mb-8 text-yellow-400 pixel-font">TIEMPOS DE REACCIÓN</h2>
+                <div id="results-grid" class="w-full max-w-4xl grid grid-cols-1 gap-4 overflow-y-auto max-h-[60vh] px-4">
+                    <!-- Barras de resultados -->
+                </div>
+                <div id="eliminated-msg" class="mt-8 text-3xl font-black text-red-500 animate-pulse hidden">
+                    ELIMINADO: <span id="eliminated-name">...</span>
+                </div>
             </div>
 
             <!-- Estado: GANADOR -->
@@ -148,7 +163,7 @@
             <p class="text-blue-300">Mantente preparado</p>
         </div>
 
-        <!-- Pantalla: ACTIVO (Corre/Quieto) -->
+        <!-- Pantalla: ACTIVO (Corre/Quieto/Midiendo) -->
         <div id="p-screen-active" class="hidden text-center w-full h-full flex flex-col items-center justify-center">
             <div id="p-icon-container" class="mb-6 transform transition-transform duration-200">
                 <!-- Icono -->
@@ -161,7 +176,7 @@
         <div id="p-screen-dead" class="hidden text-center animate-pulse bg-red-950 absolute inset-0 flex flex-col items-center justify-center z-50">
             <i data-lucide="skull" class="w-32 h-32 text-red-500 mb-4"></i>
             <h1 class="text-5xl font-black text-red-500 mb-2">ELIMINADO</h1>
-            <p class="text-red-300">Te has movido</p>
+            <p class="text-red-300">Fuiste el más lento</p>
         </div>
 
         <!-- Pantalla: VICTORIA -->
@@ -170,9 +185,6 @@
             <h1 class="text-5xl font-black text-yellow-400 mb-2">¡VICTORIA!</h1>
             <p class="text-yellow-100">Has sobrevivido</p>
         </div>
-
-        <!-- Debug Info (Oculto) -->
-        <div id="debug-acc" class="absolute bottom-2 right-2 text-xs text-white/30 font-mono"></div>
     </div>
 
     <script>
@@ -194,7 +206,7 @@
         const APP_ID = "music-game-v1";
         
         // Sonidos
-        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3']; // Deben estar en la misma carpeta o usar URLs completas
+        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3']; 
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
         
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
@@ -244,11 +256,10 @@
         // --- LÓGICA DEL HOST (PANTALLA) ---
         const host = {
             players: {},
-            gameState: 'waiting', // waiting, playing, ended
+            gameState: 'waiting', // waiting, playing, measuring, round_result, ended
             musicPlaying: false,
 
             init: function() {
-                // Generar o usar Session ID
                 if (!app.sessionId) {
                     app.sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
                     const newUrl = `?session=${app.sessionId}&role=screen`;
@@ -258,7 +269,6 @@
                 $('host-session-code').innerText = app.sessionId;
                 app.showView('view-screen');
 
-                // Generar QR (Negro sobre blanco para contraste)
                 const joinUrl = `${window.location.origin}${window.location.pathname}?session=${app.sessionId}&role=player`;
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(joinUrl)}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
@@ -268,7 +278,6 @@
             },
 
             resetDB: function() {
-                // Inicializar sesión en DB
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     state: 'waiting',
                     musicPlaying: false,
@@ -278,12 +287,9 @@
             },
 
             setupListeners: function() {
-                // Escuchar Jugadores
                 db.ref(`artifacts/${APP_ID}/public/data/players`).on('value', snap => {
                     const allPlayers = snap.val() || {};
                     this.players = {};
-                    
-                    // Filtrar solo los de esta sesión
                     Object.entries(allPlayers).forEach(([key, p]) => {
                         if (p.sessionId === app.sessionId) {
                             this.players[key] = p;
@@ -292,7 +298,6 @@
                     this.renderPlayers();
                 });
 
-                // Escuchar estado del juego (para actualizar si hay cambios externos)
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', snap => {
                     const data = snap.val();
                     if(data) {
@@ -316,7 +321,6 @@
                 $('host-alive-count').innerText = alive;
                 $('host-dead-count').innerText = dead;
 
-                // Habilitar botón empezar si hay jugadores
                 $('btn-start-game').disabled = playersArr.length === 0;
 
                 playersArr.forEach(p => {
@@ -330,98 +334,140 @@
             },
 
             startGame: function() {
-                // Revivir a todos los jugadores en la DB
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
+                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0; // Reset score
                 });
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true; // Empieza con música
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
                 
                 db.ref().update(updates);
                 
-                // Iniciar lógica de audio
                 this.startMusic();
-                this.scheduleToggle();
+                this.scheduleStop();
             },
 
-            scheduleToggle: function() {
+            scheduleStop: function() {
                 if (this.gameState !== 'playing') return;
 
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
-
-                // Tiempos más largos como solicitado
-                // Música sonando: entre 5 y 12 segundos (antes era 2-5)
-                let min = this.musicPlaying ? 5000 : 3000; 
-                let max = this.musicPlaying ? 12000 : 6000;
-
-                // FINAL SHOWDOWN: Si quedan 2 jugadores y hay música, hacer ronda más larga
-                if (aliveCount <= 2 && this.musicPlaying) {
-                     min = 10000; // Mínimo 10 segundos
-                     max = 20000; // Máximo 20 segundos
-                }
+                let min = 5000, max = 12000;
+                
+                if (aliveCount <= 2) { min = 10000; max = 20000; }
 
                 const duration = Math.random() * (max - min) + min;
 
                 setTimeout(() => {
-                    if (this.gameState !== 'playing') return;
-                    this.toggleMusic(!this.musicPlaying);
+                    if (this.gameState !== 'playing' || !this.musicPlaying) return;
+                    this.stopRound();
                 }, duration);
             },
 
-            toggleMusic: function(shouldPlay) {
+            stopRound: function() {
+                // Parar música e iniciar fase de medición
+                this.stopMusic();
                 const updates = {
-                    musicPlaying: shouldPlay
+                    musicPlaying: false,
+                    state: 'measuring', // Nueva fase
+                    lastStop: firebase.database.ServerValue.TIMESTAMP
                 };
-                if (!shouldPlay) {
-                    updates.lastStop = firebase.database.ServerValue.TIMESTAMP;
-                }
-                
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates)
-                .then(() => {
-                    if (shouldPlay) this.startMusic();
-                    else this.stopMusic();
-                    
-                    this.scheduleToggle();
+                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
+
+                // Esperar 3 segundos para recolectar datos y luego mostrar resultados
+                setTimeout(() => this.calculateRoundResults(), 3000);
+            },
+
+            calculateRoundResults: function() {
+                if (this.gameState !== 'measuring') return;
+
+                // Cambiar a fase de resultados
+                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
+                    state: 'round_result'
                 });
+
+                // Lógica de eliminación en el UI (se ejecuta en renderResults)
+                // Pero necesitamos calcular quién muere aquí para actualizar DB
+                
+                const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
+                if (alivePlayers.length === 0) return;
+
+                // Encontrar el peor tiempo (score más alto)
+                // Si hay empate, coge el primero. Si nadie se movió (score 10-11), nadie muere o aleatorio?
+                // Vamos a matar solo si score > 15 (significa que se movió algo) O simplemente el peor.
+                // El prompt dice "se elimina el que tiene peor tiempo".
+                
+                let worstPlayerId = null;
+                let maxScore = -1;
+
+                alivePlayers.forEach(([pid, p]) => {
+                    const score = p.lastScore || 10;
+                    if (score > maxScore) {
+                        maxScore = score;
+                        worstPlayerId = pid;
+                    }
+                });
+
+                // Mostrar resultados por 5 segundos, luego eliminar y seguir
+                setTimeout(() => {
+                    if (worstPlayerId && maxScore > 10) { // Solo eliminar si hubo movimiento significativo? O siempre el peor.
+                         // Vamos a asumir siempre el peor para que el juego avance, 
+                         // pero si todos estuvieron quietos (10-12), perdonamos?
+                         // Prompt: "elimina el que tiene peor tiempo".
+                         // Vamos a poner un umbral mínimo de "movimiento"
+                         // Pero para cumplir "elimina", eliminamos.
+                        
+                        db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
+                        
+                        // Sonido de disparo en host también?
+                        gunshotAudio.play().catch(()=>{});
+                    }
+
+                    // Reiniciar ronda
+                    setTimeout(() => {
+                        // Verificar si hay ganador
+                        const stillAlive = Object.values(this.players).filter(p => p.isAlive).length;
+                        if (stillAlive <= 1 && Object.values(this.players).length > 1) {
+                            // CheckWinCondition lo manejará en renderPlayers
+                        } else {
+                            // Siguiente ronda
+                            const updates = {
+                                state: 'playing',
+                                musicPlaying: true
+                            };
+                            db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
+                            this.startMusic();
+                            this.scheduleStop();
+                        }
+                    }, 3000); // Tiempo viendo quién murió
+                }, 3000); // Tiempo viendo la tabla antes de revelar muerte
             },
 
             startMusic: function() {
-                // Lógica de elección de canción
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
                 let songToPlay;
-
-                // Si quedan 2 personas o menos, forzar canción 3 (Tensión final)
-                if (aliveCount <= 2) {
-                    songToPlay = 'song3.mp3';
-                } else {
-                    // Elegir canción aleatoria entre las 3
-                    songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
-                }
+                if (aliveCount <= 2) songToPlay = 'song3.mp3';
+                else songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
                 
                 if (currentMusic) {
                     currentMusic.pause();
                     currentMusic = null;
                 }
-
                 currentMusic = new Audio(songToPlay);
                 currentMusic.loop = true;
-                currentMusic.play().catch(e => console.log("Error reproduciendo música (interacción requerida):", e));
+                currentMusic.play().catch(e => console.log("Audio error", e));
             },
 
             stopMusic: function() {
                 if (currentMusic) {
                     currentMusic.pause();
                     currentMusic.currentTime = 0;
-                    // No ponemos currentMusic a null para poder reutilizarlo si quisiéramos, 
-                    // pero en startMusic creamos uno nuevo para cambiar de canción.
                 }
             },
 
             checkWinCondition: function(aliveCount, totalCount) {
-                if (this.gameState === 'playing' && totalCount > 0) {
+                if ((this.gameState === 'playing' || this.gameState === 'round_result') && totalCount > 0) {
                     if (aliveCount === 1 && totalCount > 1) {
-                         // Ganador único
                          const winner = Object.values(this.players).find(p => p.isAlive);
                          this.endGame(winner ? winner.name : 'Nadie');
                     } else if (aliveCount === 0) {
@@ -440,30 +486,27 @@
             },
 
             resetGame: function() {
-                // Al volver al lobby, revivimos a todos
                 const updates = {};
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
-                
-                // Revivir jugadores
                 Object.keys(this.players).forEach(pid => {
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
+                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
                 });
-
                 db.ref().update(updates);
             },
 
             updateUI: function() {
-                // Controlar visibilidad de secciones
+                // Ocultar todo primero
+                $('host-lobby').classList.add('hidden');
+                $('host-game').classList.add('hidden');
+                $('host-round-results').classList.add('hidden');
+                $('host-winner').classList.add('hidden');
+
                 if (this.gameState === 'waiting') {
                     $('host-lobby').classList.remove('hidden');
-                    $('host-game').classList.add('hidden');
-                    $('host-winner').classList.add('hidden');
-                } else if (this.gameState === 'playing') {
-                    $('host-lobby').classList.add('hidden');
+                } else if (this.gameState === 'playing' || this.gameState === 'measuring') {
                     $('host-game').classList.remove('hidden');
-                    $('host-winner').classList.add('hidden');
-
                     const light = $('traffic-light');
                     const text = $('host-status-text');
 
@@ -473,20 +516,64 @@
                         text.innerText = "¡CORRE!";
                         text.className = "text-5xl font-black mt-8 tracking-wider text-green-500";
                     } else {
-                        light.className = "w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-red-600 border-red-400 pulse-red shadow-[0_0_50px_rgba(220,38,38,0.6)]";
-                        light.innerHTML = `<i data-lucide="octagon" class="w-40 h-40 text-white"></i>`;
-                        text.innerText = "¡QUIETO!";
-                        text.className = "text-5xl font-black mt-8 tracking-wider text-red-500";
+                        // MEASURING or STOPPED
+                        light.className = "w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_50px_rgba(234,179,8,0.6)]";
+                        light.innerHTML = `<i data-lucide="activity" class="w-40 h-40 text-white animate-pulse"></i>`;
+                        text.innerText = "MIDIENDO...";
+                        text.className = "text-5xl font-black mt-8 tracking-wider text-yellow-500";
                     }
-                    lucide.createIcons();
+                } else if (this.gameState === 'round_result') {
+                    $('host-round-results').classList.remove('hidden');
+                    this.renderResultsBoard();
                 } else if (this.gameState === 'ended') {
-                    $('host-game').classList.add('hidden');
                     $('host-winner').classList.remove('hidden');
-                    // Obtener ganador de la DB si es necesario, pero ya lo pasamos antes
                     db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/winner`).once('value', s => {
                         $('winner-name').innerText = s.val() || '...';
                     });
                 }
+                lucide.createIcons();
+            },
+
+            renderResultsBoard: function() {
+                const grid = $('results-grid');
+                grid.innerHTML = '';
+                $('eliminated-msg').classList.add('hidden');
+
+                // Ordenar jugadores por score (de peor a mejor para visualización, o mejor a peor)
+                // Queremos ver quién tardó más arriba (o abajo).
+                // Vamos a mostrar todos.
+                const players = Object.values(this.players).filter(p => p.isAlive || (p.lastScore > 0)); 
+                // Incluir eliminados recientes? No, solo vivos de esta ronda para ver su tiempo.
+                // Bueno, el que va a morir todavía está "isAlive" en la DB hasta el timeout.
+
+                players.sort((a, b) => b.lastScore - a.lastScore); // Mayor tiempo primero
+
+                players.forEach((p, index) => {
+                    const score = p.lastScore ? p.lastScore.toFixed(2) : "10.00";
+                    const isWorst = index === 0; // El primero es el peor
+                    
+                    const barColor = score > 15 ? 'bg-red-600' : 'bg-green-600';
+                    const widthPercent = Math.min(100, (score / 20) * 100);
+
+                    const item = document.createElement('div');
+                    item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg";
+                    item.innerHTML = `
+                        <div class="w-32 font-bold truncate text-right">${p.name}</div>
+                        <div class="flex-1 bg-neutral-700 h-8 rounded-full overflow-hidden relative">
+                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-2 font-mono font-bold" style="width: ${widthPercent}%">
+                                ${score}
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(item);
+
+                    if (isWorst) {
+                        setTimeout(() => {
+                            $('eliminated-msg').classList.remove('hidden');
+                            $('eliminated-name').innerText = p.name;
+                        }, 3000);
+                    }
+                });
             }
         };
 
@@ -494,7 +581,6 @@
         const player = {
             isAlive: true,
             init: function() {
-                // Si ya tenemos sesión en URL, mostramos join pre-relleno
                 $('inp-session-code').value = app.sessionId || '';
                 app.showView('view-player-join');
             },
@@ -507,12 +593,11 @@
 
                 app.sessionId = code;
                 
-                // Guardar jugador en DB
-                const playerRef = db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`);
-                playerRef.set({
+                db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).set({
                     name: name,
                     sessionId: code,
                     isAlive: true,
+                    lastScore: 0,
                     joinedAt: firebase.database.ServerValue.TIMESTAMP
                 }).then(() => {
                     app.showView('view-player-sensor');
@@ -522,17 +607,12 @@
             },
 
             requestPermissions: function() {
-                // Permisos para iOS 13+
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     DeviceMotionEvent.requestPermission()
                         .then(response => {
-                            if (response === 'granted') {
-                                this.enterGame();
-                            } else {
-                                alert("Permiso denegado. No puedes jugar sin sensores.");
-                            }
-                        })
-                        .catch(console.error);
+                            if (response === 'granted') this.enterGame();
+                            else alert("Permiso denegado.");
+                        }).catch(console.error);
                 } else {
                     this.enterGame();
                 }
@@ -541,139 +621,141 @@
             enterGame: function() {
                 app.showView('view-player-game');
                 this.setupListeners();
-                this.startMotionDetection();
+                // La detección de movimiento ahora es bajo demanda en el estado 'measuring'
             },
 
             setupListeners: function() {
-                // Escuchar mi estado (vivo/muerto)
                 db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).on('value', s => {
                     const p = s.val();
                     if (p) {
+                        if (this.isAlive && !p.isAlive) {
+                            // Acabo de morir
+                            this.dieLocal();
+                        }
                         this.isAlive = p.isAlive;
                         this.updateScreen();
                     }
                 });
 
-                // Escuchar la sesión (estado del juego, música)
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
                     const sess = s.val();
                     if (sess) {
                         this.sessionData = sess;
-                        // Si el juego pasa a waiting, revivimos localmente
                         if (sess.state === 'waiting' && !this.isAlive) {
-                            // En realidad la DB lo actualiza el host, pero por si acaso
+                             // Reset local si el juego se reinicia
                         }
                         this.updateScreen();
+                        
+                        // Lógica de medición
+                        if (sess.state === 'measuring') {
+                            this.measureReaction();
+                        }
                     }
                 });
+            },
+
+            measureReaction: function() {
+                // Escuchar acelerómetro durante 1.5 segundos
+                let maxAccel = 0;
+                let samples = 0;
+
+                const handler = (event) => {
+                    let acc = 0;
+                    if (event.acceleration) {
+                        acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
+                    } else if (event.accelerationIncludingGravity) {
+                        const g = event.accelerationIncludingGravity;
+                        acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
+                    }
+                    if (acc > maxAccel) maxAccel = acc;
+                    samples++;
+                };
+
+                window.addEventListener('devicemotion', handler);
+
+                setTimeout(() => {
+                    window.removeEventListener('devicemotion', handler);
+                    
+                    // CALCULAR SCORE (Tiempo simulado)
+                    // Queremos que esté entre 10 y 15 si es bajo, y 15-20 si es alto.
+                    // Base: 10 + random(0-2)
+                    // Penalización: maxAccel * factor
+                    
+                    let baseScore = 10 + Math.random() * 2; // 10.0 - 12.0
+                    let movementPenalty = maxAccel * 2; // Ajustar sensibilidad aquí. Accel de 2.0 -> +4.0
+                    
+                    let finalScore = baseScore + movementPenalty;
+                    if (finalScore > 20) finalScore = 20; // Cap at 20
+                    if (finalScore < 10) finalScore = 10;
+                    
+                    // Enviar score
+                    if (this.isAlive) {
+                        db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({
+                            lastScore: finalScore
+                        });
+                    }
+                }, 1500);
+            },
+
+            dieLocal: function() {
+                gunshotAudio.play().catch(e => console.log(e));
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             },
 
             updateScreen: function() {
                 const sess = this.sessionData;
                 const container = $('view-player-game');
                 
-                // Reset views
                 $('p-screen-waiting').classList.add('hidden');
                 $('p-screen-active').classList.add('hidden');
                 $('p-screen-dead').classList.add('hidden');
                 $('p-screen-win').classList.add('hidden');
                 container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-neutral-900 relative";
 
-                if (!sess) return; // Cargando
+                if (!sess) return;
 
-                // 1. Muerto
                 if (!this.isAlive) {
                     $('p-screen-dead').classList.remove('hidden');
-                    if (navigator.vibrate) navigator.vibrate(200);
                     return;
                 }
 
-                // 2. Ganador
                 if (sess.state === 'ended') {
-                    if (sess.winner !== 'NADIE') {
-                        $('p-screen-win').classList.remove('hidden');
-                    } else {
-                        $('p-screen-dead').classList.remove('hidden'); // Todos murieron
-                    }
+                    if (sess.winner !== 'NADIE') $('p-screen-win').classList.remove('hidden');
+                    else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
-                // 3. Waiting (Lobby)
                 if (sess.state === 'waiting') {
                     $('p-screen-waiting').classList.remove('hidden');
                     return;
                 }
 
-                // 4. Playing
-                if (sess.state === 'playing') {
+                if (sess.state === 'playing' || sess.state === 'measuring' || sess.state === 'round_result') {
                     $('p-screen-active').classList.remove('hidden');
                     const icon = $('p-icon-container');
                     const mainText = $('p-status-text');
                     const subText = $('p-sub-text');
 
                     if (sess.musicPlaying) {
-                        // VERDE
                         container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-safe relative";
                         icon.innerHTML = `<i data-lucide="play" class="w-32 h-32 text-white"></i>`;
-                        icon.className = "mb-6 transform scale-110";
                         mainText.innerText = "CORRE";
                         subText.innerText = "La música suena";
-                    } else {
-                        // ROJO
-                        container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-danger relative";
-                        icon.innerHTML = `<i data-lucide="octagon" class="w-32 h-32 text-white"></i>`;
-                        icon.className = "mb-6 transform scale-100";
-                        mainText.innerText = "¡QUIETO!";
-                        subText.innerText = "No te muevas";
+                    } else if (sess.state === 'measuring') {
+                         container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-measuring relative";
+                        icon.innerHTML = `<i data-lucide="activity" class="w-32 h-32 text-white animate-pulse"></i>`;
+                        mainText.innerText = "MIDIENDO";
+                        subText.innerText = "¡No te muevas!";
                         if (navigator.vibrate) navigator.vibrate(50);
+                    } else {
+                        // Round result (mostrando tabla en host)
+                        container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-neutral-800 relative";
+                        icon.innerHTML = `<i data-lucide="monitor" class="w-32 h-32 text-white"></i>`;
+                        mainText.innerText = "RESULTADOS";
+                        subText.innerText = "Mira la pantalla";
                     }
                     lucide.createIcons();
                 }
-            },
-
-            startMotionDetection: function() {
-                window.addEventListener('devicemotion', (event) => {
-                    if (!this.isAlive || !this.sessionData || this.sessionData.state !== 'playing') return;
-                    
-                    // Si hay música, estamos a salvo
-                    if (this.sessionData.musicPlaying) return;
-
-                    // Tiempo de gracia (400ms)
-                    const lastStop = this.sessionData.lastStop || 0;
-                    if (Date.now() - lastStop < 400) return;
-
-                    // Calcular aceleración
-                    let acc = 0;
-                    if (event.acceleration) {
-                        acc = Math.sqrt(
-                            Math.pow(event.acceleration.x || 0, 2) + 
-                            Math.pow(event.acceleration.y || 0, 2) + 
-                            Math.pow(event.acceleration.z || 0, 2)
-                        );
-                    } else if (event.accelerationIncludingGravity) {
-                         const g = event.accelerationIncludingGravity;
-                         // Quitar gravedad aprox
-                         acc = Math.abs(Math.sqrt(g.x*g.x + g.y*g.y + g.z*g.z) - 9.8);
-                    }
-
-                    // Debug
-                    //$('debug-acc').innerText = acc.toFixed(2);
-
-                    // Umbral (ajustar sensibilidad) - BAJADO para aumentar sensibilidad
-                    if (acc > 0.8) {
-                        this.die();
-                    }
-                });
-            },
-
-            die: function() {
-                this.isAlive = false;
-                gunshotAudio.play().catch(e => console.log(e));
-                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                
-                // Actualizar DB
-                db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({ isAlive: false });
-                this.updateScreen();
             }
         };
 
