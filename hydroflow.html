@@ -79,6 +79,10 @@
         
         .pulse-red { animation: pulseRed 0.5s infinite; }
         @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        
+        /* Shaking Animation for Cold Mode */
+        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-2deg); } 75% { transform: translateX(4px) rotate(2deg); } }
 
         .rank-card { transition: all 0.2s; }
         .rank-card:active { transform: scale(0.98); }
@@ -231,7 +235,7 @@
                         <span class="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded uppercase border border-yellow-500">Arcade Touch</span>
                     </div>
                     <h2 class="text-3xl font-black text-white mb-2 brand-font">Modo Arcade</h2>
-                    <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Minijuegos táctiles de reacción.</p>
+                    <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Minijuegos de reacción + ¡DESAFÍO FRÍO!</p>
                     <div class="inline-flex items-center gap-2 bg-slate-900 text-white border border-fuchsia-500 px-6 py-3 rounded-full font-black text-sm shadow-lg"><i class="ph-fill ph-play-circle"></i> START</div>
                 </div>
             </div>
@@ -393,6 +397,24 @@
             <p class="text-slate-400 mt-8 text-sm">Toca la pantalla cuando la línea pase por lo verde</p>
         </div>
 
+        <!-- GAME UI: COLD (NUEVO) -->
+        <div id="gameUI_Cold" class="hidden w-full h-full flex flex-col items-center justify-center relative pointer-events-none overflow-hidden">
+            <!-- Background Fill Animation -->
+            <div id="coldWaterFill" class="absolute bottom-0 left-0 w-full bg-sky-300 transition-all duration-[100ms] ease-linear opacity-50 z-0 h-0"></div>
+            
+            <div class="relative z-10 text-center w-full max-w-md px-6">
+                <i id="coldIcon" class="ph-fill ph-thermometer-cold text-6xl text-sky-400 mb-4 drop-shadow-lg"></i>
+                <h2 id="coldTitle" class="text-4xl font-black text-white brand-font mb-2 drop-shadow-lg uppercase">¡Agua Fría!</h2>
+                <p id="coldInstruction" class="text-sky-200 text-lg mb-8 font-bold drop-shadow">1. Pon el agua FRÍA<br>2. Toca para empezar</p>
+                
+                <!-- Timer Container -->
+                <div id="coldTimerContainer" class="hidden">
+                     <div id="coldTimer" class="text-[8rem] font-black leading-none text-white drop-shadow-2xl">15</div>
+                     <p class="text-white font-bold uppercase tracking-widest mt-2">Aguanta...</p>
+                </div>
+            </div>
+        </div>
+
         <button onclick="skipGame()" class="absolute bottom-10 text-xs text-slate-500 hover:text-white uppercase tracking-widest font-bold z-50 pointer-events-auto">Saltar Juego</button>
     </section>
 
@@ -425,13 +447,16 @@
             currentUserUid: null,
             calendarDate: new Date(),
             gameActive: false,
-            currentGameType: null, // 'tsunami', 'semaforo', 'bomb'
+            currentGameType: null, // 'tsunami', 'semaforo', 'bomb', 'cold'
             gameLoopId: null,
             // Game Specific State
             tsunamiLevel: 30,
             semaforoReady: false,
             semaforoStart: 0,
-            bombCursorPos: 0
+            bombCursorPos: 0,
+            coldPhase: 0, // 0: Waiting for tap, 1: Holding, 2: Restoring
+            coldStartTime: 0,
+            coldDuration: 15 // Seconds to hold
         };
 
         const QUESTIONS = [
@@ -721,9 +746,10 @@
             clearInterval(window.STATE.currentShower.interval);
             window.STATE.gameActive = true;
             
-            ['gameUI_Tsunami', 'gameUI_Semaforo', 'gameUI_Bomb'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['gameUI_Tsunami', 'gameUI_Semaforo', 'gameUI_Bomb', 'gameUI_Cold'].forEach(id => document.getElementById(id).classList.add('hidden'));
             
-            const games = ['tsunami', 'semaforo', 'bomb'];
+            // INCREASED PROBABILITY FOR COLD GAME
+            const games = ['tsunami', 'semaforo', 'bomb', 'cold', 'cold', 'cold']; // 50% chance
             const game = games[Math.floor(Math.random() * games.length)];
             window.STATE.currentGameType = game;
             
@@ -732,6 +758,7 @@
             if(game === 'tsunami') runTsunamiGame();
             else if(game === 'semaforo') runSemaforoGame();
             else if(game === 'bomb') runBombGame();
+            else if(game === 'cold') runColdGame();
         }
 
         // --- GAME INPUT HANDLER ---
@@ -742,8 +769,6 @@
             if(window.STATE.currentGameType === 'tsunami') {
                 window.STATE.tsunamiLevel += 5; // Jump up on tap
                 if(window.STATE.tsunamiLevel > 100) window.STATE.tsunamiLevel = 100;
-                
-                // Visual feedback (simple scale effect on container could be added here)
                 playTick();
             }
             
@@ -772,6 +797,21 @@
                     cursor.style.backgroundColor = 'red';
                     setTimeout(() => cursor.style.backgroundColor = 'white', 200);
                 }
+            }
+            
+            // Cold Challenge: Logic
+            else if(window.STATE.currentGameType === 'cold') {
+                if(window.STATE.coldPhase === 0) {
+                    // Start Holding Phase
+                    window.STATE.coldPhase = 1;
+                    window.STATE.coldStartTime = Date.now();
+                    document.getElementById('coldInstruction').classList.add('hidden');
+                    document.getElementById('coldTimerContainer').classList.remove('hidden');
+                    document.getElementById('coldTitle').innerText = "¡AGUANTA!";
+                    document.getElementById('coldTimer').classList.add('animate-shake');
+                }
+                // During phase 1 and 2, tap does nothing (except maybe skipping if we wanted to allow cheat)
+                // But let's keep it strictly timer based as requested
             }
         }
 
@@ -851,6 +891,52 @@
                 window.STATE.bombCursorPos += direction * speed;
                 if(window.STATE.bombCursorPos > 100 || window.STATE.bombCursorPos < 0) direction *= -1;
                 cursor.style.left = window.STATE.bombCursorPos + '%';
+            });
+        }
+        
+        // GAME 4: COLD CHALLENGE
+        function runColdGame() {
+            const ui = document.getElementById('gameUI_Cold');
+            ui.classList.remove('hidden');
+            
+            // Reset UI
+            window.STATE.coldPhase = 0; // Waiting
+            document.getElementById('coldTimerContainer').classList.add('hidden');
+            document.getElementById('coldInstruction').classList.remove('hidden');
+            document.getElementById('coldTitle').innerText = "¡AGUA FRÍA!";
+            document.getElementById('coldIcon').className = "ph-fill ph-thermometer-cold text-6xl text-sky-400 mb-4 drop-shadow-lg";
+            document.getElementById('coldWaterFill').style.height = '0%';
+            
+            startGameLoop(() => {
+                if(window.STATE.coldPhase === 1) {
+                    // Holding Phase
+                    const elapsed = (Date.now() - window.STATE.coldStartTime) / 1000;
+                    const remaining = Math.max(0, 15 - elapsed);
+                    
+                    document.getElementById('coldTimer').innerText = Math.ceil(remaining);
+                    // Fill water background
+                    const pct = Math.min(100, (elapsed / 15) * 100);
+                    document.getElementById('coldWaterFill').style.height = pct + '%';
+                    
+                    if(remaining <= 0) {
+                        // Switch to Restore Phase
+                        window.STATE.coldPhase = 2;
+                        window.STATE.coldStartTime = Date.now(); // Reuse start time for restore count
+                        document.getElementById('coldTitle').innerText = "¡RECUPERA!";
+                        document.getElementById('coldIcon').className = "ph-fill ph-fire text-6xl text-orange-500 mb-4 drop-shadow-lg animate-pulse";
+                        document.getElementById('coldTimer').classList.remove('animate-shake'); // Stop shaking
+                        playPop();
+                    }
+                } else if(window.STATE.coldPhase === 2) {
+                    // Restoring Phase
+                    const elapsed = (Date.now() - window.STATE.coldStartTime) / 1000;
+                    const remaining = Math.max(0, 15 - elapsed);
+                    document.getElementById('coldTimer').innerText = Math.ceil(remaining);
+                    
+                    if(remaining <= 0) {
+                        winGame();
+                    }
+                }
             });
         }
 
