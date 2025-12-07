@@ -118,7 +118,7 @@
                 <i data-lucide="trophy" class="w-40 h-40 text-yellow-400 mx-auto mb-4"></i>
                 <h2 class="text-4xl text-yellow-400 font-bold mb-2">GANADOR</h2>
                 <div id="winner-name" class="text-6xl font-black text-white mb-8">NOMBRE</div>
-                <button onclick="host.resetGame()" class="px-6 py-3 bg-neutral-700 rounded text-white font-bold hover:bg-neutral-600">Volver al Lobby</button>
+                <p class="text-gray-400 mt-4">Reiniciando juego en breve...</p>
             </div>
         </div>
 
@@ -205,7 +205,7 @@
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
         
-        // Sonidos (AÑADIDA SONG4)
+        // Sonidos
         const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3']; 
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
         
@@ -329,8 +329,8 @@
                     div.innerText = p.name;
                     list.appendChild(div);
                 });
-
-                this.checkWinCondition(alive, playersArr.length);
+                
+                // NOTA: No chequeamos win condition aquí para evitar terminaciones prematuras por latencia
             },
 
             startGame: function() {
@@ -365,32 +365,32 @@
             },
 
             stopRound: function() {
-                // Parar música e iniciar fase de medición
                 this.stopMusic();
                 const updates = {
                     musicPlaying: false,
-                    state: 'measuring', // Nueva fase
+                    state: 'measuring', 
                     lastStop: firebase.database.ServerValue.TIMESTAMP
                 };
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
 
-                // Esperar 3 segundos para recolectar datos y luego mostrar resultados
                 setTimeout(() => this.calculateRoundResults(), 3000);
             },
 
             calculateRoundResults: function() {
                 if (this.gameState !== 'measuring') return;
 
-                // Cambiar a fase de resultados
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     state: 'round_result'
                 });
-
-                // Lógica de eliminación en el UI (se ejecuta en renderResults)
-                // Pero necesitamos calcular quién muere aquí para actualizar DB
                 
                 const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
-                if (alivePlayers.length === 0) return;
+                
+                // Si ya no queda nadie o solo 1 antes de calcular, acabamos
+                if (alivePlayers.length <= 1 && Object.keys(this.players).length > 1) {
+                     const winner = alivePlayers.length === 1 ? alivePlayers[0][1].name : 'NADIE';
+                     this.endGame(winner);
+                     return;
+                }
 
                 let worstPlayerId = null;
                 let maxScore = -1;
@@ -403,21 +403,34 @@
                     }
                 });
 
-                // Mostrar resultados por 5 segundos, luego eliminar y seguir
+                // Mostrar resultados, eliminar al peor y decidir
                 setTimeout(() => {
-                    if (worstPlayerId && maxScore > 10) { 
+                    // Eliminar al peor si hay más de 1 jugador
+                    if (worstPlayerId && maxScore > 10 && alivePlayers.length > 1) { 
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
                         gunshotAudio.play().catch(()=>{});
                     }
 
-                    // Reiniciar ronda
                     setTimeout(() => {
-                        // Verificar si hay ganador
-                        const stillAlive = Object.values(this.players).filter(p => p.isAlive).length;
-                        if (stillAlive <= 1 && Object.values(this.players).length > 1) {
-                            // CheckWinCondition lo manejará en renderPlayers
+                        // Calcular supervivientes REALES (excluyendo al que acabamos de matar)
+                        let currentAliveCount = 0;
+                        let lastSurvivorName = "";
+                        
+                        Object.entries(this.players).forEach(([pid, p]) => {
+                            // Si es el que acabamos de matar, lo ignoramos aunque el objeto local aun diga true
+                            if (pid === worstPlayerId) return;
+                            if (p.isAlive) {
+                                currentAliveCount++;
+                                lastSurvivorName = p.name;
+                            }
+                        });
+
+                        if (currentAliveCount <= 1) {
+                            // FIN DEL JUEGO
+                            const wName = currentAliveCount === 1 ? lastSurvivorName : 'NADIE';
+                            this.endGame(wName);
                         } else {
-                            // Siguiente ronda
+                            // SIGUIENTE RONDA
                             const updates = {
                                 state: 'playing',
                                 musicPlaying: true
@@ -426,19 +439,17 @@
                             this.startMusic();
                             this.scheduleStop();
                         }
-                    }, 3000); // Tiempo viendo quién murió
-                }, 3000); // Tiempo viendo la tabla antes de revelar muerte
+                    }, 3000); 
+                }, 3000); 
             },
 
             startMusic: function() {
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
                 let songToPlay;
                 
-                // Si quedan 2 personas o menos, forzar canción 3 (Tensión final)
                 if (aliveCount <= 2) {
                     songToPlay = 'song3.mp3';
                 } else {
-                    // Elegir canción aleatoria entre las disponibles (incluida song4)
                     songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
                 }
                 
@@ -458,17 +469,6 @@
                 }
             },
 
-            checkWinCondition: function(aliveCount, totalCount) {
-                if ((this.gameState === 'playing' || this.gameState === 'round_result') && totalCount > 0) {
-                    if (aliveCount === 1 && totalCount > 1) {
-                         const winner = Object.values(this.players).find(p => p.isAlive);
-                         this.endGame(winner ? winner.name : 'Nadie');
-                    } else if (aliveCount === 0) {
-                        this.endGame('NADIE');
-                    }
-                }
-            },
-
             endGame: function(winnerName) {
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     state: 'ended',
@@ -476,12 +476,19 @@
                     winner: winnerName
                 });
                 this.stopMusic();
+
+                // REINICIO AUTOMÁTICO EN 8 SEGUNDOS
+                setTimeout(() => {
+                    this.resetGame();
+                }, 8000);
             },
 
             resetGame: function() {
                 const updates = {};
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
+                
+                // Revivir a TODOS
                 Object.keys(this.players).forEach(pid => {
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
@@ -490,7 +497,6 @@
             },
 
             updateUI: function() {
-                // Ocultar todo primero
                 $('host-lobby').classList.add('hidden');
                 $('host-game').classList.add('hidden');
                 $('host-round-results').classList.add('hidden');
@@ -509,7 +515,6 @@
                         text.innerText = "¡CORRE!";
                         text.className = "text-5xl font-black mt-8 tracking-wider text-green-500";
                     } else {
-                        // MEASURING or STOPPED
                         light.className = "w-80 h-80 rounded-full flex items-center justify-center border-8 transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_50px_rgba(234,179,8,0.6)]";
                         light.innerHTML = `<i data-lucide="activity" class="w-40 h-40 text-white animate-pulse"></i>`;
                         text.innerText = "MIDIENDO...";
@@ -533,23 +538,23 @@
                 $('eliminated-msg').classList.add('hidden');
 
                 const players = Object.values(this.players).filter(p => p.isAlive || (p.lastScore > 0)); 
-                
-                players.sort((a, b) => b.lastScore - a.lastScore); // Mayor tiempo primero
+                players.sort((a, b) => b.lastScore - a.lastScore);
 
                 players.forEach((p, index) => {
                     const score = p.lastScore ? p.lastScore.toFixed(2) : "10.00";
-                    const isWorst = index === 0; // El primero es el peor
+                    const isWorst = index === 0; 
                     
                     const barColor = score > 15 ? 'bg-red-600' : 'bg-green-600';
                     const widthPercent = Math.min(100, (score / 20) * 100);
 
                     const item = document.createElement('div');
                     item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg";
+                    // AÑADIDA "s" AL SCORE PARA INDICAR SEGUNDOS
                     item.innerHTML = `
                         <div class="w-32 font-bold truncate text-right">${p.name}</div>
                         <div class="flex-1 bg-neutral-700 h-8 rounded-full overflow-hidden relative">
                             <div class="h-full ${barColor} score-bar flex items-center justify-end px-2 font-mono font-bold" style="width: ${widthPercent}%">
-                                ${score}
+                                ${score}s
                             </div>
                         </div>
                     `;
@@ -609,7 +614,6 @@
             enterGame: function() {
                 app.showView('view-player-game');
                 this.setupListeners();
-                // La detección de movimiento ahora es bajo demanda en el estado 'measuring'
             },
 
             setupListeners: function() {
@@ -617,7 +621,6 @@
                     const p = s.val();
                     if (p) {
                         if (this.isAlive && !p.isAlive) {
-                            // Acabo de morir
                             this.dieLocal();
                         }
                         this.isAlive = p.isAlive;
@@ -630,11 +633,11 @@
                     if (sess) {
                         this.sessionData = sess;
                         if (sess.state === 'waiting' && !this.isAlive) {
-                             // Reset local si el juego se reinicia
+                             // Si el juego está en waiting, asegurarnos de que localmente estamos listos
+                             // La DB ya nos revive en host.resetGame(), pero aquí actualizamos UI
                         }
                         this.updateScreen();
                         
-                        // Lógica de medición
                         if (sess.state === 'measuring') {
                             this.measureReaction();
                         }
@@ -643,7 +646,6 @@
             },
 
             measureReaction: function() {
-                // Escuchar acelerómetro durante 1.5 segundos
                 let maxAccel = 0;
                 let samples = 0;
 
@@ -664,19 +666,13 @@
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', handler);
                     
-                    // CALCULAR SCORE (Tiempo simulado)
-                    // Queremos que esté entre 10 y 15 si es bajo, y 15-20 si es alto.
-                    // Base: 10 + random(0-2)
-                    // Penalización: maxAccel * factor
-                    
-                    let baseScore = 10 + Math.random() * 2; // 10.0 - 12.0
-                    let movementPenalty = maxAccel * 2; // Ajustar sensibilidad aquí. Accel de 2.0 -> +4.0
+                    let baseScore = 10 + Math.random() * 2; 
+                    let movementPenalty = maxAccel * 2; 
                     
                     let finalScore = baseScore + movementPenalty;
-                    if (finalScore > 20) finalScore = 20; // Cap at 20
+                    if (finalScore > 20) finalScore = 20;
                     if (finalScore < 10) finalScore = 10;
                     
-                    // Enviar score
                     if (this.isAlive) {
                         db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({
                             lastScore: finalScore
@@ -702,22 +698,33 @@
 
                 if (!sess) return;
 
-                if (!this.isAlive) {
-                    $('p-screen-dead').classList.remove('hidden');
-                    return;
-                }
+                // Orden de prioridad de pantallas
 
+                // 1. Ganador (Muestra victoria o derrota global)
                 if (sess.state === 'ended') {
-                    if (sess.winner !== 'NADIE') $('p-screen-win').classList.remove('hidden');
+                    if (sess.winner !== 'NADIE') {
+                         // Si yo soy el ganador (o estoy vivo y hay ganador)
+                         // Aunque en teoría 'ended' solo se activa con 1 vivo.
+                         // El host revive a todos despues, asi que esto es temporal.
+                         $('p-screen-win').classList.remove('hidden');
+                    }
                     else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
+                // 2. Waiting (Reseteo)
                 if (sess.state === 'waiting') {
                     $('p-screen-waiting').classList.remove('hidden');
                     return;
                 }
 
+                // 3. Muerto durante la partida
+                if (!this.isAlive) {
+                    $('p-screen-dead').classList.remove('hidden');
+                    return;
+                }
+
+                // 4. Juego Activo
                 if (sess.state === 'playing' || sess.state === 'measuring' || sess.state === 'round_result') {
                     $('p-screen-active').classList.remove('hidden');
                     const icon = $('p-icon-container');
@@ -736,7 +743,7 @@
                         subText.innerText = "¡No te muevas!";
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        // Round result (mostrando tabla en host)
+                        // Round result
                         container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-neutral-800 relative";
                         icon.innerHTML = `<i data-lucide="monitor" class="w-32 h-32 text-white"></i>`;
                         mainText.innerText = "RESULTADOS";
@@ -747,7 +754,6 @@
             }
         };
 
-        // Arrancar app
         app.init();
 
     </script>
