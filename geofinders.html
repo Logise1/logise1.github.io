@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts: Fortnite Style -->
+    <!-- Fonts -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@400;700;900&display=swap');
 
@@ -30,11 +30,11 @@
             font-family: 'Nunito', sans-serif;
         }
 
-        /* --- FORTNITE UI STYLES --- */
+        /* --- UI STYLES --- */
         .fn-font { font-family: 'Luckiest Guy', cursive; letter-spacing: 1px; }
         
         .fn-card {
-            background: rgba(30, 27, 75, 0.9);
+            background: rgba(30, 27, 75, 0.95);
             border: 4px solid #4c1d95;
             border-radius: 12px;
             box-shadow: 0 4px 0 #312e81;
@@ -43,7 +43,7 @@
         .fn-btn {
             background: linear-gradient(to bottom, #fbbf24, #d97706);
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             color: #451a03;
             font-family: 'Luckiest Guy', cursive;
             text-transform: uppercase;
@@ -61,19 +61,18 @@
         }
         .fn-btn-blue:active { transform: translateY(6px); box-shadow: 0 0 0 #1e40af; }
 
-        /* --- MAP ROTATION CONTAINER --- */
-        #map-container {
-            position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            transform-origin: center center;
-            will-change: transform;
-            transition: transform 0.2s linear; /* Suavizado */
-            z-index: 1;
-        }
-        #map { height: 100%; width: 100%; background: #2f343f; }
+        /* --- MAP & PLAYER --- */
+        #map { height: 100%; width: 100%; background: #2f343f; z-index: 1; }
         
-        /* Marcadores que rotan inversamente para mantenerse de pie */
-        .marker-counter-rotate { will-change: transform; transition: transform 0.2s linear; }
+        /* Flecha del jugador que rotará */
+        #player-arrow {
+            position: absolute; top: 50%; left: 50%;
+            width: 40px; height: 40px;
+            margin-left: -20px; margin-top: -20px;
+            z-index: 20; pointer-events: none;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            transition: transform 0.1s linear;
+        }
 
         /* --- HITMARKER & FEEDBACK --- */
         .hit-feedback {
@@ -87,16 +86,8 @@
         .dmg-flash { animation: flashRed 0.3s; }
         @keyframes flashRed { 0% {background:rgba(255,0,0,0.5);} 100% {background:transparent;} }
 
-        /* Killfeed */
-        .killfeed-item {
-            background: rgba(0,0,0,0.6);
-            border-left: 4px solid var(--fn-yellow);
-            margin-bottom: 4px; padding: 4px 8px;
-            font-size: 11px; font-weight: bold;
-            border-radius: 0 4px 4px 0;
-            animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn { from {transform: translateX(100%); opacity:0;} to {transform: translateX(0); opacity:1;} }
+        .ammo-shake { animation: shake 0.3s; color: red !important; }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
 
         /* Loot Marker Pulse */
         .loot-pulse { animation: lootPop 1s infinite alternate; }
@@ -116,47 +107,32 @@
             <input type="text" id="player-name" placeholder="NOMBRE DE GUERRERO" maxlength="12"
                    class="w-full bg-white border-4 border-black text-black text-center text-xl font-black py-4 rounded-xl focus:outline-none focus:border-yellow-400 uppercase placeholder-gray-400 shadow-xl">
             
-            <button onclick="APP.init()" class="w-full fn-btn py-4 text-2xl">¡JUGAR!</button>
+            <button onclick="APP.init()" class="w-full fn-btn py-5 text-3xl shadow-2xl">¡JUGAR!</button>
         </div>
-        <p class="mt-8 text-white/50 text-xs font-bold">SOLO GPS Y DATOS MÓVILES</p>
+        <p class="mt-8 text-white/50 text-xs font-bold bg-black/20 px-4 py-2 rounded-full">REQUIERE GPS Y PANTALLA COMPLETA</p>
     </div>
 
     <!-- 2. LOBBY -->
     <div id="screen-lobby" class="hidden fixed inset-0 z-[90] bg-indigo-950 flex flex-col p-4 overflow-y-auto">
-        <h3 class="text-3xl text-white fn-font mb-4 text-center">PREPARACIÓN</h3>
+        <h3 class="text-3xl text-white fn-font mb-6 text-center mt-8">SALA DE OPERACIONES</h3>
         
-        <!-- CLASES -->
-        <div class="grid grid-cols-3 gap-3 mb-6">
-            <div onclick="APP.selectClass('ASALTO')" id="cls-ASALTO" class="bg-blue-600 p-2 rounded-xl text-center cursor-pointer border-4 border-white shadow-lg transform scale-105">
-                <i class="fas fa-bomb text-2xl text-white mb-1"></i>
-                <div class="text-xs font-black text-white">ASALTO</div>
-            </div>
-            <div onclick="APP.selectClass('EXPLORADOR')" id="cls-EXPLORADOR" class="bg-indigo-800 p-2 rounded-xl text-center cursor-pointer border-4 border-indigo-900 opacity-70">
-                <i class="fas fa-binoculars text-2xl text-white mb-1"></i>
-                <div class="text-xs font-black text-white">EXPLORADOR</div>
-            </div>
-            <div onclick="APP.selectClass('MEDICO')" id="cls-MEDICO" class="bg-indigo-800 p-2 rounded-xl text-center cursor-pointer border-4 border-indigo-900 opacity-70">
-                <i class="fas fa-first-aid text-2xl text-white mb-1"></i>
-                <div class="text-xs font-black text-white">MÉDICO</div>
-            </div>
-        </div>
-
         <!-- CONTROLES SALA -->
-        <div class="space-y-4">
-            <div class="fn-card p-4">
-                <h4 class="text-sm font-black text-purple-300 mb-2">CREAR PARTIDA</h4>
-                <div class="flex items-center gap-2 mb-3 bg-black/30 p-2 rounded">
-                    <input type="range" id="host-range" min="100" max="1000" value="300" step="50" class="flex-1">
-                    <span id="range-val" class="text-yellow-400 font-bold text-sm w-12 text-right">300m</span>
+        <div class="space-y-6 max-w-md mx-auto w-full">
+            <div class="fn-card p-6">
+                <h4 class="text-xl font-black text-purple-300 mb-4 text-center">CREAR NUEVA PARTIDA</h4>
+                <div class="flex items-center gap-3 mb-4 bg-black/30 p-3 rounded-lg">
+                    <span class="text-xs font-bold text-gray-400">RADIO</span>
+                    <input type="range" id="host-range" min="100" max="1000" value="300" step="50" class="flex-1 h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer">
+                    <span id="range-val" class="text-yellow-400 font-bold text-lg w-16 text-right">300m</span>
                 </div>
-                <button onclick="ROOMS.createRoom()" class="w-full fn-btn py-3 text-lg">CREAR</button>
+                <button onclick="ROOMS.createRoom()" class="w-full fn-btn py-4 text-xl">CREAR SALA</button>
             </div>
 
-            <div class="fn-card p-4">
-                <h4 class="text-sm font-black text-blue-300 mb-2">UNIRSE</h4>
-                <div class="flex gap-2">
-                    <input type="number" id="room-code-input" placeholder="CÓDIGO" class="w-24 bg-white text-black font-black text-center rounded-lg p-2 border-2 border-black">
-                    <button onclick="ROOMS.joinRoom()" class="flex-1 fn-btn fn-btn-blue py-2 text-lg">ENTRAR</button>
+            <div class="fn-card p-6">
+                <h4 class="text-xl font-black text-blue-300 mb-4 text-center">UNIRSE A PARTIDA</h4>
+                <div class="flex gap-3">
+                    <input type="number" id="room-code-input" placeholder="0000" class="w-28 bg-white text-black font-black text-center rounded-lg p-2 border-4 border-black text-xl">
+                    <button onclick="ROOMS.joinRoom()" class="flex-1 fn-btn fn-btn-blue py-3 text-xl">ENTRAR</button>
                 </div>
             </div>
         </div>
@@ -164,101 +140,113 @@
 
     <!-- 3. SALA DE ESPERA -->
     <div id="screen-waiting" class="hidden fixed inset-0 z-[80] bg-indigo-900 flex flex-col items-center justify-center p-6 text-center">
-        <div class="mb-4 animate-bounce"><i class="fas fa-gamepad text-6xl text-yellow-400"></i></div>
-        <h2 class="text-7xl text-white fn-font mb-2 drop-shadow-md" id="lobby-room-code">----</h2>
-        <p class="text-sm text-purple-200 font-bold bg-purple-900/50 px-4 py-1 rounded-full mb-8">CÓDIGO DE SALA</p>
+        <div class="mb-4 animate-bounce"><i class="fas fa-satellite-dish text-6xl text-yellow-400"></i></div>
+        <h2 class="text-8xl text-white fn-font mb-2 drop-shadow-md tracking-widest" id="lobby-room-code">----</h2>
+        <p class="text-sm text-purple-200 font-bold bg-purple-900/50 px-6 py-2 rounded-full mb-8">CÓDIGO DE SALA</p>
         
-        <div id="players-list" class="w-full max-w-sm bg-black/20 rounded-xl p-4 mb-4 min-h-[150px] text-left space-y-2 overflow-y-auto"></div>
+        <div id="players-list" class="w-full max-w-sm bg-black/20 rounded-xl p-4 mb-4 min-h-[200px] text-left space-y-2 overflow-y-auto border-2 border-white/10"></div>
 
         <div id="host-controls" class="hidden w-full max-w-sm">
-            <button onclick="GAME.triggerStart()" class="w-full fn-btn py-4 text-xl animate-pulse">¡LANZARSE!</button>
+            <button onclick="GAME.triggerStart()" class="w-full fn-btn py-5 text-2xl animate-pulse">¡LANZAMIENTO!</button>
         </div>
-        <div id="guest-controls" class="hidden text-sm font-bold text-white/50">ESPERANDO AL LÍDER...</div>
+        <div id="guest-controls" class="hidden text-sm font-bold text-white/50 animate-pulse">ESPERANDO AL LÍDER...</div>
     </div>
 
     <!-- 4. JUEGO (HUD) -->
-    <div id="game-ui" class="hidden h-full w-full relative overflow-hidden">
+    <div id="game-ui" class="hidden h-full w-full relative overflow-hidden bg-black">
         
         <!-- Overlay Daño -->
         <div id="damage-overlay" class="absolute inset-0 pointer-events-none z-[60]"></div>
         
         <!-- Mensaje de Impacto -->
         <div id="hit-msg" class="hit-feedback text-center">
-            <h1 class="text-5xl text-yellow-400 fn-font stroke-black" style="-webkit-text-stroke: 2px black;">¡LE HAS DADO!</h1>
-            <p class="text-white font-black text-xl drop-shadow-md">DAÑO CRÍTICO</p>
+            <h1 class="text-6xl text-yellow-400 fn-font stroke-black" style="-webkit-text-stroke: 3px black;">¡IMPACTO!</h1>
         </div>
 
         <!-- Killfeed -->
         <div id="killfeed" class="absolute top-24 right-2 z-50 w-48 flex flex-col items-end pointer-events-none"></div>
 
         <!-- HUD Superior -->
-        <div class="absolute top-0 w-full z-40 p-2 pt-[calc(env(safe-area-inset-top)+10px)] flex justify-between items-start pointer-events-none">
+        <div class="absolute top-0 w-full z-40 p-3 pt-[calc(env(safe-area-inset-top)+10px)] flex justify-between items-start pointer-events-none">
             <!-- Fase -->
-            <div class="bg-black/50 backdrop-blur rounded-lg p-2 border-b-4 border-blue-500">
-                <div class="text-[10px] text-blue-300 font-black">ZONA</div>
-                <div id="mission-timer" class="text-xl font-black text-white font-mono">00:00</div>
+            <div class="bg-black/60 backdrop-blur-md rounded-xl p-3 border-b-4 border-blue-500 shadow-lg">
+                <div class="text-[10px] text-blue-300 font-black tracking-wider">ZONA SEGURA</div>
+                <div id="mission-timer" class="text-2xl font-black text-white font-mono leading-none">00:00</div>
             </div>
 
             <!-- Objetivo -->
-            <div class="bg-black/50 backdrop-blur rounded-lg p-2 border-b-4 border-green-500 text-right">
-                <div class="text-[10px] text-green-300 font-black">OBJETIVO</div>
-                <div id="dist-target" class="text-xl font-black text-white font-mono">---</div>
+            <div class="bg-black/60 backdrop-blur-md rounded-xl p-3 border-b-4 border-green-500 text-right shadow-lg">
+                <div class="text-[10px] text-green-300 font-black tracking-wider">DISTANCIA</div>
+                <div id="dist-target" class="text-2xl font-black text-white font-mono leading-none">---</div>
             </div>
         </div>
 
         <!-- Alertas Centro -->
         <div id="alert-box" class="absolute top-1/4 left-1/2 -translate-x-1/2 w-full text-center hidden pointer-events-none z-50">
-            <div class="bg-red-600 text-white py-2 px-8 transform -skew-x-12 inline-block border-4 border-white shadow-xl">
-                <h2 class="text-2xl font-black fn-font transform skew-x-12" id="alert-title">¡TORMENTA!</h2>
+            <div class="bg-red-600 text-white py-3 px-10 transform -skew-x-12 inline-block border-4 border-white shadow-2xl">
+                <h2 class="text-3xl font-black fn-font transform skew-x-12" id="alert-title">¡ALERTA!</h2>
             </div>
         </div>
 
         <!-- HUD Inferior -->
         <div class="absolute bottom-0 w-full p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex justify-between items-end pointer-events-none">
             
-            <!-- Salud y Escudo -->
+            <!-- Salud -->
             <div class="w-40 pointer-events-auto">
-                <div class="bg-black/60 p-2 rounded-xl backdrop-blur border-2 border-white/20">
+                <div class="bg-black/60 p-3 rounded-2xl backdrop-blur-md border-2 border-white/20 shadow-xl">
                     <div class="flex justify-between items-baseline mb-1">
-                        <span class="text-3xl font-black italic text-green-400" id="health-val">100</span>
-                        <span class="text-xs font-bold text-gray-400">PV</span>
+                        <span class="text-4xl font-black italic text-green-400" id="health-val">100</span>
+                        <i class="fas fa-heart text-red-500 animate-pulse"></i>
                     </div>
-                    <div class="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
+                    <div class="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
                         <div id="health-bar" class="h-full bg-green-500 w-full transition-all duration-300"></div>
                     </div>
-                    <div class="mt-1 text-[10px] font-bold text-yellow-400" id="class-display">CLASE: ASALTO</div>
                 </div>
             </div>
 
-            <!-- Botón Disparar -->
-            <button id="shoot-btn" onclick="GAME.shoot()" 
-                class="pointer-events-auto w-24 h-24 rounded-full border-4 border-white bg-red-500 active:bg-red-600 active:scale-95 transition-all flex items-center justify-center shadow-xl group">
-                <i class="fas fa-crosshairs text-4xl text-white group-active:rotate-90 transition-transform duration-100"></i>
-            </button>
+            <!-- Controles Disparo y Munición -->
+            <div class="flex items-end gap-4 pointer-events-auto">
+                <!-- Munición -->
+                <div class="flex flex-col items-center mb-2">
+                    <div class="bg-black/60 px-3 py-1 rounded-lg border border-yellow-500/50 mb-1">
+                        <span id="ammo-count" class="text-2xl font-black text-yellow-400 font-mono">30</span>
+                        <span class="text-[10px] text-gray-400 font-bold block text-center">BALAS</span>
+                    </div>
+                </div>
+
+                <!-- Botón Disparar -->
+                <button id="shoot-btn" onclick="GAME.shoot()" 
+                    class="w-24 h-24 rounded-full border-4 border-white bg-red-600 active:bg-red-700 active:scale-95 transition-all flex items-center justify-center shadow-2xl group relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
+                    <i class="fas fa-crosshairs text-4xl text-white group-active:scale-90 transition-transform"></i>
+                </button>
+            </div>
         </div>
 
-        <!-- MAPA ROTATORIO -->
-        <div id="map-container">
-            <div id="map"></div>
-        </div>
-        <!-- Puntero del Jugador (Fijo en el centro) -->
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-            <div class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[20px] border-b-white drop-shadow-md"></div>
+        <!-- MAPA -->
+        <div id="map"></div>
+        
+        <!-- Puntero del Jugador (Rota según brújula) -->
+        <div id="player-arrow">
+            <!-- Triángulo visual -->
+            <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                <path d="M50 0 L100 100 L50 80 L0 100 Z" fill="#3b82f6" stroke="white" stroke-width="5"/>
+            </svg>
         </div>
     </div>
 
     <!-- 5. PANTALLA DE MUERTE -->
     <div id="death-screen" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-red-900/90 text-center p-8 backdrop-blur">
         <h1 class="text-6xl text-white fn-font mb-2 drop-shadow-lg transform rotate-[-3deg]">¡ELIMINADO!</h1>
-        <p class="text-white font-bold text-lg mb-8 bg-black/30 px-4 py-1 rounded">SUERTE LA PRÓXIMA VEZ</p>
+        <p class="text-white font-bold text-lg mb-8 bg-black/30 px-4 py-1 rounded">MALA SUERTE, SOLDADO</p>
         
         <div class="bg-white text-black p-6 rounded-xl w-full max-w-xs mb-8 shadow-2xl transform rotate-[2deg]">
             <div class="text-xs font-black text-gray-500 uppercase">CAUSA</div>
-            <div class="text-3xl font-black text-red-600 mt-1" id="death-cause">DISPARO</div>
+            <div class="text-3xl font-black text-red-600 mt-1" id="death-cause">COMBATE</div>
         </div>
 
-        <button onclick="GAME.enableSpectator()" class="fn-btn fn-btn-blue py-3 px-8 text-lg w-full max-w-xs mb-4">ESPECTADOR</button>
-        <button onclick="location.reload()" class="text-white/70 text-sm font-bold underline">SALIR AL MENÚ</button>
+        <button onclick="GAME.enableSpectator()" class="fn-btn fn-btn-blue py-3 px-8 text-lg w-full max-w-xs mb-4">MODO ESPECTADOR</button>
+        <button onclick="location.reload()" class="text-white/70 text-sm font-bold underline">VOLVER AL LOBBY</button>
     </div>
 
     <!-- LOGICA -->
@@ -294,21 +282,22 @@
                     const now = Tone.now();
                     switch(type) {
                         case 'shot': 
-                            // Sonido "Pew Pew" laser cartoon
-                            const osc = new Tone.Oscillator(800, "sawtooth").toDestination();
-                            osc.start().stop("+0.1");
-                            osc.frequency.rampTo(200, 0.1);
+                            const osc = new Tone.Oscillator(400, "square").toDestination();
+                            osc.start().stop("+0.05"); // Disparo seco
+                            osc.volume.value = -5;
+                            break;
+                        case 'empty':
+                            // Click seco sin balas
+                            const click = new Tone.Oscillator(800, "sine").toDestination();
+                            click.start().stop("+0.02");
                             break;
                         case 'hit': 
-                            // Sonido satisfactorio de "crítico"
                             AUDIO.poly.triggerAttackRelease(["C5", "E5"], "16n");
                             break;
                         case 'damage':
-                            // Golpe grave
                             AUDIO.membrane.triggerAttackRelease("C2", "8n");
                             break;
                         case 'kill': 
-                            // Fanfarria corta
                             AUDIO.poly.triggerAttackRelease(["C4", "E4", "G4", "C5"], "8n");
                             break;
                         case 'loot': 
@@ -322,9 +311,9 @@
         // --- ESTADO ---
         window.STATE = {
             userId: 'u_' + Math.floor(Math.random()*99999),
-            name: "Jugador",
-            class: 'ASALTO',
+            name: "Soldado",
             health: 100,
+            ammo: 30, // Munición inicial
             isDead: false,
             pos: { lat: 0, lng: 0, head: 0 },
             roomId: null, isHost: false, phase: 'LOBBY',
@@ -334,7 +323,6 @@
             storm: { start: 0, centerLat: 0, centerLng: 0, initialRange: 300 },
             
             map: null, markers: {}, layers: {storm:null, target:null},
-            isDraggingMap: false
         };
 
         // --- LÓGICA APP ---
@@ -344,9 +332,11 @@
                 if(!name) return alert("¡PONTE UN NOMBRE!");
                 STATE.name = name;
                 
+                // Audio y Fullscreen
                 await AUDIO.init();
+                APP.toggleFullscreen();
 
-                // Permiso iOS Brújula
+                // Permiso Brújula iOS
                 if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
                     try { await DeviceOrientationEvent.requestPermission(); } catch(e){}
                 }
@@ -363,19 +353,11 @@
 
                 setInterval(GAME.loop, 1000);
             },
-            selectClass: (cls) => {
-                STATE.class = cls;
-                // Reset styles
-                ['ASALTO','EXPLORADOR','MEDICO'].forEach(c => {
-                    const el = document.getElementById('cls-'+c);
-                    el.classList.add('opacity-70');
-                    el.classList.remove('scale-105', 'shadow-lg', 'bg-blue-600', 'bg-indigo-800');
-                    el.classList.add('bg-indigo-800');
-                });
-                // Set active
-                const el = document.getElementById('cls-'+cls);
-                el.classList.remove('opacity-70', 'bg-indigo-800');
-                el.classList.add('bg-blue-600', 'scale-105', 'shadow-lg');
+            toggleFullscreen: () => {
+                const doc = window.document;
+                const docEl = doc.documentElement;
+                const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+                if(requestFullScreen) requestFullScreen.call(docEl);
             }
         };
 
@@ -394,8 +376,9 @@
             },
             genLoot: (range) => {
                 let l = {};
-                const types = ['VIDA', 'VIDA', 'ESCUDO', 'RADAR'];
-                for(let i=0; i<12; i++) {
+                // Más munición en el mapa
+                const types = ['VIDA', 'VIDA', 'MUNICION', 'MUNICION', 'ESCUDO'];
+                for(let i=0; i<15; i++) {
                     const type = types[Math.floor(Math.random()*types.length)];
                     l['box_'+i] = { 
                         type: type, taken: false,
@@ -417,7 +400,7 @@
                 const pRef = ref(db, `rooms/${code}/players/${STATE.userId}`);
                 onDisconnect(pRef).update({ status: 'OFFLINE' });
                 await set(pRef, { 
-                    name: STATE.name, health: 100, class: STATE.class, 
+                    name: STATE.name, health: 100, 
                     status: 'ALIVE', lat:0, lng:0, lastHitBy: null 
                 });
 
@@ -449,17 +432,13 @@
                     const oldPlayers = STATE.players || {};
                     STATE.players = data.players || {};
                     
-                    // Killfeed & Sync Personal
                     if(STATE.players[STATE.userId]) {
                         const me = STATE.players[STATE.userId];
                         
-                        // Detectar si me han pegado (Sync DB -> Local)
                         if(me.lastHitBy && (!oldPlayers[STATE.userId] || oldPlayers[STATE.userId].lastHitBy !== me.lastHitBy)) {
-                            // Alguien me pegó (el id es timestamp)
-                            GAME.takeDamage(10, true); // Visual feedback de recibir golpe
+                            GAME.takeDamage(10, true);
                         }
                         
-                        // Sincronizar vida real
                         if(me.health < STATE.health) {
                              STATE.health = me.health; 
                              GAME.updateHUD();
@@ -468,7 +447,6 @@
                         if(me.status === 'DEAD' && !STATE.isDead) GAME.die();
                     }
 
-                    // Detectar muertes globales para Killfeed
                     Object.keys(STATE.players).forEach(uid => {
                         const p = STATE.players[uid];
                         if(p.status === 'DEAD' && oldPlayers[uid]?.status === 'ALIVE') {
@@ -485,7 +463,7 @@
                 list.innerHTML = Object.values(STATE.players).map(p => 
                     `<div class="flex justify-between border-b border-white/10 pb-2">
                         <span class="text-white font-bold">${p.name}</span>
-                        <span class="text-yellow-400 text-xs font-black bg-black/40 px-2 rounded">${p.class}</span>
+                        <span class="text-green-400 text-xs font-black bg-black/40 px-2 rounded">LISTO</span>
                     </div>`
                 ).join('');
             }
@@ -506,34 +484,19 @@
                     });
                 }
 
-                // 2. Regeneración Médico
-                if(STATE.class === 'MEDICO' && now % 4000 < 50 && STATE.health < 100) {
-                    STATE.health = Math.min(100, STATE.health + 2);
-                    GAME.updateHUD();
-                    update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {health:STATE.health});
-                }
-
                 GAME.updateStorm();
                 GAME.checkLoot();
                 
-                // Actualizar rotación del mapa si no se está arrastrando
-                if(!STATE.isDraggingMap && STATE.map) {
-                     const heading = STATE.pos.head;
-                     const container = document.getElementById('map-container');
-                     // Rotar el contenedor en contra de la brújula para que el Norte gire
-                     container.style.transform = `translate(-25%, -25%) rotate(${-heading}deg)`;
-                     
-                     // Contra-rotar los marcadores para que se lean bien (Iconos, texto)
-                     document.querySelectorAll('.leaflet-marker-icon, .leaflet-popup-content-wrapper').forEach(el => {
-                         el.style.transform = `rotate(${heading}deg)`;
-                     });
+                // Rotar FLECHA DEL JUGADOR (No el mapa)
+                const arrow = document.getElementById('player-arrow');
+                if(arrow) {
+                    arrow.style.transform = `translate(-50%, -50%) rotate(${STATE.pos.head}deg)`;
                 }
             },
             deploy: (range, cLat, cLng) => {
                 STATE.phase = 'DEPLOY';
                 document.getElementById('screen-waiting').classList.add('hidden');
                 document.getElementById('game-ui').classList.remove('hidden');
-                document.getElementById('class-display').innerText = `CLASE: ${STATE.class}`;
 
                 // Init Mapa
                 if(!STATE.map) {
@@ -542,17 +505,13 @@
                         zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false
                     }).setView([cLat, cLng], 17);
                     
-                    // Mapa Oscuro Limpio
+                    // Mapa Oscuro
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:20}).addTo(STATE.map);
-                    
-                    // Eventos Dragging para pausar rotación
-                    STATE.map.on('dragstart', () => STATE.isDraggingMap = true);
-                    STATE.map.on('dragend', () => STATE.isDraggingMap = false);
                 }
 
                 // Generar Meta
                 const angle = Math.random() * Math.PI * 2;
-                const dist = range * 0.5; // 50% del radio
+                const dist = range * 0.5; 
                 const dLat = (dist*Math.cos(angle))/111320;
                 const dLng = (dist*Math.sin(angle))/(111320*Math.cos(cLat*Math.PI/180));
                 STATE.target = {lat: cLat+dLat, lng: cLng+dLng};
@@ -567,7 +526,7 @@
                     const lat = cLat + l.dLat;
                     const lng = cLng + l.dLng;
                     
-                    let color = '#fbbf24'; // Amarillo
+                    let color = '#fbbf24'; // Amarillo (Default/Municion)
                     if(l.type === 'VIDA') color = '#22c55e';
                     if(l.type === 'ESCUDO') color = '#3b82f6';
 
@@ -579,60 +538,65 @@
                     STATE.markers[id] = {marker:m, lat:lat, lng:lng, type:l.type};
                 });
 
-                GAME.alert("¡DESPLIEGUE!", "LLEGA A LA BANDERA");
+                GAME.alert("¡DESPLIEGUE!", "VE A LA BANDERA VERDE");
             },
             shoot: () => {
                 if(STATE.health <= 0) return;
                 
-                // Efecto visual local inmediato
+                // Comprobar Munición
+                if(STATE.ammo <= 0) {
+                    AUDIO.play('empty');
+                    const ac = document.getElementById('ammo-count');
+                    ac.classList.add('ammo-shake');
+                    setTimeout(()=>ac.classList.remove('ammo-shake'), 300);
+                    return; // No dispara
+                }
+
+                // Disparar
+                STATE.ammo--;
+                GAME.updateHUD();
+                
                 AUDIO.play('shot');
                 const btn = document.getElementById('shoot-btn');
                 btn.classList.add('scale-90');
                 setTimeout(()=>btn.classList.remove('scale-90'), 100);
 
                 let hit = false;
-                const DMG = STATE.class === 'ASALTO' ? 20 : 12; // Daño base
+                const DMG = 20; // Daño estándar
 
                 Object.entries(STATE.players).forEach(([uid, p]) => {
                     if(uid === STATE.userId || p.status !== 'ALIVE' || !p.lat) return;
                     
                     const d = MAP.dist(STATE.pos.lat, STATE.pos.lng, p.lat, p.lng);
-                    if(d > 80) return; // Rango máximo 80m
+                    if(d > 80) return; 
 
                     const bearing = MAP.bearing(STATE.pos.lat, STATE.pos.lng, p.lat, p.lng);
                     let diff = Math.abs(bearing - STATE.pos.head);
                     if(diff > 180) diff = 360 - diff;
                     
-                    // Cono de disparo más generoso (30 grados)
-                    // Si está muy cerca (<15m), es casi imposible fallar (60 grados)
                     const cone = d < 15 ? 60 : 30;
                     
                     if(diff < cone) {
                         hit = true;
-                        // Calcular daño final
-                        const finalDmg = Math.floor(DMG * (1 - (d/100))); // Menos daño a distancia
+                        const finalDmg = Math.floor(DMG * (1 - (d/100)));
                         
-                        // Actualizar DB Enemigo
                         update(ref(db, `rooms/${STATE.roomId}/players/${uid}`), { 
                             health: Math.max(0, p.health - finalDmg),
-                            lastHitBy: Date.now() // Trigger vibración enemigo
+                            lastHitBy: Date.now()
                         });
                         
-                        // Feedback Tirador
                         if(navigator.vibrate) navigator.vibrate(50);
                         AUDIO.play('hit');
                         
-                        // Texto visual "LE HAS DADO"
                         const fb = document.getElementById('hit-msg');
                         fb.classList.add('show');
                         setTimeout(() => fb.classList.remove('show'), 800);
                     }
                 });
                 
-                if(!hit && navigator.vibrate) navigator.vibrate(10); // Vibración pequeña fallo
+                if(!hit && navigator.vibrate) navigator.vibrate(10);
             },
             takeDamage: (amt, vibrate=false) => {
-                // Flash Rojo
                 const overlay = document.getElementById('damage-overlay');
                 overlay.classList.add('dmg-flash');
                 setTimeout(()=>overlay.classList.remove('dmg-flash'), 300);
@@ -646,8 +610,6 @@
                 if(!STATE.storm.start) return;
                 const elapsed = (Date.now() - STATE.storm.start) / 1000;
                 
-                // Lógica Simplificada Fases Fortnite
-                // 0-2min: Looting/Correr -> 2-5min: Cierra Zona 1 -> etc
                 let r = STATE.storm.initialRange;
                 let phaseName = "PREPARACIÓN";
                 let timer = 0;
@@ -662,7 +624,7 @@
                              STATE.targetReached = true;
                              STATE.phase = 'GAME';
                              STATE.map.removeLayer(STATE.layers.target);
-                             GAME.alert("¡LLEGASTE!", "ARMAS ACTIVAS");
+                             GAME.alert("¡LLEGASTE!", "¡COMBATE!");
                              AUDIO.play('loot');
                          }
                     } else {
@@ -670,7 +632,7 @@
                     }
                 } else {
                     if(STATE.phase === 'DEPLOY' && !STATE.targetReached) {
-                        GAME.takeDamage(100); // Muerte por no llegar
+                        GAME.takeDamage(100); 
                         STATE.phase = 'GAME';
                     }
                     if(elapsed < 300) { phaseName = "CERRANDO (1)"; r=150; timer=300-elapsed; }
@@ -680,17 +642,15 @@
 
                 document.getElementById('mission-timer').innerText = `${Math.floor(timer/60)}:${Math.floor(timer%60).toString().padStart(2,'0')}`;
                 
-                // Dibujar Tormenta
                 if(!STATE.layers.storm) STATE.layers.storm = L.circle([STATE.storm.centerLat, STATE.storm.centerLng], {color:'#8b5cf6', weight: 4, fill: false}).addTo(STATE.map);
                 STATE.layers.storm.setRadius(r);
 
-                // Daño Tormenta
                 if(STATE.phase === 'GAME') {
                     const d = MAP.dist(STATE.pos.lat, STATE.pos.lng, STATE.storm.centerLat, STATE.storm.centerLng);
                     if(d > r) {
-                        GAME.takeDamage(0, false); // Solo flash visual suave
+                        GAME.takeDamage(0, false);
                         GAME.alert("¡TORMENTA!", "¡SAL DE AHÍ!");
-                        STATE.health -= 0.5; // Daño constante suave
+                        STATE.health -= 0.5;
                         GAME.updateHUD();
                         update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {health:STATE.health});
                     }
@@ -707,8 +667,8 @@
                         update(ref(db, `rooms/${STATE.roomId}/loot/${id}`), {taken:true});
                         let txt = "";
                         if(obj.type === 'VIDA') { STATE.health = Math.min(100, STATE.health+50); txt="+50 VIDA"; }
-                        else if(obj.type === 'ESCUDO') { STATE.health = 150; txt="SOBRECARGA ESCUDO"; } // Max 150
-                        else { txt = "RADAR ACTIVO"; }
+                        else if(obj.type === 'ESCUDO') { STATE.health = 150; txt="ESCUDO MAX"; } 
+                        else if(obj.type === 'MUNICION') { STATE.ammo += 20; txt="+20 BALAS"; }
                         
                         GAME.updateHUD();
                         GAME.alert("¡BOTÍN!", txt);
@@ -720,6 +680,7 @@
             updateHUD: () => {
                 document.getElementById('health-val').innerText = Math.round(STATE.health);
                 document.getElementById('health-bar').style.width = Math.min(100, STATE.health) + "%";
+                document.getElementById('ammo-count').innerText = STATE.ammo;
             },
             alert: (title, msg) => {
                 const b = document.getElementById('alert-box');
@@ -753,9 +714,6 @@
             enableSpectator: () => {
                 document.getElementById('death-screen').classList.add('hidden');
                 STATE.map.dragging.enable();
-                // En espectador no rotamos el mapa
-                STATE.isDraggingMap = true; 
-                document.getElementById('map-container').style.transform = 'none';
             }
         };
 
@@ -767,8 +725,6 @@
                     STATE.pos.lng = p.coords.longitude;
                     
                     if(STATE.map && !STATE.isDead) {
-                        // El jugador siempre está en el centro del mapa visualmente
-                        // pero movemos el centro de Leaflet
                         STATE.map.setView([STATE.pos.lat, STATE.pos.lng]); 
                     }
                 }, null, {enableHighAccuracy:true});
@@ -787,7 +743,6 @@
             }
         };
         
-        // UTILS
         window.MAP = {
             dist: (lat1,lon1,lat2,lon2) => {
                 const R=6371e3; 
