@@ -256,8 +256,9 @@
         // --- LÓGICA DEL HOST (PANTALLA) ---
         const host = {
             players: {},
-            gameState: 'waiting', // waiting, playing, measuring, round_result, ended
+            gameState: 'waiting', 
             musicPlaying: false,
+            timers: [], // Sistema de gestión de temporizadores
 
             init: function() {
                 if (!app.sessionId) {
@@ -275,6 +276,21 @@
 
                 this.setupListeners();
                 this.resetDB();
+            },
+
+            // Función Wrapper para controlar temporizadores
+            wait: function(fn, delay) {
+                const id = setTimeout(() => {
+                    fn();
+                    this.timers = this.timers.filter(t => t !== id);
+                }, delay);
+                this.timers.push(id);
+                return id;
+            },
+
+            clearTimers: function() {
+                this.timers.forEach(id => clearTimeout(id));
+                this.timers = [];
             },
 
             resetDB: function() {
@@ -329,15 +345,14 @@
                     div.innerText = p.name;
                     list.appendChild(div);
                 });
-                
-                // NOTA: No chequeamos win condition aquí para evitar terminaciones prematuras por latencia
             },
 
             startGame: function() {
+                this.clearTimers(); // Limpiar por seguridad
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0; // Reset score
+                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
                 });
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
@@ -358,7 +373,7 @@
 
                 const duration = Math.random() * (max - min) + min;
 
-                setTimeout(() => {
+                this.wait(() => {
                     if (this.gameState !== 'playing' || !this.musicPlaying) return;
                     this.stopRound();
                 }, duration);
@@ -373,7 +388,7 @@
                 };
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
 
-                setTimeout(() => this.calculateRoundResults(), 3000);
+                this.wait(() => this.calculateRoundResults(), 3000);
             },
 
             calculateRoundResults: function() {
@@ -385,7 +400,7 @@
                 
                 const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
                 
-                // Si ya no queda nadie o solo 1 antes de calcular, acabamos
+                // Si no hay jugadores o solo 1 (y había más de 1 al empezar), acabamos ya.
                 if (alivePlayers.length <= 1 && Object.keys(this.players).length > 1) {
                      const winner = alivePlayers.length === 1 ? alivePlayers[0][1].name : 'NADIE';
                      this.endGame(winner);
@@ -396,8 +411,6 @@
                 let maxScore = -1;
 
                 alivePlayers.forEach(([pid, p]) => {
-                    // Si score es undefined, asumimos que no se movio (0) o que hubo error (-1)
-                    // Asumimos 0 si no hay score
                     const score = p.lastScore || 0;
                     if (score > maxScore) {
                         maxScore = score;
@@ -405,23 +418,21 @@
                     }
                 });
 
-                // Mostrar resultados, eliminar al peor y decidir
-                setTimeout(() => {
-                    // Eliminar al peor si hay más de 1 jugador y se movió algo (mayor que 0.1s para evitar ruido)
-                    // Si todos tienen 0.00s, nadie muere en esta ronda.
+                // Mostrar resultados y eliminar
+                this.wait(() => {
+                    // Eliminar al peor si hay más de 1 jugador y se movió algo (mayor que 0.05s)
                     if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
                         gunshotAudio.play().catch(()=>{});
                     }
 
-                    setTimeout(() => {
-                        // Calcular supervivientes REALES (excluyendo al que acabamos de matar)
+                    this.wait(() => {
+                        // RECALCULAR supervivientes REALES (excluyendo al que acabamos de matar)
                         let currentAliveCount = 0;
                         let lastSurvivorName = "";
                         
                         Object.entries(this.players).forEach(([pid, p]) => {
-                            // Si es el que acabamos de matar, lo ignoramos aunque el objeto local aun diga true
-                            if (pid === worstPlayerId && maxScore > 0.05) return;
+                            if (pid === worstPlayerId && maxScore > 0.05) return; // Ignorar al muerto actual
                             if (p.isAlive) {
                                 currentAliveCount++;
                                 lastSurvivorName = p.name;
@@ -442,8 +453,8 @@
                             this.startMusic();
                             this.scheduleStop();
                         }
-                    }, 3000); 
-                }, 3000); 
+                    }, 3000); // 3s viendo al eliminado
+                }, 3000); // 3s viendo la tabla
             },
 
             startMusic: function() {
@@ -473,6 +484,9 @@
             },
 
             endGame: function(winnerName) {
+                // IMPORTANTÍSIMO: Detener bucles
+                this.clearTimers();
+                
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
                     state: 'ended',
                     musicPlaying: false,
@@ -480,13 +494,14 @@
                 });
                 this.stopMusic();
 
-                // REINICIO AUTOMÁTICO EN 8 SEGUNDOS
-                setTimeout(() => {
+                // REINICIO AUTOMÁTICO
+                this.wait(() => {
                     this.resetGame();
                 }, 8000);
             },
 
             resetGame: function() {
+                this.clearTimers(); // Limpieza extra
                 const updates = {};
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
@@ -547,17 +562,14 @@
                     const score = p.lastScore ? p.lastScore.toFixed(2) : "0.00";
                     const isWorst = index === 0 && parseFloat(score) > 0.05; 
                     
-                    // Escala de color: > 1.0s rojo, < 0.5s verde
                     let barColor = 'bg-green-600';
                     if (parseFloat(score) > 1.0) barColor = 'bg-red-600';
                     else if (parseFloat(score) > 0.5) barColor = 'bg-yellow-500';
 
-                    // Ancho de barra: máximo 3 segundos para llenar la barra
                     const widthPercent = Math.min(100, (parseFloat(score) / 3.0) * 100);
 
                     const item = document.createElement('div');
                     item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg";
-                    // AÑADIDA "s" AL SCORE PARA INDICAR SEGUNDOS
                     item.innerHTML = `
                         <div class="w-32 font-bold truncate text-right">${p.name}</div>
                         <div class="flex-1 bg-neutral-700 h-8 rounded-full overflow-hidden relative">
@@ -569,7 +581,8 @@
                     grid.appendChild(item);
 
                     if (isWorst) {
-                        setTimeout(() => {
+                        // Usamos wait para evitar zombie timers
+                        this.wait(() => {
                             $('eliminated-msg').classList.remove('hidden');
                             $('eliminated-name').innerText = p.name;
                         }, 3000);
@@ -640,10 +653,6 @@
                     const sess = s.val();
                     if (sess) {
                         this.sessionData = sess;
-                        if (sess.state === 'waiting' && !this.isAlive) {
-                             // Si el juego está en waiting, asegurarnos de que localmente estamos listos
-                             // La DB ya nos revive en host.resetGame(), pero aquí actualizamos UI
-                        }
                         this.updateScreen();
                         
                         if (sess.state === 'measuring') {
@@ -654,12 +663,9 @@
             },
 
             measureReaction: function() {
-                // MEDIDA REAL: Tiempo desde inicio hasta último movimiento
-                // Si no se mueve, 0. Si se mueve hasta el final, 2.0s
-                
                 const startTime = Date.now();
-                let lastMoveTimestamp = 0; // Relative to start
-                const THRESHOLD = 2.0; // Umbral de sensibilidad (ajustar si es necesario)
+                let lastMoveTimestamp = 0; 
+                const THRESHOLD = 2.0;
 
                 const handler = (event) => {
                     let acc = 0;
@@ -667,7 +673,6 @@
                         acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
                     } else if (event.accelerationIncludingGravity) {
                         const g = event.accelerationIncludingGravity;
-                        // Estimación simple quitando gravedad
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
                     
@@ -678,11 +683,9 @@
 
                 window.addEventListener('devicemotion', handler);
 
-                // Medimos durante 2 segundos (coincide con el timeout del host de 3s para recolección)
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', handler);
                     
-                    // Convertir a segundos reales
                     let finalScore = lastMoveTimestamp / 1000;
                     
                     if (this.isAlive) {
@@ -710,33 +713,24 @@
 
                 if (!sess) return;
 
-                // Orden de prioridad de pantallas
-
-                // 1. Ganador (Muestra victoria o derrota global)
                 if (sess.state === 'ended') {
                     if (sess.winner !== 'NADIE') {
-                         // Si yo soy el ganador (o estoy vivo y hay ganador)
-                         // Aunque en teoría 'ended' solo se activa con 1 vivo.
-                         // El host revive a todos despues, asi que esto es temporal.
                          $('p-screen-win').classList.remove('hidden');
                     }
                     else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
-                // 2. Waiting (Reseteo)
                 if (sess.state === 'waiting') {
                     $('p-screen-waiting').classList.remove('hidden');
                     return;
                 }
 
-                // 3. Muerto durante la partida
                 if (!this.isAlive) {
                     $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
-                // 4. Juego Activo
                 if (sess.state === 'playing' || sess.state === 'measuring' || sess.state === 'round_result') {
                     $('p-screen-active').classList.remove('hidden');
                     const icon = $('p-icon-container');
@@ -755,7 +749,6 @@
                         subText.innerText = "¡No te muevas!";
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        // Round result
                         container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-neutral-800 relative";
                         icon.innerHTML = `<i data-lucide="monitor" class="w-32 h-32 text-white"></i>`;
                         mainText.innerText = "RESULTADOS";
