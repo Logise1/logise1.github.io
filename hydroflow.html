@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HydroFlow Pro - Gamer Edition</title>
+    <title>HydroFlow Pro - Arcade Edition</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
@@ -21,6 +21,7 @@
             -webkit-tap-highlight-color: transparent;
             overflow: hidden;
             overscroll-behavior: none;
+            user-select: none;
         }
 
         h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
@@ -75,6 +76,9 @@
         .slide-in-right { animation: slideInRight 0.4s ease-out forwards; }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
+        .pulse-red { animation: pulseRed 0.5s infinite; }
+        @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
         .rank-card { transition: all 0.2s; }
         .rank-card:active { transform: scale(0.98); }
 
@@ -90,12 +94,26 @@
             backdrop-filter: blur(4px);
         }
 
-        /* Audio Visualizer Bars */
-        .audio-bar {
-            width: 10px;
-            background: #ec4899;
-            border-radius: 99px;
-            transition: height 0.1s ease;
+        /* Game Elements */
+        .target-zone {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 20%;
+            transform: translateX(-50%);
+            background: rgba(34, 197, 94, 0.2);
+            border-left: 2px solid #22c55e;
+            border-right: 2px solid #22c55e;
+            z-index: 0;
+        }
+        .moving-cursor {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 4px;
+            background: white;
+            box-shadow: 0 0 10px white;
+            z-index: 10;
         }
     </style>
 </head>
@@ -108,9 +126,7 @@
                 <h3 id="modalDateTitle" class="font-bold text-lg text-white">Detalles</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
             </div>
-            <div id="modalContent" class="p-4 overflow-y-auto space-y-3">
-                <!-- JS inyecta duchas aquí -->
-            </div>
+            <div id="modalContent" class="p-4 overflow-y-auto space-y-3"></div>
         </div>
     </div>
 
@@ -201,16 +217,16 @@
                 </div>
             </div>
 
-            <!-- CTA GAMER MODE -->
-            <div class="bg-gradient-to-br from-fuchsia-600 via-purple-600 to-indigo-500 rounded-3xl p-1 shadow-2xl cursor-pointer hover:scale-[1.01] transition-transform group" onclick="setupGameMode()">
+            <!-- CTA ARCADE MODE -->
+            <div class="bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-500 rounded-3xl p-1 shadow-2xl cursor-pointer hover:scale-[1.01] transition-transform group" onclick="setupGameMode()">
                 <div class="bg-slate-950/20 backdrop-blur-sm h-full w-full rounded-[20px] p-6 relative overflow-hidden">
-                    <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-4 group-hover:scale-110 transition-transform"><i class="ph-fill ph-microphone-stage text-9xl text-white"></i></div>
+                    <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-4 group-hover:scale-110 transition-transform"><i class="ph-fill ph-game-controller text-9xl text-white"></i></div>
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="bg-pink-500/20 text-pink-300 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-pink-500/30">Nuevo</span>
+                        <span class="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded uppercase border border-yellow-500">Arcade v2</span>
                     </div>
-                    <h2 class="text-3xl font-black text-white mb-2 brand-font">Ducha Gamer</h2>
-                    <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Control por voz y minijuegos entre fases.</p>
-                    <div class="inline-flex items-center gap-2 bg-slate-900 text-white border border-fuchsia-500 px-6 py-3 rounded-full font-black text-sm shadow-lg"><i class="ph-fill ph-game-controller"></i> JUGAR</div>
+                    <h2 class="text-3xl font-black text-white mb-2 brand-font">Modo Arcade</h2>
+                    <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Calibración auto + Minijuegos de reacción.</p>
+                    <div class="inline-flex items-center gap-2 bg-slate-900 text-white border border-fuchsia-500 px-6 py-3 rounded-full font-black text-sm shadow-lg"><i class="ph-fill ph-play-circle"></i> START</div>
                 </div>
             </div>
 
@@ -258,7 +274,7 @@
         <button onclick="showView('view-dashboard')" class="absolute top-6 left-6 p-2 text-slate-500 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
         <div class="text-center w-full max-w-sm">
             <div id="setupModeLabel" class="hidden mb-4">
-                <span class="bg-pink-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">MODO GAMER ACTIVO</span>
+                <span class="bg-pink-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">MODO ARCADE</span>
             </div>
             <p class="text-sky-400 text-sm font-bold uppercase tracking-widest mb-4">Tiempo Objetivo</p>
             <div class="flex items-center justify-between bg-slate-900 rounded-3xl p-2 mb-8 border border-slate-800">
@@ -270,6 +286,19 @@
                 <button onclick="adjustTime(1)" class="w-16 h-16 flex items-center justify-center bg-slate-800 rounded-2xl text-2xl hover:bg-slate-700"><i class="ph-bold ph-plus"></i></button>
             </div>
             <button onclick="startShower()" id="btnStartShower" class="w-full bg-sky-500 text-white text-xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform"><i class="ph-fill ph-shower text-2xl"></i> EMPEZAR</button>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA CALIBRACIÓN (NUEVO) ==================== -->
+    <section id="view-calibration" class="view-section items-center justify-center p-6 bg-slate-950 z-[55]">
+        <div class="text-center w-full max-w-sm">
+            <i class="ph-fill ph-waves text-6xl text-sky-400 animate-pulse mb-6"></i>
+            <h2 class="text-2xl font-bold text-white mb-2">Calibrando Ducha...</h2>
+            <p class="text-slate-400 text-sm mb-8">Abre el agua. Mediremos el ruido de fondo para ajustar los juegos.</p>
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2">
+                <div id="calibrationBar" class="bg-sky-500 h-full w-0 transition-all duration-100 ease-linear"></div>
+            </div>
+            <p id="calibrationStatus" class="text-xs text-sky-400 font-mono">Escuchando...</p>
         </div>
     </section>
 
@@ -335,26 +364,43 @@
         </div>
     </section>
 
-    <!-- ==================== VISTA 9: GAME OVERLAY (NUEVO) ==================== -->
-    <section id="view-game-challenge" class="view-section items-center justify-center p-6 bg-purple-950/95 backdrop-blur z-[60]">
-        <div class="text-center w-full max-w-sm relative">
-            <div class="mb-4">
-                <i class="ph-duotone ph-game-controller text-6xl text-fuchsia-400 animate-bounce"></i>
-            </div>
-            <h2 id="gameTitle" class="text-3xl font-black text-white brand-font mb-2">MINIJUEGO</h2>
-            <p id="gameInstruction" class="text-pink-200 text-sm mb-8 font-medium">Instrucciones aquí</p>
-            
-            <!-- Visualizador de Audio / Progreso -->
-            <div id="gameVisualizer" class="h-32 bg-purple-900/50 rounded-2xl border-2 border-fuchsia-500 mb-6 flex items-end justify-center gap-1 p-4 relative overflow-hidden">
-                <!-- Barras dinámicas inyectadas por JS -->
-                <div id="gameProgressBar" class="absolute bottom-0 left-0 h-full bg-fuchsia-500 opacity-30 transition-all duration-300 w-0"></div>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <span id="gameStatusText" class="text-4xl font-black text-white drop-shadow-lg">GO!</span>
+    <!-- ==================== VISTA 9: GAME OVERLAY ARCADE (V2) ==================== -->
+    <section id="view-game-challenge" class="view-section items-center justify-center p-6 bg-slate-950 z-[60]">
+        <!-- GAME UI: TSUNAMI -->
+        <div id="gameUI_Tsunami" class="hidden w-full h-full flex flex-col items-center justify-center relative">
+            <div class="absolute inset-0 bg-blue-900/20 z-0"></div>
+            <div class="relative z-10 w-full max-w-xs text-center">
+                <h2 class="text-4xl font-black text-white brand-font mb-2 drop-shadow-lg">¡GRITA FUERTE!</h2>
+                <p class="text-blue-200 text-sm mb-8 font-bold">Llena el tanque antes de que se vacíe</p>
+                
+                <div class="h-64 w-24 bg-slate-800 rounded-3xl border-4 border-slate-600 relative overflow-hidden mx-auto shadow-2xl">
+                    <div id="tsunamiLevel" class="absolute bottom-0 left-0 w-full bg-blue-500 transition-all duration-75" style="height: 30%">
+                        <div class="w-full h-2 bg-blue-300 opacity-50 absolute top-0 animate-pulse"></div>
+                    </div>
                 </div>
             </div>
-
-            <button onclick="skipGame()" class="text-xs text-fuchsia-300/50 hover:text-white uppercase tracking-widest font-bold">Saltar Desafío</button>
         </div>
+
+        <!-- GAME UI: SEMÁFORO -->
+        <div id="gameUI_Semaforo" class="hidden w-full h-full flex flex-col items-center justify-center bg-slate-950 transition-colors duration-200" data-bg="red">
+            <div id="semaforoLight" class="w-64 h-64 rounded-full bg-red-600 shadow-[0_0_100px_rgba(220,38,38,0.5)] flex items-center justify-center mb-12 transition-all duration-100">
+                <i id="semaforoIcon" class="ph-fill ph-hand-palm text-6xl text-red-900"></i>
+            </div>
+            <h2 id="semaforoText" class="text-4xl font-black text-white text-center">ESPERA...</h2>
+            <p class="text-slate-500 mt-4 text-sm font-mono">Haz un ruido fuerte cuando se ponga VERDE</p>
+        </div>
+
+        <!-- GAME UI: BOMB -->
+        <div id="gameUI_Bomb" class="hidden w-full h-full flex flex-col items-center justify-center">
+            <h2 class="text-3xl font-black text-white mb-8">¡DESACTIVA!</h2>
+            <div class="relative w-full max-w-md h-16 bg-slate-800 rounded-full overflow-hidden border-2 border-slate-600">
+                <div class="target-zone"></div> <!-- Zona verde centro -->
+                <div id="bombCursor" class="moving-cursor"></div>
+            </div>
+            <p class="text-slate-400 mt-8 text-sm">Haz ruido cuando la línea pase por lo verde</p>
+        </div>
+
+        <button onclick="skipGame()" class="absolute bottom-10 text-xs text-slate-500 hover:text-white uppercase tracking-widest font-bold z-50">Saltar Juego</button>
     </section>
 
     <!-- SCRIPTS -->
@@ -363,10 +409,9 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // CONFIGURACIÓN PROPORCIONADA
         const firebaseConfig = { apiKey: "AIzaSyBwYTi_qmSqAJ9r23tDH9UT1zJAwHl3WiA", authDomain: "ducha-e22b1.firebaseapp.com", projectId: "ducha-e22b1", storageBucket: "ducha-e22b1.firebasestorage.app", messagingSenderId: "683891690774", appId: "1:683891690774:web:a9b51326766498245b1437", measurementId: "G-XCX2V2QHTZ" };
         const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ducha-e22b1'; // Fallback
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ducha-e22b1';
 
         // --- GLOBAL STATE ---
         window.STATE = {
@@ -382,14 +427,16 @@
                 isRunning: false, 
                 isPaused: false, 
                 interval: null,
-                isGameMode: false // NEW
+                isGameMode: false
             },
             currentUserUid: null,
             calendarDate: new Date(),
-            audioContext: null, // NEW
-            analyser: null, // NEW
-            microphone: null, // NEW
-            gameActive: false // NEW
+            audioContext: null,
+            analyser: null,
+            microphone: null,
+            noiseFloor: 20, // Nivel de ruido base calibrado
+            gameActive: false,
+            gameLoop: null // Intervalo específico del juego
         };
 
         const QUESTIONS = [
@@ -450,7 +497,7 @@
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', uid), publicData, { merge: true });
         }
 
-        // --- LEADERBOARD LOGIC ---
+        // --- LEADERBOARD & STREAK ---
         window.loadLeaderboard = async () => {
             showView('view-leaderboard');
             const list = document.getElementById('leaderboardList');
@@ -486,7 +533,6 @@
             } catch (e) { console.error(e); list.innerHTML = '<div class="text-red-400 text-center">Error al cargar ranking. Inicia sesión primero.</div>'; }
         }
 
-        // --- STREAK & RANK LOGIC ---
         function getRank(streak) {
             if(streak < 3) return "Novato Húmedo";
             if(streak < 7) return "Aprendiz de Agua";
@@ -525,7 +571,7 @@
             if(id === 'view-stats') renderCalendar();
         }
 
-        // --- QUIZ LOGIC ---
+        // --- QUIZ & ROUTINE ---
         function startQuiz() {
             const name = document.getElementById('inputName').value.trim();
             if(!name) return alert("Por favor, introduce tu nombre.");
@@ -567,7 +613,6 @@
             }
         }
 
-        // --- ROUTINE GENERATOR ---
         function generateRoutineFromQuiz() {
             const ans = window.STATE.quiz.answers; 
             let routine = [ {name:"Mojar cuerpo y pelo", weight: 2} ];
@@ -599,7 +644,6 @@
             renderEditor();
         }
 
-        // --- EDITOR ---
         function renderEditor() {
             const c = document.getElementById('stepsListContainer'); c.innerHTML = '';
             const totalW = window.STATE.tempRoutine.reduce((a,b)=>a+b.weight,0);
@@ -621,16 +665,12 @@
             window.STATE.tempRoutine = JSON.parse(JSON.stringify(window.STATE.user.routine)); renderEditor(); showView('view-editor');
             document.querySelector('#view-editor button[onclick="saveAndTriggerAuth()"]').onclick = () => { window.STATE.user.routine = window.STATE.tempRoutine; if(window.STATE.currentUserUid) saveUserData(); showView('view-dashboard'); };
         }
-
-        // --- DASHBOARD UI ---
         function updateDashboardUI() {
             document.getElementById('userNameDisplay').innerText = window.STATE.user.name;
             const s = window.STATE.user.streak || 0;
             document.getElementById('streakDisplay').innerText = s;
             document.getElementById('rankDisplay').innerText = getRank(s);
         }
-
-        // --- CALENDAR & MODAL ---
         function changeCalendarMonth(d) { window.STATE.calendarDate.setMonth(window.STATE.calendarDate.getMonth() + d); renderCalendar(); }
         function renderCalendar() {
             const date = window.STATE.calendarDate;
@@ -644,16 +684,10 @@
             const startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
             for(let i=0; i<startOffset; i++) grid.appendChild(document.createElement('div'));
-
             const history = window.STATE.user.history || [];
-            
             for(let d=1; d<=daysInMonth; d++) {
                 const dayDiv = document.createElement('div');
-                const showers = history.filter(h => {
-                    const hDate = new Date(h.date);
-                    return hDate.getDate() === d && hDate.getMonth() === month && hDate.getFullYear() === year && h.duration >= 2;
-                });
-
+                const showers = history.filter(h => { const hDate = new Date(h.date); return hDate.getDate() === d && hDate.getMonth() === month && hDate.getFullYear() === year && h.duration >= 2; });
                 if(showers.length > 0) {
                     dayDiv.className = "h-10 rounded-lg flex items-center justify-center cursor-pointer bg-emerald-900 border border-emerald-500 hover:bg-emerald-800 transition-colors";
                     dayDiv.innerHTML = `<span class="text-xs font-bold text-emerald-300">✓</span>`;
@@ -665,7 +699,6 @@
                 grid.appendChild(dayDiv);
             }
         }
-
         function openModal(day, month, year, showers) {
             document.getElementById('dayModal').classList.remove('hidden');
             document.getElementById('modalDateTitle').innerText = `${day}/${month+1}/${year}`;
@@ -683,16 +716,13 @@
             recalculateStreak(); await saveUserData(); closeModal(); renderCalendar(); updateDashboardUI();
         }
 
-        // --- GAME LOGIC ---
+        // --- AUDIO & CALIBRATION (REFINED) ---
         function setupGameMode() {
-            // Solicitar acceso a microfono
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 window.STATE.microphone = stream;
                 initAudio(stream);
-                goToTimeSelect(true);
-            }).catch(e => {
-                alert("Para el Modo Gamer necesitas permitir el micrófono. Revisa tu navegador.");
-            });
+                runCalibration();
+            }).catch(e => { alert("Micrófono requerido para modo Arcade."); });
         }
 
         function initAudio(stream) {
@@ -701,7 +731,7 @@
                 window.STATE.analyser = window.STATE.audioContext.createAnalyser();
                 const source = window.STATE.audioContext.createMediaStreamSource(stream);
                 source.connect(window.STATE.analyser);
-                window.STATE.analyser.fftSize = 256;
+                window.STATE.analyser.fftSize = 512;
             } else if(window.STATE.audioContext.state === 'suspended') {
                 window.STATE.audioContext.resume();
             }
@@ -713,143 +743,175 @@
             window.STATE.analyser.getByteFrequencyData(dataArray);
             let sum = 0;
             for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-            return sum / dataArray.length; // Promedio de volumen (0-255 aprox)
+            return sum / dataArray.length; 
         }
 
-        async function triggerRandomChallenge() {
-            // Pausar el timer de la ducha
+        function runCalibration() {
+            showView('view-calibration');
+            let samples = 0;
+            let sumVol = 0;
+            const bar = document.getElementById('calibrationBar');
+            const status = document.getElementById('calibrationStatus');
+            
+            const calInterval = setInterval(() => {
+                const vol = getVolume();
+                sumVol += vol;
+                samples++;
+                bar.style.width = Math.min(100, (samples/60)*100) + '%'; // 60 samples aprox 3s
+                
+                if(samples >= 60) {
+                    clearInterval(calInterval);
+                    const avg = sumVol / samples;
+                    window.STATE.noiseFloor = Math.max(10, avg); // Set baseline
+                    status.innerText = `Ruido Base: ${Math.floor(window.STATE.noiseFloor)}`;
+                    setTimeout(() => goToTimeSelect(true), 1000);
+                }
+            }, 50);
+        }
+
+        // --- NEW GAME LOGIC ---
+        function triggerRandomChallenge() {
             clearInterval(window.STATE.currentShower.interval);
             window.STATE.gameActive = true;
             
-            const games = [
-                { id: 'opera', title: '🎤 OPERA STAR', instr: '¡Canta o mantén una nota alta para llenar la barra!' },
-                { id: 'shout', title: '🌊 GRITO ESPARTANO', instr: '¡Haz un ruido FUERTE para romper el bloqueo!' },
-                { id: 'word', title: '🗣️ PALABRA MÁGICA', instr: 'Di "JABÓN" o "AGUA" claramente.' }
-            ];
+            // Hide all game UIs
+            ['gameUI_Tsunami', 'gameUI_Semaforo', 'gameUI_Bomb'].forEach(id => document.getElementById(id).classList.add('hidden'));
             
+            const games = ['tsunami', 'semaforo', 'bomb'];
             const game = games[Math.floor(Math.random() * games.length)];
             
-            // Configurar UI
-            document.getElementById('gameTitle').innerText = game.title;
-            document.getElementById('gameInstruction').innerText = game.instr;
-            document.getElementById('gameStatusText').innerText = "GO!";
-            document.getElementById('gameProgressBar').style.width = '0%';
             showView('view-game-challenge');
 
-            // Lógica específica del juego
-            if(game.id === 'opera') runOperaGame();
-            else if(game.id === 'shout') runShoutGame();
-            else if(game.id === 'word') runWordGame();
+            if(game === 'tsunami') runTsunamiGame();
+            else if(game === 'semaforo') runSemaforoGame();
+            else if(game === 'bomb') runBombGame();
         }
 
-        function runOperaGame() {
-            let energy = 0;
-            const gameInt = setInterval(() => {
-                if(!window.STATE.gameActive) { clearInterval(gameInt); return; }
+        // GAME 1: TSUNAMI (Sustain/Intensity)
+        function runTsunamiGame() {
+            document.getElementById('gameUI_Tsunami').classList.remove('hidden');
+            let waterLevel = 30;
+            const bar = document.getElementById('tsunamiLevel');
+            
+            window.STATE.gameLoop = setInterval(() => {
+                if(!window.STATE.gameActive) return;
+                const vol = getVolume();
+                const threshold = window.STATE.noiseFloor * 1.5; // Trigger threshold
+                
+                // Decay constant
+                waterLevel -= 0.5;
+                
+                // Boost on loud noise
+                if(vol > threshold) {
+                    waterLevel += 2;
+                }
+                
+                waterLevel = Math.max(0, Math.min(100, waterLevel));
+                bar.style.height = waterLevel + '%';
+                
+                if(waterLevel >= 100) winGame();
+                if(waterLevel <= 0) { waterLevel = 20; } // Mercy bounce
+            }, 30);
+        }
+
+        // GAME 2: SEMAFORO (Reaction)
+        function runSemaforoGame() {
+            const ui = document.getElementById('gameUI_Semaforo');
+            const light = document.getElementById('semaforoLight');
+            const text = document.getElementById('semaforoText');
+            const icon = document.getElementById('semaforoIcon');
+            
+            ui.classList.remove('hidden');
+            // Reset UI
+            ui.style.backgroundColor = '#020617';
+            light.className = "w-64 h-64 rounded-full bg-red-600 shadow-[0_0_100px_rgba(220,38,38,0.5)] flex items-center justify-center mb-12 transition-all duration-100";
+            icon.className = "ph-fill ph-hand-palm text-6xl text-red-900";
+            text.innerText = "ESPERA...";
+            
+            let canReact = false;
+            let reactionStart = 0;
+            
+            // Random delay 2-5s
+            const delay = 2000 + Math.random() * 3000;
+            
+            const timeout = setTimeout(() => {
+                if(!window.STATE.gameActive) return;
+                canReact = true;
+                reactionStart = Date.now();
+                light.className = "w-72 h-72 rounded-full bg-green-500 shadow-[0_0_100px_rgba(34,197,94,0.8)] flex items-center justify-center mb-12 transition-all duration-100 scale-110";
+                icon.className = "ph-fill ph-lightning text-7xl text-white animate-bounce";
+                text.innerText = "¡AHORA!";
+                ui.style.backgroundColor = '#14532d'; // Dark green bg
+            }, delay);
+            
+            window.STATE.gameLoop = setInterval(() => {
+                if(!window.STATE.gameActive) { clearTimeout(timeout); return; }
                 const vol = getVolume();
                 
-                // Visualizar volumen en barras
-                updateVisualizer(vol);
-
-                if(vol > 30) { // Umbral de canto
-                    energy += 1.5;
-                } else {
-                    energy = Math.max(0, energy - 0.5);
-                }
-                
-                document.getElementById('gameProgressBar').style.width = Math.min(100, energy) + '%';
-                
-                if(energy >= 100) {
-                    clearInterval(gameInt);
+                // Detection logic
+                if(canReact && vol > window.STATE.noiseFloor * 2.0) {
+                    const reactionTime = Date.now() - reactionStart;
+                    text.innerText = `${reactionTime}ms!`;
                     winGame();
+                } else if(!canReact && vol > window.STATE.noiseFloor * 3.0) {
+                    // False start penalty (optional, kept simple for shower)
+                    text.innerText = "¡Espera!";
+                    text.classList.add("text-red-500");
+                    setTimeout(() => text.classList.remove("text-red-500"), 500);
                 }
-            }, 50);
+            }, 20);
         }
 
-        function runShoutGame() {
-            const gameInt = setInterval(() => {
-                if(!window.STATE.gameActive) { clearInterval(gameInt); return; }
+        // GAME 3: BOMB (Precision)
+        function runBombGame() {
+            document.getElementById('gameUI_Bomb').classList.remove('hidden');
+            const cursor = document.getElementById('bombCursor');
+            let pos = 0;
+            let direction = 1;
+            const speed = 1.5; // Speed multiplier
+            
+            window.STATE.gameLoop = setInterval(() => {
+                if(!window.STATE.gameActive) return;
+                
+                // Move cursor ping-pong
+                pos += direction * speed;
+                if(pos > 100 || pos < 0) direction *= -1;
+                cursor.style.left = pos + '%';
+                
                 const vol = getVolume();
-                updateVisualizer(vol);
-
-                if(vol > 100) { // Umbral de grito fuerte
-                    clearInterval(gameInt);
-                    winGame();
+                // Check for sharp spike
+                if(vol > window.STATE.noiseFloor * 2.5) {
+                    // Check if inside center zone (40% to 60%)
+                    if(pos > 40 && pos < 60) {
+                        winGame();
+                    } else {
+                        // Miss visualization
+                        cursor.style.backgroundColor = 'red';
+                        setTimeout(() => cursor.style.backgroundColor = 'white', 200);
+                    }
                 }
-            }, 50);
-        }
-
-        function runWordGame() {
-             // Fallback si no hay soporte speech
-             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("Navegador no soporta voz. Saltando...");
-                winGame();
-                return;
-             }
-
-             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-             const recognition = new SpeechRecognition();
-             recognition.lang = 'es-ES';
-             recognition.continuous = false;
-             recognition.interimResults = false;
-
-             recognition.start();
-
-             recognition.onresult = (event) => {
-                 const transcript = event.results[0][0].transcript.toLowerCase();
-                 document.getElementById('gameStatusText').innerText = `"${transcript}"`;
-                 if(transcript.includes('jabón') || transcript.includes('jabon') || transcript.includes('agua') || transcript.includes('listo')) {
-                     winGame();
-                 } else {
-                     setTimeout(() => { if(window.STATE.gameActive) recognition.start(); }, 500);
-                 }
-             };
-
-             recognition.onerror = () => {
-                 if(window.STATE.gameActive) setTimeout(() => recognition.start(), 1000);
-             }
-
-             // Visualizer dummy para este modo
-             const gameInt = setInterval(() => {
-                 if(!window.STATE.gameActive) { clearInterval(gameInt); recognition.stop(); return; }
-                 updateVisualizer(getVolume());
-             }, 50);
-        }
-
-        function updateVisualizer(vol) {
-            const container = document.getElementById('gameVisualizer');
-            // Crear barras si no existen (limpieza básica)
-            if(container.querySelectorAll('.audio-bar').length === 0) {
-                 for(let i=0; i<10; i++) {
-                     const d = document.createElement('div');
-                     d.className = 'audio-bar';
-                     container.appendChild(d);
-                 }
-            }
-            const bars = container.querySelectorAll('.audio-bar');
-            bars.forEach((b, i) => {
-                const h = Math.max(10, Math.min(100, vol * (1 + Math.random())));
-                b.style.height = h + '%';
-            });
+            }, 20);
         }
 
         function winGame() {
             window.STATE.gameActive = false;
-            document.getElementById('gameStatusText').innerText = "¡BIEN!";
-            document.getElementById('gameStatusText').classList.add('text-green-400');
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
-            const u = new SpeechSynthesisUtterance("¡Excelente!"); u.lang='es-ES'; window.speechSynthesis.speak(u);
+            clearInterval(window.STATE.gameLoop);
+            
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
+            
+            // Audio feedback
+            const u = new SpeechSynthesisUtterance("¡Muy bien!"); u.lang='es-ES'; window.speechSynthesis.speak(u);
             
             setTimeout(() => {
                 showView('view-timer');
-                // Reanudar timer
                 window.STATE.currentShower.interval = setInterval(tick, 1000);
-                nextPhaseLogic(); // Continuar a la siguiente fase real
+                nextPhaseLogic();
             }, 1500);
         }
 
         function skipGame() {
             window.STATE.gameActive = false;
+            if(window.STATE.gameLoop) clearInterval(window.STATE.gameLoop);
             showView('view-timer');
             window.STATE.currentShower.interval = setInterval(tick, 1000);
             nextPhaseLogic();
@@ -872,7 +934,6 @@
                 btn.classList.add('bg-sky-500');
                 btn.classList.remove('bg-fuchsia-600');
             }
-            
             updateTimeUI(); 
             showView('view-setup'); 
         }
@@ -919,12 +980,10 @@
         }
         function updateTimerDisplay() { const t = window.STATE.currentShower.timeLeftInPhase; document.getElementById('timerNumber').innerText = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`; }
         
-        // Modified Next Phase Logic for Gamer Mode
         function nextPhase() { 
-            // Si es modo gamer y no es la última fase, lanzar juego
             const cs = window.STATE.currentShower;
             if(cs.isGameMode && cs.currentPhaseIndex < cs.phases.length - 1) {
-                // Probabilidad del 100% para demo (podría ser Math.random() > 0.5)
+                // Trigger game logic
                 triggerRandomChallenge();
             } else {
                 nextPhaseLogic();
@@ -946,31 +1005,21 @@
 
         async function endShower() {
             clearInterval(window.STATE.currentShower.interval);
-            if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); // Apagar micro
+            if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop());
             
             const duration = Math.ceil(window.STATE.currentShower.totalElapsed / 60);
-            
             if(duration < 2) {
                 alert("Ducha demasiado corta (< 2 min). No cuenta para la racha.");
                 showView('view-dashboard');
                 return;
             }
-
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            
             const entry = { date: new Date().toISOString(), duration: duration };
-            
             if(!window.STATE.user.history) window.STATE.user.history = [];
             window.STATE.user.history.push(entry);
-            
             const today = new Date().setHours(0,0,0,0);
             const lastUpdate = window.STATE.user.lastStreakDate ? new Date(window.STATE.user.lastStreakDate).setHours(0,0,0,0) : 0;
-            
-            if(today > lastUpdate) {
-                recalculateStreak(); 
-                window.STATE.user.lastStreakDate = new Date().toISOString();
-            }
-
+            if(today > lastUpdate) { recalculateStreak(); window.STATE.user.lastStreakDate = new Date().toISOString(); }
             await saveUserData();
             window.STATE.calendarDate = new Date(); renderCalendar(); 
             alert(`¡Ducha Registrada! (+${duration} min)`);
