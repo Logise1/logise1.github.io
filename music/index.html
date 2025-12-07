@@ -348,11 +348,19 @@
             scheduleToggle: function() {
                 if (this.gameState !== 'playing') return;
 
+                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
+
                 // Tiempos más largos como solicitado
                 // Música sonando: entre 5 y 12 segundos (antes era 2-5)
-                // Música parada (silencio): entre 3 y 6 segundos
-                const min = this.musicPlaying ? 5000 : 3000; 
-                const max = this.musicPlaying ? 12000 : 6000;
+                let min = this.musicPlaying ? 5000 : 3000; 
+                let max = this.musicPlaying ? 12000 : 6000;
+
+                // FINAL SHOWDOWN: Si quedan 2 jugadores y hay música, hacer ronda más larga
+                if (aliveCount <= 2 && this.musicPlaying) {
+                     min = 10000; // Mínimo 10 segundos
+                     max = 20000; // Máximo 20 segundos
+                }
+
                 const duration = Math.random() * (max - min) + min;
 
                 setTimeout(() => {
@@ -379,15 +387,24 @@
             },
 
             startMusic: function() {
-                // Elegir canción aleatoria
-                const randomSong = SONGS[Math.floor(Math.random() * SONGS.length)];
+                // Lógica de elección de canción
+                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
+                let songToPlay;
+
+                // Si quedan 2 personas o menos, forzar canción 3 (Tensión final)
+                if (aliveCount <= 2) {
+                    songToPlay = 'song3.mp3';
+                } else {
+                    // Elegir canción aleatoria entre las 3
+                    songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
+                }
                 
                 if (currentMusic) {
                     currentMusic.pause();
                     currentMusic = null;
                 }
 
-                currentMusic = new Audio(randomSong);
+                currentMusic = new Audio(songToPlay);
                 currentMusic.loop = true;
                 currentMusic.play().catch(e => console.log("Error reproduciendo música (interacción requerida):", e));
             },
