@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Juego del Semáforo Musical</title>
+    <title>Juego del Semáforo Musical (RTDB)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,9 +15,9 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Firebase SDKs (Solo App y Firestore, sin Auth) -->
+    <!-- Firebase SDKs (Cambiado a DATABASE para RTDB) -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -29,7 +29,7 @@
             font-family: 'Roboto', sans-serif;
             background-color: #1a1a1a;
             color: white;
-            overflow: hidden; /* Prevent scrolling during game */
+            overflow: hidden;
         }
         
         .pixel-font {
@@ -70,12 +70,12 @@
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        const db = firebase.firestore();
+        // Usamos Realtime Database en lugar de Firestore
+        const db = firebase.database();
 
         // --- GESTIÓN DE ID LOCAL (SIN AUTH) ---
-        // Generamos un ID único y lo guardamos en el navegador
         const getLocalUserId = () => {
-            const STORAGE_KEY = 'music_game_uid';
+            const STORAGE_KEY = 'music_game_uid_rtdb';
             let uid = localStorage.getItem(STORAGE_KEY);
             if (!uid) {
                 uid = 'user_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -87,21 +87,20 @@
         const LOCAL_USER_ID = getLocalUserId();
 
         // Constantes del juego
-        const APP_ID = "music-game-v1"; // ID único para las colecciones de Firestore
+        const APP_ID = "music-game-v1"; 
+        const BASE_PATH = `artifacts/${APP_ID}/public/data`; // Ruta base para cumplir reglas
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
         
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
         const { LucideMonitor, LucideSmartphone, LucideSkull, LucideTrophy, LucidePlay, LucideActivity } = lucide;
 
         // --- COMPONENTE PRINCIPAL ---
         function App() {
-            // Usamos un objeto simple en lugar del objeto User de Firebase Auth
             const [user] = useState({ uid: LOCAL_USER_ID });
-            const [role, setRole] = useState(null); // 'screen' o 'player'
+            const [role, setRole] = useState(null); 
             const [sessionId, setSessionId] = useState(null);
 
             useEffect(() => {
-                // Comprobar parámetros de URL para unirse automáticamente
                 const params = new URLSearchParams(window.location.search);
                 const urlSession = params.get('session');
                 const urlRole = params.get('role');
@@ -111,7 +110,7 @@
             }, []);
 
             if (!role) {
-                return <RoleSelection onSelect={(r) => setRole(r)} user={user} />;
+                return <RoleSelection onSelect={(r) => setRole(r)} />;
             }
 
             if (role === 'screen') {
@@ -122,14 +121,11 @@
         }
 
         // --- SELECCIÓN DE ROL ---
-        function RoleSelection({ onSelect, user }) {
+        function RoleSelection({ onSelect }) {
             const createSession = () => {
-                // Generar un ID de sesión simple de 4 caracteres
                 const newSessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
-                // Actualizar URL sin recargar para que sea fácil de copiar si es necesario
                 const newUrl = `${window.location.pathname}?session=${newSessionId}&role=screen`;
                 window.history.pushState({path: newUrl}, '', newUrl);
-                
                 onSelect('screen');
             };
 
@@ -164,72 +160,66 @@
 
         // --- VISTA PANTALLA (HOST) ---
         function ScreenView({ user }) {
-            // El ID de sesión viene de la URL porque lo pusimos en RoleSelection
             const params = new URLSearchParams(window.location.search);
             const sessionId = params.get('session');
             
             const [players, setPlayers] = useState([]);
-            const [gameStatus, setGameStatus] = useState({ state: 'waiting', musicPlaying: false, startTime: 0 });
+            const [gameStatus, setGameStatus] = useState({ state: 'waiting', musicPlaying: false });
             const [winner, setWinner] = useState(null);
 
-            // Audio Context para generar sonido en la TV
             const audioCtxRef = useRef(null);
             const oscillatorRef = useRef(null);
 
-            // Setup Firestore Listeners
+            // Setup RTDB Listeners
             useEffect(() => {
                 if (!sessionId) return;
 
-                // Referencia al documento de la sesión
-                const sessionRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('sessions').doc(sessionId);
-
-                // Crear sesión si no existe
-                sessionRef.set({
-                    created: firebase.firestore.FieldValue.serverTimestamp(),
+                const sessionRef = db.ref(`${BASE_PATH}/sessions/${sessionId}`);
+                
+                // Inicializar sesión
+                sessionRef.update({
+                    created: firebase.database.ServerValue.TIMESTAMP,
                     host: user.uid,
                     state: 'waiting',
                     musicPlaying: false
-                }, { merge: true });
+                });
 
-                // Escuchar cambios en la sesión
-                const unsubSession = sessionRef.onSnapshot(doc => {
-                    const data = doc.data();
+                // Escuchar estado del juego
+                sessionRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
                     if (data) {
                         setGameStatus({
                             state: data.state || 'waiting',
                             musicPlaying: data.musicPlaying || false,
-                            startTime: data.startTime || 0
+                            lastStop: data.lastStop || 0
                         });
                         if (data.winner) setWinner(data.winner);
                     }
                 });
 
-                // Escuchar jugadores
-                const playersRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('players');
-
-                const unsubPlayers = playersRef.onSnapshot(snapshot => {
+                // Escuchar jugadores (Traer todos y filtrar)
+                const playersRef = db.ref(`${BASE_PATH}/players`);
+                playersRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
                     const sessionPlayers = [];
-                    snapshot.forEach(doc => {
-                        const p = doc.data();
-                        if (p.sessionId === sessionId) {
-                            sessionPlayers.push({ id: doc.id, ...p });
-                        }
-                    });
+                    if (data) {
+                        Object.entries(data).forEach(([key, val]) => {
+                            if (val.sessionId === sessionId) {
+                                sessionPlayers.push({ id: key, ...val });
+                            }
+                        });
+                    }
                     setPlayers(sessionPlayers);
                 });
 
                 return () => {
-                    unsubSession();
-                    unsubPlayers();
-                    stopMusic(); // Limpieza audio
+                    sessionRef.off();
+                    playersRef.off();
+                    stopMusic();
                 };
             }, [sessionId]);
 
-            // Lógica del Audio
+            // Lógica Audio
             const startMusic = () => {
                 if (!audioCtxRef.current) {
                     audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -239,15 +229,13 @@
                 const osc = audioCtxRef.current.createOscillator();
                 const gain = audioCtxRef.current.createGain();
                 
-                // Melodía tipo "luz roja, luz verde" (simple tono rápido)
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(440, audioCtxRef.current.currentTime);
                 osc.frequency.linearRampToValueAtTime(880, audioCtxRef.current.currentTime + 0.1);
                 
-                // LFO para modular
                 const lfo = audioCtxRef.current.createOscillator();
                 lfo.type = 'sawtooth';
-                lfo.frequency.value = 8; // Velocidad del trino
+                lfo.frequency.value = 8; 
                 const lfoGain = audioCtxRef.current.createGain();
                 lfoGain.gain.value = 500;
                 
@@ -265,18 +253,18 @@
             const stopMusic = () => {
                 if (oscillatorRef.current) {
                     const { osc, lfo, gain } = oscillatorRef.current;
-                    // Fade out rápido para evitar "click"
                     gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.015);
                     setTimeout(() => {
-                        osc.stop();
-                        lfo.stop();
-                        osc.disconnect();
+                        try {
+                            osc.stop();
+                            lfo.stop();
+                            osc.disconnect();
+                        } catch(e) {}
                     }, 50);
                     oscillatorRef.current = null;
                 }
             };
 
-            // Sincronizar audio con estado
             useEffect(() => {
                 if (gameStatus.musicPlaying) {
                     startMusic();
@@ -285,13 +273,10 @@
                 }
             }, [gameStatus.musicPlaying]);
 
-            // Bucle del juego (Controlado por la Pantalla)
+            // Bucle del juego
             useEffect(() => {
                 let timeoutId;
-                
                 if (gameStatus.state === 'playing') {
-                    // Si está sonando, paramos en un momento aleatorio entre 2 y 6 segundos
-                    // Si está parada, arrancamos en un momento aleatorio entre 2 y 5 segundos
                     const minTime = gameStatus.musicPlaying ? 2000 : 2000;
                     const maxTime = gameStatus.musicPlaying ? 6000 : 5000;
                     const duration = Math.random() * (maxTime - minTime) + minTime;
@@ -300,77 +285,61 @@
                         toggleMusic(!gameStatus.musicPlaying);
                     }, duration);
                 }
-
                 return () => clearTimeout(timeoutId);
             }, [gameStatus.musicPlaying, gameStatus.state]);
 
-            const toggleMusic = async (shouldPlay) => {
-                const sessionRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('sessions').doc(sessionId);
-                
-                await sessionRef.update({
-                    musicPlaying: shouldPlay,
-                    lastStop: firebase.firestore.FieldValue.serverTimestamp()
-                });
+            const toggleMusic = (shouldPlay) => {
+                const updates = {
+                    musicPlaying: shouldPlay
+                };
+                if (!shouldPlay) {
+                    updates.lastStop = firebase.database.ServerValue.TIMESTAMP;
+                }
+                db.ref(`${BASE_PATH}/sessions/${sessionId}`).update(updates);
             };
 
-            const startGame = async () => {
-                // Revivir a todos los jugadores
-                const batch = db.batch();
+            const startGame = () => {
+                // Revivir jugadores
+                const updates = {};
                 players.forEach(p => {
-                    const ref = db.collection('artifacts').doc(APP_ID)
-                        .collection('public').doc('data')
-                        .collection('players').doc(p.id);
-                    batch.update(ref, { isAlive: true });
+                    updates[`${BASE_PATH}/players/${p.id}/isAlive`] = true;
                 });
                 
-                const sessionRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('sessions').doc(sessionId);
-                
-                batch.update(sessionRef, { 
-                    state: 'playing', 
-                    musicPlaying: true,
-                    winner: null
-                });
+                // Actualizar estado sesión
+                updates[`${BASE_PATH}/sessions/${sessionId}/state`] = 'playing';
+                updates[`${BASE_PATH}/sessions/${sessionId}/musicPlaying`] = true;
+                updates[`${BASE_PATH}/sessions/${sessionId}/winner`] = null;
 
-                await batch.commit();
+                db.ref().update(updates);
             };
             
-            const stopGame = async () => {
-                 const sessionRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('sessions').doc(sessionId);
-                 await sessionRef.update({ state: 'waiting', musicPlaying: false });
+            const stopGame = () => {
+                 db.ref(`${BASE_PATH}/sessions/${sessionId}`).update({ 
+                     state: 'waiting', 
+                     musicPlaying: false 
+                });
             };
 
-            // Comprobar ganador (si solo queda 1 vivo)
+            // Comprobar ganador
             useEffect(() => {
                 if (gameStatus.state === 'playing' && players.length > 0) {
                     const alive = players.filter(p => p.isAlive);
                     if (alive.length === 1 && players.length > 1) {
-                        // Tenemos un ganador
-                        const sessionRef = db.collection('artifacts').doc(APP_ID)
-                        .collection('public').doc('data')
-                        .collection('sessions').doc(sessionId);
-                        
-                        sessionRef.update({
+                        db.ref(`${BASE_PATH}/sessions/${sessionId}`).update({
                             state: 'ended',
                             musicPlaying: false,
                             winner: alive[0].name
                         });
                     } else if (alive.length === 0 && players.length > 0) {
-                         // Todos muertos
-                         const sessionRef = db.collection('artifacts').doc(APP_ID)
-                        .collection('public').doc('data')
-                        .collection('sessions').doc(sessionId);
-                        sessionRef.update({ state: 'ended', musicPlaying: false, winner: "NADIE" });
+                         db.ref(`${BASE_PATH}/sessions/${sessionId}`).update({ 
+                             state: 'ended', 
+                             musicPlaying: false, 
+                             winner: "NADIE" 
+                        });
                     }
                 }
             }, [players, gameStatus.state]);
 
-            // Generar URL para QR
             const joinUrl = `${window.location.origin}${window.location.pathname}?session=${sessionId}&role=player`;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(joinUrl)}&bgcolor=171717&color=ec4899`;
 
@@ -394,7 +363,6 @@
                     {/* Main Content */}
                     <div className="flex-1 flex flex-col items-center justify-center p-4">
                         
-                        {/* Waiting State */}
                         {gameStatus.state === 'waiting' && (
                             <div className="text-center animate-fade-in">
                                 <div className="bg-white p-4 rounded-xl shadow-2xl shadow-pink-500/20 mb-8 inline-block">
@@ -413,7 +381,6 @@
                             </div>
                         )}
 
-                        {/* Playing State */}
                         {gameStatus.state === 'playing' && (
                             <div className={`w-full h-full flex items-center justify-center transition-colors duration-200 ${gameStatus.musicPlaying ? 'bg-green-900/20' : 'bg-red-900/20'}`}>
                                 <div className={`relative w-80 h-80 rounded-full border-8 flex items-center justify-center transition-all duration-300 ${gameStatus.musicPlaying ? 'border-green-500 status-green bg-green-900' : 'border-red-600 status-red bg-red-900'}`}>
@@ -435,7 +402,6 @@
                             </div>
                         )}
 
-                        {/* Ended State */}
                         {gameStatus.state === 'ended' && (
                             <div className="text-center">
                                 <i data-lucide="trophy" className="w-32 h-32 text-yellow-500 mx-auto mb-6 animate-bounce"></i>
@@ -451,7 +417,6 @@
                         )}
                     </div>
 
-                    {/* Player Grid Footer */}
                     <div className="h-32 bg-neutral-800 border-t border-neutral-700 p-4 overflow-y-auto">
                         <div className="flex flex-wrap gap-2 justify-center">
                             {players.map(p => (
@@ -470,72 +435,61 @@
             const [inputSession, setInputSession] = useState(initialSessionId || '');
             const [name, setName] = useState('');
             const [joined, setJoined] = useState(false);
-            const [gameState, setGameState] = useState(null); // { state, musicPlaying, lastStop }
+            const [gameState, setGameState] = useState(null);
             const [isAlive, setIsAlive] = useState(true);
             const [sensorsActive, setSensorsActive] = useState(false);
-            const [debugInfo, setDebugInfo] = useState(0); // Para ver aceleración
+            const [debugInfo, setDebugInfo] = useState(0);
 
             const audioRef = useRef(new Audio(GUNSHOT_URL));
-            const accelerometerRef = useRef({ x: 0, y: 0, z: 0 });
-            const lastUpdateRef = useRef(Date.now());
             
-            // Unirse a la sesión
             const joinSession = async () => {
                 if (!name.trim() || !inputSession.trim()) return;
                 const sid = inputSession.trim().toUpperCase();
 
-                // Crear/Actualizar jugador
-                const playerRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('players').doc(user.uid);
-
-                await playerRef.set({
-                    sessionId: sid,
-                    name: name.substring(0, 10), // Max 10 chars
-                    isAlive: true,
-                    joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                setJoined(true);
-                setSensorsActive(false); // Esperar permiso explícito para iOS
+                // Crear jugador en RTDB (Esta era la parte que fallaba en Firestore)
+                try {
+                    await db.ref(`${BASE_PATH}/players/${user.uid}`).set({
+                        sessionId: sid,
+                        name: name.substring(0, 10),
+                        isAlive: true,
+                        joinedAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    
+                    setJoined(true);
+                    setSensorsActive(false); 
+                } catch (error) {
+                    console.error("Error uniéndose:", error);
+                    alert("Error al unirse. Verifica la conexión.");
+                }
             };
 
-            // Escuchar cambios del juego
+            // Listeners
             useEffect(() => {
                 if (!joined) return;
 
-                // Escuchar estado global del juego
-                const sessionRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('sessions').doc(inputSession);
+                const sessionRef = db.ref(`${BASE_PATH}/sessions/${inputSession}`);
+                const meRef = db.ref(`${BASE_PATH}/players/${user.uid}`);
 
-                const unsubSession = sessionRef.onSnapshot(doc => {
-                    const data = doc.data();
+                sessionRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
                     if (data) {
                         setGameState(data);
-                        // Si el juego se reinicia (pasa a waiting), revivimos localmente
                         if (data.state === 'waiting') setIsAlive(true);
                     }
                 });
 
-                // Escuchar mi propio estado (por si el servidor me mata o reinicia)
-                const myRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('players').doc(user.uid);
-                
-                const unsubMe = myRef.onSnapshot(doc => {
-                    const data = doc.data();
+                meRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
                     if (data) setIsAlive(data.isAlive);
                 });
 
                 return () => {
-                    unsubSession();
-                    unsubMe();
+                    sessionRef.off();
+                    meRef.off();
                 };
             }, [joined, inputSession, user.uid]);
 
-
-            // PERMISOS DE ACELERÓMETRO (iOS 13+ requires requestPermission)
+            // Sensores
             const requestSensorPermission = async () => {
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     try {
@@ -545,32 +499,28 @@
                         } else {
                             alert("Permiso denegado. No podrás jugar.");
                         }
-                    } catch (e) {
-                        console.error(e);
-                    }
+                    } catch (e) { console.error(e); }
                 } else {
-                    setSensorsActive(true); // Android / Old iOS
+                    setSensorsActive(true);
                 }
             };
 
-            // LÓGICA DE DETECCIÓN DE MOVIMIENTO
+            // Detección Movimiento
             useEffect(() => {
                 if (!sensorsActive || !isAlive || !gameState || gameState.state !== 'playing') return;
 
                 const handleMotion = (event) => {
-                    // Si hay música, no importa si nos movemos
                     if (gameState.musicPlaying) return;
 
-                    // LÓGICA DE 400MS DE GRACIA
+                    // 400ms de gracia
                     if (gameState.lastStop) {
-                        const stopTime = gameState.lastStop.toMillis ? gameState.lastStop.toMillis() : Date.now(); 
                         const now = Date.now();
+                        // RTDB devuelve timestamp como number, no como objeto
+                        const stopTime = gameState.lastStop;
                         
-                        // Si han pasado menos de 400ms desde el stop, ignoramos movimiento
                         if (now - stopTime < 400) return; 
                     }
 
-                    // Calcular aceleración
                     let acc = 0;
                     if (event.acceleration) {
                         acc = Math.sqrt(
@@ -586,7 +536,7 @@
 
                     setDebugInfo(acc.toFixed(2));
 
-                    if (acc > 2.5) { 
+                    if (acc > 2.5) { // Sensibilidad
                         eliminatePlayer();
                     }
                 };
@@ -595,25 +545,19 @@
                 return () => window.removeEventListener('devicemotion', handleMotion);
             }, [sensorsActive, isAlive, gameState]);
 
-            const eliminatePlayer = async () => {
+            const eliminatePlayer = () => {
                 try {
                     audioRef.current.currentTime = 0;
                     audioRef.current.play();
                     if (navigator.vibrate) navigator.vibrate(500);
-                } catch(e) { console.log("Audio play error", e); }
+                } catch(e) {}
 
                 setIsAlive(false);
 
-                // Actualizar DB
-                const playerRef = db.collection('artifacts').doc(APP_ID)
-                    .collection('public').doc('data')
-                    .collection('players').doc(user.uid);
-                
-                await playerRef.update({ isAlive: false });
+                db.ref(`${BASE_PATH}/players/${user.uid}`).update({ isAlive: false });
             };
 
-            // --- RENDER JUGADOR ---
-
+            // --- Render Player ---
             if (!joined) {
                 return (
                     <div className="flex flex-col items-center justify-center h-screen bg-black p-6 space-y-6">
@@ -707,7 +651,6 @@
                 );
             }
 
-            // PANTALLA DE JUEGO ACTIVO (Player)
             const isSafe = gameState?.musicPlaying;
 
             return (
@@ -735,11 +678,9 @@
             );
         }
 
-        // Renderizar App
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
         
-        // Inicializar iconos
         lucide.createIcons();
     </script>
 </body>
