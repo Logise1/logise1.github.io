@@ -16,278 +16,368 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
         
+        :root {
+            --squid-pink: #ed1b76;
+            --squid-green: #037a76; /* Darker green for contrast */
+            --squid-green-light: #249f9c;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f0f13;
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #000;
             color: white;
             overflow: hidden;
             touch-action: none;
+            user-select: none;
         }
         
         .title-font {
-            font-family: 'Audiowide', cursive;
+            font-family: 'Orbitron', sans-serif;
         }
 
         .hidden { display: none !important; }
 
-        /* Gradientes y efectos */
-        .bg-gradient-main { background: radial-gradient(circle at center, #1f1f2e 0%, #000000 100%); }
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .glass-panel { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        /* Background Animated */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            opacity: 0.2;
+        }
 
-        /* Estados del juego */
-        .state-safe { background: radial-gradient(circle at center, #15803d 0%, #052e16 100%); }
-        .state-danger { background: radial-gradient(circle at center, #b91c1c 0%, #450a0a 100%); }
-        .state-measuring { background: radial-gradient(circle at center, #ca8a04 0%, #422006 100%); }
-        
-        /* Animaciones */
-        @keyframes pulse-glow { 0% { box-shadow: 0 0 20px currentColor; } 50% { box-shadow: 0 0 50px currentColor; } 100% { box-shadow: 0 0 20px currentColor; } }
-        .glow-text { text-shadow: 0 0 20px currentColor; }
-        
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.5s infinite; }
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
 
-        .score-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* Status Styles */
+        .status-safe { 
+            box-shadow: inset 0 0 100px rgba(34, 197, 94, 0.2); 
+            border-color: #22c55e;
+        }
+        .status-danger { 
+            box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+        }
         
-        /* Transiciones suaves */
-        .fade-enter { opacity: 0; transform: translateY(20px); }
-        .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.5s, transform 0.5s; }
+        /* Animations */
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-heartbeat { animation: heartbeat 1.5s infinite; }
 
-        /* Flash Effect */
-        #flash-overlay { transition: opacity 0.1s ease-out; }
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        .animate-glitch { animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; }
+
+        #flash-overlay { transition: opacity 0.05s ease-out; }
     </style>
 </head>
-<body class="bg-gradient-main text-white h-screen w-screen overflow-hidden">
+<body class="h-screen w-screen overflow-hidden bg-black text-white relative">
 
-    <!-- FLASH OVERLAY (Global) -->
-    <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-overlay pointer-events-none opacity-0"></div>
+    <!-- GLOBAL AUDIO MANAGER (Hidden) -->
+    <div id="audio-status" class="fixed top-2 right-2 text-[10px] text-gray-700 z-50 pointer-events-none">AUDIO OFF</div>
+
+    <!-- FLASH OVERLAY -->
+    <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-lighten pointer-events-none opacity-0"></div>
+
+    <!-- BACKGROUND -->
+    <div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
 
     <!-- VISTA: SELECCIÓN DE ROL -->
-    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 space-y-12 relative z-10">
-        <!-- Decoración de fondo -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-600 rounded-full blur-[128px]"></div>
-            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[128px]"></div>
-        </div>
-
-        <div class="text-center space-y-2 z-10">
-            <h1 class="text-5xl md:text-7xl font-black title-font text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 drop-shadow-lg tracking-wider">
+    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 relative z-10">
+        <div class="mb-12 text-center space-y-4">
+            <div class="flex justify-center space-x-4 text-6xl text-gray-700 mb-4 opacity-50">
+                <span>○</span><span>△</span><span>□</span>
+            </div>
+            <h1 class="text-6xl md:text-8xl font-black title-font text-transparent bg-clip-text bg-gradient-to-br from-[#ed1b76] to-[#ff5252] drop-shadow-lg tracking-tighter">
                 RED LIGHT
             </h1>
-            <h2 class="text-2xl md:text-3xl font-bold tracking-[0.5em] text-gray-400">CHALLENGE</h2>
+            <p class="text-xl tracking-[0.5em] text-gray-400 uppercase">Survival Game</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl z-10">
-            <button onclick="app.setRole('screen')" class="group relative flex flex-col items-center justify-center p-10 glass rounded-2xl hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-pink-500/50">
-                <div class="absolute inset-0 bg-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <i data-lucide="monitor" class="w-20 h-20 text-pink-500 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(236,72,153,0.8)] transition-all"></i>
-                <span class="text-3xl font-bold title-font">PANTALLA</span>
-                <span class="text-sm text-gray-400 mt-2 font-mono uppercase tracking-widest">Host del Juego</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+            <button onclick="app.setRole('screen')" class="group relative p-1 glass-panel rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(237,27,118,0.4)]">
+                <div class="absolute inset-0 bg-[#ed1b76] opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity"></div>
+                <div class="p-10 flex flex-col items-center">
+                    <i data-lucide="monitor" class="w-20 h-20 text-[#ed1b76] mb-6"></i>
+                    <span class="text-3xl font-bold title-font">PANTALLA (TV)</span>
+                    <span class="text-sm text-gray-500 mt-2 font-mono">Modo Host</span>
+                </div>
             </button>
 
-            <button onclick="app.setRole('player')" class="group relative flex flex-col items-center justify-center p-10 glass rounded-2xl hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-green-500/50">
-                <div class="absolute inset-0 bg-green-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <i data-lucide="smartphone" class="w-20 h-20 text-green-500 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(34,197,94,0.8)] transition-all"></i>
-                <span class="text-3xl font-bold title-font">JUGADOR</span>
-                <span class="text-sm text-gray-400 mt-2 font-mono uppercase tracking-widest">Unirse con Móvil</span>
+            <button onclick="app.setRole('player')" class="group relative p-1 glass-panel rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(36,159,156,0.4)]">
+                <div class="absolute inset-0 bg-[#249f9c] opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity"></div>
+                <div class="p-10 flex flex-col items-center">
+                    <i data-lucide="smartphone" class="w-20 h-20 text-[#249f9c] mb-6"></i>
+                    <span class="text-3xl font-bold title-font">JUGADOR</span>
+                    <span class="text-sm text-gray-500 mt-2 font-mono">Unirse con Móvil</span>
+                </div>
             </button>
         </div>
     </div>
 
     <!-- VISTA: PANTALLA (HOST) -->
-    <div id="view-screen" class="hidden h-full w-full flex flex-col relative bg-neutral-900">
+    <div id="view-screen" class="hidden h-full w-full flex flex-col relative bg-neutral-900 z-10">
         <!-- Header -->
-        <div class="absolute top-0 w-full p-6 flex justify-between items-center z-20 glass-panel border-b-0 rounded-b-2xl mx-auto max-w-[95%] left-0 right-0 mt-2">
-            <div class="flex items-center space-x-4">
-                <span class="text-gray-400 font-mono text-sm uppercase">Código de Sala</span>
-                <span id="host-session-code" class="text-4xl font-black title-font text-pink-500 tracking-widest glow-text">...</span>
+        <div class="absolute top-0 w-full p-6 flex justify-between items-center z-20">
+            <div class="glass-panel px-6 py-3 rounded-full flex items-center space-x-4">
+                <span class="text-gray-400 text-sm">SALA</span>
+                <span id="host-session-code" class="text-4xl font-bold title-font text-[#ed1b76] tracking-widest">...</span>
             </div>
-            <div class="flex space-x-8 text-2xl font-bold font-mono">
-                <div class="flex items-center text-green-400 bg-green-900/20 px-4 py-2 rounded-lg border border-green-500/30">
-                    <i data-lucide="activity" class="mr-3"></i> <span id="host-alive-count">0</span>
+            <div class="flex space-x-4">
+                <div class="glass-panel px-6 py-3 rounded-full flex items-center text-[#249f9c]">
+                    <i data-lucide="users" class="mr-3"></i> <span id="host-alive-count" class="text-2xl font-bold">0</span>
                 </div>
-                <div class="flex items-center text-red-500 bg-red-900/20 px-4 py-2 rounded-lg border border-red-500/30">
-                    <i data-lucide="skull" class="mr-3"></i> <span id="host-dead-count">0</span>
+                <div class="glass-panel px-6 py-3 rounded-full flex items-center text-[#ed1b76]">
+                    <i data-lucide="skull" class="mr-3"></i> <span id="host-dead-count" class="text-2xl font-bold">0</span>
                 </div>
             </div>
         </div>
 
         <!-- Contenido Central Host -->
-        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full z-10">
+        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full">
             
             <!-- Estado: LOBBY -->
             <div id="host-lobby" class="flex flex-col items-center justify-center w-full animate-fade-in">
-                <div class="relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                    <div class="relative bg-white p-4 rounded-2xl">
-                        <img id="host-qr-img" src="" alt="QR Code" class="w-72 h-72 object-contain rounded-lg">
-                    </div>
+                <div class="bg-white p-4 rounded-xl mb-8 transform hover:scale-105 transition-transform duration-500">
+                    <img id="host-qr-img" src="" alt="QR Code" class="w-72 h-72 object-contain">
                 </div>
-                <h2 class="text-4xl font-bold mt-8 mb-2 title-font">ESCANEA PARA UNIRTE</h2>
-                <p class="text-gray-400 mb-10 text-xl font-mono">Jugadores en sala: <span id="host-lobby-count" class="text-white font-bold">0</span></p>
-                <button id="btn-start-game" onclick="host.startGame()" disabled class="px-12 py-6 bg-pink-600 hover:bg-pink-500 rounded-xl text-3xl font-black title-font transition-all transform hover:scale-105 hover:shadow-[0_0_30px_rgba(219,39,119,0.5)] disabled:opacity-50 disabled:grayscale disabled:pointer-events-none">
-                    EMPEZAR JUEGO
+                <h2 class="text-5xl font-black mb-4 title-font tracking-tighter">ESCANEA EL CÓDIGO</h2>
+                <p class="text-gray-400 mb-12 text-xl">Esperando jugadores...</p>
+                
+                <button id="btn-start-game" onclick="host.startGame()" disabled class="group relative px-12 py-6 bg-[#ed1b76] rounded-lg text-3xl font-bold title-font transition-all disabled:opacity-50 disabled:grayscale overflow-hidden">
+                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <span class="relative">EMPEZAR JUEGO</span>
                 </button>
             </div>
 
-            <!-- Estado: JUEGO (Semáforo) -->
-            <div id="host-game" class="hidden w-full h-full flex items-center justify-center flex-col">
-                <!-- Luz principal -->
-                <div id="traffic-light-container" class="relative">
-                    <div class="absolute inset-0 rounded-full blur-[100px] opacity-50 transition-colors duration-200" id="light-glow"></div>
-                    <div id="traffic-light" class="relative w-96 h-96 rounded-full flex items-center justify-center border-[12px] transition-all duration-300 bg-neutral-900 border-neutral-700 shadow-2xl">
-                        <!-- Icono dinámico -->
+            <!-- Estado: JUEGO -->
+            <div id="host-game" class="hidden w-full h-full flex flex-col items-center justify-center">
+                <!-- Doll/Traffic Light Representation -->
+                <div id="traffic-light-wrapper" class="relative mb-12 transition-transform duration-500">
+                    <div id="traffic-light-ring" class="absolute -inset-4 rounded-full border-4 border-dashed border-gray-700 animate-[spin_10s_linear_infinite]"></div>
+                    <div id="traffic-light" class="w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-neutral-900 transition-colors duration-200 shadow-2xl relative z-10">
+                        <i id="traffic-icon" data-lucide="eye" class="w-40 h-40 text-gray-500 transition-colors duration-200"></i>
                     </div>
                 </div>
                 
-                <h2 id="host-status-text" class="text-8xl font-black mt-12 tracking-widest title-font drop-shadow-2xl transition-colors duration-300">PREPARADOS</h2>
+                <h2 id="host-status-text" class="text-9xl font-black tracking-widest title-font transition-colors duration-200">ESPERA</h2>
             </div>
 
-            <!-- Estado: RESULTADOS RONDA (Leaderboard) -->
-            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-32 px-4">
-                <h2 class="text-5xl font-black mb-12 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 title-font tracking-widest">
-                    TIEMPOS DE REACCIÓN
-                </h2>
-                
-                <div id="results-grid" class="w-full max-w-5xl grid grid-cols-1 gap-3 overflow-y-auto max-h-[65vh] px-2 pb-20">
-                    <!-- Filas generadas por JS -->
+            <!-- Estado: RESULTADOS -->
+            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-32 px-10">
+                <h2 class="text-6xl font-black mb-12 text-[#ed1b76] title-font border-b-4 border-[#ed1b76] pb-4">ELIMINACIÓN</h2>
+                <div id="results-grid" class="w-full max-w-6xl grid grid-cols-1 gap-4 overflow-y-auto max-h-[60vh] pr-4 scrollbar-hide">
+                    <!-- Filas dinámicas -->
                 </div>
 
-                <!-- Overlay de Eliminación Host -->
-                <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm hidden">
-                    <div class="text-center animate-shake">
-                        <i data-lucide="skull" class="w-48 h-48 text-red-600 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"></i>
-                        <h2 class="text-7xl font-black text-red-600 title-font tracking-tighter mb-4">ELIMINADO</h2>
-                        <div id="eliminated-name" class="text-5xl font-bold text-white font-mono border-2 border-red-600 px-8 py-4 inline-block bg-red-900/30 rounded-lg">
-                            JUGADOR 1
-                        </div>
+                <!-- Overlay Eliminado -->
+                <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center hidden backdrop-blur-md">
+                    <div class="animate-glitch text-center">
+                        <h1 class="text-[10rem] leading-none font-black text-[#ed1b76] title-font mb-4">ELIMINADO</h1>
+                        <div class="w-full h-2 bg-[#ed1b76] mb-8"></div>
+                        <h2 id="eliminated-name" class="text-7xl font-mono text-white bg-neutral-800 px-8 py-4 inline-block rounded border border-[#ed1b76]">JUGADOR</h2>
                     </div>
                 </div>
             </div>
 
             <!-- Estado: GANADOR -->
             <div id="host-winner" class="hidden flex flex-col items-center justify-center animate-fade-in-up">
-                <div class="relative">
-                    <div class="absolute inset-0 bg-yellow-500 rounded-full blur-[100px] opacity-30"></div>
-                    <i data-lucide="trophy" class="relative w-64 h-64 text-yellow-400 mb-8 drop-shadow-[0_0_30px_rgba(250,204,21,0.6)]"></i>
-                </div>
-                <h2 class="text-5xl font-bold text-yellow-500 mb-4 title-font tracking-[0.2em]">GANADOR SUPREMO</h2>
-                <div id="winner-name" class="text-8xl font-black text-white mb-12 title-font glow-text">NOMBRE</div>
-                <div class="bg-white/10 px-6 py-3 rounded-full flex items-center space-x-3">
-                    <div class="w-3 h-3 bg-white rounded-full animate-bounce"></div>
-                    <p class="text-gray-300 font-mono">Reiniciando sistema...</p>
-                </div>
+                <i data-lucide="crown" class="w-48 h-48 text-yellow-400 mb-8 animate-bounce"></i>
+                <h2 class="text-6xl font-bold text-yellow-500 mb-6 title-font tracking-widest">GANADOR</h2>
+                <div id="winner-name" class="text-9xl font-black text-white mb-12 title-font">NOMBRE</div>
+                <div class="text-gray-500 font-mono animate-pulse">Reiniciando sistema de juego...</div>
             </div>
         </div>
 
-        <!-- Footer Jugadores -->
-        <div class="absolute bottom-0 w-full bg-black/80 backdrop-blur-md border-t border-white/5 p-6 z-20">
-            <div id="host-players-list" class="flex flex-wrap gap-3 justify-center max-h-32 overflow-y-auto">
-                <!-- Chips de jugadores -->
-            </div>
+        <!-- Footer -->
+        <div class="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black to-transparent z-20">
+            <div id="host-players-list" class="flex flex-wrap gap-3 justify-center max-h-32 overflow-hidden mask-fade-bottom"></div>
         </div>
     </div>
 
     <!-- VISTA: JUGADOR (LOGIN) -->
-    <div id="view-player-join" class="hidden h-full w-full flex flex-col items-center justify-center p-6 bg-neutral-900 relative">
-        <div class="w-full max-w-md space-y-8 z-10">
-            <div class="text-center">
-                <h1 class="text-4xl font-bold text-pink-500 title-font mb-2 glow-text">UNIRSE</h1>
-                <p class="text-gray-400 font-mono">Introduce tus credenciales</p>
+    <div id="view-player-join" class="hidden h-full w-full flex flex-col items-center justify-center p-6 bg-neutral-900 z-20">
+        <div class="w-full max-w-sm space-y-8">
+            <div class="text-center space-y-2">
+                <div class="flex justify-center space-x-2 text-2xl text-[#ed1b76] mb-4">
+                    <span>○</span><span>△</span><span>□</span>
+                </div>
+                <h1 class="text-4xl font-bold text-white title-font">INGRESO</h1>
             </div>
-            
             <div class="space-y-4">
-                <div class="relative group">
-                    <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-50 group-hover:opacity-75 transition duration-200"></div>
-                    <input type="text" id="inp-player-name" placeholder="TU NOMBRE" maxlength="10" class="relative w-full bg-black border border-white/10 p-5 rounded-lg text-center text-2xl font-bold text-white uppercase focus:outline-none placeholder-gray-700 font-mono">
-                </div>
-                <div class="relative group">
-                    <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-50 group-hover:opacity-75 transition duration-200"></div>
-                    <input type="text" id="inp-session-code" placeholder="CÓDIGO SALA" maxlength="4" class="relative w-full bg-black border border-white/10 p-5 rounded-lg text-center text-2xl font-bold text-white uppercase focus:outline-none placeholder-gray-700 font-mono tracking-[0.5em]">
-                </div>
+                <input type="text" id="inp-player-name" placeholder="NOMBRE" maxlength="10" class="w-full bg-black/50 border border-gray-700 p-4 rounded text-center text-2xl text-white uppercase focus:border-[#ed1b76] focus:outline-none transition-colors font-mono">
+                <input type="text" id="inp-session-code" placeholder="CÓDIGO" maxlength="4" class="w-full bg-black/50 border border-gray-700 p-4 rounded text-center text-2xl text-white uppercase focus:border-[#ed1b76] focus:outline-none transition-colors font-mono tracking-widest">
             </div>
-
-            <button onclick="player.join()" class="w-full bg-green-600 hover:bg-green-500 p-5 rounded-lg font-black text-2xl shadow-lg shadow-green-900/50 transition-all transform active:scale-95 title-font tracking-wider">
-                ENTRAR AL JUEGO
+            <button onclick="player.join()" class="w-full bg-[#ed1b76] hover:bg-pink-700 text-white p-4 rounded font-bold text-xl transition-all active:scale-95 shadow-lg shadow-pink-900/50">
+                ENTRAR
             </button>
         </div>
     </div>
 
     <!-- VISTA: JUGADOR (PERMISO) -->
-    <div id="view-player-sensor" class="hidden h-full w-full flex flex-col items-center justify-center p-8 text-center bg-black">
-        <div class="p-8 bg-yellow-500/10 rounded-full mb-8 animate-pulse">
-            <i data-lucide="smartphone" class="w-24 h-24 text-yellow-500"></i>
-        </div>
-        <h2 class="text-3xl font-bold mb-4 font-mono text-yellow-500">ACCESO SENSORES</h2>
-        <p class="text-gray-400 mb-12 max-w-xs mx-auto leading-relaxed">Necesitamos acceder al acelerómetro para detectar si te mueves. Pulsa el botón para autorizar.</p>
-        <button onclick="player.requestPermissions()" class="bg-yellow-500 hover:bg-yellow-400 text-black px-10 py-5 rounded-xl font-bold text-xl shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all">
-            ACTIVAR Y JUGAR
+    <div id="view-player-sensor" class="hidden h-full w-full flex flex-col items-center justify-center p-8 text-center bg-black z-20">
+        <i data-lucide="smartphone" class="w-24 h-24 text-yellow-500 mb-6 animate-pulse"></i>
+        <h2 class="text-3xl font-bold mb-4 font-mono text-yellow-500">CALIBRACIÓN</h2>
+        <p class="text-gray-400 mb-12">Requiere acceso a sensores de movimiento para jugar.</p>
+        <button onclick="player.requestPermissions()" class="bg-yellow-500 text-black px-10 py-4 rounded font-bold text-xl w-full max-w-xs">
+            AUTORIZAR
         </button>
     </div>
 
     <!-- VISTA: JUGADOR (JUEGO) -->
-    <div id="view-player-game" class="hidden h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-500">
+    <div id="view-player-game" class="hidden h-full w-full flex flex-col items-center justify-center transition-colors duration-300 bg-neutral-900 relative overflow-hidden z-10">
         
         <!-- Pantalla: ESPERANDO -->
-        <div id="p-screen-waiting" class="text-center z-10">
-            <div class="relative mb-8 mx-auto w-24 h-24">
-                <div class="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
-                <div class="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <i data-lucide="hourglass" class="absolute inset-0 m-auto w-10 h-10 text-blue-400"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-2 title-font tracking-wider">EN ESPERA</h2>
-            <p class="text-blue-300/80 font-mono text-sm">El Host iniciará la ronda...</p>
+        <div id="p-screen-waiting" class="text-center z-10 flex flex-col items-center">
+            <div class="w-20 h-20 border-4 border-t-[#ed1b76] border-r-[#ed1b76] border-b-transparent border-l-transparent rounded-full animate-spin mb-6"></div>
+            <h2 class="text-2xl font-bold mb-2 font-mono tracking-widest">EN ESPERA</h2>
+            <p class="text-gray-500 font-mono text-sm">El Líder iniciará...</p>
         </div>
 
         <!-- Pantalla: ACTIVO -->
         <div id="p-screen-active" class="hidden absolute inset-0 flex flex-col items-center justify-center z-10">
-            
-            <!-- ALERTA MUEVETE -->
-            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-orange-600 flex flex-col items-center justify-center animate-pulse">
-                <i data-lucide="footprints" class="w-48 h-48 text-white mb-8 transform rotate-12"></i>
-                <h1 class="text-7xl font-black text-white italic transform -rotate-6 title-font drop-shadow-lg">¡MUÉVETE!</h1>
-                <p class="text-3xl text-white font-bold mt-6 tracking-widest">¡DEBES ANDAR!</p>
+            <!-- Alerta Movimiento -->
+            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-[#ed1b76] flex flex-col items-center justify-center animate-heartbeat">
+                <i data-lucide="footprints" class="w-40 h-40 text-white mb-6"></i>
+                <h1 class="text-6xl font-black text-white italic -rotate-3">¡MUEVETE!</h1>
             </div>
 
-            <div id="p-icon-container" class="mb-10 transform transition-all duration-300 p-8 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <!-- Icono inyectado -->
-            </div>
-            
-            <h1 id="p-status-text" class="text-7xl font-black text-white drop-shadow-2xl title-font tracking-widest text-center">...</h1>
-            <p id="p-sub-text" class="text-2xl mt-4 font-bold opacity-80 font-mono tracking-widest uppercase text-center">...</p>
+            <div id="p-icon-container" class="mb-12 transform transition-transform duration-300"></div>
+            <h1 id="p-status-text" class="text-6xl font-black text-white drop-shadow-xl tracking-widest">...</h1>
+            <p id="p-sub-text" class="text-xl mt-4 font-mono text-gray-300">...</p>
 
-            <!-- Barra de progreso para medir -->
-            <div id="p-measure-bar-container" class="hidden w-64 h-2 bg-black/50 rounded-full mt-12 overflow-hidden border border-white/20">
+            <!-- Barra Medición -->
+            <div id="p-measure-bar-container" class="hidden absolute bottom-20 w-3/4 h-2 bg-gray-800 rounded-full overflow-hidden">
                 <div id="p-measure-bar" class="h-full bg-yellow-400 w-full origin-left"></div>
             </div>
         </div>
 
         <!-- Pantalla: MUERTO -->
-        <div id="p-screen-dead" class="hidden absolute inset-0 z-50 bg-red-950 flex flex-col items-center justify-center">
-            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/noise.png')] opacity-20 pointer-events-none"></div>
-            <div class="animate-shake text-center">
-                <i data-lucide="skull" class="w-40 h-40 text-red-500 mx-auto mb-8 drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]"></i>
-                <h1 class="text-6xl font-black text-red-500 mb-4 title-font tracking-tighter">ELIMINADO</h1>
-                <p class="text-red-300 font-mono text-xl">Has sido detectado</p>
-                <div class="mt-8 px-6 py-2 border border-red-500/30 rounded bg-red-900/50 text-red-400 font-mono">
-                    ESPERA AL SIGUIENTE JUEGO
-                </div>
+        <div id="p-screen-dead" class="hidden absolute inset-0 z-50 bg-[#2a0a0a] flex flex-col items-center justify-center">
+            <div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)] opacity-10"></div>
+            <div class="text-center">
+                <i data-lucide="x-circle" class="w-40 h-40 text-[#ed1b76] mx-auto mb-6"></i>
+                <h1 class="text-6xl font-black text-[#ed1b76] mb-2 title-font">ELIMINADO</h1>
+                <p class="text-gray-400 font-mono">Has sido detectado</p>
             </div>
         </div>
 
         <!-- Pantalla: VICTORIA -->
-        <div id="p-screen-win" class="hidden absolute inset-0 z-50 bg-yellow-900 flex flex-col items-center justify-center">
-            <div class="absolute inset-0 bg-yellow-500/20 mix-blend-overlay"></div>
-            <i data-lucide="trophy" class="w-40 h-40 text-yellow-400 mb-8 animate-bounce drop-shadow-[0_0_30px_rgba(250,204,21,0.6)]"></i>
-            <h1 class="text-6xl font-black text-yellow-400 mb-4 title-font">¡VICTORIA!</h1>
-            <p class="text-yellow-100 font-mono text-xl tracking-wider">SOBREVIVISTE</p>
+        <div id="p-screen-win" class="hidden absolute inset-0 z-50 bg-[#0f392b] flex flex-col items-center justify-center">
+            <i data-lucide="award" class="w-40 h-40 text-[#249f9c] mb-6 animate-pulse"></i>
+            <h1 class="text-5xl font-black text-white mb-4 title-font">SOBREVIVISTE</h1>
+            <p class="text-[#249f9c] font-mono tracking-widest">VICTORIA</p>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN FIREBASE ---
+        // --- SOUND MANAGER ROBUSTO ---
+        const SoundManager = {
+            gunshot: new Audio('https://library.penguinmod.com/files/sounds/gunshot3.mp3'),
+            win: new Audio('https://library.penguinmod.com/files/sounds/win3.mp3'),
+            bgm: null,
+            songs: ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3'],
+            
+            // AudioContext de respaldo para asegurar sonido si falla MP3
+            ctx: null,
+
+            init() {
+                this.gunshot.preload = 'auto';
+                this.win.preload = 'auto';
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                } catch(e) { console.log("AudioContext not supported"); }
+            },
+
+            // Función crítica: Desbloquea audio en el primer click
+            unlock() {
+                // 1. Desbloquear elementos HTML Audio
+                [this.gunshot, this.win].forEach(s => {
+                    s.volume = 0;
+                    s.play().then(() => {
+                        s.pause();
+                        s.currentTime = 0;
+                        s.volume = 1; // Restaurar volumen
+                    }).catch(e => console.log("Unlock failed for HTML Audio", e));
+                });
+
+                // 2. Desbloquear AudioContext (Beep backup)
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume().then(() => {
+                        // Tocar un beep silencioso
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        gain.gain.value = 0.001; // Casi silencio
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.1);
+                        document.getElementById('audio-status').innerText = "AUDIO ON";
+                        document.getElementById('audio-status').style.color = "green";
+                    });
+                }
+            },
+
+            playGunshot() {
+                // Intentar HTML Audio primero
+                this.gunshot.currentTime = 0;
+                this.gunshot.play().catch(e => {
+                    console.warn("Gunshot HTML Audio blocked, using synth fallback");
+                    this.playSynthGunshot(); // Fallback
+                });
+            },
+
+            playWin() {
+                this.win.currentTime = 0;
+                this.win.play().catch(() => {});
+            },
+
+            playSynthGunshot() {
+                // Sonido sintético estridente por si falla el archivo
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            },
+
+            playBGM(isFinal) {
+                if (this.bgm) { this.bgm.pause(); }
+                const src = isFinal ? 'song3.mp3' : this.songs[Math.floor(Math.random() * this.songs.length)];
+                this.bgm = new Audio(src);
+                this.bgm.loop = true;
+                this.bgm.play().catch(e => console.log("BGM Blocked", e));
+            },
+
+            stopBGM() {
+                if (this.bgm) { this.bgm.pause(); this.bgm.currentTime = 0; }
+            }
+        };
+        SoundManager.init();
+
+        // --- FIREBASE SETUP ---
         const firebaseConfig = {
             apiKey: "AIzaSyBMYTnk-CljdWENtDQqqKUBmQzBQuoxYPo",
             authDomain: "hello-74404.firebaseapp.com",
@@ -300,74 +390,54 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- UTILIDADES ---
+        // --- UTILS ---
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
-        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3']; 
-        const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
-        const WIN_URL = "https://library.penguinmod.com/files/sounds/win3.mp3";
-        
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
-        let currentMusic = null;
-        const gunshotAudio = new Audio(GUNSHOT_URL);
-        const winAudio = new Audio(WIN_URL);
-
-        // Flash Effect
+        // Flash UI
         const triggerFlash = () => {
             const el = $('flash-overlay');
-            el.classList.remove('opacity-0');
-            setTimeout(() => el.classList.add('opacity-0'), 150);
-        };
-
-        const unlockAudio = () => {
-            [gunshotAudio, winAudio].forEach(audio => {
-                audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
-            });
+            el.style.opacity = '1';
+            setTimeout(() => el.style.opacity = '0', 100);
         };
 
         // --- APP CONTROLLER ---
         const app = {
             role: null,
             sessionId: null,
-
-            init: function() {
-                const params = new URLSearchParams(window.location.search);
-                const urlSession = params.get('session');
-                const urlRole = params.get('role');
-
-                if (urlSession && urlRole) {
-                    this.sessionId = urlSession.toUpperCase();
-                    this.setRole(urlRole);
-                    if (urlRole === 'player') $('inp-session-code').value = this.sessionId;
+            init() {
+                const p = new URLSearchParams(window.location.search);
+                this.sessionId = p.get('session')?.toUpperCase();
+                const role = p.get('role');
+                if (this.sessionId && role) {
+                    if (role === 'player') $('inp-session-code').value = this.sessionId;
+                    this.setRole(role);
                 } else {
                     this.showView('view-landing');
                 }
                 lucide.createIcons();
+                // Global unlock attempt on any interaction
+                document.body.addEventListener('click', () => SoundManager.unlock(), { once: true });
+                document.body.addEventListener('touchstart', () => SoundManager.unlock(), { once: true });
             },
-
-            setRole: function(role) {
-                this.role = role;
-                if (role === 'screen') host.init();
-                else player.init();
+            setRole(r) {
+                this.role = r;
+                SoundManager.unlock();
+                if (r === 'screen') host.init(); else player.init();
             },
-
-            showView: function(viewId) {
+            showView(id) {
                 document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-                $(viewId).classList.remove('hidden');
+                $(id).classList.remove('hidden');
             }
         };
 
-        // --- HOST LOGIC ---
+        // --- HOST ---
         const host = {
-            players: {},
-            gameState: 'waiting', 
-            musicPlaying: false,
-            timers: [],
-
-            init: function() {
-                document.body.addEventListener('click', unlockAudio, { once: true });
+            players: {}, gameState: 'waiting', musicPlaying: false, timers: [],
+            
+            init() {
                 if (!app.sessionId) {
                     app.sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
                     const newUrl = `?session=${app.sessionId}&role=screen`;
@@ -375,279 +445,169 @@
                 }
                 $('host-session-code').innerText = app.sessionId;
                 app.showView('view-screen');
-
-                const joinUrl = `${window.location.origin}${window.location.pathname}?session=${app.sessionId}&role=player`;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(joinUrl)}&bgcolor=ffffff&color=000000&margin=10`;
+                
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(location.origin + location.pathname + '?session=' + app.sessionId + '&role=player')}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
 
-                this.setupListeners();
-                this.resetDB();
-            },
-
-            wait: function(fn, delay) {
-                const id = setTimeout(() => { fn(); this.timers = this.timers.filter(t => t !== id); }, delay);
-                this.timers.push(id);
-                return id;
-            },
-
-            clearTimers: function() { this.timers.forEach(id => clearTimeout(id)); this.timers = []; },
-
-            resetDB: function() {
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
-                    state: 'waiting',
-                    musicPlaying: false,
-                    host: localUid,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            },
-
-            setupListeners: function() {
-                db.ref(`artifacts/${APP_ID}/public/data/players`).on('value', snap => {
-                    const allPlayers = snap.val() || {};
+                db.ref(`artifacts/${APP_ID}/public/data/players`).on('value', s => {
+                    const all = s.val() || {};
                     this.players = {};
-                    Object.entries(allPlayers).forEach(([key, p]) => {
-                        if (p.sessionId === app.sessionId) this.players[key] = p;
-                    });
+                    Object.entries(all).forEach(([k,p]) => { if(p.sessionId === app.sessionId) this.players[k]=p; });
                     this.renderPlayers();
                 });
 
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', snap => {
-                    const data = snap.val();
-                    if(data) {
-                        this.gameState = data.state;
-                        this.musicPlaying = data.musicPlaying;
-                        this.updateUI();
-                    }
+                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
+                    const d = s.val();
+                    if(d) { this.gameState = d.state; this.musicPlaying = d.musicPlaying; this.updateUI(); }
+                });
+                
+                // Init Session
+                this.updateDB({ state: 'waiting', musicPlaying: false, host: localUid });
+            },
+
+            updateDB(updates) { db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates); },
+            wait(fn, ms) { const id = setTimeout(() => { fn(); this.timers=this.timers.filter(t=>t!==id); }, ms); this.timers.push(id); },
+            clearTimers() { this.timers.forEach(clearTimeout); this.timers = []; },
+
+            renderPlayers() {
+                const list = $('host-players-list'); list.innerHTML = '';
+                const pArr = Object.values(this.players);
+                $('host-lobby-count').innerText = pArr.length;
+                $('host-alive-count').innerText = pArr.filter(p=>p.isAlive).length;
+                $('host-dead-count').innerText = pArr.filter(p=>!p.isAlive).length;
+                $('btn-start-game').disabled = pArr.length === 0;
+
+                pArr.forEach(p => {
+                    const d = document.createElement('div');
+                    const color = p.isAlive ? 'border-[#249f9c] text-[#249f9c]' : 'border-red-900 text-red-900 line-through';
+                    d.className = `px-3 py-1 border rounded font-mono text-sm ${color}`;
+                    d.innerText = p.name;
+                    list.appendChild(d);
                 });
             },
 
-            renderPlayers: function() {
-                const list = $('host-players-list');
-                list.innerHTML = '';
-                
-                const playersArr = Object.values(this.players);
-                $('host-lobby-count').innerText = playersArr.length;
-                
-                const alive = playersArr.filter(p => p.isAlive).length;
-                const dead = playersArr.filter(p => !p.isAlive).length;
-                
-                $('host-alive-count').innerText = alive;
-                $('host-dead-count').innerText = dead;
-                $('btn-start-game').disabled = playersArr.length === 0;
-
-                playersArr.forEach(p => {
-                    const div = document.createElement('div');
-                    // Mostrar eliminados diferentes
-                    const statusClass = p.isAlive ? 'bg-green-900/50 text-green-400 border-green-500/30' : 'bg-red-900/30 text-red-500/50 border-red-500/10 line-through grayscale';
-                    div.className = `px-4 py-2 rounded-lg font-mono font-bold flex items-center border ${statusClass} backdrop-blur-sm`;
-                    div.innerText = p.name;
-                    list.appendChild(div);
-                });
-            },
-
-            startGame: function() {
-                unlockAudio();
-                this.clearTimers(); 
+            startGame() {
+                SoundManager.unlock();
+                this.clearTimers();
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                    // Reset score to NULL to verify who plays
-                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null; 
-                });
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
-                
-                db.ref().update(updates);
-                
-                this.startMusic();
-                this.scheduleStop();
-            },
-
-            // --- Lógica del Ciclo de Juego ---
-
-            startNewRound: function() {
-                // Borrar tiempos anteriores de TODOS (vivos y muertos)
-                const updates = {};
-                Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
                 });
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
-                
                 db.ref().update(updates);
-                this.startMusic();
-                this.scheduleStop();
+                
+                this.startMusicLogic();
             },
 
-            scheduleStop: function() {
-                if (this.gameState !== 'playing') return;
-                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
+            startMusicLogic() {
+                const alive = Object.values(this.players).filter(p=>p.isAlive).length;
+                SoundManager.playBGM(alive <= 2);
+                
                 let min = 5000, max = 12000;
-                if (aliveCount <= 2) { min = 10000; max = 20000; } // Showdown
+                if(alive <= 2) { min = 10000; max = 20000; }
                 
-                const duration = Math.random() * (max - min) + min;
-                this.wait(() => {
-                    if (this.gameState !== 'playing' || !this.musicPlaying) return;
-                    this.stopRound();
-                }, duration);
+                this.wait(() => this.stopMusicLogic(), Math.random()*(max-min)+min);
             },
 
-            stopRound: function() {
-                this.stopMusic();
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
-                    musicPlaying: false,
-                    state: 'measuring', 
-                    lastStop: firebase.database.ServerValue.TIMESTAMP
-                });
-                // 3 segundos para que los jugadores envíen sus tiempos
-                this.wait(() => this.calculateRoundResults(), 3000);
+            stopMusicLogic() {
+                SoundManager.stopBGM();
+                this.updateDB({ musicPlaying: false, state: 'measuring', lastStop: firebase.database.ServerValue.TIMESTAMP });
+                this.wait(() => this.processResults(), 3000);
             },
 
-            calculateRoundResults: function() {
-                if (this.gameState !== 'measuring') return;
-
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({ state: 'round_result' });
+            processResults() {
+                this.updateDB({ state: 'round_result' });
                 
-                const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
-                
-                // Win Condition Check
-                if (alivePlayers.length <= 1 && Object.keys(this.players).length > 1) {
-                     const winner = alivePlayers.length === 1 ? alivePlayers[0][1].name : 'NADIE';
-                     this.endGame(winner);
-                     return;
+                const aliveP = Object.entries(this.players).filter(([k,p])=>p.isAlive);
+                // Win check immediate
+                if(aliveP.length <= 1 && Object.keys(this.players).length > 1) {
+                    this.endGame(aliveP.length ? aliveP[0][1].name : 'NADIE');
+                    return;
                 }
 
-                // Encontrar al peor DE LOS QUE JUGARON (lastScore != null)
-                let worstPlayerId = null;
-                let maxScore = -1;
-
-                alivePlayers.forEach(([pid, p]) => {
-                    const score = (p.lastScore === null || p.lastScore === undefined) ? 0 : p.lastScore;
-                    if (score > maxScore) {
-                        maxScore = score;
-                        worstPlayerId = pid;
-                    }
+                let worstId = null, maxScore = -1;
+                aliveP.forEach(([id, p]) => {
+                    const s = (p.lastScore === undefined || p.lastScore === null) ? 0 : p.lastScore;
+                    if(s > maxScore) { maxScore = s; worstId = id; }
                 });
 
-                // Suspense
-                const isSuspense = alivePlayers.length <= 2;
-                const revealDelay = isSuspense ? 5000 : 3000;
-
+                // Suspense delay
                 this.wait(() => {
-                    // Eliminar si se movió (umbral 0.05s)
-                    if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
-                        // Efecto visual en host y Trigger Global Flash
-                        const loserName = this.players[worstPlayerId].name;
-                        $('eliminated-name').innerText = loserName;
+                    if(worstId && maxScore > 0.05 && aliveP.length > 1) {
+                        // ELIMINATE
+                        SoundManager.playGunshot();
+                        triggerFlash();
+                        
+                        $('eliminated-name').innerText = this.players[worstId].name;
                         $('eliminated-overlay').classList.remove('hidden');
                         
-                        // DB Updates
                         const updates = {};
-                        updates[`artifacts/${APP_ID}/public/data/players/${worstPlayerId}/isAlive`] = false;
-                        // Timestamp para que todos flasheen
+                        updates[`artifacts/${APP_ID}/public/data/players/${worstId}/isAlive`] = false;
                         updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/lastShot`] = firebase.database.ServerValue.TIMESTAMP;
-                        
                         db.ref().update(updates);
-                        
-                        gunshotAudio.play().catch(()=>{});
-                        triggerFlash(); // Host local flash
+                    } else {
+                        // No one moved significantly
                     }
 
                     this.wait(() => {
                         $('eliminated-overlay').classList.add('hidden');
-                        // Recalcular Vivos
-                        let currentAliveCount = 0;
-                        let lastSurvivorName = "";
                         
-                        Object.entries(this.players).forEach(([pid, p]) => {
-                            if (pid === worstPlayerId && maxScore > 0.05) return; // Ya está muerto lógicamente
-                            if (p.isAlive) {
-                                currentAliveCount++;
-                                lastSurvivorName = p.name;
-                            }
+                        // Re-check win after kill
+                        let currentAlive = 0, lastName = "";
+                        Object.entries(this.players).forEach(([id,p]) => {
+                            // Don't count the one we just killed locally even if update is pending
+                            if(id === worstId && maxScore > 0.05) return;
+                            if(p.isAlive) { currentAlive++; lastName = p.name; }
                         });
 
-                        if (currentAliveCount <= 1) {
-                            const wName = currentAliveCount === 1 ? lastSurvivorName : 'NADIE';
-                            this.endGame(wName);
+                        if(currentAlive <= 1) {
+                            this.endGame(currentAlive === 1 ? lastName : 'NADIE');
                         } else {
-                            this.startNewRound(); // Ciclo nuevo limpiando scores
+                            // New Round - Clear Scores
+                            const ups = {};
+                            Object.keys(this.players).forEach(id => ups[`artifacts/${APP_ID}/public/data/players/${id}/lastScore`] = null);
+                            ups[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
+                            ups[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
+                            db.ref().update(ups);
+                            this.startMusicLogic();
                         }
-                    }, 4000); // Tiempo viendo al muerto
-                }, revealDelay); // Tiempo viendo la tabla
+                    }, 4000);
+                }, aliveP.length <= 2 ? 5000 : 3000);
             },
 
-            // --- UI & Helpers ---
+            endGame(winner) {
+                this.clearTimers();
+                SoundManager.stopBGM();
+                SoundManager.playWin();
+                this.updateDB({ state: 'ended', musicPlaying: false, winner: winner });
+                this.wait(() => this.startGame(), 8000); // Auto restart loop
+            },
 
-            startMusic: function() {
-                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
-                const songToPlay = (aliveCount <= 2) ? 'song3.mp3' : SONGS[Math.floor(Math.random() * SONGS.length)];
+            updateUI() {
+                ['host-lobby','host-game','host-round-results','host-winner'].forEach(id=>$(id).classList.add('hidden'));
                 
-                if (currentMusic) { currentMusic.pause(); currentMusic = null; }
-                currentMusic = new Audio(songToPlay);
-                currentMusic.loop = true;
-                currentMusic.play().catch(e => console.log("Audio block", e));
-            },
-
-            stopMusic: function() {
-                if (currentMusic) { currentMusic.pause(); currentMusic.currentTime = 0; }
-            },
-
-            endGame: function(winnerName) {
-                this.clearTimers();
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
-                    state: 'ended',
-                    musicPlaying: false,
-                    winner: winnerName
-                });
-                this.stopMusic();
-                winAudio.play().catch(()=>{});
-                this.wait(() => this.resetGame(), 8000);
-            },
-
-            resetGame: function() {
-                this.clearTimers();
-                const updates = {};
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
-                Object.keys(this.players).forEach(pid => {
-                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
-                });
-                db.ref().update(updates);
-            },
-
-            updateUI: function() {
-                ['host-lobby', 'host-game', 'host-round-results', 'host-winner'].forEach(id => $(id).classList.add('hidden'));
-
-                if (this.gameState === 'waiting') {
+                if(this.gameState === 'waiting') {
                     $('host-lobby').classList.remove('hidden');
-                } else if (this.gameState === 'playing' || this.gameState === 'measuring') {
+                } else if(this.gameState === 'playing' || this.gameState === 'measuring') {
                     $('host-game').classList.remove('hidden');
-                    const light = $('traffic-light');
-                    const glow = $('light-glow');
-                    const text = $('host-status-text');
-                    const container = $('traffic-light-container');
-
-                    if (this.musicPlaying) {
-                        // VERDE
-                        light.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-300 bg-green-600 border-green-400 shadow-[0_0_100px_rgba(34,197,94,0.5)] scale-110";
-                        glow.className = "absolute inset-0 rounded-full bg-green-500 blur-[80px] opacity-40 animate-pulse";
-                        light.innerHTML = `<i data-lucide="play" class="w-48 h-48 text-white fill-current"></i>`;
-                        text.innerText = "¡CORRE!";
-                        text.className = "text-9xl font-black mt-12 tracking-widest title-font text-green-500 drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]";
+                    const l = $('traffic-light'), t = $('host-status-text'), i = $('traffic-icon');
+                    if(this.musicPlaying) {
+                        l.className = "w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-green-900 border-green-500 shadow-[0_0_80px_rgba(34,197,94,0.6)]";
+                        i.outerHTML = '<i id="traffic-icon" data-lucide="play" class="w-40 h-40 text-green-400 fill-current animate-pulse"></i>';
+                        t.innerText = "¡CORRE!";
+                        t.className = "text-9xl font-black mt-12 tracking-widest title-font text-green-500";
                     } else {
-                        // ROJO / MIDIENDO
-                        light.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_100px_rgba(234,179,8,0.5)] scale-100";
-                        glow.className = "absolute inset-0 rounded-full bg-yellow-500 blur-[80px] opacity-40";
-                        light.innerHTML = `<i data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>`;
-                        text.innerText = "MIDIENDO";
-                        text.className = "text-8xl font-black mt-12 tracking-widest title-font text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]";
+                        l.className = "w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-[#ed1b76] border-red-500 shadow-[0_0_80px_rgba(237,27,118,0.6)]";
+                        i.outerHTML = '<i id="traffic-icon" data-lucide="eye" class="w-40 h-40 text-white animate-[pulse_0.2s_infinite]"></i>';
+                        t.innerText = "MIDIENDO";
+                        t.className = "text-8xl font-black mt-12 tracking-widest title-font text-[#ed1b76]";
                     }
-                } else if (this.gameState === 'round_result') {
+                } else if(this.gameState === 'round_result') {
                     $('host-round-results').classList.remove('hidden');
-                    this.renderResultsBoard();
-                } else if (this.gameState === 'ended') {
+                    this.renderResults();
+                } else if(this.gameState === 'ended') {
                     $('host-winner').classList.remove('hidden');
                     db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/winner`).once('value', s => {
                         $('winner-name').innerText = s.val() || '...';
@@ -656,228 +616,180 @@
                 lucide.createIcons();
             },
 
-            renderResultsBoard: function() {
-                const grid = $('results-grid');
-                grid.innerHTML = '';
+            renderResults() {
+                const g = $('results-grid'); g.innerHTML = '';
                 $('eliminated-overlay').classList.add('hidden');
+                
+                // Show ONLY alive players that submitted a score
+                const players = Object.values(this.players).filter(p => p.isAlive && p.lastScore !== null && p.lastScore !== undefined);
+                players.sort((a,b) => b.lastScore - a.lastScore);
 
-                // FILTRADO CLAVE: Solo mostrar jugadores vivos Y que hayan enviado score (no null)
-                const players = Object.values(this.players).filter(p => p.isAlive && p.lastScore !== null && p.lastScore !== undefined); 
-                players.sort((a, b) => b.lastScore - a.lastScore);
-
-                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
-                const isSuspense = aliveCount <= 2;
-
-                players.forEach((p, index) => {
-                    const score = p.lastScore ? parseFloat(p.lastScore).toFixed(2) : "0.00";
+                players.forEach((p, i) => {
+                    const score = parseFloat(p.lastScore).toFixed(2);
+                    const isDanger = score > 1.0;
+                    const w = Math.min(100, (score/2.5)*100);
                     
-                    let barColor = 'bg-gradient-to-r from-emerald-500 to-green-600';
-                    let numScore = parseFloat(score);
-                    if (numScore > 1.0) barColor = 'bg-gradient-to-r from-red-600 to-red-800'; 
-                    else if (numScore > 0.5) barColor = 'bg-gradient-to-r from-yellow-400 to-orange-500'; 
-
-                    const widthPercent = Math.min(100, (numScore / 2.5) * 100); 
-
-                    const item = document.createElement('div');
-                    item.className = "flex items-center space-x-6 p-4 rounded-xl glass-panel opacity-0 fade-enter transition-all duration-500 mb-2";
-                    item.innerHTML = `
-                        <div class="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 font-bold font-mono text-xl text-gray-400">#${index + 1}</div>
-                        <div class="w-48 font-bold truncate text-right text-2xl font-mono text-white">${p.name}</div>
-                        <div class="flex-1 h-10 bg-black/50 rounded-full overflow-hidden relative border border-white/10 shadow-inner">
-                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-3 font-mono font-bold text-lg text-white shadow-lg" style="width: 0%">
-                                ${score}s
+                    const el = document.createElement('div');
+                    el.className = "glass-panel p-4 rounded-xl flex items-center space-x-6 mb-3 fade-enter opacity-0 transition-all duration-500";
+                    el.innerHTML = `
+                        <div class="text-2xl font-bold w-12 text-gray-500">#${i+1}</div>
+                        <div class="text-3xl font-mono w-48 truncate">${p.name}</div>
+                        <div class="flex-1 h-8 bg-gray-800 rounded-full overflow-hidden relative">
+                            <div class="h-full score-bar flex items-center justify-end px-2 font-bold text-black" 
+                                 style="width:0%; background: ${isDanger ? '#ed1b76' : '#249f9c'}">
+                                 ${score}s
                             </div>
                         </div>
                     `;
-                    grid.appendChild(item);
-
+                    g.appendChild(el);
+                    
                     setTimeout(() => {
-                        item.classList.remove('opacity-0', 'fade-enter');
-                        item.querySelector('.score-bar').style.width = `${Math.max(5, widthPercent)}%`; 
-                    }, index * (isSuspense ? 800 : 150));
+                        el.classList.remove('opacity-0', 'fade-enter');
+                        el.querySelector('.score-bar').style.width = `${Math.max(5, w)}%`;
+                    }, i * 200);
                 });
             }
         };
 
-        // --- PLAYER LOGIC ---
+        // --- PLAYER ---
         const player = {
-            isAlive: true,
-            lastActivityTime: 0,
-            lastShotSeen: 0,
-
-            init: function() {
+            isAlive: true, lastMove: 0, lastShotSeen: 0,
+            
+            init() {
                 $('inp-session-code').value = app.sessionId || '';
                 app.showView('view-player-join');
             },
 
-            join: function() {
+            join() {
                 const name = $('inp-player-name').value.trim().toUpperCase();
                 const code = $('inp-session-code').value.trim().toUpperCase();
-                if (!name || !code) return alert("Rellena todos los campos");
-                unlockAudio();
-                app.sessionId = code;
+                if(!name || !code) return alert("Datos incompletos");
                 
+                SoundManager.unlock(); // FORCE UNLOCK
+                app.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).set({
-                    name: name, sessionId: code, isAlive: true, lastScore: null,
+                    name, sessionId: code, isAlive: true, lastScore: null,
                     joinedAt: firebase.database.ServerValue.TIMESTAMP
                 }).then(() => app.showView('view-player-sensor')).catch(alert);
             },
 
-            requestPermissions: function() {
-                unlockAudio();
+            requestPermissions() {
+                SoundManager.unlock(); // FORCE UNLOCK AGAIN
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                    DeviceMotionEvent.requestPermission().then(r => r==='granted' ? this.enterGame() : alert("Permiso requerido")).catch(console.error);
-                } else this.enterGame();
+                    DeviceMotionEvent.requestPermission().then(r => r==='granted' ? this.enter() : alert("Permiso denegado")).catch(console.error);
+                } else this.enter();
             },
 
-            enterGame: function() {
+            enter() {
                 app.showView('view-player-game');
-                this.setupListeners();
-                this.startMotionMonitor();
+                this.setup();
+                this.monitor();
             },
 
-            setupListeners: function() {
+            setup() {
                 db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).on('value', s => {
                     const p = s.val();
-                    if (p) {
-                        if (this.isAlive && !p.isAlive) this.dieLocal();
+                    if(p) {
+                        if(this.isAlive && !p.isAlive) this.die();
                         this.isAlive = p.isAlive;
                         this.updateScreen();
                     }
                 });
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
                     const sess = s.val();
-                    if (sess) {
+                    if(sess) {
                         this.sessionData = sess;
-                        
-                        // Detectar disparo global para FLash
-                        if (sess.lastShot && sess.lastShot !== this.lastShotSeen) {
+                        if(sess.lastShot && sess.lastShot !== this.lastShotSeen) {
                             this.lastShotSeen = sess.lastShot;
-                            // Check if recent (last 3 seconds) to avoid flash on join
-                            if (Date.now() - sess.lastShot < 3000) {
-                                triggerFlash();
-                            }
+                            if(Date.now() - sess.lastShot < 3000) triggerFlash();
                         }
-
                         this.updateScreen();
-                        if (sess.state === 'measuring') this.measureReaction();
+                        if(sess.state === 'measuring') this.measure();
                     }
                 });
             },
 
-            startMotionMonitor: function() {
-                this.lastActivityTime = Date.now();
-                window.addEventListener('devicemotion', (e) => {
-                    let acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
-                    if (acc > 0.5) this.lastActivityTime = Date.now();
+            monitor() {
+                this.lastMove = Date.now();
+                window.addEventListener('devicemotion', e => {
+                    let acc = e.acceleration ? Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2) : 0;
+                    if(acc > 0.5) this.lastMove = Date.now();
                 });
                 setInterval(() => {
-                    if (!this.sessionData || !this.isAlive) return;
-                    if (this.sessionData.state === 'playing' && this.sessionData.musicPlaying) {
-                        const inactive = Date.now() - this.lastActivityTime;
-                        const warn = $('p-move-warning');
-                        if (inactive > 2000) {
-                            warn.classList.remove('hidden');
-                            if(navigator.vibrate) navigator.vibrate(200);
-                        } else warn.classList.add('hidden');
+                    if(!this.sessionData || !this.isAlive) return;
+                    if(this.sessionData.state === 'playing' && this.sessionData.musicPlaying) {
+                        $('p-move-warning').classList.toggle('hidden', (Date.now() - this.lastMove) < 2000);
+                        if((Date.now() - this.lastMove) > 2000 && navigator.vibrate) navigator.vibrate(200);
                     } else $('p-move-warning').classList.add('hidden');
                 }, 500);
             },
 
-            measureReaction: function() {
-                const startTime = Date.now();
-                let lastMoveTimestamp = 0; 
-                const THRESHOLD = 2.0;
+            measure() {
+                const start = Date.now();
+                let lastM = 0;
                 
-                const bar = $('p-measure-bar');
-                bar.style.transition = 'none';
-                bar.style.transform = 'scaleX(1)';
-                void bar.offsetWidth;
-                bar.style.transition = 'transform 2s linear'; 
-                bar.style.transform = 'scaleX(0)';
+                // Animation
+                const b = $('p-measure-bar');
+                b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
+                void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
 
-                const handler = (e) => {
+                const h = (e) => {
                     let acc = 0;
-                    if (e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
-                    else if (e.accelerationIncludingGravity) {
+                    if(e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
+                    else if(e.accelerationIncludingGravity) {
                         const g = e.accelerationIncludingGravity;
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
-                    if (acc > THRESHOLD) lastMoveTimestamp = Date.now() - startTime;
+                    if(acc > 2.0) lastM = Date.now() - start;
                 };
-
-                window.addEventListener('devicemotion', handler);
+                window.addEventListener('devicemotion', h);
                 setTimeout(() => {
-                    window.removeEventListener('devicemotion', handler);
-                    if (this.isAlive) {
-                        db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({ lastScore: lastMoveTimestamp / 1000 });
-                    }
+                    window.removeEventListener('devicemotion', h);
+                    if(this.isAlive) db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({ lastScore: lastM/1000 });
                 }, 2000);
             },
 
-            dieLocal: function() {
-                // Sound handled by host usually, but player needs feedback
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+            die() {
+                SoundManager.playGunshot(); // Try play local
+                if(navigator.vibrate) navigator.vibrate([200, 100, 500]);
             },
 
-            updateScreen: function() {
-                const sess = this.sessionData;
-                const container = $('view-player-game');
+            updateScreen() {
+                const s = this.sessionData;
+                const c = $('view-player-game');
+                ['p-screen-waiting','p-screen-active','p-screen-dead','p-screen-win'].forEach(id=>$(id).classList.add('hidden'));
+                c.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300";
+
+                if(!s) return;
                 
-                container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300";
-                $('p-screen-waiting').classList.add('hidden');
-                $('p-screen-active').classList.add('hidden');
-                $('p-screen-dead').classList.add('hidden');
-                $('p-screen-win').classList.add('hidden');
-
-                if (!sess) return;
-
-                if (sess.state === 'ended') {
-                    if (sess.winner !== 'NADIE') {
-                         $('p-screen-win').classList.remove('hidden');
-                         winAudio.play().catch(()=>{});
-                    }
+                if(s.state === 'ended') {
+                    if(s.winner !== 'NADIE') { $('p-screen-win').classList.remove('hidden'); SoundManager.playWin(); }
                     else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
+                if(!this.isAlive) { $('p-screen-dead').classList.remove('hidden'); return; }
+                if(s.state === 'waiting') { $('p-screen-waiting').classList.remove('hidden'); c.classList.add('bg-neutral-900'); return; }
 
-                if (!this.isAlive) {
-                    $('p-screen-dead').classList.remove('hidden');
-                    return;
-                }
-
-                if (sess.state === 'waiting') {
-                    $('p-screen-waiting').classList.remove('hidden');
-                    container.classList.add('bg-neutral-900');
-                    return;
-                }
-
-                if (sess.state === 'playing' || sess.state === 'measuring' || sess.state === 'round_result') {
+                if(s.state === 'playing' || s.state === 'measuring' || s.state === 'round_result') {
                     $('p-screen-active').classList.remove('hidden');
-                    const icon = $('p-icon-container');
-                    const mainText = $('p-status-text');
-                    const subText = $('p-sub-text');
-                    const barContainer = $('p-measure-bar-container');
-
-                    if (sess.musicPlaying) {
-                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-safe transition-colors duration-300";
-                        icon.innerHTML = `<i data-lucide="footprints" class="w-32 h-32 text-white fill-current animate-bounce"></i>`;
-                        mainText.innerText = "¡CORRE!";
-                        subText.innerText = "MANTENTE EN MOVIMIENTO";
-                        barContainer.classList.add('hidden');
-                    } else if (sess.state === 'measuring') {
-                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-measuring transition-colors duration-100";
-                        icon.innerHTML = `<i data-lucide="eye" class="w-32 h-32 text-white animate-pulse"></i>`;
-                        mainText.innerText = "QUIETO";
-                        subText.innerText = "NO TE MUEVAS";
-                        barContainer.classList.remove('hidden');
-                        if (navigator.vibrate) navigator.vibrate(50);
+                    const i = $('p-icon-container'), t = $('p-status-text'), st = $('p-sub-text'), bar = $('p-measure-bar-container');
+                    
+                    if(s.musicPlaying) {
+                        c.className = "h-full w-full flex flex-col items-center justify-center bg-[#249f9c]";
+                        i.innerHTML = '<i data-lucide="footprints" class="w-48 h-48 text-white animate-bounce"></i>';
+                        t.innerText = "¡CORRE!"; st.innerText = "MUÉVETE AHORA";
+                        bar.classList.add('hidden');
+                    } else if(s.state === 'measuring') {
+                        c.className = "h-full w-full flex flex-col items-center justify-center bg-[#ed1b76]";
+                        i.innerHTML = '<i data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>';
+                        t.innerText = "QUIETO"; st.innerText = "NO TE MUEVAS";
+                        bar.classList.remove('hidden');
+                        if(navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-neutral-900";
-                        icon.innerHTML = `<i data-lucide="bar-chart-2" class="w-32 h-32 text-gray-400"></i>`;
-                        mainText.innerText = "RESULTADOS";
-                        subText.innerText = "MIRA LA PANTALLA PRINCIPAL";
-                        barContainer.classList.add('hidden');
+                        c.className = "h-full w-full flex flex-col items-center justify-center bg-black";
+                        i.innerHTML = '<i data-lucide="bar-chart-2" class="w-48 h-48 text-gray-500"></i>';
+                        t.innerText = "RESULTADOS"; st.innerText = "MIRA LA PANTALLA";
+                        bar.classList.add('hidden');
                     }
                     lucide.createIcons();
                 }
