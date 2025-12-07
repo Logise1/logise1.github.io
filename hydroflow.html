@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HydroFlow Pro - Arcade Edition</title>
+    <title>HydroFlow Pro - Arcade Optimized</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
@@ -222,7 +222,7 @@
                 <div class="bg-slate-950/20 backdrop-blur-sm h-full w-full rounded-[20px] p-6 relative overflow-hidden">
                     <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-4 group-hover:scale-110 transition-transform"><i class="ph-fill ph-game-controller text-9xl text-white"></i></div>
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded uppercase border border-yellow-500">Arcade v2</span>
+                        <span class="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded uppercase border border-yellow-500">Arcade v3</span>
                     </div>
                     <h2 class="text-3xl font-black text-white mb-2 brand-font">Modo Arcade</h2>
                     <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Calibración auto + Minijuegos de reacción.</p>
@@ -289,7 +289,7 @@
         </div>
     </section>
 
-    <!-- ==================== VISTA CALIBRACIÓN (NUEVO) ==================== -->
+    <!-- ==================== VISTA CALIBRACIÓN ==================== -->
     <section id="view-calibration" class="view-section items-center justify-center p-6 bg-slate-950 z-[55]">
         <div class="text-center w-full max-w-sm">
             <i class="ph-fill ph-waves text-6xl text-sky-400 animate-pulse mb-6"></i>
@@ -434,9 +434,10 @@
             audioContext: null,
             analyser: null,
             microphone: null,
-            noiseFloor: 20, // Nivel de ruido base calibrado
+            dataArray: null, // OPTIMIZATION: Reusable array
+            noiseFloor: 20, 
             gameActive: false,
-            gameLoop: null // Intervalo específico del juego
+            gameLoopId: null // Usaremos requestAnimationFrame ID
         };
 
         const QUESTIONS = [
@@ -732,18 +733,21 @@
                 const source = window.STATE.audioContext.createMediaStreamSource(stream);
                 source.connect(window.STATE.analyser);
                 window.STATE.analyser.fftSize = 512;
+                // CRITICAL OPTIMIZATION: Create Uint8Array once
+                window.STATE.dataArray = new Uint8Array(window.STATE.analyser.frequencyBinCount);
             } else if(window.STATE.audioContext.state === 'suspended') {
                 window.STATE.audioContext.resume();
             }
         }
 
         function getVolume() {
-            if(!window.STATE.analyser) return 0;
-            const dataArray = new Uint8Array(window.STATE.analyser.frequencyBinCount);
-            window.STATE.analyser.getByteFrequencyData(dataArray);
+            if(!window.STATE.analyser || !window.STATE.dataArray) return 0;
+            // Use existing array instead of creating new one
+            window.STATE.analyser.getByteFrequencyData(window.STATE.dataArray);
             let sum = 0;
-            for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-            return sum / dataArray.length; 
+            // Optimize loop - step by 2 is precise enough for game
+            for(let i = 0; i < window.STATE.dataArray.length; i+=2) sum += window.STATE.dataArray[i];
+            return (sum * 2) / window.STATE.dataArray.length; 
         }
 
         function runCalibration() {
@@ -753,25 +757,28 @@
             const bar = document.getElementById('calibrationBar');
             const status = document.getElementById('calibrationStatus');
             
+            // Check context state before calibrating
+            if(window.STATE.audioContext.state === 'suspended') window.STATE.audioContext.resume();
+
             const calInterval = setInterval(() => {
                 const vol = getVolume();
                 sumVol += vol;
                 samples++;
-                bar.style.width = Math.min(100, (samples/60)*100) + '%'; // 60 samples aprox 3s
+                bar.style.width = Math.min(100, (samples/60)*100) + '%';
                 
                 if(samples >= 60) {
                     clearInterval(calInterval);
                     const avg = sumVol / samples;
-                    window.STATE.noiseFloor = Math.max(10, avg); // Set baseline
+                    window.STATE.noiseFloor = Math.max(10, avg); 
                     status.innerText = `Ruido Base: ${Math.floor(window.STATE.noiseFloor)}`;
                     setTimeout(() => goToTimeSelect(true), 1000);
                 }
             }, 50);
         }
 
-        // --- NEW GAME LOGIC ---
+        // --- NEW GAME LOGIC (OPTIMIZED WITH RequestAnimationFrame) ---
         function triggerRandomChallenge() {
-            // Resume Audio Context only when challenge starts
+            // Ensure context is awake
             if(window.STATE.audioContext && window.STATE.audioContext.state === 'suspended') {
                 window.STATE.audioContext.resume();
             }
@@ -779,7 +786,6 @@
             clearInterval(window.STATE.currentShower.interval);
             window.STATE.gameActive = true;
             
-            // Hide all game UIs
             ['gameUI_Tsunami', 'gameUI_Semaforo', 'gameUI_Bomb'].forEach(id => document.getElementById(id).classList.add('hidden'));
             
             const games = ['tsunami', 'semaforo', 'bomb'];
@@ -792,34 +798,45 @@
             else if(game === 'bomb') runBombGame();
         }
 
-        // GAME 1: TSUNAMI (Sustain/Intensity)
+        // --- GAME LOOP HANDLER ---
+        function startGameLoop(callback) {
+            if(window.STATE.gameLoopId) cancelAnimationFrame(window.STATE.gameLoopId);
+            
+            let lastTime = 0;
+            const loop = (timestamp) => {
+                if(!window.STATE.gameActive) return;
+                // Throttle to approx 30-60fps logic if needed, but rAF is naturally smooth
+                if(timestamp - lastTime > 30) { 
+                    callback();
+                    lastTime = timestamp;
+                }
+                window.STATE.gameLoopId = requestAnimationFrame(loop);
+            };
+            window.STATE.gameLoopId = requestAnimationFrame(loop);
+        }
+
+        // GAME 1: TSUNAMI
         function runTsunamiGame() {
             document.getElementById('gameUI_Tsunami').classList.remove('hidden');
             let waterLevel = 30;
             const bar = document.getElementById('tsunamiLevel');
             
-            // Optimized interval: 100ms instead of 30ms
-            window.STATE.gameLoop = setInterval(() => {
-                if(!window.STATE.gameActive) return;
+            startGameLoop(() => {
                 const vol = getVolume();
                 const threshold = window.STATE.noiseFloor * 1.5; 
                 
-                // Adjusted decay/boost for slower tick rate
-                waterLevel -= 1.5; 
-                
-                if(vol > threshold) {
-                    waterLevel += 6;
-                }
+                waterLevel -= 0.3; // Slower decay for rAF
+                if(vol > threshold) waterLevel += 1.5;
                 
                 waterLevel = Math.max(0, Math.min(100, waterLevel));
                 bar.style.height = waterLevel + '%';
                 
                 if(waterLevel >= 100) winGame();
-                if(waterLevel <= 0) { waterLevel = 20; } 
-            }, 100);
+                if(waterLevel <= 0) waterLevel = 20; 
+            });
         }
 
-        // GAME 2: SEMAFORO (Reaction)
+        // GAME 2: SEMAFORO
         function runSemaforoGame() {
             const ui = document.getElementById('gameUI_Semaforo');
             const light = document.getElementById('semaforoLight');
@@ -831,10 +848,10 @@
             light.className = "w-64 h-64 rounded-full bg-red-600 shadow-[0_0_100px_rgba(220,38,38,0.5)] flex items-center justify-center mb-12 transition-all duration-100";
             icon.className = "ph-fill ph-hand-palm text-6xl text-red-900";
             text.innerText = "ESPERA...";
+            text.className = "text-4xl font-black text-white text-center"; // Reset class
             
             let canReact = false;
             let reactionStart = 0;
-            
             const delay = 2000 + Math.random() * 3000;
             
             const timeout = setTimeout(() => {
@@ -847,8 +864,7 @@
                 ui.style.backgroundColor = '#14532d'; 
             }, delay);
             
-            // Optimized interval: 60ms instead of 20ms
-            window.STATE.gameLoop = setInterval(() => {
+            startGameLoop(() => {
                 if(!window.STATE.gameActive) { clearTimeout(timeout); return; }
                 const vol = getVolume();
                 
@@ -859,23 +875,20 @@
                 } else if(!canReact && vol > window.STATE.noiseFloor * 3.0) {
                     text.innerText = "¡Espera!";
                     text.classList.add("text-red-500");
-                    setTimeout(() => text.classList.remove("text-red-500"), 500);
+                    // No timeout needed here, rAF cleans up visual glitch naturally next frame if we toggle
                 }
-            }, 60);
+            });
         }
 
-        // GAME 3: BOMB (Precision)
+        // GAME 3: BOMB
         function runBombGame() {
             document.getElementById('gameUI_Bomb').classList.remove('hidden');
             const cursor = document.getElementById('bombCursor');
             let pos = 0;
             let direction = 1;
-            const speed = 4.0; // Adjusted for slower tick
+            const speed = 1.0; 
             
-            // Optimized interval: 50ms instead of 20ms
-            window.STATE.gameLoop = setInterval(() => {
-                if(!window.STATE.gameActive) return;
-                
+            startGameLoop(() => {
                 pos += direction * speed;
                 if(pos > 100 || pos < 0) direction *= -1;
                 cursor.style.left = pos + '%';
@@ -889,20 +902,19 @@
                         setTimeout(() => cursor.style.backgroundColor = 'white', 200);
                     }
                 }
-            }, 50);
+            });
         }
 
         function winGame() {
             window.STATE.gameActive = false;
-            clearInterval(window.STATE.gameLoop);
+            if(window.STATE.gameLoopId) cancelAnimationFrame(window.STATE.gameLoopId);
             
-            // Suspend Audio Context to save battery/CPU
-            if(window.STATE.audioContext && window.STATE.audioContext.state === 'running') {
-                window.STATE.audioContext.suspend();
-            }
+            // Suspend context to save resources
+            if(window.STATE.audioContext) window.STATE.audioContext.suspend();
             
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
             
+            // Web Speech API might need gesture to unlock on some browsers, handled by previous interactions
             const u = new SpeechSynthesisUtterance("¡Muy bien!"); u.lang='es-ES'; window.speechSynthesis.speak(u);
             
             setTimeout(() => {
@@ -914,12 +926,8 @@
 
         function skipGame() {
             window.STATE.gameActive = false;
-            if(window.STATE.gameLoop) clearInterval(window.STATE.gameLoop);
-            
-            // Suspend Audio Context
-            if(window.STATE.audioContext && window.STATE.audioContext.state === 'running') {
-                window.STATE.audioContext.suspend();
-            }
+            if(window.STATE.gameLoopId) cancelAnimationFrame(window.STATE.gameLoopId);
+            if(window.STATE.audioContext) window.STATE.audioContext.suspend();
 
             showView('view-timer');
             window.STATE.currentShower.interval = setInterval(tick, 1000);
@@ -1013,16 +1021,16 @@
         function cancelShower() { 
             clearInterval(window.STATE.currentShower.interval); 
             if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); 
-            if(window.STATE.audioContext) window.STATE.audioContext.close(); // Full cleanup
-            window.STATE.audioContext = null;
+            if(window.STATE.audioContext) { window.STATE.audioContext.close(); window.STATE.audioContext = null; }
+            window.STATE.dataArray = null; // Clean up huge array
             showView('view-dashboard'); 
         }
 
         async function endShower() {
             clearInterval(window.STATE.currentShower.interval);
             if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop());
-            if(window.STATE.audioContext) window.STATE.audioContext.close(); // Full cleanup
-            window.STATE.audioContext = null;
+            if(window.STATE.audioContext) { window.STATE.audioContext.close(); window.STATE.audioContext = null; }
+            window.STATE.dataArray = null; // Clean up
 
             const duration = Math.ceil(window.STATE.currentShower.totalElapsed / 60);
             if(duration < 2) {
