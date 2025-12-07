@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>GEOFINDERS: BATTLE ROYALE</title>
+    
+    <!-- Leaflet & Tailwind -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts: Fortnite Style -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@400;700;900&display=swap');
+
+        :root {
+            --fn-purple: #a855f7;
+            --fn-blue: #3b82f6;
+            --fn-yellow: #fbbf24;
+            --fn-dark: #1e1b4b;
+        }
+
+        html, body {
+            height: 100dvh; width: 100vw; overflow: hidden;
+            background-color: var(--fn-dark); color: white;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        /* --- FORTNITE UI STYLES --- */
+        .fn-font { font-family: 'Luckiest Guy', cursive; letter-spacing: 1px; }
+        
+        .fn-card {
+            background: rgba(30, 27, 75, 0.9);
+            border: 4px solid #4c1d95;
+            border-radius: 12px;
+            box-shadow: 0 4px 0 #312e81;
+        }
+
+        .fn-btn {
+            background: linear-gradient(to bottom, #fbbf24, #d97706);
+            border: none;
+            border-radius: 8px;
+            color: #451a03;
+            font-family: 'Luckiest Guy', cursive;
+            text-transform: uppercase;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+            box-shadow: 0 6px 0 #92400e, 0 10px 10px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+        .fn-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #92400e; }
+        
+        .fn-btn-blue {
+            background: linear-gradient(to bottom, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 6px 0 #1e40af, 0 10px 10px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        .fn-btn-blue:active { transform: translateY(6px); box-shadow: 0 0 0 #1e40af; }
+
+        /* --- MAP ROTATION CONTAINER --- */
+        #map-container {
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            transform-origin: center center;
+            will-change: transform;
+            transition: transform 0.2s linear; /* Suavizado */
+            z-index: 1;
+        }
+        #map { height: 100%; width: 100%; background: #2f343f; }
+        
+        /* Marcadores que rotan inversamente para mantenerse de pie */
+        .marker-counter-rotate { will-change: transform; transition: transform 0.2s linear; }
+
+        /* --- HITMARKER & FEEDBACK --- */
+        .hit-feedback {
+            position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            pointer-events: none; z-index: 100;
+            text-shadow: 2px 2px 0 #000;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .hit-feedback.show { transform: translate(-50%, -50%) scale(1); }
+
+        .dmg-flash { animation: flashRed 0.3s; }
+        @keyframes flashRed { 0% {background:rgba(255,0,0,0.5);} 100% {background:transparent;} }
+
+        /* Killfeed */
+        .killfeed-item {
+            background: rgba(0,0,0,0.6);
+            border-left: 4px solid var(--fn-yellow);
+            margin-bottom: 4px; padding: 4px 8px;
+            font-size: 11px; font-weight: bold;
+            border-radius: 0 4px 4px 0;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from {transform: translateX(100%); opacity:0;} to {transform: translateX(0); opacity:1;} }
+
+        /* Loot Marker Pulse */
+        .loot-pulse { animation: lootPop 1s infinite alternate; }
+        @keyframes lootPop { from {transform: scale(0.8); opacity:0.8;} to {transform: scale(1.2); opacity:1;} }
+    </style>
+</head>
+<body>
+
+    <!-- 1. PANTALLA DE INICIO (LOGIN) -->
+    <div id="screen-login" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-indigo-900 to-purple-800">
+        <div class="mb-8 transform rotate-[-2deg]">
+            <h1 class="text-6xl text-yellow-400 fn-font drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] stroke-black" style="-webkit-text-stroke: 2px black;">GEOFINDERS</h1>
+            <div class="text-white fn-font text-xl bg-purple-600 inline-block px-4 py-1 rounded shadow-lg transform rotate-[4deg]">BATTLE ROYALE</div>
+        </div>
+        
+        <div class="w-full max-w-sm space-y-4">
+            <input type="text" id="player-name" placeholder="NOMBRE DE GUERRERO" maxlength="12"
+                   class="w-full bg-white border-4 border-black text-black text-center text-xl font-black py-4 rounded-xl focus:outline-none focus:border-yellow-400 uppercase placeholder-gray-400 shadow-xl">
+            
+            <button onclick="APP.init()" class="w-full fn-btn py-4 text-2xl">¡JUGAR!</button>
+        </div>
+        <p class="mt-8 text-white/50 text-xs font-bold">SOLO GPS Y DATOS MÓVILES</p>
+    </div>
+
+    <!-- 2. LOBBY -->
+    <div id="screen-lobby" class="hidden fixed inset-0 z-[90] bg-indigo-950 flex flex-col p-4 overflow-y-auto">
+        <h3 class="text-3xl text-white fn-font mb-4 text-center">PREPARACIÓN</h3>
+        
+        <!-- CLASES -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div onclick="APP.selectClass('ASALTO')" id="cls-ASALTO" class="bg-blue-600 p-2 rounded-xl text-center cursor-pointer border-4 border-white shadow-lg transform scale-105">
+                <i class="fas fa-bomb text-2xl text-white mb-1"></i>
+                <div class="text-xs font-black text-white">ASALTO</div>
+            </div>
+            <div onclick="APP.selectClass('EXPLORADOR')" id="cls-EXPLORADOR" class="bg-indigo-800 p-2 rounded-xl text-center cursor-pointer border-4 border-indigo-900 opacity-70">
+                <i class="fas fa-binoculars text-2xl text-white mb-1"></i>
+                <div class="text-xs font-black text-white">EXPLORADOR</div>
+            </div>
+            <div onclick="APP.selectClass('MEDICO')" id="cls-MEDICO" class="bg-indigo-800 p-2 rounded-xl text-center cursor-pointer border-4 border-indigo-900 opacity-70">
+                <i class="fas fa-first-aid text-2xl text-white mb-1"></i>
+                <div class="text-xs font-black text-white">MÉDICO</div>
+            </div>
+        </div>
+
+        <!-- CONTROLES SALA -->
+        <div class="space-y-4">
+            <div class="fn-card p-4">
+                <h4 class="text-sm font-black text-purple-300 mb-2">CREAR PARTIDA</h4>
+                <div class="flex items-center gap-2 mb-3 bg-black/30 p-2 rounded">
+                    <input type="range" id="host-range" min="100" max="1000" value="300" step="50" class="flex-1">
+                    <span id="range-val" class="text-yellow-400 font-bold text-sm w-12 text-right">300m</span>
+                </div>
+                <button onclick="ROOMS.createRoom()" class="w-full fn-btn py-3 text-lg">CREAR</button>
+            </div>
+
+            <div class="fn-card p-4">
+                <h4 class="text-sm font-black text-blue-300 mb-2">UNIRSE</h4>
+                <div class="flex gap-2">
+                    <input type="number" id="room-code-input" placeholder="CÓDIGO" class="w-24 bg-white text-black font-black text-center rounded-lg p-2 border-2 border-black">
+                    <button onclick="ROOMS.joinRoom()" class="flex-1 fn-btn fn-btn-blue py-2 text-lg">ENTRAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. SALA DE ESPERA -->
+    <div id="screen-waiting" class="hidden fixed inset-0 z-[80] bg-indigo-900 flex flex-col items-center justify-center p-6 text-center">
+        <div class="mb-4 animate-bounce"><i class="fas fa-gamepad text-6xl text-yellow-400"></i></div>
+        <h2 class="text-7xl text-white fn-font mb-2 drop-shadow-md" id="lobby-room-code">----</h2>
+        <p class="text-sm text-purple-200 font-bold bg-purple-900/50 px-4 py-1 rounded-full mb-8">CÓDIGO DE SALA</p>
+        
+        <div id="players-list" class="w-full max-w-sm bg-black/20 rounded-xl p-4 mb-4 min-h-[150px] text-left space-y-2 overflow-y-auto"></div>
+
+        <div id="host-controls" class="hidden w-full max-w-sm">
+            <button onclick="GAME.triggerStart()" class="w-full fn-btn py-4 text-xl animate-pulse">¡LANZARSE!</button>
+        </div>
+        <div id="guest-controls" class="hidden text-sm font-bold text-white/50">ESPERANDO AL LÍDER...</div>
+    </div>
+
+    <!-- 4. JUEGO (HUD) -->
+    <div id="game-ui" class="hidden h-full w-full relative overflow-hidden">
+        
+        <!-- Overlay Daño -->
+        <div id="damage-overlay" class="absolute inset-0 pointer-events-none z-[60]"></div>
+        
+        <!-- Mensaje de Impacto -->
+        <div id="hit-msg" class="hit-feedback text-center">
+            <h1 class="text-5xl text-yellow-400 fn-font stroke-black" style="-webkit-text-stroke: 2px black;">¡LE HAS DADO!</h1>
+            <p class="text-white font-black text-xl drop-shadow-md">DAÑO CRÍTICO</p>
+        </div>
+
+        <!-- Killfeed -->
+        <div id="killfeed" class="absolute top-24 right-2 z-50 w-48 flex flex-col items-end pointer-events-none"></div>
+
+        <!-- HUD Superior -->
+        <div class="absolute top-0 w-full z-40 p-2 pt-[calc(env(safe-area-inset-top)+10px)] flex justify-between items-start pointer-events-none">
+            <!-- Fase -->
+            <div class="bg-black/50 backdrop-blur rounded-lg p-2 border-b-4 border-blue-500">
+                <div class="text-[10px] text-blue-300 font-black">ZONA</div>
+                <div id="mission-timer" class="text-xl font-black text-white font-mono">00:00</div>
+            </div>
+
+            <!-- Objetivo -->
+            <div class="bg-black/50 backdrop-blur rounded-lg p-2 border-b-4 border-green-500 text-right">
+                <div class="text-[10px] text-green-300 font-black">OBJETIVO</div>
+                <div id="dist-target" class="text-xl font-black text-white font-mono">---</div>
+            </div>
+        </div>
+
+        <!-- Alertas Centro -->
+        <div id="alert-box" class="absolute top-1/4 left-1/2 -translate-x-1/2 w-full text-center hidden pointer-events-none z-50">
+            <div class="bg-red-600 text-white py-2 px-8 transform -skew-x-12 inline-block border-4 border-white shadow-xl">
+                <h2 class="text-2xl font-black fn-font transform skew-x-12" id="alert-title">¡TORMENTA!</h2>
+            </div>
+        </div>
+
+        <!-- HUD Inferior -->
+        <div class="absolute bottom-0 w-full p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex justify-between items-end pointer-events-none">
+            
+            <!-- Salud y Escudo -->
+            <div class="w-40 pointer-events-auto">
+                <div class="bg-black/60 p-2 rounded-xl backdrop-blur border-2 border-white/20">
+                    <div class="flex justify-between items-baseline mb-1">
+                        <span class="text-3xl font-black italic text-green-400" id="health-val">100</span>
+                        <span class="text-xs font-bold text-gray-400">PV</span>
+                    </div>
+                    <div class="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
+                        <div id="health-bar" class="h-full bg-green-500 w-full transition-all duration-300"></div>
+                    </div>
+                    <div class="mt-1 text-[10px] font-bold text-yellow-400" id="class-display">CLASE: ASALTO</div>
+                </div>
+            </div>
+
+            <!-- Botón Disparar -->
+            <button id="shoot-btn" onclick="GAME.shoot()" 
+                class="pointer-events-auto w-24 h-24 rounded-full border-4 border-white bg-red-500 active:bg-red-600 active:scale-95 transition-all flex items-center justify-center shadow-xl group">
+                <i class="fas fa-crosshairs text-4xl text-white group-active:rotate-90 transition-transform duration-100"></i>
+            </button>
+        </div>
+
+        <!-- MAPA ROTATORIO -->
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+        <!-- Puntero del Jugador (Fijo en el centro) -->
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+            <div class="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[20px] border-b-white drop-shadow-md"></div>
+        </div>
+    </div>
+
+    <!-- 5. PANTALLA DE MUERTE -->
+    <div id="death-screen" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-red-900/90 text-center p-8 backdrop-blur">
+        <h1 class="text-6xl text-white fn-font mb-2 drop-shadow-lg transform rotate-[-3deg]">¡ELIMINADO!</h1>
+        <p class="text-white font-bold text-lg mb-8 bg-black/30 px-4 py-1 rounded">SUERTE LA PRÓXIMA VEZ</p>
+        
+        <div class="bg-white text-black p-6 rounded-xl w-full max-w-xs mb-8 shadow-2xl transform rotate-[2deg]">
+            <div class="text-xs font-black text-gray-500 uppercase">CAUSA</div>
+            <div class="text-3xl font-black text-red-600 mt-1" id="death-cause">DISPARO</div>
+        </div>
+
+        <button onclick="GAME.enableSpectator()" class="fn-btn fn-btn-blue py-3 px-8 text-lg w-full max-w-xs mb-4">ESPECTADOR</button>
+        <button onclick="location.reload()" class="text-white/70 text-sm font-bold underline">SALIR AL MENÚ</button>
+    </div>
+
+    <!-- LOGICA -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, get, update, onValue, child, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMYTnk-CljdWENtDQqqKUBmQzBQuoxYPo",
+            authDomain: "hello-74404.firebaseapp.com",
+            databaseURL: "https://hello-74404-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "hello-74404",
+            storageBucket: "hello-74404.firebasestorage.app",
+            messagingSenderId: "781363507648",
+            appId: "1:781363507648:web:5c7b871f11b9010bfd1825"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- AUDIO ---
+        const AUDIO = {
+            synth: null, poly: null,
+            init: async () => {
+                await Tone.start();
+                AUDIO.synth = new Tone.Synth().toDestination();
+                AUDIO.poly = new Tone.PolySynth(Tone.Synth).toDestination();
+                AUDIO.membrane = new Tone.MembraneSynth().toDestination();
+            },
+            play: (type) => {
+                try {
+                    const now = Tone.now();
+                    switch(type) {
+                        case 'shot': 
+                            // Sonido "Pew Pew" laser cartoon
+                            const osc = new Tone.Oscillator(800, "sawtooth").toDestination();
+                            osc.start().stop("+0.1");
+                            osc.frequency.rampTo(200, 0.1);
+                            break;
+                        case 'hit': 
+                            // Sonido satisfactorio de "crítico"
+                            AUDIO.poly.triggerAttackRelease(["C5", "E5"], "16n");
+                            break;
+                        case 'damage':
+                            // Golpe grave
+                            AUDIO.membrane.triggerAttackRelease("C2", "8n");
+                            break;
+                        case 'kill': 
+                            // Fanfarria corta
+                            AUDIO.poly.triggerAttackRelease(["C4", "E4", "G4", "C5"], "8n");
+                            break;
+                        case 'loot': 
+                            AUDIO.poly.triggerAttackRelease(["G5", "B5"], "16n");
+                            break;
+                    }
+                } catch(e) {}
+            }
+        };
+
+        // --- ESTADO ---
+        window.STATE = {
+            userId: 'u_' + Math.floor(Math.random()*99999),
+            name: "Jugador",
+            class: 'ASALTO',
+            health: 100,
+            isDead: false,
+            pos: { lat: 0, lng: 0, head: 0 },
+            roomId: null, isHost: false, phase: 'LOBBY',
+            players: {}, loot: {},
+            
+            target: null, targetReached: false,
+            storm: { start: 0, centerLat: 0, centerLng: 0, initialRange: 300 },
+            
+            map: null, markers: {}, layers: {storm:null, target:null},
+            isDraggingMap: false
+        };
+
+        // --- LÓGICA APP ---
+        window.APP = {
+            init: async () => {
+                const name = document.getElementById('player-name').value.trim().toUpperCase();
+                if(!name) return alert("¡PONTE UN NOMBRE!");
+                STATE.name = name;
+                
+                await AUDIO.init();
+
+                // Permiso iOS Brújula
+                if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+                    try { await DeviceOrientationEvent.requestPermission(); } catch(e){}
+                }
+
+                GPS.start();
+                COMPASS.init();
+                
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-lobby').classList.remove('hidden');
+
+                // Listener Slider
+                document.getElementById('host-range').oninput = (e) => 
+                    document.getElementById('range-val').innerText = e.target.value + "m";
+
+                setInterval(GAME.loop, 1000);
+            },
+            selectClass: (cls) => {
+                STATE.class = cls;
+                // Reset styles
+                ['ASALTO','EXPLORADOR','MEDICO'].forEach(c => {
+                    const el = document.getElementById('cls-'+c);
+                    el.classList.add('opacity-70');
+                    el.classList.remove('scale-105', 'shadow-lg', 'bg-blue-600', 'bg-indigo-800');
+                    el.classList.add('bg-indigo-800');
+                });
+                // Set active
+                const el = document.getElementById('cls-'+cls);
+                el.classList.remove('opacity-70', 'bg-indigo-800');
+                el.classList.add('bg-blue-600', 'scale-105', 'shadow-lg');
+            }
+        };
+
+        // --- SALAS ---
+        window.ROOMS = {
+            createRoom: async () => {
+                const code = Math.floor(1000 + Math.random()*9000).toString();
+                STATE.roomId = code; STATE.isHost = true;
+                const range = parseInt(document.getElementById('host-range').value);
+
+                await set(ref(db, 'rooms/'+code), {
+                    hostId: STATE.userId, status: 'LOBBY', range: range, createdAt: Date.now(),
+                    loot: ROOMS.genLoot(range)
+                });
+                ROOMS.joinMyRoom(code);
+            },
+            genLoot: (range) => {
+                let l = {};
+                const types = ['VIDA', 'VIDA', 'ESCUDO', 'RADAR'];
+                for(let i=0; i<12; i++) {
+                    const type = types[Math.floor(Math.random()*types.length)];
+                    l['box_'+i] = { 
+                        type: type, taken: false,
+                        dLat: (Math.random()-0.5)*(range/111320)*1.2,
+                        dLng: (Math.random()-0.5)*(range/111320)*1.2
+                    };
+                }
+                return l;
+            },
+            joinRoom: async () => {
+                const code = document.getElementById('room-code-input').value.trim();
+                if(code.length < 4) return;
+                const snap = await get(child(ref(db), 'rooms/'+code));
+                if(!snap.exists()) return alert("¡SALA NO ENCONTRADA!");
+                STATE.roomId = code; STATE.isHost = false;
+                ROOMS.joinMyRoom(code);
+            },
+            joinMyRoom: async (code) => {
+                const pRef = ref(db, `rooms/${code}/players/${STATE.userId}`);
+                onDisconnect(pRef).update({ status: 'OFFLINE' });
+                await set(pRef, { 
+                    name: STATE.name, health: 100, class: STATE.class, 
+                    status: 'ALIVE', lat:0, lng:0, lastHitBy: null 
+                });
+
+                document.getElementById('screen-lobby').classList.add('hidden');
+                document.getElementById('screen-waiting').classList.remove('hidden');
+                document.getElementById('lobby-room-code').innerText = code;
+                
+                if(STATE.isHost) document.getElementById('host-controls').classList.remove('hidden');
+                else document.getElementById('guest-controls').classList.remove('hidden');
+                
+                ROOMS.subscribe();
+            },
+            subscribe: () => {
+                onValue(ref(db, `rooms/${STATE.roomId}`), (snap) => {
+                    const data = snap.val();
+                    if(!data) return;
+
+                    STATE.loot = data.loot || {};
+                    STATE.storm.start = data.stormStart || 0;
+                    STATE.storm.centerLat = data.centerLat;
+                    STATE.storm.centerLng = data.centerLng;
+                    STATE.storm.initialRange = data.range;
+
+                    if(data.status === 'DEPLOY' && STATE.phase === 'LOBBY') {
+                        GAME.deploy(data.range, data.centerLat, data.centerLng);
+                    }
+
+                    // Sync Jugadores
+                    const oldPlayers = STATE.players || {};
+                    STATE.players = data.players || {};
+                    
+                    // Killfeed & Sync Personal
+                    if(STATE.players[STATE.userId]) {
+                        const me = STATE.players[STATE.userId];
+                        
+                        // Detectar si me han pegado (Sync DB -> Local)
+                        if(me.lastHitBy && (!oldPlayers[STATE.userId] || oldPlayers[STATE.userId].lastHitBy !== me.lastHitBy)) {
+                            // Alguien me pegó (el id es timestamp)
+                            GAME.takeDamage(10, true); // Visual feedback de recibir golpe
+                        }
+                        
+                        // Sincronizar vida real
+                        if(me.health < STATE.health) {
+                             STATE.health = me.health; 
+                             GAME.updateHUD();
+                        }
+
+                        if(me.status === 'DEAD' && !STATE.isDead) GAME.die();
+                    }
+
+                    // Detectar muertes globales para Killfeed
+                    Object.keys(STATE.players).forEach(uid => {
+                        const p = STATE.players[uid];
+                        if(p.status === 'DEAD' && oldPlayers[uid]?.status === 'ALIVE') {
+                            GAME.showKill(p.name);
+                        }
+                    });
+
+                    ROOMS.updateLobbyList();
+                });
+            },
+            updateLobbyList: () => {
+                if(STATE.phase !== 'LOBBY') return;
+                const list = document.getElementById('players-list');
+                list.innerHTML = Object.values(STATE.players).map(p => 
+                    `<div class="flex justify-between border-b border-white/10 pb-2">
+                        <span class="text-white font-bold">${p.name}</span>
+                        <span class="text-yellow-400 text-xs font-black bg-black/40 px-2 rounded">${p.class}</span>
+                    </div>`
+                ).join('');
+            }
+        };
+
+        // --- JUEGO ---
+        window.GAME = {
+            loop: () => {
+                if(STATE.phase !== 'GAME' && STATE.phase !== 'DEPLOY') return;
+                if(STATE.isDead) return;
+
+                const now = Date.now();
+                
+                // 1. Subir Posición (Cada 1.5s)
+                if(now % 1500 < 1000 && STATE.pos.lat !== 0) {
+                    update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {
+                        lat: STATE.pos.lat, lng: STATE.pos.lng
+                    });
+                }
+
+                // 2. Regeneración Médico
+                if(STATE.class === 'MEDICO' && now % 4000 < 50 && STATE.health < 100) {
+                    STATE.health = Math.min(100, STATE.health + 2);
+                    GAME.updateHUD();
+                    update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {health:STATE.health});
+                }
+
+                GAME.updateStorm();
+                GAME.checkLoot();
+                
+                // Actualizar rotación del mapa si no se está arrastrando
+                if(!STATE.isDraggingMap && STATE.map) {
+                     const heading = STATE.pos.head;
+                     const container = document.getElementById('map-container');
+                     // Rotar el contenedor en contra de la brújula para que el Norte gire
+                     container.style.transform = `translate(-25%, -25%) rotate(${-heading}deg)`;
+                     
+                     // Contra-rotar los marcadores para que se lean bien (Iconos, texto)
+                     document.querySelectorAll('.leaflet-marker-icon, .leaflet-popup-content-wrapper').forEach(el => {
+                         el.style.transform = `rotate(${heading}deg)`;
+                     });
+                }
+            },
+            deploy: (range, cLat, cLng) => {
+                STATE.phase = 'DEPLOY';
+                document.getElementById('screen-waiting').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                document.getElementById('class-display').innerText = `CLASE: ${STATE.class}`;
+
+                // Init Mapa
+                if(!STATE.map) {
+                    STATE.map = L.map('map', {
+                        zoomControl:false, attributionControl:false, 
+                        zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false
+                    }).setView([cLat, cLng], 17);
+                    
+                    // Mapa Oscuro Limpio
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:20}).addTo(STATE.map);
+                    
+                    // Eventos Dragging para pausar rotación
+                    STATE.map.on('dragstart', () => STATE.isDraggingMap = true);
+                    STATE.map.on('dragend', () => STATE.isDraggingMap = false);
+                }
+
+                // Generar Meta
+                const angle = Math.random() * Math.PI * 2;
+                const dist = range * 0.5; // 50% del radio
+                const dLat = (dist*Math.cos(angle))/111320;
+                const dLng = (dist*Math.sin(angle))/(111320*Math.cos(cLat*Math.PI/180));
+                STATE.target = {lat: cLat+dLat, lng: cLng+dLng};
+
+                const tIcon = L.divIcon({className:'text-green-500 text-4xl animate-bounce drop-shadow-md', html:'<i class="fas fa-flag-checkered"></i>'});
+                STATE.layers.target = L.marker([STATE.target.lat, STATE.target.lng], {icon:tIcon}).addTo(STATE.map);
+                L.circle([STATE.target.lat, STATE.target.lng], {color:'#22c55e', radius:25, fillOpacity:0.3}).addTo(STATE.map);
+
+                // Loot
+                Object.entries(STATE.loot).forEach(([id, l]) => {
+                    if(l.taken) return;
+                    const lat = cLat + l.dLat;
+                    const lng = cLng + l.dLng;
+                    
+                    let color = '#fbbf24'; // Amarillo
+                    if(l.type === 'VIDA') color = '#22c55e';
+                    if(l.type === 'ESCUDO') color = '#3b82f6';
+
+                    const m = L.circleMarker([lat,lng], {
+                        radius: 8, color: 'white', weight: 2, fillColor: color, fillOpacity: 1,
+                        className: 'loot-pulse'
+                    }).addTo(STATE.map);
+                    
+                    STATE.markers[id] = {marker:m, lat:lat, lng:lng, type:l.type};
+                });
+
+                GAME.alert("¡DESPLIEGUE!", "LLEGA A LA BANDERA");
+            },
+            shoot: () => {
+                if(STATE.health <= 0) return;
+                
+                // Efecto visual local inmediato
+                AUDIO.play('shot');
+                const btn = document.getElementById('shoot-btn');
+                btn.classList.add('scale-90');
+                setTimeout(()=>btn.classList.remove('scale-90'), 100);
+
+                let hit = false;
+                const DMG = STATE.class === 'ASALTO' ? 20 : 12; // Daño base
+
+                Object.entries(STATE.players).forEach(([uid, p]) => {
+                    if(uid === STATE.userId || p.status !== 'ALIVE' || !p.lat) return;
+                    
+                    const d = MAP.dist(STATE.pos.lat, STATE.pos.lng, p.lat, p.lng);
+                    if(d > 80) return; // Rango máximo 80m
+
+                    const bearing = MAP.bearing(STATE.pos.lat, STATE.pos.lng, p.lat, p.lng);
+                    let diff = Math.abs(bearing - STATE.pos.head);
+                    if(diff > 180) diff = 360 - diff;
+                    
+                    // Cono de disparo más generoso (30 grados)
+                    // Si está muy cerca (<15m), es casi imposible fallar (60 grados)
+                    const cone = d < 15 ? 60 : 30;
+                    
+                    if(diff < cone) {
+                        hit = true;
+                        // Calcular daño final
+                        const finalDmg = Math.floor(DMG * (1 - (d/100))); // Menos daño a distancia
+                        
+                        // Actualizar DB Enemigo
+                        update(ref(db, `rooms/${STATE.roomId}/players/${uid}`), { 
+                            health: Math.max(0, p.health - finalDmg),
+                            lastHitBy: Date.now() // Trigger vibración enemigo
+                        });
+                        
+                        // Feedback Tirador
+                        if(navigator.vibrate) navigator.vibrate(50);
+                        AUDIO.play('hit');
+                        
+                        // Texto visual "LE HAS DADO"
+                        const fb = document.getElementById('hit-msg');
+                        fb.classList.add('show');
+                        setTimeout(() => fb.classList.remove('show'), 800);
+                    }
+                });
+                
+                if(!hit && navigator.vibrate) navigator.vibrate(10); // Vibración pequeña fallo
+            },
+            takeDamage: (amt, vibrate=false) => {
+                // Flash Rojo
+                const overlay = document.getElementById('damage-overlay');
+                overlay.classList.add('dmg-flash');
+                setTimeout(()=>overlay.classList.remove('dmg-flash'), 300);
+
+                if(vibrate) {
+                    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    AUDIO.play('damage');
+                }
+            },
+            updateStorm: () => {
+                if(!STATE.storm.start) return;
+                const elapsed = (Date.now() - STATE.storm.start) / 1000;
+                
+                // Lógica Simplificada Fases Fortnite
+                // 0-2min: Looting/Correr -> 2-5min: Cierra Zona 1 -> etc
+                let r = STATE.storm.initialRange;
+                let phaseName = "PREPARACIÓN";
+                let timer = 0;
+
+                if(elapsed < 120) {
+                    phaseName = "¡CORRE A ZONA!"; timer = 120 - elapsed;
+                    // Check Meta
+                    if(STATE.phase === 'DEPLOY' && !STATE.targetReached) {
+                         const d = MAP.dist(STATE.pos.lat, STATE.pos.lng, STATE.target.lat, STATE.target.lng);
+                         document.getElementById('dist-target').innerText = Math.round(d) + " M";
+                         if(d < 25) {
+                             STATE.targetReached = true;
+                             STATE.phase = 'GAME';
+                             STATE.map.removeLayer(STATE.layers.target);
+                             GAME.alert("¡LLEGASTE!", "ARMAS ACTIVAS");
+                             AUDIO.play('loot');
+                         }
+                    } else {
+                        document.getElementById('dist-target').innerText = "LIBRE";
+                    }
+                } else {
+                    if(STATE.phase === 'DEPLOY' && !STATE.targetReached) {
+                        GAME.takeDamage(100); // Muerte por no llegar
+                        STATE.phase = 'GAME';
+                    }
+                    if(elapsed < 300) { phaseName = "CERRANDO (1)"; r=150; timer=300-elapsed; }
+                    else if(elapsed < 450) { phaseName = "CERRANDO (2)"; r=80; timer=450-elapsed; }
+                    else { phaseName = "MUERTE SÚBITA"; r=30; timer=0; }
+                }
+
+                document.getElementById('mission-timer').innerText = `${Math.floor(timer/60)}:${Math.floor(timer%60).toString().padStart(2,'0')}`;
+                
+                // Dibujar Tormenta
+                if(!STATE.layers.storm) STATE.layers.storm = L.circle([STATE.storm.centerLat, STATE.storm.centerLng], {color:'#8b5cf6', weight: 4, fill: false}).addTo(STATE.map);
+                STATE.layers.storm.setRadius(r);
+
+                // Daño Tormenta
+                if(STATE.phase === 'GAME') {
+                    const d = MAP.dist(STATE.pos.lat, STATE.pos.lng, STATE.storm.centerLat, STATE.storm.centerLng);
+                    if(d > r) {
+                        GAME.takeDamage(0, false); // Solo flash visual suave
+                        GAME.alert("¡TORMENTA!", "¡SAL DE AHÍ!");
+                        STATE.health -= 0.5; // Daño constante suave
+                        GAME.updateHUD();
+                        update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {health:STATE.health});
+                    }
+                }
+            },
+            checkLoot: () => {
+                Object.entries(STATE.markers).forEach(([id, obj]) => {
+                    if(STATE.loot[id]?.taken) {
+                        STATE.map.removeLayer(obj.marker);
+                        delete STATE.markers[id];
+                        return;
+                    }
+                    if(MAP.dist(STATE.pos.lat, STATE.pos.lng, obj.lat, obj.lng) < 15) {
+                        update(ref(db, `rooms/${STATE.roomId}/loot/${id}`), {taken:true});
+                        let txt = "";
+                        if(obj.type === 'VIDA') { STATE.health = Math.min(100, STATE.health+50); txt="+50 VIDA"; }
+                        else if(obj.type === 'ESCUDO') { STATE.health = 150; txt="SOBRECARGA ESCUDO"; } // Max 150
+                        else { txt = "RADAR ACTIVO"; }
+                        
+                        GAME.updateHUD();
+                        GAME.alert("¡BOTÍN!", txt);
+                        AUDIO.play('loot');
+                        update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {health:STATE.health});
+                    }
+                });
+            },
+            updateHUD: () => {
+                document.getElementById('health-val').innerText = Math.round(STATE.health);
+                document.getElementById('health-bar').style.width = Math.min(100, STATE.health) + "%";
+            },
+            alert: (title, msg) => {
+                const b = document.getElementById('alert-box');
+                document.getElementById('alert-title').innerText = title;
+                b.classList.remove('hidden');
+                setTimeout(()=>b.classList.add('hidden'), 2500);
+            },
+            showKill: (name) => {
+                const f = document.getElementById('killfeed');
+                const d = document.createElement('div');
+                d.className = 'killfeed-item';
+                d.innerHTML = `<span class="text-white">${name}</span> <span class="text-red-400">ELIMINADO</span>`;
+                f.appendChild(d);
+                setTimeout(()=>d.remove(), 4000);
+            },
+            die: () => {
+                STATE.isDead = true;
+                AUDIO.play('kill');
+                if(navigator.vibrate) navigator.vibrate(1000);
+                update(ref(db, `rooms/${STATE.roomId}/players/${STATE.userId}`), {status:'DEAD', health:0});
+                document.getElementById('death-screen').classList.remove('hidden');
+                document.getElementById('game-ui').classList.add('grayscale');
+            },
+            triggerStart: () => {
+                 update(ref(db, `rooms/${STATE.roomId}`), {
+                    status: 'DEPLOY',
+                    centerLat: STATE.pos.lat, centerLng: STATE.pos.lng,
+                    stormStart: Date.now()
+                });
+            },
+            enableSpectator: () => {
+                document.getElementById('death-screen').classList.add('hidden');
+                STATE.map.dragging.enable();
+                // En espectador no rotamos el mapa
+                STATE.isDraggingMap = true; 
+                document.getElementById('map-container').style.transform = 'none';
+            }
+        };
+
+        // --- SENSORES ---
+        window.GPS = {
+            start: () => {
+                navigator.geolocation.watchPosition(p => {
+                    STATE.pos.lat = p.coords.latitude;
+                    STATE.pos.lng = p.coords.longitude;
+                    
+                    if(STATE.map && !STATE.isDead) {
+                        // El jugador siempre está en el centro del mapa visualmente
+                        // pero movemos el centro de Leaflet
+                        STATE.map.setView([STATE.pos.lat, STATE.pos.lng]); 
+                    }
+                }, null, {enableHighAccuracy:true});
+            }
+        };
+
+        window.COMPASS = {
+            init: () => {
+                if(window.DeviceOrientationEvent) {
+                    window.addEventListener('deviceorientation', e => {
+                        let h = e.webkitCompassHeading || Math.abs(e.alpha - 360);
+                        if(!e.webkitCompassHeading && e.alpha) h = (360 - e.alpha); 
+                        if(h) STATE.pos.head = h;
+                    });
+                }
+            }
+        };
+        
+        // UTILS
+        window.MAP = {
+            dist: (lat1,lon1,lat2,lon2) => {
+                const R=6371e3; 
+                const f1=lat1*Math.PI/180, f2=lat2*Math.PI/180;
+                const Df=(lat2-lat1)*Math.PI/180, Dl=(lon2-lon1)*Math.PI/180;
+                const a = Math.sin(Df/2)**2 + Math.cos(f1)*Math.cos(f2)*Math.sin(Dl/2)**2;
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            },
+            bearing: (lat1,lon1,lat2,lon2) => {
+                const toRad = Math.PI/180; const toDeg = 180/Math.PI;
+                const y = Math.sin((lon2-lon1)*toRad) * Math.cos(lat2*toRad);
+                const x = Math.cos(lat1*toRad)*Math.sin(lat2*toRad) - Math.sin(lat1*toRad)*Math.cos(lat2*toRad)*Math.cos((lon2-lon1)*toRad);
+                return (Math.atan2(y, x) * toDeg + 360) % 360;
+            }
+        };
+    </script>
+</body>
+</html>
