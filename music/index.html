@@ -396,7 +396,9 @@
                 let maxScore = -1;
 
                 alivePlayers.forEach(([pid, p]) => {
-                    const score = p.lastScore || 10;
+                    // Si score es undefined, asumimos que no se movio (0) o que hubo error (-1)
+                    // Asumimos 0 si no hay score
+                    const score = p.lastScore || 0;
                     if (score > maxScore) {
                         maxScore = score;
                         worstPlayerId = pid;
@@ -405,8 +407,9 @@
 
                 // Mostrar resultados, eliminar al peor y decidir
                 setTimeout(() => {
-                    // Eliminar al peor si hay más de 1 jugador
-                    if (worstPlayerId && maxScore > 10 && alivePlayers.length > 1) { 
+                    // Eliminar al peor si hay más de 1 jugador y se movió algo (mayor que 0.1s para evitar ruido)
+                    // Si todos tienen 0.00s, nadie muere en esta ronda.
+                    if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
                         gunshotAudio.play().catch(()=>{});
                     }
@@ -418,7 +421,7 @@
                         
                         Object.entries(this.players).forEach(([pid, p]) => {
                             // Si es el que acabamos de matar, lo ignoramos aunque el objeto local aun diga true
-                            if (pid === worstPlayerId) return;
+                            if (pid === worstPlayerId && maxScore > 0.05) return;
                             if (p.isAlive) {
                                 currentAliveCount++;
                                 lastSurvivorName = p.name;
@@ -541,11 +544,16 @@
                 players.sort((a, b) => b.lastScore - a.lastScore);
 
                 players.forEach((p, index) => {
-                    const score = p.lastScore ? p.lastScore.toFixed(2) : "10.00";
-                    const isWorst = index === 0; 
+                    const score = p.lastScore ? p.lastScore.toFixed(2) : "0.00";
+                    const isWorst = index === 0 && parseFloat(score) > 0.05; 
                     
-                    const barColor = score > 15 ? 'bg-red-600' : 'bg-green-600';
-                    const widthPercent = Math.min(100, (score / 20) * 100);
+                    // Escala de color: > 1.0s rojo, < 0.5s verde
+                    let barColor = 'bg-green-600';
+                    if (parseFloat(score) > 1.0) barColor = 'bg-red-600';
+                    else if (parseFloat(score) > 0.5) barColor = 'bg-yellow-500';
+
+                    // Ancho de barra: máximo 3 segundos para llenar la barra
+                    const widthPercent = Math.min(100, (parseFloat(score) / 3.0) * 100);
 
                     const item = document.createElement('div');
                     item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg";
@@ -646,8 +654,12 @@
             },
 
             measureReaction: function() {
-                let maxAccel = 0;
-                let samples = 0;
+                // MEDIDA REAL: Tiempo desde inicio hasta último movimiento
+                // Si no se mueve, 0. Si se mueve hasta el final, 2.0s
+                
+                const startTime = Date.now();
+                let lastMoveTimestamp = 0; // Relative to start
+                const THRESHOLD = 2.0; // Umbral de sensibilidad (ajustar si es necesario)
 
                 const handler = (event) => {
                     let acc = 0;
@@ -655,30 +667,30 @@
                         acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
                     } else if (event.accelerationIncludingGravity) {
                         const g = event.accelerationIncludingGravity;
+                        // Estimación simple quitando gravedad
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
-                    if (acc > maxAccel) maxAccel = acc;
-                    samples++;
+                    
+                    if (acc > THRESHOLD) {
+                        lastMoveTimestamp = Date.now() - startTime;
+                    }
                 };
 
                 window.addEventListener('devicemotion', handler);
 
+                // Medimos durante 2 segundos (coincide con el timeout del host de 3s para recolección)
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', handler);
                     
-                    let baseScore = 10 + Math.random() * 2; 
-                    let movementPenalty = maxAccel * 2; 
-                    
-                    let finalScore = baseScore + movementPenalty;
-                    if (finalScore > 20) finalScore = 20;
-                    if (finalScore < 10) finalScore = 10;
+                    // Convertir a segundos reales
+                    let finalScore = lastMoveTimestamp / 1000;
                     
                     if (this.isAlive) {
                         db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({
                             lastScore: finalScore
                         });
                     }
-                }, 1500);
+                }, 2000);
             },
 
             dieLocal: function() {
