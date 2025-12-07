@@ -192,13 +192,16 @@
         // --- UTILIDADES ---
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
+        
+        // Sonidos
+        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3']; // Deben estar en la misma carpeta o usar URLs completas
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
+        
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
         // Audio
-        let audioCtx;
-        let oscillatorNode;
+        let currentMusic = null;
         const gunshotAudio = new Audio(GUNSHOT_URL);
 
         // --- LÓGICA DE APLICACIÓN CENTRAL ---
@@ -345,9 +348,11 @@
             scheduleToggle: function() {
                 if (this.gameState !== 'playing') return;
 
-                // Tiempos aleatorios
-                const min = this.musicPlaying ? 2000 : 2500; // Mínimo tiempo sonando/parado
-                const max = this.musicPlaying ? 5000 : 4000;
+                // Tiempos más largos como solicitado
+                // Música sonando: entre 5 y 12 segundos (antes era 2-5)
+                // Música parada (silencio): entre 3 y 6 segundos
+                const min = this.musicPlaying ? 5000 : 3000; 
+                const max = this.musicPlaying ? 12000 : 6000;
                 const duration = Math.random() * (max - min) + min;
 
                 setTimeout(() => {
@@ -374,43 +379,25 @@
             },
 
             startMusic: function() {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (oscillatorNode) return;
+                // Elegir canción aleatoria
+                const randomSong = SONGS[Math.floor(Math.random() * SONGS.length)];
+                
+                if (currentMusic) {
+                    currentMusic.pause();
+                    currentMusic = null;
+                }
 
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                
-                // Tono de alarma rápida estilo "Squid Game"
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(900, audioCtx.currentTime + 0.1);
-                
-                // Modulación rápida
-                const lfo = audioCtx.createOscillator();
-                lfo.frequency.value = 10;
-                const lfoGain = audioCtx.createGain();
-                lfoGain.gain.value = 300;
-                lfo.connect(lfoGain);
-                lfoGain.connect(osc.frequency);
-                lfo.start();
-
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                
-                oscillatorNode = { osc, lfo, gain };
+                currentMusic = new Audio(randomSong);
+                currentMusic.loop = true;
+                currentMusic.play().catch(e => console.log("Error reproduciendo música (interacción requerida):", e));
             },
 
             stopMusic: function() {
-                if (oscillatorNode) {
-                    oscillatorNode.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
-                    setTimeout(() => {
-                        try {
-                            oscillatorNode.osc.stop();
-                            oscillatorNode.lfo.stop();
-                        } catch(e){}
-                        oscillatorNode = null;
-                    }, 50);
+                if (currentMusic) {
+                    currentMusic.pause();
+                    currentMusic.currentTime = 0;
+                    // No ponemos currentMusic a null para poder reutilizarlo si quisiéramos, 
+                    // pero en startMusic creamos uno nuevo para cambiar de canción.
                 }
             },
 
@@ -436,10 +423,17 @@
             },
 
             resetGame: function() {
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
-                    state: 'waiting',
-                    musicPlaying: false
+                // Al volver al lobby, revivimos a todos
+                const updates = {};
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
+                
+                // Revivir jugadores
+                Object.keys(this.players).forEach(pid => {
+                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
                 });
+
+                db.ref().update(updates);
             },
 
             updateUI: function() {
@@ -648,8 +642,8 @@
                     // Debug
                     //$('debug-acc').innerText = acc.toFixed(2);
 
-                    // Umbral (ajustar sensibilidad)
-                    if (acc > 2.0) {
+                    // Umbral (ajustar sensibilidad) - BAJADO para aumentar sensibilidad
+                    if (acc > 0.8) {
                         this.die();
                     }
                 });
