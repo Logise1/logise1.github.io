@@ -54,9 +54,15 @@
         /* Transiciones suaves */
         .fade-enter { opacity: 0; transform: translateY(20px); }
         .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.5s, transform 0.5s; }
+
+        /* Flash Effect */
+        #flash-overlay { transition: opacity 0.1s ease-out; }
     </style>
 </head>
 <body class="bg-gradient-main text-white h-screen w-screen overflow-hidden">
+
+    <!-- FLASH OVERLAY (Global) -->
+    <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-overlay pointer-events-none opacity-0"></div>
 
     <!-- VISTA: SELECCIÓN DE ROL -->
     <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 space-y-12 relative z-10">
@@ -149,7 +155,7 @@
                     <!-- Filas generadas por JS -->
                 </div>
 
-                <!-- Overlay de Eliminación -->
+                <!-- Overlay de Eliminación Host -->
                 <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/80 flex items-center justify-center backdrop-blur-sm hidden">
                     <div class="text-center animate-shake">
                         <i data-lucide="skull" class="w-48 h-48 text-red-600 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"></i>
@@ -308,6 +314,13 @@
         const gunshotAudio = new Audio(GUNSHOT_URL);
         const winAudio = new Audio(WIN_URL);
 
+        // Flash Effect
+        const triggerFlash = () => {
+            const el = $('flash-overlay');
+            el.classList.remove('opacity-0');
+            setTimeout(() => el.classList.add('opacity-0'), 150);
+        };
+
         const unlockAudio = () => {
             [gunshotAudio, winAudio].forEach(audio => {
                 audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
@@ -454,7 +467,6 @@
 
             startNewRound: function() {
                 // Borrar tiempos anteriores de TODOS (vivos y muertos)
-                // Esto garantiza que los muertos no tengan un 'lastScore' valido en la DB
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
@@ -510,8 +522,6 @@
                 let maxScore = -1;
 
                 alivePlayers.forEach(([pid, p]) => {
-                    // Si lastScore es null, significa que no envió dato (error de conexión?), asumimos 0 por seguridad o ignoramos
-                    // Si ponemos 0 es seguro.
                     const score = (p.lastScore === null || p.lastScore === undefined) ? 0 : p.lastScore;
                     if (score > maxScore) {
                         maxScore = score;
@@ -526,13 +536,21 @@
                 this.wait(() => {
                     // Eliminar si se movió (umbral 0.05s)
                     if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
-                        // Efecto visual en host
+                        // Efecto visual en host y Trigger Global Flash
                         const loserName = this.players[worstPlayerId].name;
                         $('eliminated-name').innerText = loserName;
                         $('eliminated-overlay').classList.remove('hidden');
                         
-                        db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
+                        // DB Updates
+                        const updates = {};
+                        updates[`artifacts/${APP_ID}/public/data/players/${worstPlayerId}/isAlive`] = false;
+                        // Timestamp para que todos flasheen
+                        updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/lastShot`] = firebase.database.ServerValue.TIMESTAMP;
+                        
+                        db.ref().update(updates);
+                        
                         gunshotAudio.play().catch(()=>{});
+                        triggerFlash(); // Host local flash
                     }
 
                     this.wait(() => {
@@ -644,7 +662,6 @@
                 $('eliminated-overlay').classList.add('hidden');
 
                 // FILTRADO CLAVE: Solo mostrar jugadores vivos Y que hayan enviado score (no null)
-                // Los muertos tienen lastScore = null porque lo reseteamos al inicio de la ronda y ellos no enviaron nada.
                 const players = Object.values(this.players).filter(p => p.isAlive && p.lastScore !== null && p.lastScore !== undefined); 
                 players.sort((a, b) => b.lastScore - a.lastScore);
 
@@ -654,13 +671,11 @@
                 players.forEach((p, index) => {
                     const score = p.lastScore ? parseFloat(p.lastScore).toFixed(2) : "0.00";
                     
-                    // Colores barra
                     let barColor = 'bg-gradient-to-r from-emerald-500 to-green-600';
                     let numScore = parseFloat(score);
-                    if (numScore > 1.0) barColor = 'bg-gradient-to-r from-red-600 to-red-800'; // Peligro
-                    else if (numScore > 0.5) barColor = 'bg-gradient-to-r from-yellow-400 to-orange-500'; // Warning
+                    if (numScore > 1.0) barColor = 'bg-gradient-to-r from-red-600 to-red-800'; 
+                    else if (numScore > 0.5) barColor = 'bg-gradient-to-r from-yellow-400 to-orange-500'; 
 
-                    // Ancho relativo (Max 3s)
                     const widthPercent = Math.min(100, (numScore / 2.5) * 100); 
 
                     const item = document.createElement('div');
@@ -676,10 +691,9 @@
                     `;
                     grid.appendChild(item);
 
-                    // Cascada
                     setTimeout(() => {
                         item.classList.remove('opacity-0', 'fade-enter');
-                        item.querySelector('.score-bar').style.width = `${Math.max(5, widthPercent)}%`; // Minimo 5% visual
+                        item.querySelector('.score-bar').style.width = `${Math.max(5, widthPercent)}%`; 
                     }, index * (isSuspense ? 800 : 150));
                 });
             }
@@ -689,6 +703,7 @@
         const player = {
             isAlive: true,
             lastActivityTime: 0,
+            lastShotSeen: 0,
 
             init: function() {
                 $('inp-session-code').value = app.sessionId || '';
@@ -734,6 +749,16 @@
                     const sess = s.val();
                     if (sess) {
                         this.sessionData = sess;
+                        
+                        // Detectar disparo global para FLash
+                        if (sess.lastShot && sess.lastShot !== this.lastShotSeen) {
+                            this.lastShotSeen = sess.lastShot;
+                            // Check if recent (last 3 seconds) to avoid flash on join
+                            if (Date.now() - sess.lastShot < 3000) {
+                                triggerFlash();
+                            }
+                        }
+
                         this.updateScreen();
                         if (sess.state === 'measuring') this.measureReaction();
                     }
@@ -764,13 +789,11 @@
                 let lastMoveTimestamp = 0; 
                 const THRESHOLD = 2.0;
                 
-                // Animación barra
                 const bar = $('p-measure-bar');
                 bar.style.transition = 'none';
                 bar.style.transform = 'scaleX(1)';
-                // Force reflow
                 void bar.offsetWidth;
-                bar.style.transition = 'transform 2s linear'; // 2s duration matches host wait (aprox)
+                bar.style.transition = 'transform 2s linear'; 
                 bar.style.transform = 'scaleX(0)';
 
                 const handler = (e) => {
@@ -793,7 +816,7 @@
             },
 
             dieLocal: function() {
-                gunshotAudio.play().catch(e => {});
+                // Sound handled by host usually, but player needs feedback
                 if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
             },
 
@@ -801,7 +824,6 @@
                 const sess = this.sessionData;
                 const container = $('view-player-game');
                 
-                // Reset basic classes
                 container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300";
                 $('p-screen-waiting').classList.add('hidden');
                 $('p-screen-active').classList.add('hidden');
@@ -851,7 +873,6 @@
                         barContainer.classList.remove('hidden');
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        // Resultados
                         container.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden bg-neutral-900";
                         icon.innerHTML = `<i data-lucide="bar-chart-2" class="w-32 h-32 text-gray-400"></i>`;
                         mainText.innerText = "RESULTADOS";
