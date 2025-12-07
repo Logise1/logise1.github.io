@@ -470,14 +470,26 @@
             clearTimers() { this.timers.forEach(clearTimeout); this.timers = []; },
 
             renderPlayers() {
-                const list = $('host-players-list'); list.innerHTML = '';
-                const pArr = Object.values(this.players);
-                $('host-lobby-count').innerText = pArr.length;
-                $('host-alive-count').innerText = pArr.filter(p=>p.isAlive).length;
-                $('host-dead-count').innerText = pArr.filter(p=>!p.isAlive).length;
-                $('btn-start-game').disabled = pArr.length === 0;
+                const list = $('host-players-list'); 
+                if (list) list.innerHTML = '';
+                
+                const playersArr = Object.values(this.players);
+                
+                const lobbyCount = $('host-lobby-count');
+                if (lobbyCount) lobbyCount.innerText = playersArr.length;
+                
+                const aliveCount = $('host-alive-count');
+                if (aliveCount) aliveCount.innerText = playersArr.filter(p=>p.isAlive).length;
+                
+                const deadCount = $('host-dead-count');
+                if (deadCount) deadCount.innerText = playersArr.filter(p=>!p.isAlive).length;
+                
+                const btnStart = $('btn-start-game');
+                if (btnStart) btnStart.disabled = playersArr.length === 0;
 
-                pArr.forEach(p => {
+                if (!list) return;
+
+                playersArr.forEach(p => {
                     const d = document.createElement('div');
                     const color = p.isAlive ? 'border-[#249f9c] text-[#249f9c]' : 'border-red-900 text-red-900 line-through';
                     d.className = `px-3 py-1 border rounded font-mono text-sm ${color}`;
@@ -540,8 +552,11 @@
                         SoundManager.playGunshot();
                         triggerFlash();
                         
-                        $('eliminated-name').innerText = this.players[worstId].name;
-                        $('eliminated-overlay').classList.remove('hidden');
+                        const elName = $('eliminated-name');
+                        if (elName) elName.innerText = this.players[worstId].name;
+                        
+                        const elOverlay = $('eliminated-overlay');
+                        if (elOverlay) elOverlay.classList.remove('hidden');
                         
                         const updates = {};
                         updates[`artifacts/${APP_ID}/public/data/players/${worstId}/isAlive`] = false;
@@ -552,7 +567,8 @@
                     }
 
                     this.wait(() => {
-                        $('eliminated-overlay').classList.add('hidden');
+                        const elOverlay = $('eliminated-overlay');
+                        if (elOverlay) elOverlay.classList.add('hidden');
                         
                         // Re-check win after kill
                         let currentAlive = 0, lastName = "";
@@ -582,7 +598,19 @@
                 SoundManager.stopBGM();
                 SoundManager.playWin();
                 this.updateDB({ state: 'ended', musicPlaying: false, winner: winner });
-                this.wait(() => this.startGame(), 8000); // Auto restart loop
+                this.wait(() => this.resetGame(), 8000); // Changed from startGame to resetGame
+            },
+
+            resetGame() {
+                this.clearTimers();
+                const updates = {};
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
+                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
+                Object.keys(this.players).forEach(pid => {
+                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
+                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
+                });
+                db.ref().update(updates);
             },
 
             updateUI() {
