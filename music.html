@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Juego del Semáforo Musical</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase SDKs (Solo App y Firestore, sin Auth) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            overflow: hidden; /* Prevent scrolling during game */
+        }
+        
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 50px rgba(239, 68, 68, 1); }
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 50px rgba(34, 197, 94, 1); }
+        }
+
+        .status-red { animation: pulse-red 1s infinite; }
+        .status-green { animation: pulse-green 1s infinite; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- CONFIGURACIÓN FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMYTnk-CljdWENtDQqqKUBmQzBQuoxYPo",
+            authDomain: "hello-74404.firebaseapp.com",
+            databaseURL: "https://hello-74404-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "hello-74404",
+            storageBucket: "hello-74404.firebasestorage.app",
+            messagingSenderId: "781363507648",
+            appId: "1:781363507648:web:5c7b871f11b9010bfd1825"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // --- GESTIÓN DE ID LOCAL (SIN AUTH) ---
+        // Generamos un ID único y lo guardamos en el navegador
+        const getLocalUserId = () => {
+            const STORAGE_KEY = 'music_game_uid';
+            let uid = localStorage.getItem(STORAGE_KEY);
+            if (!uid) {
+                uid = 'user_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+                localStorage.setItem(STORAGE_KEY, uid);
+            }
+            return uid;
+        };
+
+        const LOCAL_USER_ID = getLocalUserId();
+
+        // Constantes del juego
+        const APP_ID = "music-game-v1"; // ID único para las colecciones de Firestore
+        const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
+        
+        const { useState, useEffect, useRef, useMemo } = React;
+        const { LucideMonitor, LucideSmartphone, LucideSkull, LucideTrophy, LucidePlay, LucideActivity } = lucide;
+
+        // --- COMPONENTE PRINCIPAL ---
+        function App() {
+            // Usamos un objeto simple en lugar del objeto User de Firebase Auth
+            const [user] = useState({ uid: LOCAL_USER_ID });
+            const [role, setRole] = useState(null); // 'screen' o 'player'
+            const [sessionId, setSessionId] = useState(null);
+
+            useEffect(() => {
+                // Comprobar parámetros de URL para unirse automáticamente
+                const params = new URLSearchParams(window.location.search);
+                const urlSession = params.get('session');
+                const urlRole = params.get('role');
+                
+                if (urlSession) setSessionId(urlSession);
+                if (urlRole) setRole(urlRole);
+            }, []);
+
+            if (!role) {
+                return <RoleSelection onSelect={(r) => setRole(r)} user={user} />;
+            }
+
+            if (role === 'screen') {
+                return <ScreenView user={user} />;
+            } else {
+                return <PlayerView user={user} initialSessionId={sessionId} />;
+            }
+        }
+
+        // --- SELECCIÓN DE ROL ---
+        function RoleSelection({ onSelect, user }) {
+            const createSession = () => {
+                // Generar un ID de sesión simple de 4 caracteres
+                const newSessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
+                // Actualizar URL sin recargar para que sea fácil de copiar si es necesario
+                const newUrl = `${window.location.pathname}?session=${newSessionId}&role=screen`;
+                window.history.pushState({path: newUrl}, '', newUrl);
+                
+                onSelect('screen');
+            };
+
+            return (
+                <div className="flex flex-col items-center justify-center h-screen bg-neutral-900 p-4 space-y-8">
+                    <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-red-500 pixel-font text-center mb-8">
+                        LUZ ROJA<br/>MUSICAL
+                    </h1>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                        <button 
+                            onClick={createSession}
+                            className="flex flex-col items-center justify-center p-8 bg-neutral-800 hover:bg-neutral-700 border-2 border-pink-500 rounded-xl transition-all hover:scale-105 group"
+                        >
+                            <i data-lucide="monitor" className="w-16 h-16 text-pink-500 mb-4 group-hover:animate-bounce"></i>
+                            <span className="text-2xl font-bold">SOY LA PANTALLA</span>
+                            <span className="text-sm text-gray-400 mt-2">Para la TV / Ordenador</span>
+                        </button>
+
+                        <button 
+                            onClick={() => onSelect('player')}
+                            className="flex flex-col items-center justify-center p-8 bg-neutral-800 hover:bg-neutral-700 border-2 border-green-500 rounded-xl transition-all hover:scale-105 group"
+                        >
+                            <i data-lucide="smartphone" className="w-16 h-16 text-green-500 mb-4 group-hover:animate-bounce"></i>
+                            <span className="text-2xl font-bold">SOY JUGADOR</span>
+                            <span className="text-sm text-gray-400 mt-2">Para el Móvil</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- VISTA PANTALLA (HOST) ---
+        function ScreenView({ user }) {
+            // El ID de sesión viene de la URL porque lo pusimos en RoleSelection
+            const params = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session');
+            
+            const [players, setPlayers] = useState([]);
+            const [gameStatus, setGameStatus] = useState({ state: 'waiting', musicPlaying: false, startTime: 0 });
+            const [winner, setWinner] = useState(null);
+
+            // Audio Context para generar sonido en la TV
+            const audioCtxRef = useRef(null);
+            const oscillatorRef = useRef(null);
+
+            // Setup Firestore Listeners
+            useEffect(() => {
+                if (!sessionId) return;
+
+                // Referencia al documento de la sesión
+                const sessionRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('sessions').doc(sessionId);
+
+                // Crear sesión si no existe
+                sessionRef.set({
+                    created: firebase.firestore.FieldValue.serverTimestamp(),
+                    host: user.uid,
+                    state: 'waiting',
+                    musicPlaying: false
+                }, { merge: true });
+
+                // Escuchar cambios en la sesión
+                const unsubSession = sessionRef.onSnapshot(doc => {
+                    const data = doc.data();
+                    if (data) {
+                        setGameStatus({
+                            state: data.state || 'waiting',
+                            musicPlaying: data.musicPlaying || false,
+                            startTime: data.startTime || 0
+                        });
+                        if (data.winner) setWinner(data.winner);
+                    }
+                });
+
+                // Escuchar jugadores
+                const playersRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('players');
+
+                const unsubPlayers = playersRef.onSnapshot(snapshot => {
+                    const sessionPlayers = [];
+                    snapshot.forEach(doc => {
+                        const p = doc.data();
+                        if (p.sessionId === sessionId) {
+                            sessionPlayers.push({ id: doc.id, ...p });
+                        }
+                    });
+                    setPlayers(sessionPlayers);
+                });
+
+                return () => {
+                    unsubSession();
+                    unsubPlayers();
+                    stopMusic(); // Limpieza audio
+                };
+            }, [sessionId]);
+
+            // Lógica del Audio
+            const startMusic = () => {
+                if (!audioCtxRef.current) {
+                    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (oscillatorRef.current) return;
+
+                const osc = audioCtxRef.current.createOscillator();
+                const gain = audioCtxRef.current.createGain();
+                
+                // Melodía tipo "luz roja, luz verde" (simple tono rápido)
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, audioCtxRef.current.currentTime);
+                osc.frequency.linearRampToValueAtTime(880, audioCtxRef.current.currentTime + 0.1);
+                
+                // LFO para modular
+                const lfo = audioCtxRef.current.createOscillator();
+                lfo.type = 'sawtooth';
+                lfo.frequency.value = 8; // Velocidad del trino
+                const lfoGain = audioCtxRef.current.createGain();
+                lfoGain.gain.value = 500;
+                
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc.frequency);
+                lfo.start();
+
+                osc.connect(gain);
+                gain.connect(audioCtxRef.current.destination);
+                osc.start();
+                
+                oscillatorRef.current = { osc, lfo, gain };
+            };
+
+            const stopMusic = () => {
+                if (oscillatorRef.current) {
+                    const { osc, lfo, gain } = oscillatorRef.current;
+                    // Fade out rápido para evitar "click"
+                    gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.015);
+                    setTimeout(() => {
+                        osc.stop();
+                        lfo.stop();
+                        osc.disconnect();
+                    }, 50);
+                    oscillatorRef.current = null;
+                }
+            };
+
+            // Sincronizar audio con estado
+            useEffect(() => {
+                if (gameStatus.musicPlaying) {
+                    startMusic();
+                } else {
+                    stopMusic();
+                }
+            }, [gameStatus.musicPlaying]);
+
+            // Bucle del juego (Controlado por la Pantalla)
+            useEffect(() => {
+                let timeoutId;
+                
+                if (gameStatus.state === 'playing') {
+                    // Si está sonando, paramos en un momento aleatorio entre 2 y 6 segundos
+                    // Si está parada, arrancamos en un momento aleatorio entre 2 y 5 segundos
+                    const minTime = gameStatus.musicPlaying ? 2000 : 2000;
+                    const maxTime = gameStatus.musicPlaying ? 6000 : 5000;
+                    const duration = Math.random() * (maxTime - minTime) + minTime;
+
+                    timeoutId = setTimeout(() => {
+                        toggleMusic(!gameStatus.musicPlaying);
+                    }, duration);
+                }
+
+                return () => clearTimeout(timeoutId);
+            }, [gameStatus.musicPlaying, gameStatus.state]);
+
+            const toggleMusic = async (shouldPlay) => {
+                const sessionRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('sessions').doc(sessionId);
+                
+                await sessionRef.update({
+                    musicPlaying: shouldPlay,
+                    lastStop: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            };
+
+            const startGame = async () => {
+                // Revivir a todos los jugadores
+                const batch = db.batch();
+                players.forEach(p => {
+                    const ref = db.collection('artifacts').doc(APP_ID)
+                        .collection('public').doc('data')
+                        .collection('players').doc(p.id);
+                    batch.update(ref, { isAlive: true });
+                });
+                
+                const sessionRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('sessions').doc(sessionId);
+                
+                batch.update(sessionRef, { 
+                    state: 'playing', 
+                    musicPlaying: true,
+                    winner: null
+                });
+
+                await batch.commit();
+            };
+            
+            const stopGame = async () => {
+                 const sessionRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('sessions').doc(sessionId);
+                 await sessionRef.update({ state: 'waiting', musicPlaying: false });
+            };
+
+            // Comprobar ganador (si solo queda 1 vivo)
+            useEffect(() => {
+                if (gameStatus.state === 'playing' && players.length > 0) {
+                    const alive = players.filter(p => p.isAlive);
+                    if (alive.length === 1 && players.length > 1) {
+                        // Tenemos un ganador
+                        const sessionRef = db.collection('artifacts').doc(APP_ID)
+                        .collection('public').doc('data')
+                        .collection('sessions').doc(sessionId);
+                        
+                        sessionRef.update({
+                            state: 'ended',
+                            musicPlaying: false,
+                            winner: alive[0].name
+                        });
+                    } else if (alive.length === 0 && players.length > 0) {
+                         // Todos muertos
+                         const sessionRef = db.collection('artifacts').doc(APP_ID)
+                        .collection('public').doc('data')
+                        .collection('sessions').doc(sessionId);
+                        sessionRef.update({ state: 'ended', musicPlaying: false, winner: "NADIE" });
+                    }
+                }
+            }, [players, gameStatus.state]);
+
+            // Generar URL para QR
+            const joinUrl = `${window.location.origin}${window.location.pathname}?session=${sessionId}&role=player`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(joinUrl)}&bgcolor=171717&color=ec4899`;
+
+            return (
+                <div className="flex flex-col h-screen bg-neutral-900 overflow-hidden relative">
+                    {/* Header */}
+                    <div className="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-neutral-900/80 backdrop-blur">
+                        <div className="text-xl font-bold text-pink-500">SALA: {sessionId}</div>
+                        <div className="flex space-x-4">
+                            <div className="flex items-center text-green-500">
+                                <i data-lucide="activity" className="w-5 h-5 mr-2"></i>
+                                {players.filter(p => p.isAlive).length} Vivos
+                            </div>
+                            <div className="flex items-center text-red-500">
+                                <i data-lucide="skull" className="w-5 h-5 mr-2"></i>
+                                {players.filter(p => !p.isAlive).length} Eliminados
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col items-center justify-center p-4">
+                        
+                        {/* Waiting State */}
+                        {gameStatus.state === 'waiting' && (
+                            <div className="text-center animate-fade-in">
+                                <div className="bg-white p-4 rounded-xl shadow-2xl shadow-pink-500/20 mb-8 inline-block">
+                                    <img src={qrUrl} alt="QR Code" className="w-64 h-64" />
+                                </div>
+                                <h2 className="text-2xl font-bold mb-4">Escanea para unirte</h2>
+                                <p className="text-gray-400 mb-8">{players.length} jugadores conectados</p>
+                                
+                                <button 
+                                    onClick={startGame}
+                                    disabled={players.length === 0}
+                                    className="px-8 py-4 bg-gradient-to-r from-pink-600 to-red-600 rounded-full text-2xl font-bold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/50"
+                                >
+                                    EMPEZAR JUEGO
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Playing State */}
+                        {gameStatus.state === 'playing' && (
+                            <div className={`w-full h-full flex items-center justify-center transition-colors duration-200 ${gameStatus.musicPlaying ? 'bg-green-900/20' : 'bg-red-900/20'}`}>
+                                <div className={`relative w-80 h-80 rounded-full border-8 flex items-center justify-center transition-all duration-300 ${gameStatus.musicPlaying ? 'border-green-500 status-green bg-green-900' : 'border-red-600 status-red bg-red-900'}`}>
+                                    {gameStatus.musicPlaying ? (
+                                        <div className="text-center">
+                                            <i data-lucide="play" className="w-32 h-32 text-green-400 ml-4"></i>
+                                            <p className="text-3xl font-black mt-4 text-green-400">¡CORRE!</p>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <div className="w-32 h-32 mx-auto bg-white rounded-full flex items-center justify-center animate-pulse">
+                                                <div className="w-10 h-24 bg-black rounded-full"></div>
+                                                <div className="w-24 h-10 bg-black rounded-full absolute"></div>
+                                            </div>
+                                            <p className="text-3xl font-black mt-4 text-red-500">¡QUIETO!</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Ended State */}
+                        {gameStatus.state === 'ended' && (
+                            <div className="text-center">
+                                <i data-lucide="trophy" className="w-32 h-32 text-yellow-500 mx-auto mb-6 animate-bounce"></i>
+                                <h2 className="text-4xl font-bold text-yellow-500 mb-2">GANADOR</h2>
+                                <p className="text-6xl font-black text-white mb-8">{winner || "Nadie"}</p>
+                                <button 
+                                    onClick={stopGame}
+                                    className="px-6 py-3 bg-neutral-700 hover:bg-neutral-600 rounded-lg font-bold"
+                                >
+                                    Volver al Lobby
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Player Grid Footer */}
+                    <div className="h-32 bg-neutral-800 border-t border-neutral-700 p-4 overflow-y-auto">
+                        <div className="flex flex-wrap gap-2 justify-center">
+                            {players.map(p => (
+                                <div key={p.id} className={`px-3 py-1 rounded-full text-sm font-bold flex items-center ${p.isAlive ? 'bg-green-900 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-400 border border-red-900 line-through'}`}>
+                                    {p.name}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- VISTA JUGADOR (CLIENTE) ---
+        function PlayerView({ user, initialSessionId }) {
+            const [inputSession, setInputSession] = useState(initialSessionId || '');
+            const [name, setName] = useState('');
+            const [joined, setJoined] = useState(false);
+            const [gameState, setGameState] = useState(null); // { state, musicPlaying, lastStop }
+            const [isAlive, setIsAlive] = useState(true);
+            const [sensorsActive, setSensorsActive] = useState(false);
+            const [debugInfo, setDebugInfo] = useState(0); // Para ver aceleración
+
+            const audioRef = useRef(new Audio(GUNSHOT_URL));
+            const accelerometerRef = useRef({ x: 0, y: 0, z: 0 });
+            const lastUpdateRef = useRef(Date.now());
+            
+            // Unirse a la sesión
+            const joinSession = async () => {
+                if (!name.trim() || !inputSession.trim()) return;
+                const sid = inputSession.trim().toUpperCase();
+
+                // Crear/Actualizar jugador
+                const playerRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('players').doc(user.uid);
+
+                await playerRef.set({
+                    sessionId: sid,
+                    name: name.substring(0, 10), // Max 10 chars
+                    isAlive: true,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                setJoined(true);
+                setSensorsActive(false); // Esperar permiso explícito para iOS
+            };
+
+            // Escuchar cambios del juego
+            useEffect(() => {
+                if (!joined) return;
+
+                // Escuchar estado global del juego
+                const sessionRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('sessions').doc(inputSession);
+
+                const unsubSession = sessionRef.onSnapshot(doc => {
+                    const data = doc.data();
+                    if (data) {
+                        setGameState(data);
+                        // Si el juego se reinicia (pasa a waiting), revivimos localmente
+                        if (data.state === 'waiting') setIsAlive(true);
+                    }
+                });
+
+                // Escuchar mi propio estado (por si el servidor me mata o reinicia)
+                const myRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('players').doc(user.uid);
+                
+                const unsubMe = myRef.onSnapshot(doc => {
+                    const data = doc.data();
+                    if (data) setIsAlive(data.isAlive);
+                });
+
+                return () => {
+                    unsubSession();
+                    unsubMe();
+                };
+            }, [joined, inputSession, user.uid]);
+
+
+            // PERMISOS DE ACELERÓMETRO (iOS 13+ requires requestPermission)
+            const requestSensorPermission = async () => {
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    try {
+                        const response = await DeviceMotionEvent.requestPermission();
+                        if (response === 'granted') {
+                            setSensorsActive(true);
+                        } else {
+                            alert("Permiso denegado. No podrás jugar.");
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                } else {
+                    setSensorsActive(true); // Android / Old iOS
+                }
+            };
+
+            // LÓGICA DE DETECCIÓN DE MOVIMIENTO
+            useEffect(() => {
+                if (!sensorsActive || !isAlive || !gameState || gameState.state !== 'playing') return;
+
+                const handleMotion = (event) => {
+                    // Si hay música, no importa si nos movemos
+                    if (gameState.musicPlaying) return;
+
+                    // LÓGICA DE 400MS DE GRACIA
+                    if (gameState.lastStop) {
+                        const stopTime = gameState.lastStop.toMillis ? gameState.lastStop.toMillis() : Date.now(); 
+                        const now = Date.now();
+                        
+                        // Si han pasado menos de 400ms desde el stop, ignoramos movimiento
+                        if (now - stopTime < 400) return; 
+                    }
+
+                    // Calcular aceleración
+                    let acc = 0;
+                    if (event.acceleration) {
+                        acc = Math.sqrt(
+                            Math.pow(event.acceleration.x || 0, 2) + 
+                            Math.pow(event.acceleration.y || 0, 2) + 
+                            Math.pow(event.acceleration.z || 0, 2)
+                        );
+                    } else if (event.accelerationIncludingGravity) {
+                        const g = event.accelerationIncludingGravity;
+                         acc = Math.sqrt(g.x*g.x + g.y*g.y + g.z*g.z) - 9.8; 
+                         acc = Math.abs(acc);
+                    }
+
+                    setDebugInfo(acc.toFixed(2));
+
+                    if (acc > 2.5) { 
+                        eliminatePlayer();
+                    }
+                };
+
+                window.addEventListener('devicemotion', handleMotion);
+                return () => window.removeEventListener('devicemotion', handleMotion);
+            }, [sensorsActive, isAlive, gameState]);
+
+            const eliminatePlayer = async () => {
+                try {
+                    audioRef.current.currentTime = 0;
+                    audioRef.current.play();
+                    if (navigator.vibrate) navigator.vibrate(500);
+                } catch(e) { console.log("Audio play error", e); }
+
+                setIsAlive(false);
+
+                // Actualizar DB
+                const playerRef = db.collection('artifacts').doc(APP_ID)
+                    .collection('public').doc('data')
+                    .collection('players').doc(user.uid);
+                
+                await playerRef.update({ isAlive: false });
+            };
+
+            // --- RENDER JUGADOR ---
+
+            if (!joined) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-black p-6 space-y-6">
+                        <div className="text-center">
+                             <h1 className="text-3xl font-bold text-pink-500 pixel-font mb-2">UNIRSE</h1>
+                             <p className="text-gray-400">Ingresa tu nombre y código</p>
+                        </div>
+                        
+                        <input 
+                            type="text" 
+                            placeholder="TU NOMBRE" 
+                            className="w-full max-w-xs bg-neutral-800 border-2 border-neutral-600 p-4 rounded text-center text-xl text-white uppercase placeholder-gray-600 focus:border-pink-500 outline-none"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            maxLength={10}
+                        />
+
+                        {!initialSessionId && (
+                             <input 
+                                type="text" 
+                                placeholder="CÓDIGO SALA" 
+                                className="w-full max-w-xs bg-neutral-800 border-2 border-neutral-600 p-4 rounded text-center text-xl text-white uppercase placeholder-gray-600 focus:border-pink-500 outline-none"
+                                value={inputSession}
+                                onChange={(e) => setInputSession(e.target.value)}
+                            />
+                        )}
+                        
+                        <button 
+                            onClick={joinSession}
+                            disabled={!name}
+                            className="w-full max-w-xs bg-green-600 p-4 rounded font-bold text-xl disabled:opacity-50"
+                        >
+                            ENTRAR
+                        </button>
+                    </div>
+                );
+            }
+
+            if (!sensorsActive) {
+                 return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-black p-6 text-center">
+                        <i data-lucide="smartphone" className="w-16 h-16 text-yellow-500 mb-4 animate-bounce"></i>
+                        <h2 className="text-2xl font-bold mb-4">Activa los Sensores</h2>
+                        <p className="text-gray-400 mb-8">Necesitamos acceso al acelerómetro para detectar si te mueves.</p>
+                        <button 
+                            onClick={requestSensorPermission}
+                            className="bg-yellow-600 hover:bg-yellow-500 text-black px-8 py-4 rounded-full font-bold text-xl"
+                        >
+                            ACTIVAR Y JUGAR
+                        </button>
+                    </div>
+                 );
+            }
+
+            if (!isAlive) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-red-950 p-6 text-center animate-pulse">
+                        <i data-lucide="skull" className="w-32 h-32 text-red-500 mb-4"></i>
+                        <h1 className="text-5xl font-black text-red-500 mb-2">ELIMINADO</h1>
+                        <p className="text-red-300">Te has movido...</p>
+                        {gameState?.state === 'ended' && (
+                            <div className="mt-8 bg-black/50 p-4 rounded">
+                                <p className="text-sm">Ganador:</p>
+                                <p className="text-xl font-bold text-white">{gameState.winner}</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (gameState?.state === 'ended') {
+                return (
+                     <div className="flex flex-col items-center justify-center h-screen bg-yellow-900/50 p-6 text-center">
+                        <i data-lucide="trophy" className="w-32 h-32 text-yellow-500 mb-4"></i>
+                        <h1 className="text-4xl font-bold text-yellow-400 mb-2">¡VICTORIA!</h1>
+                        <p className="text-white">Has sobrevivido.</p>
+                        <p className="mt-4 text-sm text-gray-400">Espera a que el host reinicie.</p>
+                    </div>
+                );
+            }
+
+            if (gameState?.state === 'waiting') {
+                return (
+                    <div className="flex flex-col items-center justify-center h-screen bg-neutral-900 p-6 text-center">
+                        <div className="animate-spin mb-8">
+                            <i data-lucide="monitor" className="w-12 h-12 text-blue-500"></i>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">Esperando al Host</h2>
+                        <p className="text-gray-400">Mantente preparado...</p>
+                    </div>
+                );
+            }
+
+            // PANTALLA DE JUEGO ACTIVO (Player)
+            const isSafe = gameState?.musicPlaying;
+
+            return (
+                <div className={`flex flex-col items-center justify-center h-screen transition-colors duration-200 ${isSafe ? 'bg-green-600' : 'bg-red-600'}`}>
+                    <div className="text-center">
+                        {isSafe ? (
+                            <>
+                                <i data-lucide="play" className="w-40 h-40 text-white mx-auto mb-4"></i>
+                                <h1 className="text-5xl font-black text-white">CAMINA</h1>
+                                <p className="mt-2 text-green-200">Música sonando</p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-40 h-40 bg-white rounded-full mx-auto mb-4 flex items-center justify-center animate-ping">
+                                    <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center">
+                                         <i data-lucide="skull" className="w-16 h-16 text-white"></i>
+                                    </div>
+                                </div>
+                                <h1 className="text-5xl font-black text-white">¡QUIETO!</h1>
+                                <p className="mt-2 text-red-200">No muevas el móvil</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Renderizar App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        // Inicializar iconos
+        lucide.createIcons();
+    </script>
+</body>
+</html>
