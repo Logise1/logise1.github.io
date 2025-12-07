@@ -154,17 +154,30 @@
     </div>
 
     <!-- VISTA: JUGADOR (JUEGO) -->
-    <div id="view-player-game" class="hidden h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-neutral-900 relative">
+    <div id="view-player-game" class="hidden h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-neutral-900 relative overflow-hidden">
         
         <!-- Pantalla: ESPERANDO (Lobby) -->
         <div id="p-screen-waiting" class="text-center">
-            <div class="animate-spin mb-6 mx-auto"><i data-lucide="loader" class="w-16 h-16 text-blue-500"></i></div>
+            <!-- FIX: Eje centrado -->
+            <div class="flex items-center justify-center mb-6">
+                <div class="animate-spin w-16 h-16 flex items-center justify-center">
+                    <i data-lucide="loader" class="w-16 h-16 text-blue-500"></i>
+                </div>
+            </div>
             <h2 class="text-3xl font-bold mb-2">Esperando al Host...</h2>
             <p class="text-blue-300">Mantente preparado</p>
         </div>
 
         <!-- Pantalla: ACTIVO (Corre/Quieto/Midiendo) -->
-        <div id="p-screen-active" class="hidden text-center w-full h-full flex flex-col items-center justify-center">
+        <div id="p-screen-active" class="hidden text-center w-full h-full flex flex-col items-center justify-center relative">
+            
+            <!-- ALERTA MUEVETE -->
+            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-orange-600/90 flex flex-col items-center justify-center animate-pulse">
+                <i data-lucide="footprints" class="w-40 h-40 text-white mb-4"></i>
+                <h1 class="text-6xl font-black text-white italic transform -rotate-6">¡MUÉVETE!</h1>
+                <p class="text-2xl text-white font-bold mt-4">¡Debes andar!</p>
+            </div>
+
             <div id="p-icon-container" class="mb-6 transform transition-transform duration-200">
                 <!-- Icono -->
             </div>
@@ -208,13 +221,25 @@
         // Sonidos
         const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3']; 
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
+        const WIN_URL = "https://library.penguinmod.com/files/sounds/win3.mp3";
         
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
-        // Audio
+        // Audio Objects
         let currentMusic = null;
         const gunshotAudio = new Audio(GUNSHOT_URL);
+        const winAudio = new Audio(WIN_URL);
+
+        // Desbloqueo de audio para móviles (Safari/Chrome policies)
+        const unlockAudio = () => {
+            [gunshotAudio, winAudio].forEach(audio => {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }).catch(e => {}); // Ignorar error si ya estaba desbloqueado o falló
+            });
+        };
 
         // --- LÓGICA DE APLICACIÓN CENTRAL ---
         const app = {
@@ -258,9 +283,12 @@
             players: {},
             gameState: 'waiting', 
             musicPlaying: false,
-            timers: [], // Sistema de gestión de temporizadores
+            timers: [],
 
             init: function() {
+                // Host click habilita sonidos (por si acaso tiene altavoces)
+                document.body.addEventListener('click', unlockAudio, { once: true });
+
                 if (!app.sessionId) {
                     app.sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
                     const newUrl = `?session=${app.sessionId}&role=screen`;
@@ -278,7 +306,6 @@
                 this.resetDB();
             },
 
-            // Función Wrapper para controlar temporizadores
             wait: function(fn, delay) {
                 const id = setTimeout(() => {
                     fn();
@@ -348,7 +375,8 @@
             },
 
             startGame: function() {
-                this.clearTimers(); // Limpiar por seguridad
+                unlockAudio(); // Desbloquear al empezar por si acaso
+                this.clearTimers(); 
                 const updates = {};
                 Object.keys(this.players).forEach(pid => {
                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
@@ -400,7 +428,6 @@
                 
                 const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
                 
-                // Si no hay jugadores o solo 1 (y había más de 1 al empezar), acabamos ya.
                 if (alivePlayers.length <= 1 && Object.keys(this.players).length > 1) {
                      const winner = alivePlayers.length === 1 ? alivePlayers[0][1].name : 'NADIE';
                      this.endGame(winner);
@@ -418,21 +445,22 @@
                     }
                 });
 
-                // Mostrar resultados y eliminar
+                // Suspense extra en la última ronda (2 jugadores)
+                const isFinalShowdown = alivePlayers.length <= 2;
+                const revealDelay = isFinalShowdown ? 6000 : 3000; // Más lento si son pocos
+
                 this.wait(() => {
-                    // Eliminar al peor si hay más de 1 jugador y se movió algo (mayor que 0.05s)
                     if (worstPlayerId && maxScore > 0.05 && alivePlayers.length > 1) { 
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
-                        gunshotAudio.play().catch(()=>{});
                     }
 
                     this.wait(() => {
-                        // RECALCULAR supervivientes REALES (excluyendo al que acabamos de matar)
+                        // Recalcular
                         let currentAliveCount = 0;
                         let lastSurvivorName = "";
                         
                         Object.entries(this.players).forEach(([pid, p]) => {
-                            if (pid === worstPlayerId && maxScore > 0.05) return; // Ignorar al muerto actual
+                            if (pid === worstPlayerId && maxScore > 0.05) return;
                             if (p.isAlive) {
                                 currentAliveCount++;
                                 lastSurvivorName = p.name;
@@ -440,21 +468,16 @@
                         });
 
                         if (currentAliveCount <= 1) {
-                            // FIN DEL JUEGO
                             const wName = currentAliveCount === 1 ? lastSurvivorName : 'NADIE';
                             this.endGame(wName);
                         } else {
-                            // SIGUIENTE RONDA
-                            const updates = {
-                                state: 'playing',
-                                musicPlaying: true
-                            };
+                            const updates = { state: 'playing', musicPlaying: true };
                             db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates);
                             this.startMusic();
                             this.scheduleStop();
                         }
-                    }, 3000); // 3s viendo al eliminado
-                }, 3000); // 3s viendo la tabla
+                    }, 3000); 
+                }, revealDelay);
             },
 
             startMusic: function() {
@@ -473,7 +496,7 @@
                 }
                 currentMusic = new Audio(songToPlay);
                 currentMusic.loop = true;
-                currentMusic.play().catch(e => console.log("Audio error", e));
+                currentMusic.play().catch(e => console.log("Audio error (posiblemente bloqueado)", e));
             },
 
             stopMusic: function() {
@@ -484,7 +507,6 @@
             },
 
             endGame: function(winnerName) {
-                // IMPORTANTÍSIMO: Detener bucles
                 this.clearTimers();
                 
                 db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update({
@@ -493,20 +515,21 @@
                     winner: winnerName
                 });
                 this.stopMusic();
+                
+                // Reproducir victoria si es posible en el host
+                winAudio.play().catch(()=>{});
 
-                // REINICIO AUTOMÁTICO
                 this.wait(() => {
                     this.resetGame();
                 }, 8000);
             },
 
             resetGame: function() {
-                this.clearTimers(); // Limpieza extra
+                this.clearTimers();
                 const updates = {};
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
                 updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
                 
-                // Revivir a TODOS
                 Object.keys(this.players).forEach(pid => {
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
                      updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = 0;
@@ -558,6 +581,10 @@
                 const players = Object.values(this.players).filter(p => p.isAlive || (p.lastScore > 0)); 
                 players.sort((a, b) => b.lastScore - a.lastScore);
 
+                // Determinar si hay suspense
+                const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
+                const isSuspense = aliveCount <= 2;
+
                 players.forEach((p, index) => {
                     const score = p.lastScore ? p.lastScore.toFixed(2) : "0.00";
                     const isWorst = index === 0 && parseFloat(score) > 0.05; 
@@ -569,23 +596,30 @@
                     const widthPercent = Math.min(100, (parseFloat(score) / 3.0) * 100);
 
                     const item = document.createElement('div');
-                    item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg";
+                    item.className = "flex items-center space-x-4 bg-neutral-800 p-2 rounded-lg opacity-0 transition-opacity duration-500";
                     item.innerHTML = `
                         <div class="w-32 font-bold truncate text-right">${p.name}</div>
                         <div class="flex-1 bg-neutral-700 h-8 rounded-full overflow-hidden relative">
-                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-2 font-mono font-bold" style="width: ${widthPercent}%">
+                            <div class="h-full ${barColor} score-bar flex items-center justify-end px-2 font-mono font-bold" style="width: 0%">
                                 ${score}s
                             </div>
                         </div>
                     `;
                     grid.appendChild(item);
 
+                    // Animación de aparición en cascada
+                    setTimeout(() => {
+                        item.classList.remove('opacity-0');
+                        const bar = item.querySelector('.score-bar');
+                        bar.style.width = `${widthPercent}%`;
+                    }, index * (isSuspense ? 1000 : 200)); // Más lento si hay suspense
+
                     if (isWorst) {
-                        // Usamos wait para evitar zombie timers
+                        const revealDelay = isSuspense ? 5000 : 3000;
                         this.wait(() => {
                             $('eliminated-msg').classList.remove('hidden');
                             $('eliminated-name').innerText = p.name;
-                        }, 3000);
+                        }, revealDelay);
                     }
                 });
             }
@@ -594,6 +628,9 @@
         // --- LÓGICA DEL JUGADOR ---
         const player = {
             isAlive: true,
+            inactivityTimer: null,
+            lastActivityTime: 0,
+
             init: function() {
                 $('inp-session-code').value = app.sessionId || '';
                 app.showView('view-player-join');
@@ -604,6 +641,9 @@
                 const code = $('inp-session-code').value.trim().toUpperCase();
 
                 if (!name || !code) return alert("Rellena todos los campos");
+
+                // CRÍTICO: Desbloquear audio al pulsar el botón
+                unlockAudio();
 
                 app.sessionId = code;
                 
@@ -621,6 +661,9 @@
             },
 
             requestPermissions: function() {
+                // También desbloquear aquí por si acaso
+                unlockAudio();
+
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     DeviceMotionEvent.requestPermission()
                         .then(response => {
@@ -635,6 +678,7 @@
             enterGame: function() {
                 app.showView('view-player-game');
                 this.setupListeners();
+                this.startMotionMonitor();
             },
 
             setupListeners: function() {
@@ -662,6 +706,42 @@
                 });
             },
 
+            // Monitor constante de movimiento para la alerta "MUÉVETE"
+            startMotionMonitor: function() {
+                this.lastActivityTime = Date.now();
+                
+                window.addEventListener('devicemotion', (event) => {
+                    let acc = 0;
+                    if (event.acceleration) {
+                        acc = Math.sqrt(event.acceleration.x**2 + event.acceleration.y**2 + event.acceleration.z**2);
+                    }
+                    // Umbral bajo para considerar "actividad"
+                    if (acc > 0.5) {
+                        this.lastActivityTime = Date.now();
+                    }
+                });
+
+                // Comprobador cada 500ms
+                setInterval(() => {
+                    if (!this.sessionData || !this.isAlive) return;
+                    
+                    // Solo si la música suena Y no estoy en fase de espera
+                    if (this.sessionData.state === 'playing' && this.sessionData.musicPlaying) {
+                        const inactiveTime = Date.now() - this.lastActivityTime;
+                        const warning = $('p-move-warning');
+                        
+                        if (inactiveTime > 2000) {
+                            warning.classList.remove('hidden');
+                            if(navigator.vibrate) navigator.vibrate(200);
+                        } else {
+                            warning.classList.add('hidden');
+                        }
+                    } else {
+                        $('p-move-warning').classList.add('hidden');
+                    }
+                }, 500);
+            },
+
             measureReaction: function() {
                 const startTime = Date.now();
                 let lastMoveTimestamp = 0; 
@@ -685,7 +765,6 @@
 
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', handler);
-                    
                     let finalScore = lastMoveTimestamp / 1000;
                     
                     if (this.isAlive) {
@@ -697,7 +776,7 @@
             },
 
             dieLocal: function() {
-                gunshotAudio.play().catch(e => console.log(e));
+                gunshotAudio.play().catch(e => console.log("Gunshot error", e));
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             },
 
@@ -709,24 +788,29 @@
                 $('p-screen-active').classList.add('hidden');
                 $('p-screen-dead').classList.add('hidden');
                 $('p-screen-win').classList.add('hidden');
-                container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-neutral-900 relative";
+                
+                // Limpiar clases de fondo
+                container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 relative overflow-hidden";
 
                 if (!sess) return;
 
                 if (sess.state === 'ended') {
                     if (sess.winner !== 'NADIE') {
                          $('p-screen-win').classList.remove('hidden');
+                         winAudio.play().catch(()=>{}); // Reproducir sonido victoria también en móvil
                     }
                     else $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
 
                 if (sess.state === 'waiting') {
+                    container.classList.add('bg-neutral-900');
                     $('p-screen-waiting').classList.remove('hidden');
                     return;
                 }
 
                 if (!this.isAlive) {
+                    container.classList.add('bg-neutral-900');
                     $('p-screen-dead').classList.remove('hidden');
                     return;
                 }
@@ -738,18 +822,18 @@
                     const subText = $('p-sub-text');
 
                     if (sess.musicPlaying) {
-                        container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-200 bg-safe relative";
+                        container.classList.add('bg-safe');
                         icon.innerHTML = `<i data-lucide="play" class="w-32 h-32 text-white"></i>`;
                         mainText.innerText = "CORRE";
                         subText.innerText = "La música suena";
                     } else if (sess.state === 'measuring') {
-                         container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-measuring relative";
+                         container.classList.add('bg-measuring');
                         icon.innerHTML = `<i data-lucide="activity" class="w-32 h-32 text-white animate-pulse"></i>`;
                         mainText.innerText = "MIDIENDO";
                         subText.innerText = "¡No te muevas!";
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
-                        container.className = "h-screen w-full flex flex-col items-center justify-center transition-colors duration-100 bg-neutral-800 relative";
+                        container.classList.add('bg-neutral-800');
                         icon.innerHTML = `<i data-lucide="monitor" class="w-32 h-32 text-white"></i>`;
                         mainText.innerText = "RESULTADOS";
                         subText.innerText = "Mira la pantalla";
