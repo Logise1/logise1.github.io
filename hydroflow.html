@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HydroFlow Pro - Gamer Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;800&family=Inter:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Slate 950 */
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .view-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            flex-direction: column;
+            background: #020617;
+            z-index: 10;
+        }
+
+        .view-section.active {
+            display: flex;
+            opacity: 1;
+            z-index: 20;
+        }
+
+        /* --- LANDSCAPE MODE FIXES --- */
+        .landscape-controls-left, .landscape-controls-right { display: none; }
+        
+        @media (orientation: landscape) and (max-height: 500px) {
+            .landscape-layout { flex-direction: row !important; align-items: center; justify-content: space-between; padding: 0 20px; }
+            .landscape-controls-left, .landscape-controls-right { 
+                display: flex !important; 
+                width: 25% !important; 
+                height: 100%; 
+                align-items: center; 
+                justify-content: center; 
+            }
+            .portrait-controls { display: none !important; }
+            .timer-container { width: 50% !important; margin-bottom: 0 !important; }
+            .landscape-btn { 
+                height: 70%; 
+                width: 100%; 
+                font-size: 1.5rem; 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                border-radius: 1rem; 
+            }
+        }
+
+        /* Animations */
+        .slide-in-right { animation: slideInRight 0.4s ease-out forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .rank-card { transition: all 0.2s; }
+        .rank-card:active { transform: scale(0.98); }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Audio Visualizer Bars */
+        .audio-bar {
+            width: 10px;
+            background: #ec4899;
+            border-radius: 99px;
+            transition: height 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== MODAL DETALLE DÍA ==================== -->
+    <div id="dayModal" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
+                <h3 id="modalDateTitle" class="font-bold text-lg text-white">Detalles</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div id="modalContent" class="p-4 overflow-y-auto space-y-3">
+                <!-- JS inyecta duchas aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== VISTA 1: ONBOARDING ==================== -->
+    <section id="view-onboarding" class="view-section p-6 justify-center items-center text-center">
+        <div class="max-w-md w-full space-y-6">
+            <i class="ph-fill ph-drop text-6xl text-sky-400 animate-bounce"></i>
+            <h2 class="text-3xl font-bold brand-font">Configuración Inicial</h2>
+            <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-xl w-full">
+                <label class="block text-xs font-bold text-sky-400 uppercase tracking-wider mb-2">Nombre de Usuario</label>
+                <input type="text" id="inputName" placeholder="Tu nombre" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-4 text-white text-center text-xl outline-none focus:border-sky-500 transition-colors">
+            </div>
+            <button onclick="startQuiz()" class="w-full bg-sky-600 text-white font-bold py-4 rounded-xl text-lg hover:bg-sky-500 transition-transform active:scale-95 shadow-lg shadow-sky-900/20">
+                COMENZAR CUESTIONARIO
+            </button>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 2: QUIZ ==================== -->
+    <section id="view-quiz" class="view-section p-6 justify-center items-center bg-slate-950">
+        <div class="w-full max-w-md">
+            <div class="w-full h-2 bg-slate-900 rounded-full mb-8">
+                <div id="quizProgress" class="h-full bg-sky-500 rounded-full transition-all duration-300 w-[16%]"></div>
+            </div>
+            <div id="quizCard" class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl min-h-[400px] flex flex-col justify-center">
+                <span class="text-sky-500 font-bold text-sm tracking-widest mb-2" id="quizStepText">PREGUNTA 1/6</span>
+                <h2 id="quizQuestion" class="text-2xl font-bold text-white mb-8 h-16 brand-font leading-tight">¿Longitud de tu cabello?</h2>
+                <div id="quizOptions" class="space-y-3"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 3: EDITOR ==================== -->
+    <section id="view-editor" class="view-section bg-slate-900">
+        <header class="p-4 bg-slate-900/95 backdrop-blur z-20 shadow-lg border-b border-slate-800 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-white brand-font">Tu Rutina (3 Fases)</h2>
+            <button onclick="saveAndTriggerAuth()" class="bg-emerald-500 text-white text-sm font-bold px-5 py-2 rounded-lg hover:bg-emerald-400 transition-colors"><i class="ph-bold ph-check-circle mr-1"></i> GUARDAR</button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 space-y-3 pb-24" id="stepsListContainer"></div>
+        <div class="p-4 bg-slate-900 border-t border-slate-800 z-30">
+             <button onclick="addNewStep()" class="w-full py-3 border border-dashed border-slate-600 text-slate-400 rounded-xl hover:text-white hover:border-slate-400 text-sm font-bold">+ Añadir paso manual</button>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 4: AUTH ==================== -->
+    <section id="view-auth" class="view-section justify-center items-center p-6 bg-slate-900/95 backdrop-blur z-50">
+        <div class="max-w-md w-full bg-slate-950 p-8 rounded-3xl border border-slate-800 shadow-2xl">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white mb-2 brand-font">Únete al Ranking</h2>
+                <p class="text-slate-400 text-sm">Crea cuenta para aparecer en la tabla de clasificación.</p>
+            </div>
+            <div class="space-y-4">
+                <input type="email" id="authEmail" placeholder="Email" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white outline-none">
+                <input type="password" id="authPass" placeholder="Contraseña" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white outline-none">
+                <button onclick="handleAuth()" class="w-full bg-sky-600 text-white font-bold py-3 rounded-xl hover:bg-sky-500">Entrar / Registrarse</button>
+                <p id="authError" class="text-red-400 text-xs text-center min-h-[1rem]"></p>
+                <button onclick="skipAuth()" class="w-full text-xs text-slate-500 hover:text-white underline">Continuar sin cuenta (No ranking)</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 5: DASHBOARD ==================== -->
+    <section id="view-dashboard" class="view-section">
+        <header class="p-6 pb-2 flex justify-between items-end">
+            <div>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <i class="ph-fill ph-crown text-amber-400"></i> <span id="rankDisplay">Novato</span>
+                </p>
+                <h1 class="text-3xl font-bold text-white brand-font">Hola, <span id="userNameDisplay">...</span></h1>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800/50 px-3 py-1 rounded-full border border-orange-500/20" onclick="alert('Solo cuenta 1 ducha > 2min por día para la racha.')">
+                <i class="ph-fill ph-fire text-orange-500 text-xl animate-pulse"></i>
+                <div class="flex flex-col leading-none">
+                    <span class="font-bold text-orange-400 text-sm" id="streakDisplay">0</span>
+                    <span class="text-[10px] text-slate-500">DÍAS</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+            <!-- CTA PRINCIPAL -->
+            <div class="bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 rounded-3xl p-1 shadow-2xl cursor-pointer hover:scale-[1.01] transition-transform" onclick="goToTimeSelect(false)">
+                <div class="bg-slate-950/20 backdrop-blur-sm h-full w-full rounded-[20px] p-6 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-4"><i class="ph-fill ph-timer text-9xl text-white"></i></div>
+                    <h2 class="text-3xl font-black text-white mb-2 brand-font">Ducha Express</h2>
+                    <p class="text-blue-100 opacity-80 mb-6 text-sm">Rutina optimizada lista.</p>
+                    <div class="inline-flex items-center gap-2 bg-white text-blue-900 px-6 py-3 rounded-full font-black text-sm shadow-lg"><i class="ph-fill ph-play"></i> GO!</div>
+                </div>
+            </div>
+
+            <!-- CTA GAMER MODE -->
+            <div class="bg-gradient-to-br from-fuchsia-600 via-purple-600 to-indigo-500 rounded-3xl p-1 shadow-2xl cursor-pointer hover:scale-[1.01] transition-transform group" onclick="setupGameMode()">
+                <div class="bg-slate-950/20 backdrop-blur-sm h-full w-full rounded-[20px] p-6 relative overflow-hidden">
+                    <div class="absolute right-0 top-0 opacity-20 transform translate-x-8 -translate-y-4 group-hover:scale-110 transition-transform"><i class="ph-fill ph-microphone-stage text-9xl text-white"></i></div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-pink-500/20 text-pink-300 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-pink-500/30">Nuevo</span>
+                    </div>
+                    <h2 class="text-3xl font-black text-white mb-2 brand-font">Ducha Gamer</h2>
+                    <p class="text-fuchsia-100 opacity-80 mb-6 text-sm">Control por voz y minijuegos entre fases.</p>
+                    <div class="inline-flex items-center gap-2 bg-slate-900 text-white border border-fuchsia-500 px-6 py-3 rounded-full font-black text-sm shadow-lg"><i class="ph-fill ph-game-controller"></i> JUGAR</div>
+                </div>
+            </div>
+
+            <!-- Botones Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="showView('view-stats')" class="bg-slate-900 border border-slate-800 p-4 rounded-2xl text-left hover:border-slate-600 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3"><i class="ph-fill ph-calendar text-xl"></i></div>
+                    <span class="font-bold block">Calendario</span><span class="text-xs text-slate-500">Ver historial</span>
+                </button>
+                <button onclick="loadLeaderboard()" class="bg-slate-900 border border-slate-800 p-4 rounded-2xl text-left hover:border-slate-600 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 mb-3"><i class="ph-fill ph-trophy text-xl"></i></div>
+                    <span class="font-bold block">Ranking</span><span class="text-xs text-slate-500">Clasificación</span>
+                </button>
+            </div>
+            
+            <button onclick="editRoutine()" class="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between hover:border-slate-600 transition-colors group">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400"><i class="ph-fill ph-sliders text-xl"></i></div>
+                    <div class="text-left">
+                        <span class="font-bold block text-white">Editar Rutina</span>
+                        <span class="text-xs text-slate-500">Ajustar pasos y tiempos</span>
+                    </div>
+                </div>
+                <i class="ph-bold ph-caret-right text-slate-500 group-hover:text-white"></i>
+            </button>
+
+            <button onclick="signOutApp()" class="w-full py-4 text-xs text-slate-600 hover:text-red-400">Cerrar Sesión</button>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA LEADERBOARD ==================== -->
+    <section id="view-leaderboard" class="view-section bg-slate-950 overflow-y-auto">
+        <header class="p-6 pb-4 border-b border-slate-800 sticky top-0 bg-slate-950 z-10 flex items-center gap-4">
+            <button onclick="showView('view-dashboard')" class="text-slate-400 hover:text-white"><i class="ph-bold ph-arrow-left text-2xl"></i></button>
+            <h2 class="text-2xl font-bold brand-font text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">Clasificación</h2>
+        </header>
+        <div class="p-6 space-y-4" id="leaderboardList">
+            <!-- Loading State -->
+            <div class="animate-pulse flex space-x-4"><div class="rounded-full bg-slate-800 h-10 w-10"></div><div class="flex-1 space-y-6 py-1"><div class="h-2 bg-slate-800 rounded"></div><div class="space-y-3"><div class="grid grid-cols-3 gap-4"><div class="h-2 bg-slate-800 rounded col-span-2"></div><div class="h-2 bg-slate-800 rounded col-span-1"></div></div><div class="h-2 bg-slate-800 rounded"></div></div></div></div>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 6: SETUP TIEMPO ==================== -->
+    <section id="view-setup" class="view-section items-center justify-center p-6 bg-slate-950">
+        <button onclick="showView('view-dashboard')" class="absolute top-6 left-6 p-2 text-slate-500 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
+        <div class="text-center w-full max-w-sm">
+            <div id="setupModeLabel" class="hidden mb-4">
+                <span class="bg-pink-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">MODO GAMER ACTIVO</span>
+            </div>
+            <p class="text-sky-400 text-sm font-bold uppercase tracking-widest mb-4">Tiempo Objetivo</p>
+            <div class="flex items-center justify-between bg-slate-900 rounded-3xl p-2 mb-8 border border-slate-800">
+                <button onclick="adjustTime(-1)" class="w-16 h-16 flex items-center justify-center bg-slate-800 rounded-2xl text-2xl hover:bg-slate-700"><i class="ph-bold ph-minus"></i></button>
+                <div class="text-center">
+                    <span id="timeDisplay" class="text-7xl font-black tabular-nums tracking-tighter text-white">15</span>
+                    <span class="text-slate-400 font-medium block text-xs mt-[-5px]">MINUTOS</span>
+                </div>
+                <button onclick="adjustTime(1)" class="w-16 h-16 flex items-center justify-center bg-slate-800 rounded-2xl text-2xl hover:bg-slate-700"><i class="ph-bold ph-plus"></i></button>
+            </div>
+            <button onclick="startShower()" id="btnStartShower" class="w-full bg-sky-500 text-white text-xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform"><i class="ph-fill ph-shower text-2xl"></i> EMPEZAR</button>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 7: TIMER ==================== -->
+    <section id="view-timer" class="view-section bg-slate-950">
+        <div class="h-1 w-full bg-slate-900 fixed top-0 left-0 z-50">
+            <div id="progressBar" class="h-full bg-gradient-to-r from-sky-400 to-indigo-500 w-0 transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(14,165,233,0.8)]"></div>
+        </div>
+        <div class="w-full h-full flex flex-col landscape-layout relative z-10">
+            <div class="landscape-controls-left hidden">
+                <button id="btnPauseLand" onclick="togglePause()" class="landscape-btn bg-amber-500/20 text-amber-500 border-2 border-amber-500 hover:bg-amber-500 hover:text-slate-900 transition-colors">
+                    <i class="ph-fill ph-pause text-4xl mb-2"></i> PAUSAR
+                </button>
+            </div>
+            <div class="timer-container flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div class="bg-slate-900/80 backdrop-blur px-4 py-1 rounded-full border border-slate-800 mb-6">
+                    <span id="stepCounter" class="text-xs font-bold text-sky-400 uppercase tracking-widest">Fase 1</span>
+                </div>
+                <h2 id="currentPhaseTitle" class="text-4xl md:text-6xl font-black text-white leading-tight mb-4 drop-shadow-2xl brand-font">Preparar</h2>
+                <div class="relative mb-6">
+                    <div id="timerNumber" class="text-[7rem] md:text-[9rem] font-black leading-none tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">00:00</div>
+                </div>
+                <p id="nextPhasePreview" class="text-slate-500 text-sm font-mono bg-slate-900 px-3 py-1 rounded text-center">Siguiente: ...</p>
+            </div>
+            <div class="landscape-controls-right hidden">
+                <button onclick="nextPhase()" class="landscape-btn bg-sky-500/20 text-sky-400 border-2 border-sky-500 hover:bg-sky-500 hover:text-white transition-colors">
+                    <i class="ph-fill ph-skip-forward text-4xl mb-2"></i> NEXT
+                </button>
+            </div>
+            <div class="portrait-controls p-6 pb-8 w-full">
+                <div class="grid grid-cols-2 gap-4 h-24 mb-4">
+                    <button id="btnPausePort" onclick="togglePause()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-2xl text-lg font-bold flex flex-col items-center justify-center active:scale-95">
+                        <i id="iconPause" class="ph-fill ph-pause text-2xl mb-1"></i> <span id="textPause">PAUSA</span>
+                    </button>
+                    <button onclick="nextPhase()" class="bg-white text-slate-900 rounded-2xl text-lg font-bold flex flex-col items-center justify-center active:scale-95 shadow-lg">
+                        <i class="ph-fill ph-skip-forward text-2xl mb-1"></i> SIGUIENTE
+                    </button>
+                </div>
+                <button onclick="cancelShower()" class="w-full text-xs text-red-500/50 uppercase font-bold hover:text-red-500">Cancelar</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 8: CALENDARIO ==================== -->
+    <section id="view-stats" class="view-section bg-slate-950 overflow-y-auto">
+        <header class="p-6 pb-2">
+             <button onclick="showView('view-dashboard')" class="text-slate-400 hover:text-white mb-4"><i class="ph-bold ph-arrow-left text-2xl"></i></button>
+             <h2 class="text-2xl font-bold brand-font">Calendario</h2>
+        </header>
+        <div class="p-6 space-y-6">
+             <div class="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
+                <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><i class="ph-bold ph-caret-left"></i></button>
+                <h3 id="calendarMonthName" class="font-bold text-lg capitalize text-white">Mes</h3>
+                <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><i class="ph-bold ph-caret-right"></i></button>
+             </div>
+             <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                <div class="grid grid-cols-7 gap-1 mb-2 text-center">
+                    <span class="text-[10px] font-bold text-slate-500">L</span><span class="text-[10px] font-bold text-slate-500">M</span><span class="text-[10px] font-bold text-slate-500">X</span><span class="text-[10px] font-bold text-slate-500">J</span><span class="text-[10px] font-bold text-slate-500">V</span><span class="text-[10px] font-bold text-slate-500">S</span><span class="text-[10px] font-bold text-slate-500">D</span>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+             </div>
+             <p class="text-center text-xs text-slate-500">Solo duchas > 2min aparecen aquí.</p>
+        </div>
+    </section>
+
+    <!-- ==================== VISTA 9: GAME OVERLAY (NUEVO) ==================== -->
+    <section id="view-game-challenge" class="view-section items-center justify-center p-6 bg-purple-950/95 backdrop-blur z-[60]">
+        <div class="text-center w-full max-w-sm relative">
+            <div class="mb-4">
+                <i class="ph-duotone ph-game-controller text-6xl text-fuchsia-400 animate-bounce"></i>
+            </div>
+            <h2 id="gameTitle" class="text-3xl font-black text-white brand-font mb-2">MINIJUEGO</h2>
+            <p id="gameInstruction" class="text-pink-200 text-sm mb-8 font-medium">Instrucciones aquí</p>
+            
+            <!-- Visualizador de Audio / Progreso -->
+            <div id="gameVisualizer" class="h-32 bg-purple-900/50 rounded-2xl border-2 border-fuchsia-500 mb-6 flex items-end justify-center gap-1 p-4 relative overflow-hidden">
+                <!-- Barras dinámicas inyectadas por JS -->
+                <div id="gameProgressBar" class="absolute bottom-0 left-0 h-full bg-fuchsia-500 opacity-30 transition-all duration-300 w-0"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span id="gameStatusText" class="text-4xl font-black text-white drop-shadow-lg">GO!</span>
+                </div>
+            </div>
+
+            <button onclick="skipGame()" class="text-xs text-fuchsia-300/50 hover:text-white uppercase tracking-widest font-bold">Saltar Desafío</button>
+        </div>
+    </section>
+
+    <!-- SCRIPTS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+        // CONFIGURACIÓN PROPORCIONADA
+        const firebaseConfig = { apiKey: "AIzaSyBwYTi_qmSqAJ9r23tDH9UT1zJAwHl3WiA", authDomain: "ducha-e22b1.firebaseapp.com", projectId: "ducha-e22b1", storageBucket: "ducha-e22b1.firebasestorage.app", messagingSenderId: "683891690774", appId: "1:683891690774:web:a9b51326766498245b1437", measurementId: "G-XCX2V2QHTZ" };
+        const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ducha-e22b1'; // Fallback
+
+        // --- GLOBAL STATE ---
+        window.STATE = {
+            user: { name: '', routine: [], history: [], streak: 0, lastStreakDate: null },
+            quiz: { answers: [], currentStep: 0 },
+            tempRoutine: [],
+            currentShower: { 
+                totalTimeAllocated: 15, 
+                phases: [], 
+                currentPhaseIndex: 0, 
+                timeLeftInPhase: 0, 
+                totalElapsed: 0, 
+                isRunning: false, 
+                isPaused: false, 
+                interval: null,
+                isGameMode: false // NEW
+            },
+            currentUserUid: null,
+            calendarDate: new Date(),
+            audioContext: null, // NEW
+            analyser: null, // NEW
+            microphone: null, // NEW
+            gameActive: false // NEW
+        };
+
+        const QUESTIONS = [
+            { q: "¿Longitud de tu cabello?", opts: ["Rapado/Muy Corto", "Corto (Orejas)", "Medio (Hombros)", "Largo (Espalda)"] },
+            { q: "¿Densidad del cabello?", opts: ["Fino / Poco", "Normal", "Grueso / Mucho", "Afro / Rizado"] },
+            { q: "¿Qué productos usarás hoy?", opts: ["Solo Champú", "Champú + Acond.", "Mascarilla", "Tratamiento Completo"] },
+            { q: "¿Frecuencia de lavado?", opts: ["Diario", "Cada 2-3 días", "Semanal", "Ocasional"] },
+            { q: "¿Objetivo de la ducha?", opts: ["Velocidad Flash", "Limpieza Normal", "Relax Total", "Spa en Casa"] },
+            { q: "¿Tipo de piel?", opts: ["Normal", "Seca", "Grasa", "Sensible"] }
+        ];
+
+        // --- AUTH ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                window.STATE.currentUserUid = user.uid;
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'profile');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    window.STATE.user = { ...window.STATE.user, ...docSnap.data() };
+                    recalculateStreak();
+                    updateDashboardUI();
+                    showView('view-dashboard');
+                } else {
+                    saveUserData();
+                    showView('view-dashboard');
+                }
+            }
+        });
+
+        window.handleAuth = async () => {
+            const email = document.getElementById('authEmail').value, pass = document.getElementById('authPass').value;
+            if(!email || !pass) return document.getElementById('authError').innerText = "Datos incompletos";
+            try {
+                try { await signInWithEmailAndPassword(auth, email, pass); } 
+                catch(e) { 
+                    if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+                        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                        window.STATE.currentUserUid = cred.user.uid;
+                        await saveUserData();
+                    } else throw e;
+                }
+            } catch(e) { document.getElementById('authError').innerText = e.message; }
+        }
+
+        window.skipAuth = () => showView('view-dashboard');
+        window.signOutApp = () => signOut(auth).then(()=>location.reload());
+
+        // --- DATA MANAGEMENT ---
+        async function saveUserData() {
+            if (!window.STATE.currentUserUid) return;
+            const uid = window.STATE.currentUserUid;
+            await setDoc(doc(db, 'artifacts', appId, 'users', uid, 'data', 'profile'), window.STATE.user, { merge: true });
+            const publicData = {
+                name: window.STATE.user.name,
+                streak: window.STATE.user.streak || 0,
+                rank: getRank(window.STATE.user.streak || 0)
+            };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', uid), publicData, { merge: true });
+        }
+
+        // --- LEADERBOARD LOGIC ---
+        window.loadLeaderboard = async () => {
+            showView('view-leaderboard');
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = '<div class="text-center text-slate-500 py-8">Cargando clasificación...</div>';
+            try {
+                const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                let users = [];
+                querySnapshot.forEach((doc) => {
+                    const d = doc.data();
+                    if(d.name) users.push(d);
+                });
+                users.sort((a, b) => b.streak - a.streak);
+                list.innerHTML = '';
+                if(users.length === 0) list.innerHTML = '<div class="text-center text-slate-500">Aún no hay duchadores legendarios.</div>';
+                users.slice(0, 20).forEach((u, index) => {
+                    const isMe = u.name === window.STATE.user.name;
+                    const rankColor = index === 0 ? 'text-yellow-400' : (index === 1 ? 'text-slate-300' : (index === 2 ? 'text-amber-600' : 'text-slate-500'));
+                    const trophy = index < 3 ? '<i class="ph-fill ph-trophy"></i>' : `<span class="font-mono font-bold">#${index+1}</span>`;
+                    list.innerHTML += `
+                        <div class="flex items-center gap-4 bg-slate-900/50 p-4 rounded-xl border ${isMe ? 'border-sky-500 bg-sky-900/20' : 'border-slate-800'} rank-card">
+                            <div class="text-2xl ${rankColor} w-8 text-center flex-shrink-0">${trophy}</div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-white text-lg ${isMe ? 'text-sky-300' : ''}">${u.name} ${isMe ? '(Tú)' : ''}</h3>
+                                <p class="text-xs text-slate-400 uppercase tracking-widest">${u.rank || 'Novato'}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="block text-2xl font-black text-white">${u.streak}</span>
+                                <span class="text-[10px] text-slate-500 font-bold uppercase">Días Racha</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) { console.error(e); list.innerHTML = '<div class="text-red-400 text-center">Error al cargar ranking. Inicia sesión primero.</div>'; }
+        }
+
+        // --- STREAK & RANK LOGIC ---
+        function getRank(streak) {
+            if(streak < 3) return "Novato Húmedo";
+            if(streak < 7) return "Aprendiz de Agua";
+            if(streak < 14) return "Duchador Constante";
+            if(streak < 30) return "Maestro del Jabón";
+            if(streak < 60) return "Hydro Lord";
+            return "Poseidón";
+        }
+
+        function recalculateStreak() {
+            const h = window.STATE.user.history || [];
+            if(h.length === 0) { window.STATE.user.streak = 0; return; }
+            const valid = h.filter(x => x.duration >= 2).map(x => new Date(x.date).setHours(0,0,0,0)).sort((a,b)=>b-a);
+            const unique = [...new Set(valid)];
+            if(unique.length === 0) { window.STATE.user.streak = 0; return; }
+            const today = new Date().setHours(0,0,0,0);
+            const diff = (today - unique[0]) / (86400000);
+            if(diff > 2) { window.STATE.user.streak = 0; return; } 
+            let s = 1;
+            for(let i=0; i<unique.length-1; i++) {
+                if((unique[i] - unique[i+1])/86400000 <= 2) s++; else break;
+            }
+            window.STATE.user.streak = s;
+        }
+
+        // --- EXPORTS ---
+        const funcs = ['showView', 'startQuiz', 'nextQuestion', 'addNewStep', 'saveAndTriggerAuth', 'skipAuth', 'togglePause', 'nextPhase', 'cancelShower', 'adjustTime', 'startShower', 'goToTimeSelect', 'editRoutine', 'removeStep', 'adjustStepDuration', 'updateStep', 'handleAuth', 'signOutApp', 'changeCalendarMonth', 'closeModal', 'deleteHistoryEntry', 'loadLeaderboard', 'setupGameMode', 'skipGame'];
+        funcs.forEach(f => window[f] = eval(f));
+
+        window.onload = () => document.getElementById('view-onboarding').classList.add('active');
+
+        function showView(id) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'view-dashboard') updateDashboardUI();
+            if(id === 'view-stats') renderCalendar();
+        }
+
+        // --- QUIZ LOGIC ---
+        function startQuiz() {
+            const name = document.getElementById('inputName').value.trim();
+            if(!name) return alert("Por favor, introduce tu nombre.");
+            window.STATE.user.name = name;
+            window.STATE.quiz.currentStep = 0;
+            window.STATE.quiz.answers = [];
+            showView('view-quiz');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const idx = window.STATE.quiz.currentStep;
+            const q = QUESTIONS[idx];
+            document.getElementById('quizStepText').innerText = `PREGUNTA ${idx+1}/${QUESTIONS.length}`;
+            document.getElementById('quizQuestion').innerText = q.q;
+            document.getElementById('quizProgress').style.width = `${((idx+1)/QUESTIONS.length)*100}%`;
+            const container = document.getElementById('quizOptions');
+            container.innerHTML = '';
+            container.classList.remove('slide-in-right');
+            void container.offsetWidth; 
+            container.classList.add('slide-in-right');
+            q.opts.forEach((opt, optIdx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-sky-500 hover:bg-slate-700 transition-all font-bold text-slate-200 active:scale-[0.98]";
+                btn.innerText = opt;
+                btn.onclick = () => nextQuestion(optIdx);
+                container.appendChild(btn);
+            });
+        }
+
+        function nextQuestion(ansIdx) {
+            window.STATE.quiz.answers.push(ansIdx);
+            window.STATE.quiz.currentStep++;
+            if(window.STATE.quiz.currentStep < QUESTIONS.length) {
+                renderQuestion();
+            } else {
+                generateRoutineFromQuiz();
+                showView('view-editor');
+            }
+        }
+
+        // --- ROUTINE GENERATOR ---
+        function generateRoutineFromQuiz() {
+            const ans = window.STATE.quiz.answers; 
+            let routine = [ {name:"Mojar cuerpo y pelo", weight: 2} ];
+            const hairLen = ans[0]; const prod = ans[2]; const goal = ans[4]; 
+            if(hairLen >= 1) { 
+                routine.push({name: "Champú R1 (Raíces)", weight: 3});
+                routine.push({name: "Aclarar R1", weight: 2});
+                routine.push({name: "Champú R2 (Masaje)", weight: 3});
+                routine.push({name: "Aclarar R2", weight: 2});
+                routine.push({name: "Champú R3 (Profundo)", weight: 3});
+                routine.push({name: "Aclarar Final", weight: 3});
+            } else {
+                routine.push({name: "Champú Rápido", weight: 3});
+                routine.push({name: "Aclarar Cabeza", weight: 2});
+            }
+            if(prod >= 1 && hairLen >= 1) {
+                routine.push({name: "Acondicionador", weight: 3});
+                routine.push({name: "Lavar cuerpo (actuar)", weight: 4});
+                routine.push({name: "Aclarar Todo", weight: 3});
+            } else {
+                routine.push({name: "Enjabonar Cuerpo", weight: 4});
+                routine.push({name: "Aclarar Cuerpo", weight: 2});
+            }
+            if(prod >= 2) routine.splice(routine.length-1, 0, {name: "Mascarilla (Puntas)", weight: 3});
+            if(goal === 0) routine.forEach(s => s.weight = Math.max(1, s.weight - 1));
+            else if (goal === 3) routine.unshift({name: "Vapor y Relax", weight: 3});
+            routine.push({name: "Secar", weight: 3});
+            window.STATE.tempRoutine = routine;
+            renderEditor();
+        }
+
+        // --- EDITOR ---
+        function renderEditor() {
+            const c = document.getElementById('stepsListContainer'); c.innerHTML = '';
+            const totalW = window.STATE.tempRoutine.reduce((a,b)=>a+b.weight,0);
+            window.STATE.tempRoutine.forEach((s, i) => {
+                const min = Math.floor(Math.floor((s.weight/totalW)*900)/60);
+                const sec = Math.floor((s.weight/totalW)*900)%60;
+                c.innerHTML += `<div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-3">
+                    <div class="flex justify-between items-center"><span class="bg-slate-800 text-slate-400 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">${i+1}</span><input type="text" value="${s.name}" onchange="updateStep(${i},'name',this.value)" class="bg-transparent text-white font-bold w-full ml-3 outline-none"><button onclick="removeStep(${i})" class="text-slate-600 hover:text-red-500"><i class="ph-bold ph-trash"></i></button></div>
+                    <div class="flex items-center justify-between bg-slate-900 rounded-lg p-2"><button onclick="adjustStepDuration(${i},-0.5)" class="w-8 h-8 bg-slate-800 rounded text-white">-</button><span class="text-sky-400 font-mono font-bold">${min}m ${sec}s</span><button onclick="adjustStepDuration(${i},0.5)" class="w-8 h-8 bg-slate-800 rounded text-white">+</button></div></div>`;
+            });
+        }
+        function updateStep(i,f,v) { window.STATE.tempRoutine[i][f]=v; }
+        function removeStep(i) { window.STATE.tempRoutine.splice(i,1); renderEditor(); }
+        function addNewStep() { window.STATE.tempRoutine.push({name:"Nuevo", weight:2}); renderEditor(); }
+        function adjustStepDuration(i,d) { window.STATE.tempRoutine[i].weight = Math.max(0.5, window.STATE.tempRoutine[i].weight+d); renderEditor(); }
+        
+        function saveAndTriggerAuth() { window.STATE.user.routine = window.STATE.tempRoutine; showView('view-auth'); }
+        function editRoutine() { 
+            window.STATE.tempRoutine = JSON.parse(JSON.stringify(window.STATE.user.routine)); renderEditor(); showView('view-editor');
+            document.querySelector('#view-editor button[onclick="saveAndTriggerAuth()"]').onclick = () => { window.STATE.user.routine = window.STATE.tempRoutine; if(window.STATE.currentUserUid) saveUserData(); showView('view-dashboard'); };
+        }
+
+        // --- DASHBOARD UI ---
+        function updateDashboardUI() {
+            document.getElementById('userNameDisplay').innerText = window.STATE.user.name;
+            const s = window.STATE.user.streak || 0;
+            document.getElementById('streakDisplay').innerText = s;
+            document.getElementById('rankDisplay').innerText = getRank(s);
+        }
+
+        // --- CALENDAR & MODAL ---
+        function changeCalendarMonth(d) { window.STATE.calendarDate.setMonth(window.STATE.calendarDate.getMonth() + d); renderCalendar(); }
+        function renderCalendar() {
+            const date = window.STATE.calendarDate;
+            const year = date.getFullYear(), month = date.getMonth();
+            const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            document.getElementById('calendarMonthName').innerText = `${months[month]} ${year}`;
+            
+            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+            for(let i=0; i<startOffset; i++) grid.appendChild(document.createElement('div'));
+
+            const history = window.STATE.user.history || [];
+            
+            for(let d=1; d<=daysInMonth; d++) {
+                const dayDiv = document.createElement('div');
+                const showers = history.filter(h => {
+                    const hDate = new Date(h.date);
+                    return hDate.getDate() === d && hDate.getMonth() === month && hDate.getFullYear() === year && h.duration >= 2;
+                });
+
+                if(showers.length > 0) {
+                    dayDiv.className = "h-10 rounded-lg flex items-center justify-center cursor-pointer bg-emerald-900 border border-emerald-500 hover:bg-emerald-800 transition-colors";
+                    dayDiv.innerHTML = `<span class="text-xs font-bold text-emerald-300">✓</span>`;
+                    dayDiv.onclick = () => openModal(d, month, year, showers);
+                } else {
+                    dayDiv.className = "h-10 rounded-lg flex items-center justify-center bg-slate-800 text-slate-600 text-xs";
+                    dayDiv.innerText = d;
+                }
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function openModal(day, month, year, showers) {
+            document.getElementById('dayModal').classList.remove('hidden');
+            document.getElementById('modalDateTitle').innerText = `${day}/${month+1}/${year}`;
+            const c = document.getElementById('modalContent'); c.innerHTML = '';
+            showers.forEach((s) => {
+                const idx = window.STATE.user.history.indexOf(s);
+                const t = new Date(s.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                c.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700"><div><p class="font-bold text-white text-sm">${s.duration} min</p><p class="text-xs text-slate-500">${t}</p></div><button onclick="deleteHistoryEntry(${idx})" class="bg-red-500/10 text-red-400 p-2 rounded-lg"><i class="ph-bold ph-trash"></i></button></div>`;
+            });
+        }
+        function closeModal() { document.getElementById('dayModal').classList.add('hidden'); }
+        async function deleteHistoryEntry(i) {
+            if(!confirm("¿Borrar?")) return;
+            window.STATE.user.history.splice(i, 1);
+            recalculateStreak(); await saveUserData(); closeModal(); renderCalendar(); updateDashboardUI();
+        }
+
+        // --- GAME LOGIC ---
+        function setupGameMode() {
+            // Solicitar acceso a microfono
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                window.STATE.microphone = stream;
+                initAudio(stream);
+                goToTimeSelect(true);
+            }).catch(e => {
+                alert("Para el Modo Gamer necesitas permitir el micrófono. Revisa tu navegador.");
+            });
+        }
+
+        function initAudio(stream) {
+            if(!window.STATE.audioContext) {
+                window.STATE.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                window.STATE.analyser = window.STATE.audioContext.createAnalyser();
+                const source = window.STATE.audioContext.createMediaStreamSource(stream);
+                source.connect(window.STATE.analyser);
+                window.STATE.analyser.fftSize = 256;
+            } else if(window.STATE.audioContext.state === 'suspended') {
+                window.STATE.audioContext.resume();
+            }
+        }
+
+        function getVolume() {
+            if(!window.STATE.analyser) return 0;
+            const dataArray = new Uint8Array(window.STATE.analyser.frequencyBinCount);
+            window.STATE.analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            return sum / dataArray.length; // Promedio de volumen (0-255 aprox)
+        }
+
+        async function triggerRandomChallenge() {
+            // Pausar el timer de la ducha
+            clearInterval(window.STATE.currentShower.interval);
+            window.STATE.gameActive = true;
+            
+            const games = [
+                { id: 'opera', title: '🎤 OPERA STAR', instr: '¡Canta o mantén una nota alta para llenar la barra!' },
+                { id: 'shout', title: '🌊 GRITO ESPARTANO', instr: '¡Haz un ruido FUERTE para romper el bloqueo!' },
+                { id: 'word', title: '🗣️ PALABRA MÁGICA', instr: 'Di "JABÓN" o "AGUA" claramente.' }
+            ];
+            
+            const game = games[Math.floor(Math.random() * games.length)];
+            
+            // Configurar UI
+            document.getElementById('gameTitle').innerText = game.title;
+            document.getElementById('gameInstruction').innerText = game.instr;
+            document.getElementById('gameStatusText').innerText = "GO!";
+            document.getElementById('gameProgressBar').style.width = '0%';
+            showView('view-game-challenge');
+
+            // Lógica específica del juego
+            if(game.id === 'opera') runOperaGame();
+            else if(game.id === 'shout') runShoutGame();
+            else if(game.id === 'word') runWordGame();
+        }
+
+        function runOperaGame() {
+            let energy = 0;
+            const gameInt = setInterval(() => {
+                if(!window.STATE.gameActive) { clearInterval(gameInt); return; }
+                const vol = getVolume();
+                
+                // Visualizar volumen en barras
+                updateVisualizer(vol);
+
+                if(vol > 30) { // Umbral de canto
+                    energy += 1.5;
+                } else {
+                    energy = Math.max(0, energy - 0.5);
+                }
+                
+                document.getElementById('gameProgressBar').style.width = Math.min(100, energy) + '%';
+                
+                if(energy >= 100) {
+                    clearInterval(gameInt);
+                    winGame();
+                }
+            }, 50);
+        }
+
+        function runShoutGame() {
+            const gameInt = setInterval(() => {
+                if(!window.STATE.gameActive) { clearInterval(gameInt); return; }
+                const vol = getVolume();
+                updateVisualizer(vol);
+
+                if(vol > 100) { // Umbral de grito fuerte
+                    clearInterval(gameInt);
+                    winGame();
+                }
+            }, 50);
+        }
+
+        function runWordGame() {
+             // Fallback si no hay soporte speech
+             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("Navegador no soporta voz. Saltando...");
+                winGame();
+                return;
+             }
+
+             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+             const recognition = new SpeechRecognition();
+             recognition.lang = 'es-ES';
+             recognition.continuous = false;
+             recognition.interimResults = false;
+
+             recognition.start();
+
+             recognition.onresult = (event) => {
+                 const transcript = event.results[0][0].transcript.toLowerCase();
+                 document.getElementById('gameStatusText').innerText = `"${transcript}"`;
+                 if(transcript.includes('jabón') || transcript.includes('jabon') || transcript.includes('agua') || transcript.includes('listo')) {
+                     winGame();
+                 } else {
+                     setTimeout(() => { if(window.STATE.gameActive) recognition.start(); }, 500);
+                 }
+             };
+
+             recognition.onerror = () => {
+                 if(window.STATE.gameActive) setTimeout(() => recognition.start(), 1000);
+             }
+
+             // Visualizer dummy para este modo
+             const gameInt = setInterval(() => {
+                 if(!window.STATE.gameActive) { clearInterval(gameInt); recognition.stop(); return; }
+                 updateVisualizer(getVolume());
+             }, 50);
+        }
+
+        function updateVisualizer(vol) {
+            const container = document.getElementById('gameVisualizer');
+            // Crear barras si no existen (limpieza básica)
+            if(container.querySelectorAll('.audio-bar').length === 0) {
+                 for(let i=0; i<10; i++) {
+                     const d = document.createElement('div');
+                     d.className = 'audio-bar';
+                     container.appendChild(d);
+                 }
+            }
+            const bars = container.querySelectorAll('.audio-bar');
+            bars.forEach((b, i) => {
+                const h = Math.max(10, Math.min(100, vol * (1 + Math.random())));
+                b.style.height = h + '%';
+            });
+        }
+
+        function winGame() {
+            window.STATE.gameActive = false;
+            document.getElementById('gameStatusText').innerText = "¡BIEN!";
+            document.getElementById('gameStatusText').classList.add('text-green-400');
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
+            const u = new SpeechSynthesisUtterance("¡Excelente!"); u.lang='es-ES'; window.speechSynthesis.speak(u);
+            
+            setTimeout(() => {
+                showView('view-timer');
+                // Reanudar timer
+                window.STATE.currentShower.interval = setInterval(tick, 1000);
+                nextPhaseLogic(); // Continuar a la siguiente fase real
+            }, 1500);
+        }
+
+        function skipGame() {
+            window.STATE.gameActive = false;
+            showView('view-timer');
+            window.STATE.currentShower.interval = setInterval(tick, 1000);
+            nextPhaseLogic();
+        }
+
+        // --- TIMER ---
+        function goToTimeSelect(isGamer = false) { 
+            window.STATE.currentShower.totalTimeAllocated = 15; 
+            window.STATE.currentShower.isGameMode = isGamer;
+            
+            const label = document.getElementById('setupModeLabel');
+            const btn = document.getElementById('btnStartShower');
+            
+            if(isGamer) {
+                label.classList.remove('hidden');
+                btn.classList.remove('bg-sky-500');
+                btn.classList.add('bg-fuchsia-600');
+            } else {
+                label.classList.add('hidden');
+                btn.classList.add('bg-sky-500');
+                btn.classList.remove('bg-fuchsia-600');
+            }
+            
+            updateTimeUI(); 
+            showView('view-setup'); 
+        }
+        function adjustTime(d) { let t = window.STATE.currentShower.totalTimeAllocated + d; if(t<5) t=5; if(t>60) t=60; window.STATE.currentShower.totalTimeAllocated = t; updateTimeUI(); }
+        function updateTimeUI() { document.getElementById('timeDisplay').innerText = window.STATE.currentShower.totalTimeAllocated; }
+
+        async function startShower() {
+            const totalSec = window.STATE.currentShower.totalTimeAllocated * 60;
+            const totalW = window.STATE.user.routine.reduce((a,b)=>a+b.weight,0);
+            window.STATE.currentShower.phases = window.STATE.user.routine.map(s => ({ name: s.name, duration: Math.floor((s.weight / totalW) * totalSec) }));
+            window.STATE.currentShower.currentPhaseIndex = 0;
+            window.STATE.currentShower.totalElapsed = 0;
+            window.STATE.currentShower.isRunning = true;
+            window.STATE.currentShower.isPaused = false;
+            try { await navigator.wakeLock.request('screen'); } catch(e){}
+            showView('view-timer');
+            runPhase();
+        }
+
+        function runPhase() {
+            const cs = window.STATE.currentShower;
+            if(cs.currentPhaseIndex >= cs.phases.length) return endShower();
+            const p = cs.phases[cs.currentPhaseIndex];
+            cs.timeLeftInPhase = p.duration;
+            document.getElementById('currentPhaseTitle').innerText = p.name;
+            document.getElementById('stepCounter').innerText = `Fase ${cs.currentPhaseIndex+1}`;
+            const n = cs.phases[cs.currentPhaseIndex+1];
+            document.getElementById('nextPhasePreview').innerText = n ? `Siguiente: ${n.name}` : "Fin";
+            const u = new SpeechSynthesisUtterance(p.name); u.lang='es-ES'; window.speechSynthesis.speak(u);
+            if(cs.interval) clearInterval(cs.interval);
+            cs.interval = setInterval(tick, 1000);
+            updateTimerDisplay();
+        }
+
+        function tick() {
+            const cs = window.STATE.currentShower;
+            if(cs.isPaused) return;
+            cs.timeLeftInPhase--; cs.totalElapsed++;
+            const pct = Math.min((cs.totalElapsed / (cs.totalTimeAllocated*60))*100, 100);
+            document.getElementById('progressBar').style.width = pct+'%';
+            if(cs.timeLeftInPhase<=0) { playPop(); nextPhase(); return; }
+            if(cs.timeLeftInPhase%10===0) playPop(); else playTick();
+            updateTimerDisplay();
+        }
+        function updateTimerDisplay() { const t = window.STATE.currentShower.timeLeftInPhase; document.getElementById('timerNumber').innerText = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`; }
+        
+        // Modified Next Phase Logic for Gamer Mode
+        function nextPhase() { 
+            // Si es modo gamer y no es la última fase, lanzar juego
+            const cs = window.STATE.currentShower;
+            if(cs.isGameMode && cs.currentPhaseIndex < cs.phases.length - 1) {
+                // Probabilidad del 100% para demo (podría ser Math.random() > 0.5)
+                triggerRandomChallenge();
+            } else {
+                nextPhaseLogic();
+            }
+        }
+        
+        function nextPhaseLogic() {
+            window.STATE.currentShower.currentPhaseIndex++; 
+            runPhase();
+        }
+
+        function togglePause() { 
+            const cs = window.STATE.currentShower; cs.isPaused = !cs.isPaused;
+            const txt = cs.isPaused ? "SEGUIR" : "PAUSAR"; const icon = cs.isPaused ? "ph-play" : "ph-pause";
+            document.getElementById('btnPauseLand').innerHTML = `<i class="ph-fill ${icon} text-4xl mb-2"></i> ${txt}`;
+            document.getElementById('btnPausePort').innerHTML = `<i class="ph-fill ${icon} text-2xl mb-1"></i> ${txt}`;
+        }
+        function cancelShower() { clearInterval(window.STATE.currentShower.interval); if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); showView('view-dashboard'); }
+
+        async function endShower() {
+            clearInterval(window.STATE.currentShower.interval);
+            if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); // Apagar micro
+            
+            const duration = Math.ceil(window.STATE.currentShower.totalElapsed / 60);
+            
+            if(duration < 2) {
+                alert("Ducha demasiado corta (< 2 min). No cuenta para la racha.");
+                showView('view-dashboard');
+                return;
+            }
+
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            
+            const entry = { date: new Date().toISOString(), duration: duration };
+            
+            if(!window.STATE.user.history) window.STATE.user.history = [];
+            window.STATE.user.history.push(entry);
+            
+            const today = new Date().setHours(0,0,0,0);
+            const lastUpdate = window.STATE.user.lastStreakDate ? new Date(window.STATE.user.lastStreakDate).setHours(0,0,0,0) : 0;
+            
+            if(today > lastUpdate) {
+                recalculateStreak(); 
+                window.STATE.user.lastStreakDate = new Date().toISOString();
+            }
+
+            await saveUserData();
+            window.STATE.calendarDate = new Date(); renderCalendar(); 
+            alert(`¡Ducha Registrada! (+${duration} min)`);
+            showView('view-dashboard');
+        }
+
+        const ac = new (window.AudioContext||window.webkitAudioContext)();
+        function playTick() { if(ac.state==='suspended')ac.resume(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=800; g.gain.setValueAtTime(0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.05); o.start(); o.stop(ac.currentTime+0.05); }
+        function playPop() { if(ac.state==='suspended')ac.resume(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=600; o.frequency.exponentialRampToValueAtTime(300,ac.currentTime+0.15); g.gain.setValueAtTime(0.3,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.01,ac.currentTime+0.15); o.start(); o.stop(ac.currentTime+0.15); }
+    </script>
+</body>
+</html>
