@@ -771,6 +771,11 @@
 
         // --- NEW GAME LOGIC ---
         function triggerRandomChallenge() {
+            // Resume Audio Context only when challenge starts
+            if(window.STATE.audioContext && window.STATE.audioContext.state === 'suspended') {
+                window.STATE.audioContext.resume();
+            }
+            
             clearInterval(window.STATE.currentShower.interval);
             window.STATE.gameActive = true;
             
@@ -793,25 +798,25 @@
             let waterLevel = 30;
             const bar = document.getElementById('tsunamiLevel');
             
+            // Optimized interval: 100ms instead of 30ms
             window.STATE.gameLoop = setInterval(() => {
                 if(!window.STATE.gameActive) return;
                 const vol = getVolume();
-                const threshold = window.STATE.noiseFloor * 1.5; // Trigger threshold
+                const threshold = window.STATE.noiseFloor * 1.5; 
                 
-                // Decay constant
-                waterLevel -= 0.5;
+                // Adjusted decay/boost for slower tick rate
+                waterLevel -= 1.5; 
                 
-                // Boost on loud noise
                 if(vol > threshold) {
-                    waterLevel += 2;
+                    waterLevel += 6;
                 }
                 
                 waterLevel = Math.max(0, Math.min(100, waterLevel));
                 bar.style.height = waterLevel + '%';
                 
                 if(waterLevel >= 100) winGame();
-                if(waterLevel <= 0) { waterLevel = 20; } // Mercy bounce
-            }, 30);
+                if(waterLevel <= 0) { waterLevel = 20; } 
+            }, 100);
         }
 
         // GAME 2: SEMAFORO (Reaction)
@@ -822,7 +827,6 @@
             const icon = document.getElementById('semaforoIcon');
             
             ui.classList.remove('hidden');
-            // Reset UI
             ui.style.backgroundColor = '#020617';
             light.className = "w-64 h-64 rounded-full bg-red-600 shadow-[0_0_100px_rgba(220,38,38,0.5)] flex items-center justify-center mb-12 transition-all duration-100";
             icon.className = "ph-fill ph-hand-palm text-6xl text-red-900";
@@ -831,7 +835,6 @@
             let canReact = false;
             let reactionStart = 0;
             
-            // Random delay 2-5s
             const delay = 2000 + Math.random() * 3000;
             
             const timeout = setTimeout(() => {
@@ -841,25 +844,24 @@
                 light.className = "w-72 h-72 rounded-full bg-green-500 shadow-[0_0_100px_rgba(34,197,94,0.8)] flex items-center justify-center mb-12 transition-all duration-100 scale-110";
                 icon.className = "ph-fill ph-lightning text-7xl text-white animate-bounce";
                 text.innerText = "¡AHORA!";
-                ui.style.backgroundColor = '#14532d'; // Dark green bg
+                ui.style.backgroundColor = '#14532d'; 
             }, delay);
             
+            // Optimized interval: 60ms instead of 20ms
             window.STATE.gameLoop = setInterval(() => {
                 if(!window.STATE.gameActive) { clearTimeout(timeout); return; }
                 const vol = getVolume();
                 
-                // Detection logic
                 if(canReact && vol > window.STATE.noiseFloor * 2.0) {
                     const reactionTime = Date.now() - reactionStart;
                     text.innerText = `${reactionTime}ms!`;
                     winGame();
                 } else if(!canReact && vol > window.STATE.noiseFloor * 3.0) {
-                    // False start penalty (optional, kept simple for shower)
                     text.innerText = "¡Espera!";
                     text.classList.add("text-red-500");
                     setTimeout(() => text.classList.remove("text-red-500"), 500);
                 }
-            }, 20);
+            }, 60);
         }
 
         // GAME 3: BOMB (Precision)
@@ -868,38 +870,39 @@
             const cursor = document.getElementById('bombCursor');
             let pos = 0;
             let direction = 1;
-            const speed = 1.5; // Speed multiplier
+            const speed = 4.0; // Adjusted for slower tick
             
+            // Optimized interval: 50ms instead of 20ms
             window.STATE.gameLoop = setInterval(() => {
                 if(!window.STATE.gameActive) return;
                 
-                // Move cursor ping-pong
                 pos += direction * speed;
                 if(pos > 100 || pos < 0) direction *= -1;
                 cursor.style.left = pos + '%';
                 
                 const vol = getVolume();
-                // Check for sharp spike
                 if(vol > window.STATE.noiseFloor * 2.5) {
-                    // Check if inside center zone (40% to 60%)
                     if(pos > 40 && pos < 60) {
                         winGame();
                     } else {
-                        // Miss visualization
                         cursor.style.backgroundColor = 'red';
                         setTimeout(() => cursor.style.backgroundColor = 'white', 200);
                     }
                 }
-            }, 20);
+            }, 50);
         }
 
         function winGame() {
             window.STATE.gameActive = false;
             clearInterval(window.STATE.gameLoop);
             
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
+            // Suspend Audio Context to save battery/CPU
+            if(window.STATE.audioContext && window.STATE.audioContext.state === 'running') {
+                window.STATE.audioContext.suspend();
+            }
             
-            // Audio feedback
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, zIndex: 100 });
+            
             const u = new SpeechSynthesisUtterance("¡Muy bien!"); u.lang='es-ES'; window.speechSynthesis.speak(u);
             
             setTimeout(() => {
@@ -912,6 +915,12 @@
         function skipGame() {
             window.STATE.gameActive = false;
             if(window.STATE.gameLoop) clearInterval(window.STATE.gameLoop);
+            
+            // Suspend Audio Context
+            if(window.STATE.audioContext && window.STATE.audioContext.state === 'running') {
+                window.STATE.audioContext.suspend();
+            }
+
             showView('view-timer');
             window.STATE.currentShower.interval = setInterval(tick, 1000);
             nextPhaseLogic();
@@ -1001,12 +1010,20 @@
             document.getElementById('btnPauseLand').innerHTML = `<i class="ph-fill ${icon} text-4xl mb-2"></i> ${txt}`;
             document.getElementById('btnPausePort').innerHTML = `<i class="ph-fill ${icon} text-2xl mb-1"></i> ${txt}`;
         }
-        function cancelShower() { clearInterval(window.STATE.currentShower.interval); if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); showView('view-dashboard'); }
+        function cancelShower() { 
+            clearInterval(window.STATE.currentShower.interval); 
+            if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop()); 
+            if(window.STATE.audioContext) window.STATE.audioContext.close(); // Full cleanup
+            window.STATE.audioContext = null;
+            showView('view-dashboard'); 
+        }
 
         async function endShower() {
             clearInterval(window.STATE.currentShower.interval);
             if(window.STATE.microphone) window.STATE.microphone.getTracks().forEach(t=>t.stop());
-            
+            if(window.STATE.audioContext) window.STATE.audioContext.close(); // Full cleanup
+            window.STATE.audioContext = null;
+
             const duration = Math.ceil(window.STATE.currentShower.totalElapsed / 60);
             if(duration < 2) {
                 alert("Ducha demasiado corta (< 2 min). No cuenta para la racha.");
