@@ -205,8 +205,8 @@
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
         
-        // Sonidos
-        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3']; 
+        // Sonidos (AÑADIDA SONG4)
+        const SONGS = ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3']; 
         const GUNSHOT_URL = "https://library.penguinmod.com/files/sounds/gunshot3.mp3";
         
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
@@ -392,11 +392,6 @@
                 const alivePlayers = Object.entries(this.players).filter(([k, p]) => p.isAlive);
                 if (alivePlayers.length === 0) return;
 
-                // Encontrar el peor tiempo (score más alto)
-                // Si hay empate, coge el primero. Si nadie se movió (score 10-11), nadie muere o aleatorio?
-                // Vamos a matar solo si score > 15 (significa que se movió algo) O simplemente el peor.
-                // El prompt dice "se elimina el que tiene peor tiempo".
-                
                 let worstPlayerId = null;
                 let maxScore = -1;
 
@@ -410,16 +405,8 @@
 
                 // Mostrar resultados por 5 segundos, luego eliminar y seguir
                 setTimeout(() => {
-                    if (worstPlayerId && maxScore > 10) { // Solo eliminar si hubo movimiento significativo? O siempre el peor.
-                         // Vamos a asumir siempre el peor para que el juego avance, 
-                         // pero si todos estuvieron quietos (10-12), perdonamos?
-                         // Prompt: "elimina el que tiene peor tiempo".
-                         // Vamos a poner un umbral mínimo de "movimiento"
-                         // Pero para cumplir "elimina", eliminamos.
-                        
+                    if (worstPlayerId && maxScore > 10) { 
                         db.ref(`artifacts/${APP_ID}/public/data/players/${worstPlayerId}`).update({ isAlive: false });
-                        
-                        // Sonido de disparo en host también?
                         gunshotAudio.play().catch(()=>{});
                     }
 
@@ -446,8 +433,14 @@
             startMusic: function() {
                 const aliveCount = Object.values(this.players).filter(p => p.isAlive).length;
                 let songToPlay;
-                if (aliveCount <= 2) songToPlay = 'song3.mp3';
-                else songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
+                
+                // Si quedan 2 personas o menos, forzar canción 3 (Tensión final)
+                if (aliveCount <= 2) {
+                    songToPlay = 'song3.mp3';
+                } else {
+                    // Elegir canción aleatoria entre las disponibles (incluida song4)
+                    songToPlay = SONGS[Math.floor(Math.random() * SONGS.length)];
+                }
                 
                 if (currentMusic) {
                     currentMusic.pause();
@@ -539,13 +532,8 @@
                 grid.innerHTML = '';
                 $('eliminated-msg').classList.add('hidden');
 
-                // Ordenar jugadores por score (de peor a mejor para visualización, o mejor a peor)
-                // Queremos ver quién tardó más arriba (o abajo).
-                // Vamos a mostrar todos.
                 const players = Object.values(this.players).filter(p => p.isAlive || (p.lastScore > 0)); 
-                // Incluir eliminados recientes? No, solo vivos de esta ronda para ver su tiempo.
-                // Bueno, el que va a morir todavía está "isAlive" en la DB hasta el timeout.
-
+                
                 players.sort((a, b) => b.lastScore - a.lastScore); // Mayor tiempo primero
 
                 players.forEach((p, index) => {
