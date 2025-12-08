@@ -36,7 +36,7 @@
         @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .animate-heartbeat { animation: heartbeat 1s infinite; }
         .score-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-        .bg-detected { background-color: #ef4444 !important; }
+        .bg-detected { background-color: #ef4444 !important; transition: background-color 0.1s; }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-black text-white relative">
@@ -580,6 +580,7 @@
             measure() {
                 const start = Date.now();
                 let lastM = 0;
+                // UI Bar Reset
                 const b = $('p-measure-bar');
                 if(b) {
                     b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
@@ -590,14 +591,17 @@
                 const bg = $('p-bg-color');
                 const h = (e) => {
                     let acc = 0;
-                    if(e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
-                    else if(e.accelerationIncludingGravity) {
+                    // Some android devices return an acceleration object with null values
+                    if(e.acceleration && e.acceleration.x !== null) {
+                        acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
+                    } else if(e.accelerationIncludingGravity) {
                         const g = e.accelerationIncludingGravity;
+                        // Simple gravity removal
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
                     
-                    // Threshod lowered to 1.5 for better detection
-                    if(acc > 1.5) { 
+                    // Threshold LOWERED to 0.5 to catch more movement
+                    if(acc > 0.5) { 
                         lastM = Date.now() - start;
                         if(bg) { 
                             bg.classList.add('bg-detected');
@@ -610,6 +614,11 @@
                     window.removeEventListener('devicemotion', h);
                     if(this.isAlive) db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: lastM/1000 });
                 }, 2000);
+            },
+
+            die() {
+                AudioSys.playGun();
+                if(navigator.vibrate) navigator.vibrate([200, 100, 500]);
             },
 
             render(state, me) {
