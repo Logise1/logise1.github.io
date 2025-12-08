@@ -710,6 +710,7 @@
                 const code = $('inp-session-code').value.trim().toUpperCase();
                 if(!name || !code) return alert("Faltan datos");
                 
+                SoundManager.unlock(); // FORCE UNLOCK
                 this.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
                     name, sessionId: code, isAlive: true, joinedAt: Date.now()
@@ -720,6 +721,7 @@
             },
 
             requestPermissions() {
+                SoundManager.unlock(); // FORCE UNLOCK AGAIN
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     DeviceMotionEvent.requestPermission().then(r => {
                         if (r==='granted') this.enter(); else alert("Permiso denegado");
@@ -732,31 +734,36 @@
                 $('player-game').classList.remove('hidden');
                 
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}`).on('value', s => {
-                    const d = s.val();
-                    if(!d) return;
-                    
-                    const me = d.players?.[localUid];
-                    const state = d.state;
-                    
-                    // Flash Check
-                    if(state.lastShot && state.lastShot !== this.lastShot && Date.now() - state.lastShot < 3000) {
-                        this.lastShot = state.lastShot;
-                        triggerFlash();
-                        AudioSys.playGun();
-                        if(navigator.vibrate) navigator.vibrate(500);
-                    }
-
-                    if(me) {
-                        if(this.isAlive && !me.isAlive) {
-                            this.isAlive = false;
-                            if(navigator.vibrate) navigator.vibrate([200,100,500]);
-                        } else if(!this.isAlive && me.isAlive) {
-                            this.isAlive = true; // Revived
+                    try {
+                        const d = s.val();
+                        // WAITING FOR VALID STATE
+                        if(!d || !d.state) return; 
+                        
+                        const me = d.players?.[localUid];
+                        const state = d.state;
+                        
+                        // Flash Check
+                        if(state.lastShot && state.lastShot !== this.lastShot && Date.now() - state.lastShot < 3000) {
+                            this.lastShot = state.lastShot;
+                            triggerFlash();
+                            AudioSys.playGun();
+                            if(navigator.vibrate) navigator.vibrate(500);
                         }
-                    }
 
-                    this.render(state, me);
-                    if(state.state === 'measuring') this.measure();
+                        if(me) {
+                            if(this.isAlive && !me.isAlive) {
+                                this.isAlive = false;
+                                if(navigator.vibrate) navigator.vibrate([200,100,500]);
+                            } else if(!this.isAlive && me.isAlive) {
+                                this.isAlive = true; // Revived
+                            }
+                        }
+
+                        this.render(state, me);
+                        if(state.state === 'measuring') this.measure();
+                    } catch(e) {
+                        console.error("Player Error:", e);
+                    }
                 });
 
                 this.monitor();
@@ -807,7 +814,8 @@
             },
 
             render(state, me) {
-                this.sessionData = state; // For monitor
+                if(!state) return; // Guard
+                this.sessionData = state; 
                 const c = $('view-player-game');
                 ['p-screen-waiting','p-screen-active','p-screen-dead','p-screen-win'].forEach(id=>$(id)?.classList.add('hidden'));
                 
