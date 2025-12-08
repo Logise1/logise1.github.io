@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
-    <!-- Three.js (3D Engine) - ACTUALIZADO A VERSIÓN MODERNA -->
+    <!-- Three.js (3D Engine) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 
     <!-- Lucide Icons -->
@@ -710,7 +710,7 @@
                 const code = $('inp-session-code').value.trim().toUpperCase();
                 if(!name || !code) return alert("Faltan datos");
                 
-                SoundManager.unlock(); // FORCE UNLOCK
+                AudioSys.unlock(); // FORCE UNLOCK
                 this.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
                     name, sessionId: code, isAlive: true, joinedAt: Date.now()
@@ -721,7 +721,7 @@
             },
 
             requestPermissions() {
-                SoundManager.unlock(); // FORCE UNLOCK AGAIN
+                AudioSys.unlock(); // FORCE UNLOCK AGAIN
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     DeviceMotionEvent.requestPermission().then(r => {
                         if (r==='granted') this.enter(); else alert("Permiso denegado");
@@ -811,6 +811,11 @@
                     window.removeEventListener('devicemotion', h);
                     if(this.isAlive) db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: lastM/1000 });
                 }, 2000);
+            },
+
+            die() {
+                AudioSys.playGun();
+                if(navigator.vibrate) navigator.vibrate([200, 100, 500]);
             },
 
             render(state, me) {
