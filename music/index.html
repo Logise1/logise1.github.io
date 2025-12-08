@@ -367,7 +367,8 @@
                 });
 
                 this.wait(() => {
-                    if(worstId && max > 0.05 && alive.length > 1) {
+                    // Solo eliminamos si la acumulación de movimiento es significativa (> 0.2s acumulados)
+                    if(worstId && max > 0.2 && alive.length > 1) {
                         AudioSys.playGun();
                         triggerFlash();
                         const elName = $('eliminated-name');
@@ -467,13 +468,14 @@
                 
                 p.forEach((pl, i) => {
                     const rawScore = (pl.lastScore === null || pl.lastScore === undefined) ? 0 : parseFloat(pl.lastScore);
-                    const score = rawScore.toFixed(2);
+                    const score = rawScore.toFixed(3);
                     // Color Logic
                     let barColor = 'bg-[#249f9c]';
-                    if (rawScore > 1.0) barColor = 'bg-[#ed1b76]';
-                    else if (rawScore > 0.5) barColor = 'bg-yellow-500';
+                    if (rawScore > 0.8) barColor = 'bg-[#ed1b76]';
+                    else if (rawScore > 0.4) barColor = 'bg-yellow-500';
 
-                    const w = Math.min(100, (rawScore/2.5)*100);
+                    // Max expected bad score approx 1.5s for bar width
+                    const w = Math.min(100, (rawScore/1.5)*100);
                     
                     g.innerHTML += `
                         <div class="glass-panel p-4 rounded-xl flex items-center space-x-6 mb-2">
@@ -563,7 +565,7 @@
                 this.lastMove = Date.now();
                 window.addEventListener('devicemotion', e => {
                     let acc = e.acceleration ? Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2) : 0;
-                    if(acc > 0.5) this.lastMove = Date.now();
+                    if(acc > 1.5) this.lastMove = Date.now();
                 });
                 setInterval(() => {
                     const w = $('p-move-warning');
@@ -578,42 +580,54 @@
             },
 
             measure() {
-                const start = Date.now();
-                let lastM = 0;
-                // UI Bar Reset
+                // CORRECCION: Usamos acumulación en vez de timestamp
+                let accumulatedTime = 0;
+                let lastEventTime = Date.now();
+
+                // Reset UI
                 const b = $('p-measure-bar');
                 if(b) {
                     b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
                     void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
                 }
 
-                // Increased Sensitivity & Visual Feedback
                 const bg = $('p-bg-color');
                 const h = (e) => {
+                    const now = Date.now();
+                    const dt = now - lastEventTime; // Tiempo desde la última lectura (ms)
+                    lastEventTime = now;
+
                     let acc = 0;
-                    // Some android devices return an acceleration object with null values
                     if(e.acceleration && e.acceleration.x !== null) {
                         acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
                     } else if(e.accelerationIncludingGravity) {
                         const g = e.accelerationIncludingGravity;
-                        // Simple gravity removal
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
                     
-                    // Threshold LOWERED to 0.5 to catch more movement
-                    if(acc > 0.5) { 
-                        lastM = Date.now() - start;
+                    // CORRECCION: Umbral subido a 1.5 para evitar ruido de sensores (era 0.5)
+                    // Si se supera el umbral, sumamos el tiempo delta al acumulado
+                    if(acc > 1.5) { 
+                        // Capamos dt a 100ms para evitar saltos locos si el navegador se congela
+                        accumulatedTime += Math.min(dt, 100);
+
                         if(bg) { 
                             bg.classList.add('bg-detected');
                             setTimeout(() => bg.classList.remove('bg-detected'), 150);
                         }
                     }
                 };
+                
                 window.addEventListener('devicemotion', h);
+                
+                // Paramos de medir a los 2s (aunque el servidor espera 4s por lag, la fase activa de medición es corta)
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', h);
-                    if(this.isAlive) db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: lastM/1000 });
-                }, 2000);
+                    if(this.isAlive) {
+                        // Enviamos el tiempo total acumulado de movimiento en segundos
+                        db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: accumulatedTime/1000 });
+                    }
+                }, 2500);
             },
 
             die() {
