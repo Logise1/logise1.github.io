@@ -821,39 +821,39 @@
             render(state, me) {
                 if(!state) return; // Guard
                 this.sessionData = state; 
-                const c = $('view-player-game');
-                ['p-screen-waiting','p-screen-active','p-screen-dead','p-screen-win'].forEach(id=>$(id)?.classList.add('hidden'));
+                const c = $('player-game'); // CORRECT ID
+                ['p-state-waiting','p-state-active','p-state-dead','p-state-win'].forEach(id=>$(id)?.classList.add('hidden')); // CORRECT IDs
                 
                 if(state.state === 'ended') {
                     if(state.winner !== 'NADIE') { 
-                        $('p-screen-win')?.classList.remove('hidden'); 
+                        $('p-state-win')?.classList.remove('hidden'); 
                         AudioSys.playWin(); 
                     }
-                    else $('p-screen-dead')?.classList.remove('hidden');
+                    else $('p-state-dead')?.classList.remove('hidden');
                     return;
                 }
 
-                if(!this.isAlive) { $('p-screen-dead')?.classList.remove('hidden'); return; }
-                if(state.state === 'waiting') { $('p-screen-waiting')?.classList.remove('hidden'); return; }
+                if(!this.isAlive) { $('p-state-dead')?.classList.remove('hidden'); return; }
+                if(state.state === 'waiting') { $('p-state-waiting')?.classList.remove('hidden'); return; }
 
-                $('p-screen-active')?.classList.remove('hidden');
-                const t = $('p-main-text'), sub = $('p-sub-text'), ic = $('p-icon'), bar = $('p-measure-bar-container');
+                $('p-state-active')?.classList.remove('hidden');
+                const t = $('p-main-text'), sub = $('p-sub-text'), ic = $('p-icon'), bar = $('p-measure-bar-container'), bg = $('p-bg-color');
                 
                 if(state.musicPlaying) {
-                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-[#249f9c]";
+                    if(bg) bg.className = "absolute inset-0 transition-colors duration-300 bg-[#249f9c]";
                     if(ic) ic.innerHTML = '<i data-lucide="footprints" class="w-32 h-32 text-white animate-bounce"></i>';
                     if(t) t.innerText = "CORRE"; 
                     if(sub) sub.innerText = "MANTENTE EN MOVIMIENTO";
                     if(bar) bar.classList.add('hidden');
                 } else if(state.state === 'measuring') {
-                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-[#ed1b76]";
+                    if(bg) bg.className = "absolute inset-0 transition-colors duration-300 bg-[#ed1b76]";
                     if(ic) ic.innerHTML = '<i data-lucide="eye" class="w-32 h-32 text-white animate-pulse"></i>';
                     if(t) t.innerText = "QUIETO"; 
                     if(sub) sub.innerText = "NO TE MUEVAS";
                     if(bar) bar.classList.remove('hidden');
                     if(navigator.vibrate) navigator.vibrate(50);
                 } else {
-                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-black";
+                    if(bg) bg.className = "absolute inset-0 transition-colors duration-300 bg-black";
                     if(ic) ic.innerHTML = '<i data-lucide="bar-chart-2" class="w-32 h-32 text-gray-500"></i>';
                     if(t) t.innerText = "RESULTADOS"; 
                     if(sub) sub.innerText = "MIRA LA PANTALLA";
