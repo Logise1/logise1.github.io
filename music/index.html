@@ -42,7 +42,7 @@
 <body class="h-screen w-screen overflow-hidden bg-black text-white relative">
 
     <!-- GLOBAL AUDIO STATUS -->
-    <div id="audio-status" class="fixed top-2 right-2 text-[10px] text-gray-700 z-50 pointer-events-none font-mono">AUDIO SYSTEM READY</div>
+    <div id="audio-status" class="fixed top-2 right-2 text-[10px] text-gray-700 z-50 pointer-events-none font-mono">SYSTEM READY</div>
 
     <!-- FLASH OVERLAY -->
     <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-lighten opacity-0"></div>
@@ -207,6 +207,40 @@
     </div>
 
     <script>
+        // --- SYSTEM UTILS (WakeLock, Fullscreen, AntiBack) ---
+        const SystemOps = {
+            wakeLock: null,
+            
+            async enableAwake() {
+                try {
+                    if ('wakeLock' in navigator) {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                    }
+                } catch (err) { console.log('WakeLock Error:', err); }
+            },
+
+            enableFullscreen() {
+                const el = document.documentElement;
+                const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+                if(rfs) {
+                    rfs.call(el).catch(err => console.log('Fullscreen blocked:', err));
+                }
+            },
+
+            enableAntiBack() {
+                history.pushState(null, document.title, location.href);
+                window.addEventListener('popstate', function (event) {
+                    history.pushState(null, document.title, location.href);
+                });
+            },
+
+            activateAll() {
+                this.enableAwake();
+                this.enableFullscreen();
+                this.enableAntiBack();
+            }
+        };
+
         // --- AUDIO MANAGER ---
         const AudioSys = {
             gun: new Audio('https://library.penguinmod.com/files/sounds/gunshot3.mp3'),
@@ -224,10 +258,23 @@
                 this.gun.currentTime=0; this.gun.play().catch(() => this.playSynth(150, 'sawtooth')); 
             },
             playWin() { this.win.currentTime=0; this.win.play().catch(()=>{}); },
-            playBGM(fast) {
+            playBGM(isFinale) {
                 if(this.bgm) this.bgm.pause();
-                const src = fast ? 'song3.mp3' : ['song1.mp3','song2.mp3', 'song4.mp3'][Math.floor(Math.random()*3)];
-                this.bgm = new Audio(src); this.bgm.loop=true; this.bgm.play().catch(()=>{});
+                
+                // LÓGICA DE CANCIONES ACTUALIZADA
+                // isFinale (<= 2 players): Song 3 (rápida)
+                // Normal (> 2 players): Pool de song1, song2, song4, song5
+                let src;
+                if (isFinale) {
+                    src = 'song3.mp3';
+                } else {
+                    const pool = ['song1.mp3', 'song2.mp3', 'song4.mp3', 'song5.mp3', 'song6.mp3'];
+                    src = pool[Math.floor(Math.random() * pool.length)];
+                }
+
+                this.bgm = new Audio(src); 
+                this.bgm.loop=true; 
+                this.bgm.play().catch(()=>{});
             },
             stopBGM() { if(this.bgm) this.bgm.pause(); },
             playSynth(freq, type) {
@@ -255,7 +302,10 @@
                 const p = new URLSearchParams(location.search);
                 const s = p.get('session')?.toUpperCase();
                 const r = p.get('role');
-                document.body.addEventListener('click', () => AudioSys.unlock(), {once:true});
+                document.body.addEventListener('click', () => {
+                    AudioSys.unlock();
+                }, {once:true});
+                
                 if(s && r) { 
                     if(r==='player') $('inp-session-code').value = s; 
                     this.setRole(r, s); 
@@ -326,6 +376,7 @@
             },
 
             startGame() {
+                SystemOps.activateAll(); // Activar Fullscreen y WakeLock al empezar
                 this.clearTimers();
                 const u = {};
                 Object.keys(this.players).forEach(id => {
@@ -339,8 +390,21 @@
 
             loopMusic() {
                 const alive = Object.values(this.players).filter(p=>p.isAlive).length;
-                AudioSys.playBGM(alive<=2);
-                let duration = alive<=2 ? Math.random()*10000+10000 : Math.random()*7000+5000;
+                const isFinale = alive <= 2;
+                
+                AudioSys.playBGM(isFinale);
+                
+                // LÓGICA DE DURACIÓN (Extendida para 3+ jugadores)
+                // Si hay más de 2 vivos, rondas largas (20s - 35s) para que la partida dure.
+                // Si hay 2 o menos, rondas rápidas (8s - 15s) para tensión final.
+                let duration;
+                if (!isFinale) {
+                    // Rondas largas (3+ jugadores)
+                    duration = Math.random() * 15000 + 20000; // 20s a 35s
+                } else {
+                    // Final intensa
+                    duration = Math.random() * 7000 + 8000; // 8s a 15s
+                }
                 
                 this.wait(() => {
                     AudioSys.stopBGM();
@@ -507,6 +571,8 @@
                 if(!name || !code) return alert("Faltan datos");
                 
                 AudioSys.unlock(); 
+                SystemOps.activateAll(); // Activar sistemas en el jugador
+                
                 this.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
                     name, sessionId: code, isAlive: true, joinedAt: Date.now()
