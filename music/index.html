@@ -38,6 +38,9 @@
         /* Animations */
         @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
         .animate-heartbeat { animation: heartbeat 1s infinite; }
+        
+        /* Red Flash for Motion Detection */
+        .bg-detected { background-color: #ef4444 !important; }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-black text-white relative">
@@ -458,13 +461,8 @@
             
             init(sid) {
                 this.sessionId = sid || Math.random().toString(36).substring(2,6).toUpperCase();
-                // Fix for SecurityError in sandboxed environments
                 if(!sid) {
-                    try {
-                        history.replaceState(null, '', `?session=${this.sessionId}&role=screen`);
-                    } catch(e) {
-                        console.warn("History API unavailable in this environment");
-                    }
+                    try { history.replaceState(null, '', `?session=${this.sessionId}&role=screen`); } catch(e) {}
                 }
                 
                 $('host-session-code').innerText = this.sessionId;
@@ -474,12 +472,11 @@
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(safeUrl + '?session=' + this.sessionId + '&role=player')}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
 
-                World3D.init(); // Start 3D
+                World3D.init(); 
 
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players`).on('value', s => {
                     this.players = s.val() || {};
                     this.renderUI();
-                    // Sync 3D
                     Object.entries(this.players).forEach(([id, p]) => {
                         if(p.isAlive) World3D.addPlayer(id);
                         else World3D.killPlayer(id);
@@ -536,11 +533,11 @@
                 Object.keys(this.players).forEach(id => {
                     u[`players/${id}/isAlive`] = true;
                     u[`players/${id}/lastScore`] = null;
-                    if(World3D.players[id]) { // Reset 3D
+                    if(World3D.players[id]) { 
                         World3D.players[id].material.color.setHex(0x249f9c);
                         World3D.players[id].rotation.x = 0;
                         World3D.players[id].position.y = 2;
-                        World3D.players[id].position.z = 40; // Reset Pos
+                        World3D.players[id].position.z = 40; 
                         World3D.players[id].userData.dead = false;
                     }
                 });
@@ -557,7 +554,8 @@
                 this.wait(() => {
                     AudioSys.stopBGM();
                     this.updateDB({ state: 'measuring', musicPlaying: false, lastStop: Date.now() });
-                    this.wait(() => this.checkResults(), 3000);
+                    // Increased wait to 4000ms for network sync
+                    this.wait(() => this.checkResults(), 4000);
                 }, duration);
             },
 
@@ -572,6 +570,7 @@
 
                 let worstId = null, max = -1;
                 alive.forEach(([id, p]) => {
+                    // Null lastScore treated as 0 (safe fallback)
                     const s = p.lastScore || 0;
                     if(s > max) { max = s; worstId = id; }
                 });
@@ -587,9 +586,8 @@
                         if(elOverlay) elOverlay.classList.remove('hidden');
                         
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${worstId}`).update({ isAlive: false });
-                        World3D.killPlayer(worstId); // Trigger 3D death
+                        World3D.killPlayer(worstId); 
                         
-                        // Set global flash for players
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update({ lastShot: Date.now() });
                     }
 
@@ -602,7 +600,6 @@
                             const winner = Object.values(this.players).find(p=>p.isAlive);
                             this.endGame(winner ? winner.name : 'NADIE');
                         } else {
-                            // Next round
                             const u = {};
                             Object.keys(this.players).forEach(id => u[`players/${id}/lastScore`] = null);
                             db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
@@ -618,11 +615,10 @@
                 this.updateDB({ state: 'ended', winner: w });
                 this.wait(() => {
                     this.updateDB({ state: 'waiting' });
-                    // Revive all
                     const u = {};
                     Object.keys(this.players).forEach(id => {
                         u[`players/${id}/isAlive`] = true;
-                        if(World3D.players[id]) { // Reset 3D Visuals
+                        if(World3D.players[id]) { 
                             World3D.players[id].userData.dead = false;
                             World3D.players[id].material.color.setHex(0x249f9c);
                             World3D.players[id].rotation.x = 0;
@@ -636,7 +632,6 @@
             updateUI() {
                 ['host-lobby','host-game-status','host-round-results','host-winner'].forEach(id=>$(id)?.classList.add('hidden'));
                 
-                // Animation loop updates 3D automatically based on variables
                 if(this.gameState === 'waiting') $('host-lobby')?.classList.remove('hidden');
                 else if(this.gameState === 'playing') {
                     $('host-game-status')?.classList.remove('hidden');
@@ -657,9 +652,6 @@
                     this.renderResults();
                 } else if(this.gameState === 'ended') {
                     $('host-winner')?.classList.remove('hidden');
-                    if(this.players) {
-                        // Find winner
-                    }
                     db.ref(`artifacts/${APP_ID}/${this.sessionId}/state/winner`).once('value', s => {
                         const winName = $('winner-name');
                         if(winName) winName.innerText = s.val() || '...';
@@ -673,13 +665,16 @@
                 if(!g) return;
                 g.innerHTML = '';
                 
-                const p = Object.values(this.players).filter(x => x.isAlive && x.lastScore !== null && x.lastScore !== undefined);
-                p.sort((a,b) => b.lastScore - a.lastScore);
+                // FIXED: Filter removed for null scores, they now appear as 0.00s
+                const p = Object.values(this.players).filter(x => x.isAlive);
+                p.sort((a,b) => (b.lastScore||0) - (a.lastScore||0));
                 
                 p.forEach((pl, i) => {
-                    const score = parseFloat(pl.lastScore).toFixed(2);
-                    const barColor = score > 1.0 ? 'bg-[#ed1b76]' : 'bg-[#249f9c]';
-                    const w = Math.min(100, (score/2.5)*100);
+                    // Safe fallback for null/undefined
+                    const rawScore = (pl.lastScore === null || pl.lastScore === undefined) ? 0 : parseFloat(pl.lastScore);
+                    const score = rawScore.toFixed(2);
+                    const barColor = rawScore > 1.0 ? 'bg-[#ed1b76]' : 'bg-[#249f9c]';
+                    const w = Math.min(100, (rawScore/2.5)*100);
                     
                     g.innerHTML += `
                         <div class="glass-panel p-4 rounded-xl flex items-center space-x-6 mb-2">
@@ -736,7 +731,6 @@
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}`).on('value', s => {
                     try {
                         const d = s.val();
-                        // WAITING FOR VALID STATE
                         if(!d || !d.state) return; 
                         
                         const me = d.players?.[localUid];
@@ -797,6 +791,9 @@
                     void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
                 }
 
+                // Add Visual Feedback for measuring state
+                const bg = $('p-bg-color');
+
                 const h = (e) => {
                     let acc = 0;
                     if(e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
@@ -804,7 +801,13 @@
                         const g = e.accelerationIncludingGravity;
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
-                    if(acc > 2.0) lastM = Date.now() - start;
+                    // Increased sensitivity threshold (1.2 instead of 2.0)
+                    if(acc > 1.2) { 
+                        lastM = Date.now() - start;
+                        // Visual feedback when motion detected
+                        if(bg) bg.classList.add('bg-detected');
+                        setTimeout(() => { if(bg) bg.classList.remove('bg-detected'); }, 100);
+                    }
                 };
                 window.addEventListener('devicemotion', h);
                 setTimeout(() => {
@@ -819,10 +822,10 @@
             },
 
             render(state, me) {
-                if(!state) return; // Guard
+                if(!state) return; 
                 this.sessionData = state; 
-                const c = $('player-game'); // CORRECT ID
-                ['p-state-waiting','p-state-active','p-state-dead','p-state-win'].forEach(id=>$(id)?.classList.add('hidden')); // CORRECT IDs
+                const c = $('player-game'); 
+                ['p-state-waiting','p-state-active','p-state-dead','p-state-win'].forEach(id=>$(id)?.classList.add('hidden')); 
                 
                 if(state.state === 'ended') {
                     if(state.winner !== 'NADIE') { 
