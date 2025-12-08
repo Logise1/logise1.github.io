@@ -210,7 +210,6 @@
         // --- SYSTEM UTILS (WakeLock, Fullscreen, AntiBack) ---
         const SystemOps = {
             wakeLock: null,
-            
             async enableAwake() {
                 try {
                     if ('wakeLock' in navigator) {
@@ -218,7 +217,6 @@
                     }
                 } catch (err) { console.log('WakeLock Error:', err); }
             },
-
             enableFullscreen() {
                 const el = document.documentElement;
                 const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
@@ -226,14 +224,12 @@
                     rfs.call(el).catch(err => console.log('Fullscreen blocked:', err));
                 }
             },
-
             enableAntiBack() {
                 history.pushState(null, document.title, location.href);
                 window.addEventListener('popstate', function (event) {
                     history.pushState(null, document.title, location.href);
                 });
             },
-
             activateAll() {
                 this.enableAwake();
                 this.enableFullscreen();
@@ -260,10 +256,6 @@
             playWin() { this.win.currentTime=0; this.win.play().catch(()=>{}); },
             playBGM(isFinale) {
                 if(this.bgm) this.bgm.pause();
-                
-                // LÓGICA DE CANCIONES ACTUALIZADA
-                // isFinale (<= 2 players): Song 3 (rápida)
-                // Normal (> 2 players): Pool de song1, song2, song4, song5
                 let src;
                 if (isFinale) {
                     src = 'song3.mp3';
@@ -271,7 +263,6 @@
                     const pool = ['song1.mp3', 'song2.mp3', 'song4.mp3', 'song5.mp3', 'song6.mp3'];
                     src = pool[Math.floor(Math.random() * pool.length)];
                 }
-
                 this.bgm = new Audio(src); 
                 this.bgm.loop=true; 
                 this.bgm.play().catch(()=>{});
@@ -295,6 +286,12 @@
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
+        // --- SERVER TIME SYNC (FAIRNESS ENGINE) ---
+        let serverTimeOffset = 0;
+        db.ref(".info/serverTimeOffset").on("value", function(snap) {
+            serverTimeOffset = snap.val();
+        });
+
         const triggerFlash = () => { $('flash-overlay').style.opacity = '1'; setTimeout(() => $('flash-overlay').style.opacity = '0', 100); };
 
         const app = {
@@ -302,10 +299,7 @@
                 const p = new URLSearchParams(location.search);
                 const s = p.get('session')?.toUpperCase();
                 const r = p.get('role');
-                document.body.addEventListener('click', () => {
-                    AudioSys.unlock();
-                }, {once:true});
-                
+                document.body.addEventListener('click', () => { AudioSys.unlock(); }, {once:true});
                 if(s && r) { 
                     if(r==='player') $('inp-session-code').value = s; 
                     this.setRole(r, s); 
@@ -327,7 +321,6 @@
             init(sid) {
                 this.sessionId = sid || Math.random().toString(36).substring(2,6).toUpperCase();
                 if(!sid) { try { history.replaceState(null, '', `?session=${this.sessionId}&role=screen`); } catch(e) {} }
-                
                 $('host-session-code').innerText = this.sessionId;
                 $('view-screen').classList.remove('hidden');
                 
@@ -348,7 +341,6 @@
                         this.updateUI();
                     }
                 });
-
                 this.updateDB({ state: 'waiting', musicPlaying: false, host: localUid });
             },
 
@@ -376,7 +368,7 @@
             },
 
             startGame() {
-                SystemOps.activateAll(); // Activar Fullscreen y WakeLock al empezar
+                SystemOps.activateAll();
                 this.clearTimers();
                 const u = {};
                 Object.keys(this.players).forEach(id => {
@@ -391,25 +383,17 @@
             loopMusic() {
                 const alive = Object.values(this.players).filter(p=>p.isAlive).length;
                 const isFinale = alive <= 2;
-                
                 AudioSys.playBGM(isFinale);
                 
-                // LÓGICA DE DURACIÓN (Extendida para 3+ jugadores)
-                // Si hay más de 2 vivos, rondas largas (20s - 35s) para que la partida dure.
-                // Si hay 2 o menos, rondas rápidas (8s - 15s) para tensión final.
                 let duration;
-                if (!isFinale) {
-                    // Rondas largas (3+ jugadores)
-                    duration = Math.random() * 15000 + 20000; // 20s a 35s
-                } else {
-                    // Final intensa
-                    duration = Math.random() * 7000 + 8000; // 8s a 15s
-                }
+                if (!isFinale) duration = Math.random() * 15000 + 20000; 
+                else duration = Math.random() * 7000 + 8000; 
                 
                 this.wait(() => {
                     AudioSys.stopBGM();
-                    this.updateDB({ state: 'measuring', musicPlaying: false, lastStop: Date.now() });
-                    // Wait 4s to allow network lag compensation before calculating
+                    // IMPORTANTE: Enviamos el TIMESTAMP del servidor para sincronizar
+                    this.updateDB({ state: 'measuring', musicPlaying: false, lastStop: firebase.database.ServerValue.TIMESTAMP });
+                    // Esperamos 4s para compensar lag de red antes de juzgar
                     this.wait(() => this.checkResults(), 4000);
                 }, duration);
             },
@@ -425,13 +409,11 @@
 
                 let worstId = null, max = -1;
                 alive.forEach(([id, p]) => {
-                    // Treat null score as 0 (safe fallback)
                     const s = p.lastScore || 0;
                     if(s > max) { max = s; worstId = id; }
                 });
 
                 this.wait(() => {
-                    // Solo eliminamos si la acumulación de movimiento es significativa (> 0.2s acumulados)
                     if(worstId && max > 0.2 && alive.length > 1) {
                         AudioSys.playGun();
                         triggerFlash();
@@ -442,7 +424,7 @@
                         if(elOverlay) elOverlay.classList.remove('hidden');
                         
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${worstId}`).update({ isAlive: false });
-                        db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update({ lastShot: Date.now() });
+                        db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update({ lastShot: firebase.database.ServerValue.TIMESTAMP });
                     }
 
                     this.wait(() => {
@@ -489,7 +471,6 @@
                     const text = $('host-status-text');
                     const icon = $('traffic-icon');
 
-                    // GREEN LIGHT VISUALS
                     l.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-300 bg-green-600 border-green-400 shadow-[0_0_100px_rgba(34,197,94,0.5)] scale-110";
                     glow.className = "absolute inset-0 rounded-full bg-green-500 blur-[80px] opacity-40 animate-pulse";
                     icon.outerHTML = `<i id="traffic-icon" data-lucide="play" class="w-48 h-48 text-white fill-current"></i>`;
@@ -502,7 +483,6 @@
                     const text = $('host-status-text');
                     const icon = $('traffic-icon');
 
-                    // RED LIGHT VISUALS
                     l.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_100px_rgba(234,179,8,0.5)] scale-100";
                     glow.className = "absolute inset-0 rounded-full bg-yellow-500 blur-[80px] opacity-40";
                     icon.outerHTML = `<i id="traffic-icon" data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>`;
@@ -525,20 +505,15 @@
                 const g = $('results-grid'); 
                 if(!g) return;
                 g.innerHTML = '';
-                
-                // Show ALL ALIVE PLAYERS regardless of score status (default to 0.00s if null)
                 const p = Object.values(this.players).filter(x => x.isAlive);
                 p.sort((a,b) => (b.lastScore||0) - (a.lastScore||0));
                 
                 p.forEach((pl, i) => {
                     const rawScore = (pl.lastScore === null || pl.lastScore === undefined) ? 0 : parseFloat(pl.lastScore);
                     const score = rawScore.toFixed(3);
-                    // Color Logic
                     let barColor = 'bg-[#249f9c]';
                     if (rawScore > 0.8) barColor = 'bg-[#ed1b76]';
                     else if (rawScore > 0.4) barColor = 'bg-yellow-500';
-
-                    // Max expected bad score approx 1.5s for bar width
                     const w = Math.min(100, (rawScore/1.5)*100);
                     
                     g.innerHTML += `
@@ -558,6 +533,7 @@
         // --- PLAYER ---
         const player = {
             sessionId: null, isAlive: true, lastMove: 0, lastShot: 0,
+            historyBuffer: [], // CAJA NEGRA PARA ANTI-LAG
             
             init(sid) {
                 if(sid) this.sessionId = sid;
@@ -571,11 +547,11 @@
                 if(!name || !code) return alert("Faltan datos");
                 
                 AudioSys.unlock(); 
-                SystemOps.activateAll(); // Activar sistemas en el jugador
+                SystemOps.activateAll();
                 
                 this.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
-                    name, sessionId: code, isAlive: true, joinedAt: Date.now()
+                    name, sessionId: code, isAlive: true, joinedAt: firebase.database.ServerValue.TIMESTAMP
                 }).then(() => {
                     $('player-login').classList.add('hidden');
                     $('player-sensor').classList.remove('hidden');
@@ -603,6 +579,7 @@
                         const me = d.players?.[localUid];
                         const state = d.state;
                         
+                        // Detectar disparo (Visual/Audio)
                         if(state.lastShot && state.lastShot !== this.lastShot && Date.now() - state.lastShot < 3000) {
                             this.lastShot = state.lastShot;
                             triggerFlash();
@@ -630,9 +607,31 @@
             monitor() {
                 this.lastMove = Date.now();
                 window.addEventListener('devicemotion', e => {
-                    let acc = e.acceleration ? Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2) : 0;
-                    if(acc > 1.5) this.lastMove = Date.now();
+                    const now = Date.now();
+                    
+                    let acc = 0;
+                    if(e.acceleration && e.acceleration.x !== null) {
+                        acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
+                    } else if(e.accelerationIncludingGravity) {
+                        const g = e.accelerationIncludingGravity;
+                        acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
+                    }
+
+                    // --- ANTI-LAG BLACK BOX RECORDER ---
+                    // Guardamos historial de movimiento si estamos jugando
+                    // Así si el server manda STOP tarde, podemos mirar atrás
+                    if(this.sessionData?.state === 'playing') {
+                        this.historyBuffer.push({ t: now, a: acc });
+                        // Mantener solo últimos 3 segundos (suficiente para lag extremo)
+                        if(this.historyBuffer.length > 0 && now - this.historyBuffer[0].t > 3000) {
+                            this.historyBuffer.shift();
+                        }
+                    }
+
+                    // Lógica visual local
+                    if(acc > 1.5) this.lastMove = now;
                 });
+
                 setInterval(() => {
                     const w = $('p-move-warning');
                     if(!w || !this.sessionData) return;
@@ -646,9 +645,33 @@
             },
 
             measure() {
-                // CORRECCION: Usamos acumulación en vez de timestamp
                 let accumulatedTime = 0;
                 let lastEventTime = Date.now();
+                
+                // 1. CÁLCULO RETROACTIVO (Anti-Lag)
+                // Calculamos cuándo dijo STOP el servidor en TIEMPO LOCAL del dispositivo
+                // serverTimeOffset = HoraDispositivo - HoraServidor (aprox, Firebase lo gestiona)
+                // HoraServidor = HoraDispositivo - Offset
+                // Queremos convertir HoraServidor a HoraDispositivo:
+                // HoraDispositivo = HoraServidor + Offset
+                // NOTA: .info/serverTimeOffset es la diferencia en ms que hay que sumar a Date.now() para obtener ServerTime
+                // Por tanto: ServerTime = ClientTime + Offset
+                // ClientTime = ServerTime - Offset
+                
+                const serverStopTimestamp = this.sessionData.lastStop;
+                const localStopTimestamp = serverStopTimestamp - serverTimeOffset;
+
+                // Revisar la caja negra: ¿Nos movimos DESPUÉS de que el servidor dijera STOP?
+                // (Aunque no hubiéramos recibido el mensaje todavía)
+                this.historyBuffer.forEach(record => {
+                    if(record.t > localStopTimestamp && record.a > 1.5) {
+                        // Asumimos sample rate de ~60hz (16ms)
+                        accumulatedTime += 0.016; 
+                    }
+                });
+                
+                // Limpiamos buffer para no contar doble
+                this.historyBuffer = [];
 
                 // Reset UI
                 const b = $('p-measure-bar');
@@ -660,7 +683,7 @@
                 const bg = $('p-bg-color');
                 const h = (e) => {
                     const now = Date.now();
-                    const dt = now - lastEventTime; // Tiempo desde la última lectura (ms)
+                    const dt = now - lastEventTime;
                     lastEventTime = now;
 
                     let acc = 0;
@@ -671,12 +694,9 @@
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
                     
-                    // CORRECCION: Umbral subido a 1.5 para evitar ruido de sensores (era 0.5)
-                    // Si se supera el umbral, sumamos el tiempo delta al acumulado
+                    // 2. CÁLCULO EN TIEMPO REAL
                     if(acc > 1.5) { 
-                        // Capamos dt a 100ms para evitar saltos locos si el navegador se congela
                         accumulatedTime += Math.min(dt, 100);
-
                         if(bg) { 
                             bg.classList.add('bg-detected');
                             setTimeout(() => bg.classList.remove('bg-detected'), 150);
@@ -686,11 +706,11 @@
                 
                 window.addEventListener('devicemotion', h);
                 
-                // Paramos de medir a los 2s (aunque el servidor espera 4s por lag, la fase activa de medición es corta)
+                // Paramos de medir a los 2.5s (la fase activa es corta)
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', h);
                     if(this.isAlive) {
-                        // Enviamos el tiempo total acumulado de movimiento en segundos
+                        // Enviamos score (segundos totales de movimiento ilegal)
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: accumulatedTime/1000 });
                     }
                 }, 2500);
