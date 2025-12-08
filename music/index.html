@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Juego del Semáforo Musical</title>
+    <title>Juego del Semáforo Musical 3D</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Firebase SDKs (Compat) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
+
+    <!-- Three.js (3D Engine) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,723 +21,733 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
         
-        :root {
-            --squid-pink: #ed1b76;
-            --squid-green: #037a76; /* Darker green for contrast */
-            --squid-green-light: #249f9c;
-        }
-
-        body {
-            font-family: 'Share Tech Mono', monospace;
-            background-color: #000;
-            color: white;
-            overflow: hidden;
-            touch-action: none;
-            user-select: none;
-        }
-        
-        .title-font {
-            font-family: 'Orbitron', sans-serif;
-        }
-
+        :root { --pink: #ed1b76; --green: #249f9c; }
+        body { font-family: 'Share Tech Mono', monospace; background-color: #000; color: white; overflow: hidden; user-select: none; }
+        .title-font { font-family: 'Orbitron', sans-serif; }
         .hidden { display: none !important; }
-
-        /* Background Animated */
-        .bg-grid {
-            background-size: 40px 40px;
-            background-image: radial-gradient(circle, #333 1px, transparent 1px);
-            opacity: 0.2;
-        }
-
-        /* Glassmorphism Panels */
-        .glass-panel {
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        }
-
-        /* Status Styles */
-        .status-safe { 
-            box-shadow: inset 0 0 100px rgba(34, 197, 94, 0.2); 
-            border-color: #22c55e;
-        }
-        .status-danger { 
-            box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.3);
-            border-color: #ef4444;
-        }
+        
+        /* UI Overlays */
+        .glass-panel { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Flash Effect */
+        #flash-overlay { transition: opacity 0.05s ease-out; pointer-events: none; }
+        
+        /* 3D Canvas Container */
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
         
         /* Animations */
-        @keyframes heartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .animate-heartbeat { animation: heartbeat 1.5s infinite; }
-
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
-        }
-        .animate-glitch { animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; }
-
-        #flash-overlay { transition: opacity 0.05s ease-out; }
+        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .animate-heartbeat { animation: heartbeat 1s infinite; }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden bg-black text-white relative">
 
-    <!-- GLOBAL AUDIO MANAGER (Hidden) -->
-    <div id="audio-status" class="fixed top-2 right-2 text-[10px] text-gray-700 z-50 pointer-events-none">AUDIO OFF</div>
+    <!-- GLOBAL AUDIO STATUS -->
+    <div id="audio-status" class="fixed top-2 right-2 text-[10px] text-gray-700 z-50 pointer-events-none font-mono">AUDIO SYSTEM READY</div>
 
     <!-- FLASH OVERLAY -->
-    <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-lighten pointer-events-none opacity-0"></div>
-
-    <!-- BACKGROUND -->
-    <div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
+    <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-lighten opacity-0"></div>
 
     <!-- VISTA: SELECCIÓN DE ROL -->
-    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 relative z-10">
+    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 relative z-20 bg-black/90">
         <div class="mb-12 text-center space-y-4">
-            <div class="flex justify-center space-x-4 text-6xl text-gray-700 mb-4 opacity-50">
-                <span>○</span><span>△</span><span>□</span>
-            </div>
-            <h1 class="text-6xl md:text-8xl font-black title-font text-transparent bg-clip-text bg-gradient-to-br from-[#ed1b76] to-[#ff5252] drop-shadow-lg tracking-tighter">
+            <h1 class="text-6xl md:text-8xl font-black title-font text-transparent bg-clip-text bg-gradient-to-br from-[#ed1b76] to-[#ff5252] drop-shadow-[0_0_15px_rgba(237,27,118,0.5)]">
                 RED LIGHT
             </h1>
-            <p class="text-xl tracking-[0.5em] text-gray-400 uppercase">Survival Game</p>
+            <p class="text-xl tracking-[0.8em] text-gray-400 uppercase">3D Simulation</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-            <button onclick="app.setRole('screen')" class="group relative p-1 glass-panel rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(237,27,118,0.4)]">
-                <div class="absolute inset-0 bg-[#ed1b76] opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity"></div>
-                <div class="p-10 flex flex-col items-center">
-                    <i data-lucide="monitor" class="w-20 h-20 text-[#ed1b76] mb-6"></i>
-                    <span class="text-3xl font-bold title-font">PANTALLA (TV)</span>
-                    <span class="text-sm text-gray-500 mt-2 font-mono">Modo Host</span>
-                </div>
+            <button onclick="app.setRole('screen')" class="group p-10 glass-panel rounded-2xl hover:bg-[#ed1b76]/20 transition-all hover:scale-105 border border-[#ed1b76]/30">
+                <i data-lucide="monitor" class="w-20 h-20 text-[#ed1b76] mb-6 mx-auto"></i>
+                <span class="text-3xl font-bold title-font block text-center">PANTALLA (TV)</span>
+                <span class="text-sm text-gray-400 mt-2 block text-center">Modo Espectador 3D</span>
             </button>
 
-            <button onclick="app.setRole('player')" class="group relative p-1 glass-panel rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(36,159,156,0.4)]">
-                <div class="absolute inset-0 bg-[#249f9c] opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity"></div>
-                <div class="p-10 flex flex-col items-center">
-                    <i data-lucide="smartphone" class="w-20 h-20 text-[#249f9c] mb-6"></i>
-                    <span class="text-3xl font-bold title-font">JUGADOR</span>
-                    <span class="text-sm text-gray-500 mt-2 font-mono">Unirse con Móvil</span>
-                </div>
+            <button onclick="app.setRole('player')" class="group p-10 glass-panel rounded-2xl hover:bg-[#249f9c]/20 transition-all hover:scale-105 border border-[#249f9c]/30">
+                <i data-lucide="smartphone" class="w-20 h-20 text-[#249f9c] mb-6 mx-auto"></i>
+                <span class="text-3xl font-bold title-font block text-center">JUGADOR</span>
+                <span class="text-sm text-gray-400 mt-2 block text-center">Control Remoto</span>
             </button>
         </div>
     </div>
 
-    <!-- VISTA: PANTALLA (HOST) -->
-    <div id="view-screen" class="hidden h-full w-full flex flex-col relative bg-neutral-900 z-10">
-        <!-- Header -->
-        <div class="absolute top-0 w-full p-6 flex justify-between items-center z-20">
-            <div class="glass-panel px-6 py-3 rounded-full flex items-center space-x-4">
-                <span class="text-gray-400 text-sm">SALA</span>
-                <span id="host-session-code" class="text-4xl font-bold title-font text-[#ed1b76] tracking-widest">...</span>
-            </div>
-            <div class="flex space-x-4">
-                <div class="glass-panel px-6 py-3 rounded-full flex items-center text-[#249f9c]">
-                    <i data-lucide="users" class="mr-3"></i> <span id="host-alive-count" class="text-2xl font-bold">0</span>
-                </div>
-                <div class="glass-panel px-6 py-3 rounded-full flex items-center text-[#ed1b76]">
-                    <i data-lucide="skull" class="mr-3"></i> <span id="host-dead-count" class="text-2xl font-bold">0</span>
-                </div>
-            </div>
-        </div>
+    <!-- VISTA: PANTALLA (HOST) CON 3D -->
+    <div id="view-screen" class="hidden h-full w-full relative bg-black z-10">
+        <!-- 3D Canvas -->
+        <div id="canvas-container"></div>
 
-        <!-- Contenido Central Host -->
-        <div class="flex-1 flex flex-col items-center justify-center p-4 relative w-full">
-            
-            <!-- Estado: LOBBY -->
-            <div id="host-lobby" class="flex flex-col items-center justify-center w-full animate-fade-in">
-                <div class="bg-white p-4 rounded-xl mb-8 transform hover:scale-105 transition-transform duration-500">
-                    <img id="host-qr-img" src="" alt="QR Code" class="w-72 h-72 object-contain">
+        <!-- UI Overlay -->
+        <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
+            <!-- Header -->
+            <div class="flex justify-between items-start">
+                <div class="glass-panel px-6 py-3 rounded-full flex items-center space-x-4">
+                    <span class="text-gray-400 text-sm">SALA</span>
+                    <span id="host-session-code" class="text-4xl font-bold title-font text-[#ed1b76] tracking-widest">...</span>
                 </div>
-                <h2 class="text-5xl font-black mb-4 title-font tracking-tighter">ESCANEA EL CÓDIGO</h2>
-                <p class="text-gray-400 mb-12 text-xl">Esperando jugadores...</p>
-                
-                <button id="btn-start-game" onclick="host.startGame()" disabled class="group relative px-12 py-6 bg-[#ed1b76] rounded-lg text-3xl font-bold title-font transition-all disabled:opacity-50 disabled:grayscale overflow-hidden">
-                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                    <span class="relative">EMPEZAR JUEGO</span>
-                </button>
-            </div>
-
-            <!-- Estado: JUEGO -->
-            <div id="host-game" class="hidden w-full h-full flex flex-col items-center justify-center">
-                <!-- Doll/Traffic Light Representation -->
-                <div id="traffic-light-wrapper" class="relative mb-12 transition-transform duration-500">
-                    <div id="traffic-light-ring" class="absolute -inset-4 rounded-full border-4 border-dashed border-gray-700 animate-[spin_10s_linear_infinite]"></div>
-                    <div id="traffic-light" class="w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-neutral-900 transition-colors duration-200 shadow-2xl relative z-10">
-                        <i id="traffic-icon" data-lucide="eye" class="w-40 h-40 text-gray-500 transition-colors duration-200"></i>
+                <div class="flex space-x-4">
+                    <div class="glass-panel px-4 py-2 rounded-lg text-[#249f9c] flex items-center">
+                        <i data-lucide="users" class="mr-2 w-5 h-5"></i> <span id="host-alive-count" class="font-bold text-xl">0</span>
                     </div>
-                </div>
-                
-                <h2 id="host-status-text" class="text-9xl font-black tracking-widest title-font transition-colors duration-200">ESPERA</h2>
-            </div>
-
-            <!-- Estado: RESULTADOS -->
-            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-32 px-10">
-                <h2 class="text-6xl font-black mb-12 text-[#ed1b76] title-font border-b-4 border-[#ed1b76] pb-4">ELIMINACIÓN</h2>
-                <div id="results-grid" class="w-full max-w-6xl grid grid-cols-1 gap-4 overflow-y-auto max-h-[60vh] pr-4 scrollbar-hide">
-                    <!-- Filas dinámicas -->
-                </div>
-
-                <!-- Overlay Eliminado -->
-                <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center hidden backdrop-blur-md">
-                    <div class="animate-glitch text-center">
-                        <h1 class="text-[10rem] leading-none font-black text-[#ed1b76] title-font mb-4">ELIMINADO</h1>
-                        <div class="w-full h-2 bg-[#ed1b76] mb-8"></div>
-                        <h2 id="eliminated-name" class="text-7xl font-mono text-white bg-neutral-800 px-8 py-4 inline-block rounded border border-[#ed1b76]">JUGADOR</h2>
+                    <div class="glass-panel px-4 py-2 rounded-lg text-[#ed1b76] flex items-center">
+                        <i data-lucide="skull" class="mr-2 w-5 h-5"></i> <span id="host-dead-count" class="font-bold text-xl">0</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Estado: GANADOR -->
-            <div id="host-winner" class="hidden flex flex-col items-center justify-center animate-fade-in-up">
-                <i data-lucide="crown" class="w-48 h-48 text-yellow-400 mb-8 animate-bounce"></i>
-                <h2 class="text-6xl font-bold text-yellow-500 mb-6 title-font tracking-widest">GANADOR</h2>
-                <div id="winner-name" class="text-9xl font-black text-white mb-12 title-font">NOMBRE</div>
-                <div class="text-gray-500 font-mono animate-pulse">Reiniciando sistema de juego...</div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black to-transparent z-20">
-            <div id="host-players-list" class="flex flex-wrap gap-3 justify-center max-h-32 overflow-hidden mask-fade-bottom"></div>
-        </div>
-    </div>
-
-    <!-- VISTA: JUGADOR (LOGIN) -->
-    <div id="view-player-join" class="hidden h-full w-full flex flex-col items-center justify-center p-6 bg-neutral-900 z-20">
-        <div class="w-full max-w-sm space-y-8">
-            <div class="text-center space-y-2">
-                <div class="flex justify-center space-x-2 text-2xl text-[#ed1b76] mb-4">
-                    <span>○</span><span>△</span><span>□</span>
+            <!-- Central Message (Dynamic) -->
+            <div id="host-center-ui" class="absolute inset-0 flex items-center justify-center pointer-events-auto">
+                <!-- Lobby UI -->
+                <div id="host-lobby" class="text-center glass-panel p-10 rounded-2xl animate-fade-in backdrop-blur-xl">
+                    <img id="host-qr-img" src="" alt="QR" class="w-64 h-64 object-contain rounded-lg mb-6 mx-auto border-4 border-white">
+                    <h2 class="text-4xl font-bold mb-4 title-font">UNIRSE AHORA</h2>
+                    <button id="btn-start-game" onclick="host.startGame()" disabled class="px-10 py-4 bg-[#ed1b76] rounded text-2xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_30px_rgba(237,27,118,0.4)]">
+                        EMPEZAR JUEGO
+                    </button>
                 </div>
-                <h1 class="text-4xl font-bold text-white title-font">INGRESO</h1>
+
+                <!-- Game Status Text (Big Overlay) -->
+                <div id="host-game-status" class="hidden text-center">
+                    <h1 id="host-status-text" class="text-[120px] font-black title-font drop-shadow-2xl tracking-tighter transition-all duration-300 transform scale-100">ESPERA</h1>
+                </div>
+
+                <!-- Winner UI -->
+                <div id="host-winner" class="hidden text-center glass-panel p-12 rounded-3xl border-2 border-yellow-500/50 shadow-[0_0_100px_rgba(234,179,8,0.3)]">
+                    <i data-lucide="crown" class="w-32 h-32 text-yellow-400 mx-auto mb-6 animate-bounce"></i>
+                    <h2 class="text-4xl text-yellow-500 mb-4 font-bold tracking-widest">GANADOR</h2>
+                    <div id="winner-name" class="text-7xl font-black text-white title-font mb-4">NOMBRE</div>
+                </div>
             </div>
-            <div class="space-y-4">
-                <input type="text" id="inp-player-name" placeholder="NOMBRE" maxlength="10" class="w-full bg-black/50 border border-gray-700 p-4 rounded text-center text-2xl text-white uppercase focus:border-[#ed1b76] focus:outline-none transition-colors font-mono">
-                <input type="text" id="inp-session-code" placeholder="CÓDIGO" maxlength="4" class="w-full bg-black/50 border border-gray-700 p-4 rounded text-center text-2xl text-white uppercase focus:border-[#ed1b76] focus:outline-none transition-colors font-mono tracking-widest">
+
+            <!-- Footer: Player List -->
+            <div class="w-full">
+                <div id="host-players-list" class="flex flex-wrap gap-2 justify-center max-h-24 overflow-hidden opacity-80"></div>
             </div>
-            <button onclick="player.join()" class="w-full bg-[#ed1b76] hover:bg-pink-700 text-white p-4 rounded font-bold text-xl transition-all active:scale-95 shadow-lg shadow-pink-900/50">
-                ENTRAR
-            </button>
         </div>
     </div>
 
-    <!-- VISTA: JUGADOR (PERMISO) -->
-    <div id="view-player-sensor" class="hidden h-full w-full flex flex-col items-center justify-center p-8 text-center bg-black z-20">
-        <i data-lucide="smartphone" class="w-24 h-24 text-yellow-500 mb-6 animate-pulse"></i>
-        <h2 class="text-3xl font-bold mb-4 font-mono text-yellow-500">CALIBRACIÓN</h2>
-        <p class="text-gray-400 mb-12">Requiere acceso a sensores de movimiento para jugar.</p>
-        <button onclick="player.requestPermissions()" class="bg-yellow-500 text-black px-10 py-4 rounded font-bold text-xl w-full max-w-xs">
-            AUTORIZAR
-        </button>
-    </div>
-
-    <!-- VISTA: JUGADOR (JUEGO) -->
-    <div id="view-player-game" class="hidden h-full w-full flex flex-col items-center justify-center transition-colors duration-300 bg-neutral-900 relative overflow-hidden z-10">
-        
-        <!-- Pantalla: ESPERANDO -->
-        <div id="p-screen-waiting" class="text-center z-10 flex flex-col items-center">
-            <div class="w-20 h-20 border-4 border-t-[#ed1b76] border-r-[#ed1b76] border-b-transparent border-l-transparent rounded-full animate-spin mb-6"></div>
-            <h2 class="text-2xl font-bold mb-2 font-mono tracking-widest">EN ESPERA</h2>
-            <p class="text-gray-500 font-mono text-sm">El Líder iniciará...</p>
+    <!-- VISTA: JUGADOR (MÓVIL) -->
+    <div id="view-player-ui" class="hidden h-full w-full relative z-20 bg-neutral-900 flex flex-col">
+        <!-- Login Screen -->
+        <div id="player-login" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+            <h1 class="text-4xl font-black text-[#ed1b76] title-font mb-4">LOGIN</h1>
+            <input type="text" id="inp-player-name" placeholder="NOMBRE" maxlength="10" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white focus:border-[#ed1b76] outline-none">
+            <input type="text" id="inp-session-code" placeholder="CÓDIGO" maxlength="4" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white uppercase focus:border-[#ed1b76] outline-none tracking-widest">
+            <button onclick="player.join()" class="w-full max-w-xs bg-[#ed1b76] p-4 rounded font-bold text-xl shadow-lg shadow-pink-900/50 active:scale-95 transition-transform">ENTRAR</button>
         </div>
 
-        <!-- Pantalla: ACTIVO -->
-        <div id="p-screen-active" class="hidden absolute inset-0 flex flex-col items-center justify-center z-10">
-            <!-- Alerta Movimiento -->
-            <div id="p-move-warning" class="hidden absolute inset-0 z-50 bg-[#ed1b76] flex flex-col items-center justify-center animate-heartbeat">
-                <i data-lucide="footprints" class="w-40 h-40 text-white mb-6"></i>
-                <h1 class="text-6xl font-black text-white italic -rotate-3">¡MUEVETE!</h1>
-            </div>
-
-            <div id="p-icon-container" class="mb-12 transform transition-transform duration-300"></div>
-            <h1 id="p-status-text" class="text-6xl font-black text-white drop-shadow-xl tracking-widest">...</h1>
-            <p id="p-sub-text" class="text-xl mt-4 font-mono text-gray-300">...</p>
-
-            <!-- Barra Medición -->
-            <div id="p-measure-bar-container" class="hidden absolute bottom-20 w-3/4 h-2 bg-gray-800 rounded-full overflow-hidden">
-                <div id="p-measure-bar" class="h-full bg-yellow-400 w-full origin-left"></div>
-            </div>
+        <!-- Sensor Permission -->
+        <div id="player-sensor" class="hidden flex-1 flex flex-col items-center justify-center p-8 text-center bg-black">
+            <i data-lucide="smartphone" class="w-24 h-24 text-yellow-500 mb-6 animate-pulse"></i>
+            <h2 class="text-2xl font-bold mb-4 text-yellow-500">HABILITAR SENSORES</h2>
+            <button onclick="player.requestPermissions()" class="bg-yellow-500 text-black px-8 py-4 rounded-xl font-bold text-lg w-full max-w-xs">PERMITIR</button>
         </div>
 
-        <!-- Pantalla: MUERTO -->
-        <div id="p-screen-dead" class="hidden absolute inset-0 z-50 bg-[#2a0a0a] flex flex-col items-center justify-center">
-            <div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)] opacity-10"></div>
-            <div class="text-center">
-                <i data-lucide="x-circle" class="w-40 h-40 text-[#ed1b76] mx-auto mb-6"></i>
-                <h1 class="text-6xl font-black text-[#ed1b76] mb-2 title-font">ELIMINADO</h1>
-                <p class="text-gray-400 font-mono">Has sido detectado</p>
+        <!-- Game Interface -->
+        <div id="player-game" class="hidden flex-1 flex flex-col relative overflow-hidden transition-colors duration-300">
+            <!-- Waiting State -->
+            <div id="p-state-waiting" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-10">
+                <div class="animate-spin w-12 h-12 border-4 border-[#249f9c] border-t-transparent rounded-full mb-4"></div>
+                <p class="text-[#249f9c] tracking-widest">ESPERANDO AL LÍDER</p>
             </div>
-        </div>
 
-        <!-- Pantalla: VICTORIA -->
-        <div id="p-screen-win" class="hidden absolute inset-0 z-50 bg-[#0f392b] flex flex-col items-center justify-center">
-            <i data-lucide="award" class="w-40 h-40 text-[#249f9c] mb-6 animate-pulse"></i>
-            <h1 class="text-5xl font-black text-white mb-4 title-font">SOBREVIVISTE</h1>
-            <p class="text-[#249f9c] font-mono tracking-widest">VICTORIA</p>
+            <!-- Active Game State -->
+            <div id="p-state-active" class="hidden absolute inset-0 flex flex-col items-center justify-center z-0">
+                <div id="p-bg-color" class="absolute inset-0 transition-colors duration-300 bg-[#249f9c]"></div>
+                
+                <div class="relative z-10 text-center">
+                    <div id="p-icon" class="mb-8 transform transition-transform duration-200"></div>
+                    <h1 id="p-main-text" class="text-6xl font-black drop-shadow-lg title-font">...</h1>
+                    <p id="p-sub-text" class="text-xl mt-2 font-mono opacity-90">...</p>
+                </div>
+
+                <!-- Warning Overlay -->
+                <div id="p-move-warning" class="hidden absolute inset-0 z-20 bg-[#ed1b76] flex flex-col items-center justify-center animate-heartbeat">
+                    <h1 class="text-6xl font-black italic -rotate-6">¡MUÉVETE!</h1>
+                </div>
+            </div>
+
+            <!-- Dead State -->
+            <div id="p-state-dead" class="hidden absolute inset-0 z-30 bg-red-950 flex flex-col items-center justify-center">
+                <i data-lucide="skull" class="w-32 h-32 text-red-500 mb-4 animate-bounce"></i>
+                <h1 class="text-5xl font-black text-red-500 title-font">ELIMINADO</h1>
+            </div>
+
+            <!-- Win State -->
+            <div id="p-state-win" class="hidden absolute inset-0 z-30 bg-yellow-900 flex flex-col items-center justify-center">
+                <i data-lucide="crown" class="w-32 h-32 text-yellow-400 mb-4 animate-bounce"></i>
+                <h1 class="text-5xl font-black text-yellow-400 title-font">VICTORIA</h1>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- SOUND MANAGER ROBUSTO ---
-        const SoundManager = {
-            gunshot: new Audio('https://library.penguinmod.com/files/sounds/gunshot3.mp3'),
-            win: new Audio('https://library.penguinmod.com/files/sounds/win3.mp3'),
-            bgm: null,
-            songs: ['song1.mp3', 'song2.mp3', 'song3.mp3', 'song4.mp3'],
+        // --- 3D ENGINE (THREE.JS) ---
+        const World3D = {
+            scene: null, camera: null, renderer: null,
+            doll: null, players: {}, // Map<id, Mesh>
+            isDollLooking: false, // false = Green Light (Looking away), true = Red Light (Looking at players)
             
-            // AudioContext de respaldo para asegurar sonido si falla MP3
-            ctx: null,
-
             init() {
-                this.gunshot.preload = 'auto';
-                this.win.preload = 'auto';
-                try {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
-                } catch(e) { console.log("AudioContext not supported"); }
+                const container = document.getElementById('canvas-container');
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x111111);
+                this.scene.fog = new THREE.Fog(0x111111, 20, 100);
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 30, 60);
+                this.camera.lookAt(0, 0, 0);
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                container.appendChild(this.renderer.domElement);
+
+                // Lights
+                const ambient = new THREE.AmbientLight(0x404040, 2); 
+                this.scene.add(ambient);
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+                dirLight.position.set(10, 50, 20);
+                dirLight.castShadow = true;
+                this.scene.add(dirLight);
+
+                // Floor (Grid + Plane)
+                const grid = new THREE.GridHelper(200, 20, 0x333333, 0x111111);
+                this.scene.add(grid);
+                const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
+                plane.rotation.x = -Math.PI / 2;
+                plane.receiveShadow = true;
+                this.scene.add(plane);
+
+                // THE DOLL (Abstract Representation)
+                this.createDoll();
+
+                // Start Loop
+                this.animate();
+                window.addEventListener('resize', () => this.onResize());
             },
 
-            // Función crítica: Desbloquea audio en el primer click
-            unlock() {
-                // 1. Desbloquear elementos HTML Audio
-                [this.gunshot, this.win].forEach(s => {
-                    s.volume = 0;
-                    s.play().then(() => {
-                        s.pause();
-                        s.currentTime = 0;
-                        s.volume = 1; // Restaurar volumen
-                    }).catch(e => console.log("Unlock failed for HTML Audio", e));
-                });
+            createDoll() {
+                const group = new THREE.Group();
+                
+                // Body
+                const bodyGeo = new THREE.CylinderGeometry(2, 3, 10, 8);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffa500 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 5;
+                body.castShadow = true;
+                group.add(body);
 
-                // 2. Desbloquear AudioContext (Beep backup)
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume().then(() => {
-                        // Tocar un beep silencioso
-                        const osc = this.ctx.createOscillator();
-                        const gain = this.ctx.createGain();
-                        gain.gain.value = 0.001; // Casi silencio
-                        osc.connect(gain);
-                        gain.connect(this.ctx.destination);
-                        osc.start();
-                        osc.stop(this.ctx.currentTime + 0.1);
-                        document.getElementById('audio-status').innerText = "AUDIO ON";
-                        document.getElementById('audio-status').style.color = "green";
-                    });
+                // Head
+                const headGeo = new THREE.SphereGeometry(3, 16, 16);
+                const headMat = new THREE.MeshStandardMaterial({ color: 0x111111 }); // Back of head
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.y = 11;
+                group.add(head);
+
+                // Face (Eye)
+                const faceGeo = new THREE.SphereGeometry(1, 16, 16);
+                const faceMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 });
+                const face = new THREE.Mesh(faceGeo, faceMat);
+                face.position.set(0, 11, 2.5); // Front of head
+                this.dollEye = face; // Reference to change color
+                group.add(face);
+
+                group.position.set(0, 0, -40); // Far end
+                this.scene.add(group);
+                this.doll = group;
+            },
+
+            addPlayer(id, colorHex = 0x249f9c) {
+                if (this.players[id]) return; // Exists
+
+                const geo = new THREE.CapsuleGeometry(1, 4, 4, 8);
+                const mat = new THREE.MeshStandardMaterial({ color: colorHex });
+                const mesh = new THREE.Mesh(geo, mat);
+                
+                // Random position start line
+                mesh.position.set((Math.random() - 0.5) * 40, 2, 40); 
+                mesh.castShadow = true;
+                
+                // Store metadata
+                mesh.userData = { id, dead: false, progress: 0 };
+                
+                this.scene.add(mesh);
+                this.players[id] = mesh;
+            },
+
+            killPlayer(id) {
+                const p = this.players[id];
+                if (p && !p.userData.dead) {
+                    p.userData.dead = true;
+                    // Death Animation: Turn Red, Fall over, Particle explosion simulation
+                    p.material.color.setHex(0xed1b76);
+                    p.rotation.x = -Math.PI / 2; // Fall flat
+                    p.position.y = 0.5;
+                    
+                    this.createExplosion(p.position);
                 }
             },
 
-            playGunshot() {
-                // Intentar HTML Audio primero
-                this.gunshot.currentTime = 0;
-                this.gunshot.play().catch(e => {
-                    console.warn("Gunshot HTML Audio blocked, using synth fallback");
-                    this.playSynthGunshot(); // Fallback
+            removePlayer(id) {
+                if (this.players[id]) {
+                    this.scene.remove(this.players[id]);
+                    delete this.players[id];
+                }
+            },
+
+            createExplosion(pos) {
+                // Simple particle burst
+                const particleCount = 8;
+                const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xed1b76 });
+                
+                for(let i=0; i<particleCount; i++) {
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.copy(pos);
+                    mesh.position.y += 1;
+                    mesh.userData = { 
+                        vel: new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).multiplyScalar(0.5) 
+                    };
+                    this.scene.add(mesh);
+                    
+                    // Simple animation loop for particles
+                    const animateParticle = () => {
+                        mesh.position.add(mesh.userData.vel);
+                        mesh.userData.vel.y -= 0.02; // Gravity
+                        mesh.scale.multiplyScalar(0.9); // Shrink
+                        if(mesh.scale.x < 0.1) this.scene.remove(mesh);
+                        else requestAnimationFrame(animateParticle);
+                    };
+                    animateParticle();
+                }
+            },
+
+            updateGame(state, musicPlaying) {
+                // Doll Rotation Logic
+                const targetRot = musicPlaying ? Math.PI : 0; // PI = Looking away (Green), 0 = Looking at players (Red)
+                if (this.doll) {
+                    this.doll.rotation.y += (targetRot - this.doll.rotation.y) * 0.1;
+                    
+                    // Eye Color
+                    if (this.dollEye) {
+                        const color = musicPlaying ? 0x00ff00 : 0xff0000;
+                        this.dollEye.material.color.setHex(color);
+                        this.dollEye.material.emissive.setHex(color);
+                    }
+                }
+
+                // Player Logic
+                Object.values(this.players).forEach(mesh => {
+                    if (mesh.userData.dead) return;
+
+                    // Move forward if green light (Simulation)
+                    if (musicPlaying) {
+                        // Move towards z = -30 (Goal)
+                        if (mesh.position.z > -30) {
+                            mesh.position.z -= 0.05 + (Math.random() * 0.02); // Small variations
+                            // Bobbing animation
+                            mesh.position.y = 2 + Math.sin(Date.now() * 0.01 + mesh.position.x) * 0.2;
+                        }
+                    } else {
+                        // Breathing idle
+                        mesh.position.y = 2;
+                    }
                 });
             },
 
-            playWin() {
-                this.win.currentTime = 0;
-                this.win.play().catch(() => {});
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // Camera Orbit (Subtle)
+                const time = Date.now() * 0.0005;
+                this.camera.position.x = Math.sin(time) * 20;
+                this.camera.lookAt(0, 5, 0);
+
+                this.renderer.render(this.scene, this.camera);
             },
 
-            playSynthGunshot() {
-                // Sonido sintético estridente por si falla el archivo
-                if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                gain.gain.setValueAtTime(1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.5);
-            },
-
-            playBGM(isFinal) {
-                if (this.bgm) { this.bgm.pause(); }
-                const src = isFinal ? 'song3.mp3' : this.songs[Math.floor(Math.random() * this.songs.length)];
-                this.bgm = new Audio(src);
-                this.bgm.loop = true;
-                this.bgm.play().catch(e => console.log("BGM Blocked", e));
-            },
-
-            stopBGM() {
-                if (this.bgm) { this.bgm.pause(); this.bgm.currentTime = 0; }
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
             }
         };
-        SoundManager.init();
 
-        // --- FIREBASE SETUP ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBMYTnk-CljdWENtDQqqKUBmQzBQuoxYPo",
-            authDomain: "hello-74404.firebaseapp.com",
-            databaseURL: "https://hello-74404-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "hello-74404",
-            storageBucket: "hello-74404.firebasestorage.app",
-            messagingSenderId: "781363507648",
-            appId: "1:781363507648:web:5c7b871f11b9010bfd1825"
+        // --- AUDIO MANAGER ---
+        const AudioSys = {
+            gun: new Audio('https://library.penguinmod.com/files/sounds/gunshot3.mp3'),
+            win: new Audio('https://library.penguinmod.com/files/sounds/win3.mp3'),
+            bgm: null,
+            ctx: null,
+            init() {
+                try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+            },
+            unlock() {
+                if(this.ctx && this.ctx.state==='suspended') this.ctx.resume();
+                [this.gun, this.win].forEach(a => { a.volume=0; a.play().then(()=>{ a.pause(); a.currentTime=0; a.volume=1; }).catch(()=>{}); });
+            },
+            playGun() { 
+                this.gun.currentTime=0; this.gun.play().catch(() => this.playSynth(150, 'sawtooth')); 
+            },
+            playWin() { this.win.currentTime=0; this.win.play().catch(()=>{}); },
+            playBGM(fast) {
+                if(this.bgm) this.bgm.pause();
+                const src = fast ? 'song3.mp3' : ['song1.mp3','song2.mp3'][Math.floor(Math.random()*2)];
+                this.bgm = new Audio(src); this.bgm.loop=true; this.bgm.play().catch(()=>{});
+            },
+            stopBGM() { if(this.bgm) this.bgm.pause(); },
+            playSynth(freq, type) {
+                if(!this.ctx) return;
+                const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+                o.type=type; o.frequency.value=freq; g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime+0.5);
+                o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.5);
+            }
         };
+        AudioSys.init();
+
+        // --- APP LOGIC ---
+        const firebaseConfig = { apiKey: "AIzaSyBMYTnk-CljdWENtDQqqKUBmQzBQuoxYPo", authDomain: "hello-74404.firebaseapp.com", databaseURL: "https://hello-74404-default-rtdb.europe-west1.firebasedatabase.app", projectId: "hello-74404", storageBucket: "hello-74404.firebasestorage.app", messagingSenderId: "781363507648", appId: "1:781363507648:web:5c7b871f11b9010bfd1825" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        // --- UTILS ---
         const $ = (id) => document.getElementById(id);
         const APP_ID = "music-game-v1";
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
-        // Flash UI
-        const triggerFlash = () => {
-            const el = $('flash-overlay');
-            el.style.opacity = '1';
-            setTimeout(() => el.style.opacity = '0', 100);
-        };
+        // Flash
+        const triggerFlash = () => { $('flash-overlay').style.opacity = '1'; setTimeout(() => $('flash-overlay').style.opacity = '0', 100); };
 
-        // --- APP CONTROLLER ---
         const app = {
-            role: null,
-            sessionId: null,
             init() {
-                const p = new URLSearchParams(window.location.search);
-                this.sessionId = p.get('session')?.toUpperCase();
-                const role = p.get('role');
-                if (this.sessionId && role) {
-                    if (role === 'player') $('inp-session-code').value = this.sessionId;
-                    this.setRole(role);
+                const p = new URLSearchParams(location.search);
+                const s = p.get('session')?.toUpperCase();
+                const r = p.get('role');
+                document.body.addEventListener('click', () => AudioSys.unlock(), {once:true});
+                if(s && r) { 
+                    if(r==='player') $('inp-session-code').value = s; 
+                    this.setRole(r, s); 
                 } else {
-                    this.showView('view-landing');
+                    $('view-landing').classList.remove('hidden');
                 }
                 lucide.createIcons();
-                // Global unlock attempt on any interaction
-                document.body.addEventListener('click', () => SoundManager.unlock(), { once: true });
-                document.body.addEventListener('touchstart', () => SoundManager.unlock(), { once: true });
             },
-            setRole(r) {
-                this.role = r;
-                SoundManager.unlock();
-                if (r === 'screen') host.init(); else player.init();
-            },
-            showView(id) {
-                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-                $(id).classList.remove('hidden');
+            setRole(r, s) {
+                AudioSys.unlock();
+                $('view-landing').classList.add('hidden');
+                if(r === 'screen') host.init(s); else player.init(s);
             }
         };
 
-        // --- HOST ---
         const host = {
-            players: {}, gameState: 'waiting', musicPlaying: false, timers: [],
+            players: {}, sessionId: null, gameState: 'waiting', musicPlaying: false, timers: [],
             
-            init() {
-                if (!app.sessionId) {
-                    app.sessionId = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    const newUrl = `?session=${app.sessionId}&role=screen`;
-                    window.history.replaceState(null, '', newUrl);
+            init(sid) {
+                this.sessionId = sid || Math.random().toString(36).substring(2,6).toUpperCase();
+                // Fix for SecurityError in sandboxed environments
+                if(!sid) {
+                    try {
+                        history.replaceState(null, '', `?session=${this.sessionId}&role=screen`);
+                    } catch(e) {
+                        console.warn("History API unavailable in this environment");
+                    }
                 }
-                $('host-session-code').innerText = app.sessionId;
-                app.showView('view-screen');
                 
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(location.origin + location.pathname + '?session=' + app.sessionId + '&role=player')}&bgcolor=ffffff&color=000000&margin=10`;
+                $('host-session-code').innerText = this.sessionId;
+                $('view-screen').classList.remove('hidden');
+                
+                const safeUrl = window.location.href.split('?')[0];
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(safeUrl + '?session=' + this.sessionId + '&role=player')}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
 
-                db.ref(`artifacts/${APP_ID}/public/data/players`).on('value', s => {
-                    const all = s.val() || {};
-                    this.players = {};
-                    Object.entries(all).forEach(([k,p]) => { if(p.sessionId === app.sessionId) this.players[k]=p; });
-                    this.renderPlayers();
+                World3D.init(); // Start 3D
+
+                db.ref(`artifacts/${APP_ID}/${this.sessionId}/players`).on('value', s => {
+                    this.players = s.val() || {};
+                    this.renderUI();
+                    // Sync 3D
+                    Object.entries(this.players).forEach(([id, p]) => {
+                        if(p.isAlive) World3D.addPlayer(id);
+                        else World3D.killPlayer(id);
+                    });
                 });
 
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
+                db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).on('value', s => {
                     const d = s.val();
-                    if(d) { this.gameState = d.state; this.musicPlaying = d.musicPlaying; this.updateUI(); }
+                    if(d) {
+                        this.gameState = d.state;
+                        this.musicPlaying = d.musicPlaying;
+                        this.updateUI();
+                        World3D.updateGame(d.state, d.musicPlaying);
+                    }
                 });
-                
-                // Init Session
+
                 this.updateDB({ state: 'waiting', musicPlaying: false, host: localUid });
             },
 
-            updateDB(updates) { db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).update(updates); },
-            wait(fn, ms) { const id = setTimeout(() => { fn(); this.timers=this.timers.filter(t=>t!==id); }, ms); this.timers.push(id); },
-            clearTimers() { this.timers.forEach(clearTimeout); this.timers = []; },
+            updateDB(d) { db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update(d); },
+            wait(fn, ms) { const t=setTimeout(fn, ms); this.timers.push(t); },
+            clearTimers() { this.timers.forEach(clearTimeout); this.timers=[]; },
 
-            renderPlayers() {
+            renderUI() {
+                const arr = Object.values(this.players);
+                
+                const countEl = $('host-lobby-count');
+                if(countEl) countEl.innerText = arr.length;
+                
+                const aliveEl = $('host-alive-count');
+                if(aliveEl) aliveEl.innerText = arr.filter(p=>p.isAlive).length;
+                
+                const deadEl = $('host-dead-count');
+                if(deadEl) deadEl.innerText = arr.filter(p=>!p.isAlive).length;
+                
+                const btn = $('btn-start-game');
+                if(btn) btn.disabled = arr.length === 0;
+                
                 const list = $('host-players-list'); 
-                if (list) list.innerHTML = '';
-                
-                const playersArr = Object.values(this.players);
-                
-                const lobbyCount = $('host-lobby-count');
-                if (lobbyCount) lobbyCount.innerText = playersArr.length;
-                
-                const aliveCount = $('host-alive-count');
-                if (aliveCount) aliveCount.innerText = playersArr.filter(p=>p.isAlive).length;
-                
-                const deadCount = $('host-dead-count');
-                if (deadCount) deadCount.innerText = playersArr.filter(p=>!p.isAlive).length;
-                
-                const btnStart = $('btn-start-game');
-                if (btnStart) btnStart.disabled = playersArr.length === 0;
-
-                if (!list) return;
-
-                playersArr.forEach(p => {
-                    const d = document.createElement('div');
-                    const color = p.isAlive ? 'border-[#249f9c] text-[#249f9c]' : 'border-red-900 text-red-900 line-through';
-                    d.className = `px-3 py-1 border rounded font-mono text-sm ${color}`;
-                    d.innerText = p.name;
-                    list.appendChild(d);
-                });
+                if(list) {
+                    list.innerHTML = '';
+                    arr.forEach(p => {
+                        const d = document.createElement('div');
+                        d.className = `px-2 py-1 text-xs border rounded ${p.isAlive ? 'border-[#249f9c] text-[#249f9c]' : 'border-red-900 text-red-900 line-through'}`;
+                        d.innerText = p.name;
+                        list.appendChild(d);
+                    });
+                }
             },
 
             startGame() {
-                SoundManager.unlock();
                 this.clearTimers();
-                const updates = {};
-                Object.keys(this.players).forEach(pid => {
-                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                    updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
+                const u = {};
+                Object.keys(this.players).forEach(id => {
+                    u[`players/${id}/isAlive`] = true;
+                    u[`players/${id}/lastScore`] = null;
+                    if(World3D.players[id]) { // Reset 3D
+                        World3D.players[id].material.color.setHex(0x249f9c);
+                        World3D.players[id].rotation.x = 0;
+                        World3D.players[id].position.y = 2;
+                        World3D.players[id].position.z = 40; // Reset Pos
+                        World3D.players[id].userData.dead = false;
+                    }
                 });
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
-                db.ref().update(updates);
-                
-                this.startMusicLogic();
+                db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
+                this.updateDB({ state: 'playing', musicPlaying: true });
+                this.loopMusic();
             },
 
-            startMusicLogic() {
+            loopMusic() {
                 const alive = Object.values(this.players).filter(p=>p.isAlive).length;
-                SoundManager.playBGM(alive <= 2);
+                AudioSys.playBGM(alive<=2);
+                let duration = alive<=2 ? Math.random()*10000+10000 : Math.random()*7000+5000;
                 
-                let min = 5000, max = 12000;
-                if(alive <= 2) { min = 10000; max = 20000; }
-                
-                this.wait(() => this.stopMusicLogic(), Math.random()*(max-min)+min);
+                this.wait(() => {
+                    AudioSys.stopBGM();
+                    this.updateDB({ state: 'measuring', musicPlaying: false, lastStop: Date.now() });
+                    this.wait(() => this.checkResults(), 3000);
+                }, duration);
             },
 
-            stopMusicLogic() {
-                SoundManager.stopBGM();
-                this.updateDB({ musicPlaying: false, state: 'measuring', lastStop: firebase.database.ServerValue.TIMESTAMP });
-                this.wait(() => this.processResults(), 3000);
-            },
-
-            processResults() {
+            checkResults() {
                 this.updateDB({ state: 'round_result' });
+                const alive = Object.entries(this.players).filter(([,p])=>p.isAlive);
                 
-                const aliveP = Object.entries(this.players).filter(([k,p])=>p.isAlive);
-                // Win check immediate
-                if(aliveP.length <= 1 && Object.keys(this.players).length > 1) {
-                    this.endGame(aliveP.length ? aliveP[0][1].name : 'NADIE');
+                if(alive.length <= 1 && Object.keys(this.players).length > 1) {
+                    this.endGame(alive.length ? alive[0][1].name : 'NADIE');
                     return;
                 }
 
-                let worstId = null, maxScore = -1;
-                aliveP.forEach(([id, p]) => {
-                    const s = (p.lastScore === undefined || p.lastScore === null) ? 0 : p.lastScore;
-                    if(s > maxScore) { maxScore = s; worstId = id; }
+                let worstId = null, max = -1;
+                alive.forEach(([id, p]) => {
+                    const s = p.lastScore || 0;
+                    if(s > max) { max = s; worstId = id; }
                 });
 
-                // Suspense delay
                 this.wait(() => {
-                    if(worstId && maxScore > 0.05 && aliveP.length > 1) {
-                        // ELIMINATE
-                        SoundManager.playGunshot();
+                    if(worstId && max > 0.05 && alive.length > 1) {
+                        AudioSys.playGun();
                         triggerFlash();
-                        
                         const elName = $('eliminated-name');
-                        if (elName) elName.innerText = this.players[worstId].name;
+                        if(elName) elName.innerText = this.players[worstId].name;
                         
                         const elOverlay = $('eliminated-overlay');
-                        if (elOverlay) elOverlay.classList.remove('hidden');
+                        if(elOverlay) elOverlay.classList.remove('hidden');
                         
-                        const updates = {};
-                        updates[`artifacts/${APP_ID}/public/data/players/${worstId}/isAlive`] = false;
-                        updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/lastShot`] = firebase.database.ServerValue.TIMESTAMP;
-                        db.ref().update(updates);
-                    } else {
-                        // No one moved significantly
+                        db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${worstId}`).update({ isAlive: false });
+                        World3D.killPlayer(worstId); // Trigger 3D death
+                        
+                        // Set global flash for players
+                        db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update({ lastShot: Date.now() });
                     }
 
                     this.wait(() => {
                         const elOverlay = $('eliminated-overlay');
-                        if (elOverlay) elOverlay.classList.add('hidden');
+                        if(elOverlay) elOverlay.classList.add('hidden');
+                        const currentAlive = Object.values(this.players).filter(p=>p.isAlive).length;
                         
-                        // Re-check win after kill
-                        let currentAlive = 0, lastName = "";
-                        Object.entries(this.players).forEach(([id,p]) => {
-                            // Don't count the one we just killed locally even if update is pending
-                            if(id === worstId && maxScore > 0.05) return;
-                            if(p.isAlive) { currentAlive++; lastName = p.name; }
-                        });
-
                         if(currentAlive <= 1) {
-                            this.endGame(currentAlive === 1 ? lastName : 'NADIE');
+                            const winner = Object.values(this.players).find(p=>p.isAlive);
+                            this.endGame(winner ? winner.name : 'NADIE');
                         } else {
-                            // New Round - Clear Scores
-                            const ups = {};
-                            Object.keys(this.players).forEach(id => ups[`artifacts/${APP_ID}/public/data/players/${id}/lastScore`] = null);
-                            ups[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'playing';
-                            ups[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = true;
-                            db.ref().update(ups);
-                            this.startMusicLogic();
+                            // Next round
+                            const u = {};
+                            Object.keys(this.players).forEach(id => u[`players/${id}/lastScore`] = null);
+                            db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
+                            this.updateDB({ state: 'playing', musicPlaying: true });
+                            this.loopMusic();
                         }
                     }, 4000);
-                }, aliveP.length <= 2 ? 5000 : 3000);
+                }, 3000);
             },
 
-            endGame(winner) {
-                this.clearTimers();
-                SoundManager.stopBGM();
-                SoundManager.playWin();
-                this.updateDB({ state: 'ended', musicPlaying: false, winner: winner });
-                this.wait(() => this.resetGame(), 8000); // Changed from startGame to resetGame
-            },
-
-            resetGame() {
-                this.clearTimers();
-                const updates = {};
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/state`] = 'waiting';
-                updates[`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/musicPlaying`] = false;
-                Object.keys(this.players).forEach(pid => {
-                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/isAlive`] = true;
-                     updates[`artifacts/${APP_ID}/public/data/players/${pid}/lastScore`] = null;
-                });
-                db.ref().update(updates);
+            endGame(w) {
+                this.clearTimers(); AudioSys.stopBGM(); AudioSys.playWin();
+                this.updateDB({ state: 'ended', winner: w });
+                this.wait(() => {
+                    this.updateDB({ state: 'waiting' });
+                    // Revive all
+                    const u = {};
+                    Object.keys(this.players).forEach(id => {
+                        u[`players/${id}/isAlive`] = true;
+                        if(World3D.players[id]) { // Reset 3D Visuals
+                            World3D.players[id].userData.dead = false;
+                            World3D.players[id].material.color.setHex(0x249f9c);
+                            World3D.players[id].rotation.x = 0;
+                            World3D.players[id].position.z = 40;
+                        }
+                    });
+                    db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
+                }, 8000);
             },
 
             updateUI() {
-                ['host-lobby','host-game','host-round-results','host-winner'].forEach(id=>$(id).classList.add('hidden'));
+                ['host-lobby','host-game-status','host-round-results','host-winner'].forEach(id=>$(id)?.classList.add('hidden'));
                 
-                if(this.gameState === 'waiting') {
-                    $('host-lobby').classList.remove('hidden');
-                } else if(this.gameState === 'playing' || this.gameState === 'measuring') {
-                    $('host-game').classList.remove('hidden');
-                    const l = $('traffic-light'), t = $('host-status-text'), i = $('traffic-icon');
-                    if(this.musicPlaying) {
-                        l.className = "w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-green-900 border-green-500 shadow-[0_0_80px_rgba(34,197,94,0.6)]";
-                        i.outerHTML = '<i id="traffic-icon" data-lucide="play" class="w-40 h-40 text-green-400 fill-current animate-pulse"></i>';
-                        t.innerText = "¡CORRE!";
-                        t.className = "text-9xl font-black mt-12 tracking-widest title-font text-green-500";
-                    } else {
-                        l.className = "w-80 h-80 rounded-full flex items-center justify-center border-[10px] bg-[#ed1b76] border-red-500 shadow-[0_0_80px_rgba(237,27,118,0.6)]";
-                        i.outerHTML = '<i id="traffic-icon" data-lucide="eye" class="w-40 h-40 text-white animate-[pulse_0.2s_infinite]"></i>';
-                        t.innerText = "MIDIENDO";
-                        t.className = "text-8xl font-black mt-12 tracking-widest title-font text-[#ed1b76]";
+                // Animation loop updates 3D automatically based on variables
+                if(this.gameState === 'waiting') $('host-lobby')?.classList.remove('hidden');
+                else if(this.gameState === 'playing') {
+                    $('host-game-status')?.classList.remove('hidden');
+                    const st = $('host-status-text');
+                    if(st) {
+                        st.innerText = "CORRE";
+                        st.className = "text-[120px] font-black title-font text-[#249f9c]";
+                    }
+                } else if(this.gameState === 'measuring') {
+                    $('host-game-status')?.classList.remove('hidden');
+                    const st = $('host-status-text');
+                    if(st) {
+                        st.innerText = "QUIETO";
+                        st.className = "text-[120px] font-black title-font text-[#ed1b76] animate-pulse";
                     }
                 } else if(this.gameState === 'round_result') {
-                    $('host-round-results').classList.remove('hidden');
+                    $('host-round-results')?.classList.remove('hidden');
                     this.renderResults();
                 } else if(this.gameState === 'ended') {
-                    $('host-winner').classList.remove('hidden');
-                    db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}/winner`).once('value', s => {
-                        $('winner-name').innerText = s.val() || '...';
+                    $('host-winner')?.classList.remove('hidden');
+                    if(this.players) {
+                        // Find winner
+                    }
+                    db.ref(`artifacts/${APP_ID}/${this.sessionId}/state/winner`).once('value', s => {
+                        const winName = $('winner-name');
+                        if(winName) winName.innerText = s.val() || '...';
                     });
                 }
                 lucide.createIcons();
             },
 
             renderResults() {
-                const g = $('results-grid'); g.innerHTML = '';
-                $('eliminated-overlay').classList.add('hidden');
+                const g = $('results-grid'); 
+                if(!g) return;
+                g.innerHTML = '';
                 
-                // Show ONLY alive players that submitted a score
-                const players = Object.values(this.players).filter(p => p.isAlive && p.lastScore !== null && p.lastScore !== undefined);
-                players.sort((a,b) => b.lastScore - a.lastScore);
-
-                players.forEach((p, i) => {
-                    const score = parseFloat(p.lastScore).toFixed(2);
-                    const isDanger = score > 1.0;
+                const p = Object.values(this.players).filter(x => x.isAlive && x.lastScore !== null && x.lastScore !== undefined);
+                p.sort((a,b) => b.lastScore - a.lastScore);
+                
+                p.forEach((pl, i) => {
+                    const score = parseFloat(pl.lastScore).toFixed(2);
+                    const barColor = score > 1.0 ? 'bg-[#ed1b76]' : 'bg-[#249f9c]';
                     const w = Math.min(100, (score/2.5)*100);
                     
-                    const el = document.createElement('div');
-                    el.className = "glass-panel p-4 rounded-xl flex items-center space-x-6 mb-3 fade-enter opacity-0 transition-all duration-500";
-                    el.innerHTML = `
-                        <div class="text-2xl font-bold w-12 text-gray-500">#${i+1}</div>
-                        <div class="text-3xl font-mono w-48 truncate">${p.name}</div>
-                        <div class="flex-1 h-8 bg-gray-800 rounded-full overflow-hidden relative">
-                            <div class="h-full score-bar flex items-center justify-end px-2 font-bold text-black" 
-                                 style="width:0%; background: ${isDanger ? '#ed1b76' : '#249f9c'}">
-                                 ${score}s
+                    g.innerHTML += `
+                        <div class="glass-panel p-4 rounded-xl flex items-center space-x-6 mb-2">
+                            <div class="text-xl font-bold w-8 text-gray-500">#${i+1}</div>
+                            <div class="text-2xl font-mono w-48 truncate">${pl.name}</div>
+                            <div class="flex-1 h-6 bg-gray-800 rounded-full overflow-hidden relative">
+                                <div class="h-full ${barColor}" style="width:${Math.max(5, w)}%"></div>
                             </div>
+                            <div class="font-bold text-xl">${score}s</div>
                         </div>
                     `;
-                    g.appendChild(el);
-                    
-                    setTimeout(() => {
-                        el.classList.remove('opacity-0', 'fade-enter');
-                        el.querySelector('.score-bar').style.width = `${Math.max(5, w)}%`;
-                    }, i * 200);
                 });
             }
         };
 
         // --- PLAYER ---
         const player = {
-            isAlive: true, lastMove: 0, lastShotSeen: 0,
+            sessionId: null, isAlive: true, lastMove: 0, lastShot: 0,
             
-            init() {
-                $('inp-session-code').value = app.sessionId || '';
-                app.showView('view-player-join');
+            init(sid) {
+                if(sid) this.sessionId = sid;
+                $('view-player-ui').classList.remove('hidden');
+                if(!sid) $('player-login').classList.remove('hidden');
             },
 
             join() {
                 const name = $('inp-player-name').value.trim().toUpperCase();
                 const code = $('inp-session-code').value.trim().toUpperCase();
-                if(!name || !code) return alert("Datos incompletos");
+                if(!name || !code) return alert("Faltan datos");
                 
-                SoundManager.unlock(); // FORCE UNLOCK
-                app.sessionId = code;
-                db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).set({
-                    name, sessionId: code, isAlive: true, lastScore: null,
-                    joinedAt: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => app.showView('view-player-sensor')).catch(alert);
+                this.sessionId = code;
+                db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
+                    name, sessionId: code, isAlive: true, joinedAt: Date.now()
+                }).then(() => {
+                    $('player-login').classList.add('hidden');
+                    $('player-sensor').classList.remove('hidden');
+                });
             },
 
             requestPermissions() {
-                SoundManager.unlock(); // FORCE UNLOCK AGAIN
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                    DeviceMotionEvent.requestPermission().then(r => r==='granted' ? this.enter() : alert("Permiso denegado")).catch(console.error);
+                    DeviceMotionEvent.requestPermission().then(r => {
+                        if (r==='granted') this.enter(); else alert("Permiso denegado");
+                    });
                 } else this.enter();
             },
 
             enter() {
-                app.showView('view-player-game');
-                this.setup();
-                this.monitor();
-            },
+                $('player-sensor').classList.add('hidden');
+                $('player-game').classList.remove('hidden');
+                
+                db.ref(`artifacts/${APP_ID}/${this.sessionId}`).on('value', s => {
+                    const d = s.val();
+                    if(!d) return;
+                    
+                    const me = d.players?.[localUid];
+                    const state = d.state;
+                    
+                    // Flash Check
+                    if(state.lastShot && state.lastShot !== this.lastShot && Date.now() - state.lastShot < 3000) {
+                        this.lastShot = state.lastShot;
+                        triggerFlash();
+                        AudioSys.playGun();
+                        if(navigator.vibrate) navigator.vibrate(500);
+                    }
 
-            setup() {
-                db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).on('value', s => {
-                    const p = s.val();
-                    if(p) {
-                        if(this.isAlive && !p.isAlive) this.die();
-                        this.isAlive = p.isAlive;
-                        this.updateScreen();
-                    }
-                });
-                db.ref(`artifacts/${APP_ID}/public/data/sessions/${app.sessionId}`).on('value', s => {
-                    const sess = s.val();
-                    if(sess) {
-                        this.sessionData = sess;
-                        if(sess.lastShot && sess.lastShot !== this.lastShotSeen) {
-                            this.lastShotSeen = sess.lastShot;
-                            if(Date.now() - sess.lastShot < 3000) triggerFlash();
+                    if(me) {
+                        if(this.isAlive && !me.isAlive) {
+                            this.isAlive = false;
+                            if(navigator.vibrate) navigator.vibrate([200,100,500]);
+                        } else if(!this.isAlive && me.isAlive) {
+                            this.isAlive = true; // Revived
                         }
-                        this.updateScreen();
-                        if(sess.state === 'measuring') this.measure();
                     }
+
+                    this.render(state, me);
+                    if(state.state === 'measuring') this.measure();
                 });
+
+                this.monitor();
             },
 
             monitor() {
@@ -744,22 +757,26 @@
                     if(acc > 0.5) this.lastMove = Date.now();
                 });
                 setInterval(() => {
-                    if(!this.sessionData || !this.isAlive) return;
-                    if(this.sessionData.state === 'playing' && this.sessionData.musicPlaying) {
-                        $('p-move-warning').classList.toggle('hidden', (Date.now() - this.lastMove) < 2000);
-                        if((Date.now() - this.lastMove) > 2000 && navigator.vibrate) navigator.vibrate(200);
-                    } else $('p-move-warning').classList.add('hidden');
+                    const w = $('p-move-warning');
+                    if(!w || !this.sessionData) return;
+                    if(this.sessionData.state === 'playing' && this.sessionData.musicPlaying && this.isAlive) {
+                        if(Date.now() - this.lastMove > 2000) {
+                            w.classList.remove('hidden');
+                            if(navigator.vibrate) navigator.vibrate(200);
+                        } else w.classList.add('hidden');
+                    } else w.classList.add('hidden');
                 }, 500);
             },
 
             measure() {
                 const start = Date.now();
                 let lastM = 0;
-                
-                // Animation
+                // UI Bar Reset
                 const b = $('p-measure-bar');
-                b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
-                void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
+                if(b) {
+                    b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
+                    void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
+                }
 
                 const h = (e) => {
                     let acc = 0;
@@ -773,54 +790,51 @@
                 window.addEventListener('devicemotion', h);
                 setTimeout(() => {
                     window.removeEventListener('devicemotion', h);
-                    if(this.isAlive) db.ref(`artifacts/${APP_ID}/public/data/players/${localUid}`).update({ lastScore: lastM/1000 });
+                    if(this.isAlive) db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: lastM/1000 });
                 }, 2000);
             },
 
-            die() {
-                SoundManager.playGunshot(); // Try play local
-                if(navigator.vibrate) navigator.vibrate([200, 100, 500]);
-            },
-
-            updateScreen() {
-                const s = this.sessionData;
+            render(state, me) {
+                this.sessionData = state; // For monitor
                 const c = $('view-player-game');
-                ['p-screen-waiting','p-screen-active','p-screen-dead','p-screen-win'].forEach(id=>$(id).classList.add('hidden'));
-                c.className = "h-full w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-300";
-
-                if(!s) return;
+                ['p-screen-waiting','p-screen-active','p-screen-dead','p-screen-win'].forEach(id=>$(id)?.classList.add('hidden'));
                 
-                if(s.state === 'ended') {
-                    if(s.winner !== 'NADIE') { $('p-screen-win').classList.remove('hidden'); SoundManager.playWin(); }
-                    else $('p-screen-dead').classList.remove('hidden');
+                if(state.state === 'ended') {
+                    if(state.winner !== 'NADIE') { 
+                        $('p-screen-win')?.classList.remove('hidden'); 
+                        AudioSys.playWin(); 
+                    }
+                    else $('p-screen-dead')?.classList.remove('hidden');
                     return;
                 }
-                if(!this.isAlive) { $('p-screen-dead').classList.remove('hidden'); return; }
-                if(s.state === 'waiting') { $('p-screen-waiting').classList.remove('hidden'); c.classList.add('bg-neutral-900'); return; }
 
-                if(s.state === 'playing' || s.state === 'measuring' || s.state === 'round_result') {
-                    $('p-screen-active').classList.remove('hidden');
-                    const i = $('p-icon-container'), t = $('p-status-text'), st = $('p-sub-text'), bar = $('p-measure-bar-container');
-                    
-                    if(s.musicPlaying) {
-                        c.className = "h-full w-full flex flex-col items-center justify-center bg-[#249f9c]";
-                        i.innerHTML = '<i data-lucide="footprints" class="w-48 h-48 text-white animate-bounce"></i>';
-                        t.innerText = "¡CORRE!"; st.innerText = "MUÉVETE AHORA";
-                        bar.classList.add('hidden');
-                    } else if(s.state === 'measuring') {
-                        c.className = "h-full w-full flex flex-col items-center justify-center bg-[#ed1b76]";
-                        i.innerHTML = '<i data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>';
-                        t.innerText = "QUIETO"; st.innerText = "NO TE MUEVAS";
-                        bar.classList.remove('hidden');
-                        if(navigator.vibrate) navigator.vibrate(50);
-                    } else {
-                        c.className = "h-full w-full flex flex-col items-center justify-center bg-black";
-                        i.innerHTML = '<i data-lucide="bar-chart-2" class="w-48 h-48 text-gray-500"></i>';
-                        t.innerText = "RESULTADOS"; st.innerText = "MIRA LA PANTALLA";
-                        bar.classList.add('hidden');
-                    }
-                    lucide.createIcons();
+                if(!this.isAlive) { $('p-screen-dead')?.classList.remove('hidden'); return; }
+                if(state.state === 'waiting') { $('p-screen-waiting')?.classList.remove('hidden'); return; }
+
+                $('p-screen-active')?.classList.remove('hidden');
+                const t = $('p-main-text'), sub = $('p-sub-text'), ic = $('p-icon'), bar = $('p-measure-bar-container');
+                
+                if(state.musicPlaying) {
+                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-[#249f9c]";
+                    if(ic) ic.innerHTML = '<i data-lucide="footprints" class="w-32 h-32 text-white animate-bounce"></i>';
+                    if(t) t.innerText = "CORRE"; 
+                    if(sub) sub.innerText = "MANTENTE EN MOVIMIENTO";
+                    if(bar) bar.classList.add('hidden');
+                } else if(state.state === 'measuring') {
+                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-[#ed1b76]";
+                    if(ic) ic.innerHTML = '<i data-lucide="eye" class="w-32 h-32 text-white animate-pulse"></i>';
+                    if(t) t.innerText = "QUIETO"; 
+                    if(sub) sub.innerText = "NO TE MUEVAS";
+                    if(bar) bar.classList.remove('hidden');
+                    if(navigator.vibrate) navigator.vibrate(50);
+                } else {
+                    if(c) c.className = "h-full w-full flex flex-col items-center justify-center bg-black";
+                    if(ic) ic.innerHTML = '<i data-lucide="bar-chart-2" class="w-32 h-32 text-gray-500"></i>';
+                    if(t) t.innerText = "RESULTADOS"; 
+                    if(sub) sub.innerText = "MIRA LA PANTALLA";
+                    if(bar) bar.classList.add('hidden');
                 }
+                lucide.createIcons();
             }
         };
 
