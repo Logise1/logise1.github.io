@@ -12,8 +12,8 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
 
-    <!-- Three.js (3D Engine) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js (3D Engine) - ACTUALIZADO A VERSIÓN MODERNA -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -189,44 +189,48 @@
             isDollLooking: false, // false = Green Light (Looking away), true = Red Light (Looking at players)
             
             init() {
-                const container = document.getElementById('canvas-container');
-                this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x111111);
-                this.scene.fog = new THREE.Fog(0x111111, 20, 100);
+                try {
+                    const container = document.getElementById('canvas-container');
+                    this.scene = new THREE.Scene();
+                    this.scene.background = new THREE.Color(0x111111);
+                    this.scene.fog = new THREE.Fog(0x111111, 20, 100);
 
-                // Camera
-                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-                this.camera.position.set(0, 30, 60);
-                this.camera.lookAt(0, 0, 0);
+                    // Camera
+                    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+                    this.camera.position.set(0, 30, 60);
+                    this.camera.lookAt(0, 0, 0);
 
-                // Renderer
-                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.shadowMap.enabled = true;
-                container.appendChild(this.renderer.domElement);
+                    // Renderer
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.renderer.shadowMap.enabled = true;
+                    container.appendChild(this.renderer.domElement);
 
-                // Lights
-                const ambient = new THREE.AmbientLight(0x404040, 2); 
-                this.scene.add(ambient);
-                const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-                dirLight.position.set(10, 50, 20);
-                dirLight.castShadow = true;
-                this.scene.add(dirLight);
+                    // Lights
+                    const ambient = new THREE.AmbientLight(0x404040, 2); 
+                    this.scene.add(ambient);
+                    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+                    dirLight.position.set(10, 50, 20);
+                    dirLight.castShadow = true;
+                    this.scene.add(dirLight);
 
-                // Floor (Grid + Plane)
-                const grid = new THREE.GridHelper(200, 20, 0x333333, 0x111111);
-                this.scene.add(grid);
-                const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
-                plane.rotation.x = -Math.PI / 2;
-                plane.receiveShadow = true;
-                this.scene.add(plane);
+                    // Floor (Grid + Plane)
+                    const grid = new THREE.GridHelper(200, 20, 0x333333, 0x111111);
+                    this.scene.add(grid);
+                    const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
+                    plane.rotation.x = -Math.PI / 2;
+                    plane.receiveShadow = true;
+                    this.scene.add(plane);
 
-                // THE DOLL (Abstract Representation)
-                this.createDoll();
+                    // THE DOLL (Abstract Representation)
+                    this.createDoll();
 
-                // Start Loop
-                this.animate();
-                window.addEventListener('resize', () => this.onResize());
+                    // Start Loop
+                    this.animate();
+                    window.addEventListener('resize', () => this.onResize());
+                } catch(e) {
+                    console.error("3D Init Error:", e);
+                }
             },
 
             createDoll() {
@@ -263,7 +267,15 @@
             addPlayer(id, colorHex = 0x249f9c) {
                 if (this.players[id]) return; // Exists
 
-                const geo = new THREE.CapsuleGeometry(1, 4, 4, 8);
+                // Use simple geometries if CapsuleGeometry is missing (fallback)
+                let geo;
+                if (typeof THREE.CapsuleGeometry === 'function') {
+                    geo = new THREE.CapsuleGeometry(1, 4, 4, 8);
+                } else {
+                    // Fallback for older Three.js versions just in case
+                    geo = new THREE.CylinderGeometry(1, 1, 4, 8);
+                }
+
                 const mat = new THREE.MeshStandardMaterial({ color: colorHex });
                 const mesh = new THREE.Mesh(geo, mat);
                 
