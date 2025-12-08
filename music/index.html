@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Juego del Semáforo Musical 3D</title>
+    <title>Juego del Semáforo Musical</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,9 +11,6 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-database-compat.js"></script>
-
-    <!-- Three.js (3D Engine) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -27,19 +24,18 @@
         .hidden { display: none !important; }
         
         /* UI Overlays */
-        .glass-panel { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); }
+        .glass-panel { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
         
         /* Flash Effect */
         #flash-overlay { transition: opacity 0.05s ease-out; pointer-events: none; }
         
-        /* 3D Canvas Container */
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
-        
+        /* Background Pattern */
+        .bg-grid { background-image: radial-gradient(#333 1px, transparent 1px); background-size: 40px 40px; opacity: 0.15; }
+
         /* Animations */
-        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .animate-heartbeat { animation: heartbeat 1s infinite; }
-        
-        /* Red Flash for Motion Detection */
+        .score-bar { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
         .bg-detected { background-color: #ef4444 !important; }
     </style>
 </head>
@@ -50,21 +46,24 @@
 
     <!-- FLASH OVERLAY -->
     <div id="flash-overlay" class="fixed inset-0 z-[100] bg-red-600 mix-blend-lighten opacity-0"></div>
+    
+    <!-- BACKGROUND -->
+    <div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
 
     <!-- VISTA: SELECCIÓN DE ROL -->
-    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 relative z-20 bg-black/90">
+    <div id="view-landing" class="h-full w-full flex flex-col items-center justify-center p-6 relative z-20 bg-black/95">
         <div class="mb-12 text-center space-y-4">
             <h1 class="text-6xl md:text-8xl font-black title-font text-transparent bg-clip-text bg-gradient-to-br from-[#ed1b76] to-[#ff5252] drop-shadow-[0_0_15px_rgba(237,27,118,0.5)]">
                 RED LIGHT
             </h1>
-            <p class="text-xl tracking-[0.8em] text-gray-400 uppercase">3D Simulation</p>
+            <p class="text-xl tracking-[0.8em] text-gray-400 uppercase">Challenge</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
             <button onclick="app.setRole('screen')" class="group p-10 glass-panel rounded-2xl hover:bg-[#ed1b76]/20 transition-all hover:scale-105 border border-[#ed1b76]/30">
                 <i data-lucide="monitor" class="w-20 h-20 text-[#ed1b76] mb-6 mx-auto"></i>
                 <span class="text-3xl font-bold title-font block text-center">PANTALLA (TV)</span>
-                <span class="text-sm text-gray-400 mt-2 block text-center">Modo Espectador 3D</span>
+                <span class="text-sm text-gray-400 mt-2 block text-center">Modo Host</span>
             </button>
 
             <button onclick="app.setRole('player')" class="group p-10 glass-panel rounded-2xl hover:bg-[#249f9c]/20 transition-all hover:scale-105 border border-[#249f9c]/30">
@@ -75,57 +74,80 @@
         </div>
     </div>
 
-    <!-- VISTA: PANTALLA (HOST) CON 3D -->
-    <div id="view-screen" class="hidden h-full w-full relative bg-black z-10">
-        <!-- 3D Canvas -->
-        <div id="canvas-container"></div>
-
-        <!-- UI Overlay -->
-        <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
-            <!-- Header -->
-            <div class="flex justify-between items-start">
-                <div class="glass-panel px-6 py-3 rounded-full flex items-center space-x-4">
-                    <span class="text-gray-400 text-sm">SALA</span>
-                    <span id="host-session-code" class="text-4xl font-bold title-font text-[#ed1b76] tracking-widest">...</span>
+    <!-- VISTA: PANTALLA (HOST) -->
+    <div id="view-screen" class="hidden h-full w-full relative bg-neutral-900 z-10 flex flex-col">
+        <!-- Header -->
+        <div class="p-6 flex justify-between items-center z-20 bg-black/50 backdrop-blur-md border-b border-white/10">
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-400 text-sm">SALA</span>
+                <span id="host-session-code" class="text-4xl font-bold title-font text-[#ed1b76] tracking-widest">...</span>
+            </div>
+            <div class="flex space-x-4">
+                <div class="bg-[#249f9c]/20 border border-[#249f9c]/50 px-4 py-2 rounded-lg text-[#249f9c] flex items-center">
+                    <i data-lucide="users" class="mr-2 w-5 h-5"></i> <span id="host-alive-count" class="font-bold text-xl">0</span>
                 </div>
-                <div class="flex space-x-4">
-                    <div class="glass-panel px-4 py-2 rounded-lg text-[#249f9c] flex items-center">
-                        <i data-lucide="users" class="mr-2 w-5 h-5"></i> <span id="host-alive-count" class="font-bold text-xl">0</span>
+                <div class="bg-red-900/20 border border-red-500/50 px-4 py-2 rounded-lg text-red-500 flex items-center">
+                    <i data-lucide="skull" class="mr-2 w-5 h-5"></i> <span id="host-dead-count" class="font-bold text-xl">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido Central Host -->
+        <div class="flex-1 relative flex items-center justify-center p-8 overflow-hidden">
+            
+            <!-- Estado: LOBBY -->
+            <div id="host-lobby" class="text-center glass-panel p-12 rounded-3xl animate-fade-in max-w-2xl w-full">
+                <img id="host-qr-img" src="" alt="QR" class="w-64 h-64 object-contain rounded-lg mb-8 mx-auto border-4 border-white shadow-2xl">
+                <h2 class="text-5xl font-bold mb-4 title-font tracking-tighter">UNIRSE</h2>
+                <div class="text-gray-400 mb-8 font-mono">Escanea el código para entrar</div>
+                <button id="btn-start-game" onclick="host.startGame()" disabled class="w-full py-5 bg-[#ed1b76] rounded-xl text-3xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_30px_rgba(237,27,118,0.4)]">
+                    EMPEZAR JUEGO
+                </button>
+            </div>
+
+            <!-- Estado: JUEGO (2D Visuals) -->
+            <div id="host-game" class="hidden w-full h-full flex flex-col items-center justify-center">
+                <!-- Luz principal -->
+                <div id="traffic-light-container" class="relative mb-12 transform transition-transform duration-500">
+                    <div class="absolute inset-0 rounded-full blur-[100px] opacity-50 transition-colors duration-200" id="light-glow"></div>
+                    <div id="traffic-light" class="relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-300 bg-neutral-900 border-neutral-700 shadow-2xl">
+                        <i id="traffic-icon" data-lucide="eye" class="w-48 h-48 text-gray-500 transition-colors duration-200"></i>
                     </div>
-                    <div class="glass-panel px-4 py-2 rounded-lg text-[#ed1b76] flex items-center">
-                        <i data-lucide="skull" class="mr-2 w-5 h-5"></i> <span id="host-dead-count" class="font-bold text-xl">0</span>
+                </div>
+                
+                <h2 id="host-status-text" class="text-[120px] font-black tracking-tighter title-font drop-shadow-2xl transition-all duration-200">ESPERA</h2>
+            </div>
+
+            <!-- Estado: RESULTADOS -->
+            <div id="host-round-results" class="hidden w-full h-full flex flex-col items-center justify-start pt-10">
+                <h2 class="text-6xl font-black mb-8 text-[#ed1b76] title-font border-b-4 border-[#ed1b76] pb-2">RESULTADOS</h2>
+                
+                <div id="results-grid" class="w-full max-w-5xl grid grid-cols-1 gap-4 overflow-y-auto pr-4 pb-20" style="max-height: 70vh;">
+                    <!-- Filas dinámicas -->
+                </div>
+
+                <!-- Overlay Eliminado -->
+                <div id="eliminated-overlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center hidden backdrop-blur-md">
+                    <div class="text-center animate-bounce">
+                        <i data-lucide="skull" class="w-48 h-48 text-red-600 mx-auto mb-6"></i>
+                        <h1 class="text-[8rem] leading-none font-black text-[#ed1b76] title-font mb-4">ELIMINADO</h1>
+                        <h2 id="eliminated-name" class="text-6xl font-mono text-white bg-neutral-800 px-8 py-4 inline-block rounded border border-[#ed1b76]">JUGADOR</h2>
                     </div>
                 </div>
             </div>
 
-            <!-- Central Message (Dynamic) -->
-            <div id="host-center-ui" class="absolute inset-0 flex items-center justify-center pointer-events-auto">
-                <!-- Lobby UI -->
-                <div id="host-lobby" class="text-center glass-panel p-10 rounded-2xl animate-fade-in backdrop-blur-xl">
-                    <img id="host-qr-img" src="" alt="QR" class="w-64 h-64 object-contain rounded-lg mb-6 mx-auto border-4 border-white">
-                    <h2 class="text-4xl font-bold mb-4 title-font">UNIRSE AHORA</h2>
-                    <button id="btn-start-game" onclick="host.startGame()" disabled class="px-10 py-4 bg-[#ed1b76] rounded text-2xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_30px_rgba(237,27,118,0.4)]">
-                        EMPEZAR JUEGO
-                    </button>
-                </div>
-
-                <!-- Game Status Text (Big Overlay) -->
-                <div id="host-game-status" class="hidden text-center">
-                    <h1 id="host-status-text" class="text-[120px] font-black title-font drop-shadow-2xl tracking-tighter transition-all duration-300 transform scale-100">ESPERA</h1>
-                </div>
-
-                <!-- Winner UI -->
-                <div id="host-winner" class="hidden text-center glass-panel p-12 rounded-3xl border-2 border-yellow-500/50 shadow-[0_0_100px_rgba(234,179,8,0.3)]">
-                    <i data-lucide="crown" class="w-32 h-32 text-yellow-400 mx-auto mb-6 animate-bounce"></i>
-                    <h2 class="text-4xl text-yellow-500 mb-4 font-bold tracking-widest">GANADOR</h2>
-                    <div id="winner-name" class="text-7xl font-black text-white title-font mb-4">NOMBRE</div>
-                </div>
+            <!-- Estado: GANADOR -->
+            <div id="host-winner" class="hidden flex flex-col items-center justify-center animate-fade-in-up">
+                <i data-lucide="crown" class="w-48 h-48 text-yellow-400 mb-8 animate-bounce"></i>
+                <h2 class="text-6xl font-bold text-yellow-500 mb-6 title-font tracking-widest">GANADOR</h2>
+                <div id="winner-name" class="text-9xl font-black text-white mb-12 title-font">NOMBRE</div>
+                <div class="text-gray-500 font-mono animate-pulse">Reiniciando sistema de juego...</div>
             </div>
+        </div>
 
-            <!-- Footer: Player List -->
-            <div class="w-full">
-                <div id="host-players-list" class="flex flex-wrap gap-2 justify-center max-h-24 overflow-hidden opacity-80"></div>
-            </div>
+        <!-- Footer: Player List -->
+        <div class="w-full p-4 bg-black/80 border-t border-white/10">
+            <div id="host-players-list" class="flex flex-wrap gap-2 justify-center max-h-24 overflow-y-auto"></div>
         </div>
     </div>
 
@@ -134,8 +156,8 @@
         <!-- Login Screen -->
         <div id="player-login" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
             <h1 class="text-4xl font-black text-[#ed1b76] title-font mb-4">LOGIN</h1>
-            <input type="text" id="inp-player-name" placeholder="NOMBRE" maxlength="10" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white focus:border-[#ed1b76] outline-none">
-            <input type="text" id="inp-session-code" placeholder="CÓDIGO" maxlength="4" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white uppercase focus:border-[#ed1b76] outline-none tracking-widest">
+            <input type="text" id="inp-player-name" placeholder="NOMBRE" maxlength="10" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white focus:border-[#ed1b76] outline-none font-mono">
+            <input type="text" id="inp-session-code" placeholder="CÓDIGO" maxlength="4" class="w-full max-w-xs bg-black border border-gray-700 p-4 rounded text-center text-xl text-white uppercase focus:border-[#ed1b76] outline-none tracking-widest font-mono">
             <button onclick="player.join()" class="w-full max-w-xs bg-[#ed1b76] p-4 rounded font-bold text-xl shadow-lg shadow-pink-900/50 active:scale-95 transition-transform">ENTRAR</button>
         </div>
 
@@ -151,7 +173,7 @@
             <!-- Waiting State -->
             <div id="p-state-waiting" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-10">
                 <div class="animate-spin w-12 h-12 border-4 border-[#249f9c] border-t-transparent rounded-full mb-4"></div>
-                <p class="text-[#249f9c] tracking-widest">ESPERANDO AL LÍDER</p>
+                <p class="text-[#249f9c] tracking-widest font-mono">ESPERANDO AL LÍDER</p>
             </div>
 
             <!-- Active Game State -->
@@ -159,7 +181,7 @@
                 <div id="p-bg-color" class="absolute inset-0 transition-colors duration-300 bg-[#249f9c]"></div>
                 
                 <div class="relative z-10 text-center">
-                    <div id="p-icon" class="mb-8 transform transition-transform duration-200"></div>
+                    <div id="p-icon" class="mb-8 transform transition-transform duration-200 flex justify-center"></div>
                     <h1 id="p-main-text" class="text-6xl font-black drop-shadow-lg title-font">...</h1>
                     <p id="p-sub-text" class="text-xl mt-2 font-mono opacity-90">...</p>
                 </div>
@@ -185,212 +207,6 @@
     </div>
 
     <script>
-        // --- 3D ENGINE (THREE.JS) ---
-        const World3D = {
-            scene: null, camera: null, renderer: null,
-            doll: null, players: {}, // Map<id, Mesh>
-            isDollLooking: false, // false = Green Light (Looking away), true = Red Light (Looking at players)
-            
-            init() {
-                try {
-                    const container = document.getElementById('canvas-container');
-                    this.scene = new THREE.Scene();
-                    this.scene.background = new THREE.Color(0x111111);
-                    this.scene.fog = new THREE.Fog(0x111111, 20, 100);
-
-                    // Camera
-                    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-                    this.camera.position.set(0, 30, 60);
-                    this.camera.lookAt(0, 0, 0);
-
-                    // Renderer
-                    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                    this.renderer.setSize(window.innerWidth, window.innerHeight);
-                    this.renderer.shadowMap.enabled = true;
-                    container.appendChild(this.renderer.domElement);
-
-                    // Lights
-                    const ambient = new THREE.AmbientLight(0x404040, 2); 
-                    this.scene.add(ambient);
-                    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-                    dirLight.position.set(10, 50, 20);
-                    dirLight.castShadow = true;
-                    this.scene.add(dirLight);
-
-                    // Floor (Grid + Plane)
-                    const grid = new THREE.GridHelper(200, 20, 0x333333, 0x111111);
-                    this.scene.add(grid);
-                    const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
-                    plane.rotation.x = -Math.PI / 2;
-                    plane.receiveShadow = true;
-                    this.scene.add(plane);
-
-                    // THE DOLL (Abstract Representation)
-                    this.createDoll();
-
-                    // Start Loop
-                    this.animate();
-                    window.addEventListener('resize', () => this.onResize());
-                } catch(e) {
-                    console.error("3D Init Error:", e);
-                }
-            },
-
-            createDoll() {
-                const group = new THREE.Group();
-                
-                // Body
-                const bodyGeo = new THREE.CylinderGeometry(2, 3, 10, 8);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffa500 });
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.y = 5;
-                body.castShadow = true;
-                group.add(body);
-
-                // Head
-                const headGeo = new THREE.SphereGeometry(3, 16, 16);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0x111111 }); // Back of head
-                const head = new THREE.Mesh(headGeo, headMat);
-                head.position.y = 11;
-                group.add(head);
-
-                // Face (Eye)
-                const faceGeo = new THREE.SphereGeometry(1, 16, 16);
-                const faceMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 });
-                const face = new THREE.Mesh(faceGeo, faceMat);
-                face.position.set(0, 11, 2.5); // Front of head
-                this.dollEye = face; // Reference to change color
-                group.add(face);
-
-                group.position.set(0, 0, -40); // Far end
-                this.scene.add(group);
-                this.doll = group;
-            },
-
-            addPlayer(id, colorHex = 0x249f9c) {
-                if (this.players[id]) return; // Exists
-
-                // Use simple geometries if CapsuleGeometry is missing (fallback)
-                let geo;
-                if (typeof THREE.CapsuleGeometry === 'function') {
-                    geo = new THREE.CapsuleGeometry(1, 4, 4, 8);
-                } else {
-                    // Fallback for older Three.js versions just in case
-                    geo = new THREE.CylinderGeometry(1, 1, 4, 8);
-                }
-
-                const mat = new THREE.MeshStandardMaterial({ color: colorHex });
-                const mesh = new THREE.Mesh(geo, mat);
-                
-                // Random position start line
-                mesh.position.set((Math.random() - 0.5) * 40, 2, 40); 
-                mesh.castShadow = true;
-                
-                // Store metadata
-                mesh.userData = { id, dead: false, progress: 0 };
-                
-                this.scene.add(mesh);
-                this.players[id] = mesh;
-            },
-
-            killPlayer(id) {
-                const p = this.players[id];
-                if (p && !p.userData.dead) {
-                    p.userData.dead = true;
-                    // Death Animation: Turn Red, Fall over, Particle explosion simulation
-                    p.material.color.setHex(0xed1b76);
-                    p.rotation.x = -Math.PI / 2; // Fall flat
-                    p.position.y = 0.5;
-                    
-                    this.createExplosion(p.position);
-                }
-            },
-
-            removePlayer(id) {
-                if (this.players[id]) {
-                    this.scene.remove(this.players[id]);
-                    delete this.players[id];
-                }
-            },
-
-            createExplosion(pos) {
-                // Simple particle burst
-                const particleCount = 8;
-                const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-                const mat = new THREE.MeshBasicMaterial({ color: 0xed1b76 });
-                
-                for(let i=0; i<particleCount; i++) {
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.copy(pos);
-                    mesh.position.y += 1;
-                    mesh.userData = { 
-                        vel: new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).multiplyScalar(0.5) 
-                    };
-                    this.scene.add(mesh);
-                    
-                    // Simple animation loop for particles
-                    const animateParticle = () => {
-                        mesh.position.add(mesh.userData.vel);
-                        mesh.userData.vel.y -= 0.02; // Gravity
-                        mesh.scale.multiplyScalar(0.9); // Shrink
-                        if(mesh.scale.x < 0.1) this.scene.remove(mesh);
-                        else requestAnimationFrame(animateParticle);
-                    };
-                    animateParticle();
-                }
-            },
-
-            updateGame(state, musicPlaying) {
-                // Doll Rotation Logic
-                const targetRot = musicPlaying ? Math.PI : 0; // PI = Looking away (Green), 0 = Looking at players (Red)
-                if (this.doll) {
-                    this.doll.rotation.y += (targetRot - this.doll.rotation.y) * 0.1;
-                    
-                    // Eye Color
-                    if (this.dollEye) {
-                        const color = musicPlaying ? 0x00ff00 : 0xff0000;
-                        this.dollEye.material.color.setHex(color);
-                        this.dollEye.material.emissive.setHex(color);
-                    }
-                }
-
-                // Player Logic
-                Object.values(this.players).forEach(mesh => {
-                    if (mesh.userData.dead) return;
-
-                    // Move forward if green light (Simulation)
-                    if (musicPlaying) {
-                        // Move towards z = -30 (Goal)
-                        if (mesh.position.z > -30) {
-                            mesh.position.z -= 0.05 + (Math.random() * 0.02); // Small variations
-                            // Bobbing animation
-                            mesh.position.y = 2 + Math.sin(Date.now() * 0.01 + mesh.position.x) * 0.2;
-                        }
-                    } else {
-                        // Breathing idle
-                        mesh.position.y = 2;
-                    }
-                });
-            },
-
-            animate() {
-                requestAnimationFrame(() => this.animate());
-                
-                // Camera Orbit (Subtle)
-                const time = Date.now() * 0.0005;
-                this.camera.position.x = Math.sin(time) * 20;
-                this.camera.lookAt(0, 5, 0);
-
-                this.renderer.render(this.scene, this.camera);
-            },
-
-            onResize() {
-                this.camera.aspect = window.innerWidth / window.innerHeight;
-                this.camera.updateProjectionMatrix();
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        };
-
         // --- AUDIO MANAGER ---
         const AudioSys = {
             gun: new Audio('https://library.penguinmod.com/files/sounds/gunshot3.mp3'),
@@ -410,7 +226,7 @@
             playWin() { this.win.currentTime=0; this.win.play().catch(()=>{}); },
             playBGM(fast) {
                 if(this.bgm) this.bgm.pause();
-                const src = fast ? 'song3.mp3' : ['song1.mp3','song2.mp3'][Math.floor(Math.random()*2)];
+                const src = fast ? 'song3.mp3' : ['song1.mp3','song2.mp3', 'song4.mp3'][Math.floor(Math.random()*3)];
                 this.bgm = new Audio(src); this.bgm.loop=true; this.bgm.play().catch(()=>{});
             },
             stopBGM() { if(this.bgm) this.bgm.pause(); },
@@ -432,7 +248,6 @@
         let localUid = localStorage.getItem('mg_uid') || 'u_' + Date.now().toString(36);
         localStorage.setItem('mg_uid', localUid);
 
-        // Flash
         const triggerFlash = () => { $('flash-overlay').style.opacity = '1'; setTimeout(() => $('flash-overlay').style.opacity = '0', 100); };
 
         const app = {
@@ -461,9 +276,7 @@
             
             init(sid) {
                 this.sessionId = sid || Math.random().toString(36).substring(2,6).toUpperCase();
-                if(!sid) {
-                    try { history.replaceState(null, '', `?session=${this.sessionId}&role=screen`); } catch(e) {}
-                }
+                if(!sid) { try { history.replaceState(null, '', `?session=${this.sessionId}&role=screen`); } catch(e) {} }
                 
                 $('host-session-code').innerText = this.sessionId;
                 $('view-screen').classList.remove('hidden');
@@ -472,15 +285,9 @@
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(safeUrl + '?session=' + this.sessionId + '&role=player')}&bgcolor=ffffff&color=000000&margin=10`;
                 $('host-qr-img').src = qrUrl;
 
-                World3D.init(); 
-
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players`).on('value', s => {
                     this.players = s.val() || {};
                     this.renderUI();
-                    Object.entries(this.players).forEach(([id, p]) => {
-                        if(p.isAlive) World3D.addPlayer(id);
-                        else World3D.killPlayer(id);
-                    });
                 });
 
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).on('value', s => {
@@ -489,7 +296,6 @@
                         this.gameState = d.state;
                         this.musicPlaying = d.musicPlaying;
                         this.updateUI();
-                        World3D.updateGame(d.state, d.musicPlaying);
                     }
                 });
 
@@ -502,18 +308,10 @@
 
             renderUI() {
                 const arr = Object.values(this.players);
-                
-                const countEl = $('host-lobby-count');
-                if(countEl) countEl.innerText = arr.length;
-                
-                const aliveEl = $('host-alive-count');
-                if(aliveEl) aliveEl.innerText = arr.filter(p=>p.isAlive).length;
-                
-                const deadEl = $('host-dead-count');
-                if(deadEl) deadEl.innerText = arr.filter(p=>!p.isAlive).length;
-                
-                const btn = $('btn-start-game');
-                if(btn) btn.disabled = arr.length === 0;
+                if($('host-lobby-count')) $('host-lobby-count').innerText = arr.length;
+                if($('host-alive-count')) $('host-alive-count').innerText = arr.filter(p=>p.isAlive).length;
+                if($('host-dead-count')) $('host-dead-count').innerText = arr.filter(p=>!p.isAlive).length;
+                if($('btn-start-game')) $('btn-start-game').disabled = arr.length === 0;
                 
                 const list = $('host-players-list'); 
                 if(list) {
@@ -533,13 +331,6 @@
                 Object.keys(this.players).forEach(id => {
                     u[`players/${id}/isAlive`] = true;
                     u[`players/${id}/lastScore`] = null;
-                    if(World3D.players[id]) { 
-                        World3D.players[id].material.color.setHex(0x249f9c);
-                        World3D.players[id].rotation.x = 0;
-                        World3D.players[id].position.y = 2;
-                        World3D.players[id].position.z = 40; 
-                        World3D.players[id].userData.dead = false;
-                    }
                 });
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
                 this.updateDB({ state: 'playing', musicPlaying: true });
@@ -554,7 +345,7 @@
                 this.wait(() => {
                     AudioSys.stopBGM();
                     this.updateDB({ state: 'measuring', musicPlaying: false, lastStop: Date.now() });
-                    // Increased wait to 4000ms for network sync
+                    // Wait 4s to allow network lag compensation before calculating
                     this.wait(() => this.checkResults(), 4000);
                 }, duration);
             },
@@ -570,7 +361,7 @@
 
                 let worstId = null, max = -1;
                 alive.forEach(([id, p]) => {
-                    // Null lastScore treated as 0 (safe fallback)
+                    // Treat null score as 0 (safe fallback)
                     const s = p.lastScore || 0;
                     if(s > max) { max = s; worstId = id; }
                 });
@@ -586,8 +377,6 @@
                         if(elOverlay) elOverlay.classList.remove('hidden');
                         
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${worstId}`).update({ isAlive: false });
-                        World3D.killPlayer(worstId); 
-                        
                         db.ref(`artifacts/${APP_ID}/${this.sessionId}/state`).update({ lastShot: Date.now() });
                     }
 
@@ -618,35 +407,42 @@
                     const u = {};
                     Object.keys(this.players).forEach(id => {
                         u[`players/${id}/isAlive`] = true;
-                        if(World3D.players[id]) { 
-                            World3D.players[id].userData.dead = false;
-                            World3D.players[id].material.color.setHex(0x249f9c);
-                            World3D.players[id].rotation.x = 0;
-                            World3D.players[id].position.z = 40;
-                        }
+                        u[`players/${id}/lastScore`] = null;
                     });
                     db.ref(`artifacts/${APP_ID}/${this.sessionId}`).update(u);
                 }, 8000);
             },
 
             updateUI() {
-                ['host-lobby','host-game-status','host-round-results','host-winner'].forEach(id=>$(id)?.classList.add('hidden'));
+                ['host-lobby','host-game','host-round-results','host-winner'].forEach(id=>$(id)?.classList.add('hidden'));
                 
                 if(this.gameState === 'waiting') $('host-lobby')?.classList.remove('hidden');
                 else if(this.gameState === 'playing') {
-                    $('host-game-status')?.classList.remove('hidden');
-                    const st = $('host-status-text');
-                    if(st) {
-                        st.innerText = "CORRE";
-                        st.className = "text-[120px] font-black title-font text-[#249f9c]";
-                    }
+                    $('host-game')?.classList.remove('hidden');
+                    const l = $('traffic-light');
+                    const glow = $('light-glow');
+                    const text = $('host-status-text');
+                    const icon = $('traffic-icon');
+
+                    // GREEN LIGHT VISUALS
+                    l.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-300 bg-green-600 border-green-400 shadow-[0_0_100px_rgba(34,197,94,0.5)] scale-110";
+                    glow.className = "absolute inset-0 rounded-full bg-green-500 blur-[80px] opacity-40 animate-pulse";
+                    icon.outerHTML = `<i id="traffic-icon" data-lucide="play" class="w-48 h-48 text-white fill-current"></i>`;
+                    text.innerText = "¡CORRE!";
+                    text.className = "text-[120px] font-black mt-12 tracking-widest title-font text-green-500 drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]";
                 } else if(this.gameState === 'measuring') {
-                    $('host-game-status')?.classList.remove('hidden');
-                    const st = $('host-status-text');
-                    if(st) {
-                        st.innerText = "QUIETO";
-                        st.className = "text-[120px] font-black title-font text-[#ed1b76] animate-pulse";
-                    }
+                    $('host-game')?.classList.remove('hidden');
+                    const l = $('traffic-light');
+                    const glow = $('light-glow');
+                    const text = $('host-status-text');
+                    const icon = $('traffic-icon');
+
+                    // RED LIGHT VISUALS
+                    l.className = "relative w-96 h-96 rounded-full flex items-center justify-center border-[15px] transition-all duration-200 bg-yellow-500 border-yellow-300 shadow-[0_0_100px_rgba(234,179,8,0.5)] scale-100";
+                    glow.className = "absolute inset-0 rounded-full bg-yellow-500 blur-[80px] opacity-40";
+                    icon.outerHTML = `<i id="traffic-icon" data-lucide="eye" class="w-48 h-48 text-white animate-pulse"></i>`;
+                    text.innerText = "MIDIENDO";
+                    text.className = "text-[100px] font-black mt-12 tracking-widest title-font text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]";
                 } else if(this.gameState === 'round_result') {
                     $('host-round-results')?.classList.remove('hidden');
                     this.renderResults();
@@ -665,15 +461,18 @@
                 if(!g) return;
                 g.innerHTML = '';
                 
-                // FIXED: Filter removed for null scores, they now appear as 0.00s
+                // Show ALL ALIVE PLAYERS regardless of score status (default to 0.00s if null)
                 const p = Object.values(this.players).filter(x => x.isAlive);
                 p.sort((a,b) => (b.lastScore||0) - (a.lastScore||0));
                 
                 p.forEach((pl, i) => {
-                    // Safe fallback for null/undefined
                     const rawScore = (pl.lastScore === null || pl.lastScore === undefined) ? 0 : parseFloat(pl.lastScore);
                     const score = rawScore.toFixed(2);
-                    const barColor = rawScore > 1.0 ? 'bg-[#ed1b76]' : 'bg-[#249f9c]';
+                    // Color Logic
+                    let barColor = 'bg-[#249f9c]';
+                    if (rawScore > 1.0) barColor = 'bg-[#ed1b76]';
+                    else if (rawScore > 0.5) barColor = 'bg-yellow-500';
+
                     const w = Math.min(100, (rawScore/2.5)*100);
                     
                     g.innerHTML += `
@@ -705,7 +504,7 @@
                 const code = $('inp-session-code').value.trim().toUpperCase();
                 if(!name || !code) return alert("Faltan datos");
                 
-                AudioSys.unlock(); // FORCE UNLOCK
+                AudioSys.unlock(); 
                 this.sessionId = code;
                 db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).set({
                     name, sessionId: code, isAlive: true, joinedAt: Date.now()
@@ -716,7 +515,7 @@
             },
 
             requestPermissions() {
-                AudioSys.unlock(); // FORCE UNLOCK AGAIN
+                AudioSys.unlock();
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     DeviceMotionEvent.requestPermission().then(r => {
                         if (r==='granted') this.enter(); else alert("Permiso denegado");
@@ -736,7 +535,6 @@
                         const me = d.players?.[localUid];
                         const state = d.state;
                         
-                        // Flash Check
                         if(state.lastShot && state.lastShot !== this.lastShot && Date.now() - state.lastShot < 3000) {
                             this.lastShot = state.lastShot;
                             triggerFlash();
@@ -749,15 +547,13 @@
                                 this.isAlive = false;
                                 if(navigator.vibrate) navigator.vibrate([200,100,500]);
                             } else if(!this.isAlive && me.isAlive) {
-                                this.isAlive = true; // Revived
+                                this.isAlive = true; 
                             }
                         }
 
                         this.render(state, me);
                         if(state.state === 'measuring') this.measure();
-                    } catch(e) {
-                        console.error("Player Error:", e);
-                    }
+                    } catch(e) { console.error("Player Error:", e); }
                 });
 
                 this.monitor();
@@ -784,16 +580,14 @@
             measure() {
                 const start = Date.now();
                 let lastM = 0;
-                // UI Bar Reset
                 const b = $('p-measure-bar');
                 if(b) {
                     b.style.transition = 'none'; b.style.transform = 'scaleX(1)';
                     void b.offsetWidth; b.style.transition = 'transform 2s linear'; b.style.transform = 'scaleX(0)';
                 }
 
-                // Add Visual Feedback for measuring state
+                // Increased Sensitivity & Visual Feedback
                 const bg = $('p-bg-color');
-
                 const h = (e) => {
                     let acc = 0;
                     if(e.acceleration) acc = Math.sqrt(e.acceleration.x**2 + e.acceleration.y**2 + e.acceleration.z**2);
@@ -801,12 +595,14 @@
                         const g = e.accelerationIncludingGravity;
                         acc = Math.abs(Math.sqrt(g.x**2 + g.y**2 + g.z**2) - 9.8);
                     }
-                    // Increased sensitivity threshold (1.2 instead of 2.0)
-                    if(acc > 1.2) { 
+                    
+                    // Threshod lowered to 1.5 for better detection
+                    if(acc > 1.5) { 
                         lastM = Date.now() - start;
-                        // Visual feedback when motion detected
-                        if(bg) bg.classList.add('bg-detected');
-                        setTimeout(() => { if(bg) bg.classList.remove('bg-detected'); }, 100);
+                        if(bg) { 
+                            bg.classList.add('bg-detected');
+                            setTimeout(() => bg.classList.remove('bg-detected'), 150);
+                        }
                     }
                 };
                 window.addEventListener('devicemotion', h);
@@ -814,11 +610,6 @@
                     window.removeEventListener('devicemotion', h);
                     if(this.isAlive) db.ref(`artifacts/${APP_ID}/${this.sessionId}/players/${localUid}`).update({ lastScore: lastM/1000 });
                 }, 2000);
-            },
-
-            die() {
-                AudioSys.playGun();
-                if(navigator.vibrate) navigator.vibrate([200, 100, 500]);
             },
 
             render(state, me) {
