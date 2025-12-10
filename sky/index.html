@@ -298,7 +298,11 @@
                     <i data-lucide="check" class="text-white" width="40" height="40"></i>
                 </div>
                 <h3 class="text-2xl font-black text-slate-800">¡Enviado!</h3>
-                <p class="text-slate-500">Tu palabra: <span id="submitted-word-display" class="font-bold text-slate-800 uppercase">...</span></p>
+                <p class="text-slate-500 mb-6">Tu palabra: <span id="submitted-word-display" class="font-bold text-slate-800 uppercase">...</span></p>
+                
+                <button onclick="changeWord()" class="bg-slate-200 text-slate-600 font-bold py-3 px-8 rounded-xl hover:bg-slate-300 transition-colors flex items-center gap-2 mx-auto">
+                    <i data-lucide="edit-2" width="16"></i> CAMBIAR PALABRA
+                </button>
             </div>
 
              <div id="eliminated-area" class="hidden text-center pop-in">
@@ -314,13 +318,35 @@
     <!-- LOGICA -->
     <script>
         // --- CONFIGURACIÓN ---
-        const CATEGORIAS = [
+        let CATEGORIAS = [
             "Frutas", "Países", "Marcas", "Colores", "Animales", "Cuerpo Humano", 
             "Verbos", "Cocina", "Deportes", "Instrumentos", "Capitales", 
             "Nombres", "Ropa", "Cosas Redondas", "Videojuegos", "Superhéroes", 
             "Bebidas", "Villanos", "Cosas Verdes", "Profesiones"
-        ];
+        ]; // Fallback por defecto
+
         const MAX_BLOCKS = 50; // Límite de muerte
+
+        // Cargar categorías desde archivo externo (fetch simulado)
+        async function loadCategories() {
+            try {
+                const response = await fetch('categories.array');
+                if (response.ok) {
+                    const text = await response.text();
+                    // Intentamos parsear como JSON, si falla, asumimos texto separado por saltos de línea
+                    try {
+                        const jsonCats = JSON.parse(text);
+                        if (Array.isArray(jsonCats)) CATEGORIAS = jsonCats;
+                    } catch {
+                        const lineCats = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                        if (lineCats.length > 0) CATEGORIAS = lineCats;
+                    }
+                    console.log("Categorías cargadas:", CATEGORIAS.length);
+                }
+            } catch (err) {
+                console.log("Usando categorías por defecto (no se encontró categories.array)");
+            }
+        }
 
         // --- FIREBASE ---
         const firebaseConfig = {
@@ -383,6 +409,7 @@
         const updateIcons = () => lucide.createIcons();
         window.onload = () => {
             updateIcons();
+            loadCategories(); // Intentar cargar categorías al inicio
             // Auto-join si hay param en URL
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
@@ -432,11 +459,26 @@
             });
 
             // Listeners
-            db.ref('rooms/' + roomCode + '/players').on('value', snap => renderHostPlayers(snap.val() || {}));
+            db.ref('rooms/' + roomCode + '/players').on('value', snap => {
+                const players = snap.val() || {};
+                renderHostPlayers(players);
+                checkAllSubmitted(players);
+            });
             db.ref('rooms/' + roomCode + '/status').on('value', snap => {
                 gameState = snap.val();
                 updateHostUI();
             });
+        }
+
+        // Nueva función para acabar ronda si todos han enviado
+        function checkAllSubmitted(players) {
+            if (gameState !== 'PLAYING') return;
+            
+            const activePlayers = Object.values(players).filter(p => !p.eliminated);
+            if (activePlayers.length > 0 && activePlayers.every(p => p.submitted)) {
+                console.log("Todos han enviado. Terminando ronda...");
+                endRound();
+            }
         }
 
         function renderHostPlayers(players) {
@@ -564,21 +606,26 @@
                 db.ref().update(updates);
                 
                 // Timer
-                let timeLeft = 25;
+                let timeLeft = 30; // 30 segundos
                 const timerEl = document.getElementById('host-timer-display');
                 timerEl.innerText = timeLeft;
                 
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     timerEl.innerText = timeLeft;
-                    if (timeLeft <= 5) playSound('tick');
+                    if (timeLeft <= 5 && timeLeft > 0) playSound('tick');
                     if(timeLeft <= 0) endRound();
                 }, 1000);
             });
         }
 
         function endRound() {
-            clearInterval(timerInterval);
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = null; // Prevenir dobles llamadas
+            
+            // Verificar si ya estamos en REVEAL para no repetir
+            if(gameState === 'REVEAL') return;
+
             db.ref('rooms/' + roomCode).update({ status: 'REVEAL' });
             setTimeout(() => calculateLogic(), 1000); // Pequeña pausa dramática
         }
@@ -587,11 +634,6 @@
             db.ref('rooms/' + roomCode + '/players').once('value', snap => {
                 const players = snap.val() || {};
                 const updates = {};
-                
-                // 1. Detectar duplicados (Si es único = OK, Si es duplicado = PENALIZACIÓN +5 letras extra?)
-                // Por simplicidad: Duplicados = Se añaden igual. El juego es sobrevivir, no competir por puntos.
-                // Si quieres penalizar duplicados, podrías añadir una palabra "FAKE" extra.
-                // Vamos a mantenerlo simple: Se añade lo que escribes.
                 
                 Object.entries(players).forEach(([pid, p]) => {
                     if (p.submitted && p.currentWord && !p.eliminated) {
@@ -679,18 +721,21 @@
                     } else if (gameState === 'PLAYING') {
                         hide('player-lobby-wait');
                         show('player-game-input');
-                        show('input-area');
-                        hide('submitted-area');
                         hide('eliminated-area');
                         
                         document.getElementById('player-category-display').innerText = category;
                         
                         // Reset input si es nueva ronda
                         if (!me.submitted) {
+                            show('input-area');
+                            hide('submitted-area');
                             document.getElementById('word-input').value = '';
                         } else {
+                            // Si ya envió pero estamos jugando
                             hide('input-area');
                             show('submitted-area');
+                            document.getElementById('submitted-word-display').innerText = me.currentWord;
+                            updateIcons(); // update icons for the Edit button
                         }
                     } else if (gameState === 'REVEAL') {
                         // Esperar a siguiente ronda
@@ -714,6 +759,22 @@
             hide('input-area');
             show('submitted-area');
             document.getElementById('submitted-word-display').innerText = word;
+            updateIcons();
+        }
+
+        function changeWord() {
+            // Permitir editar: set local UI to input mode
+            show('input-area');
+            hide('submitted-area');
+            // Update firebase submitted = false (opcional, pero mejor para UX del host)
+            db.ref('rooms/' + roomCode + '/players/' + playerId).update({
+                submitted: false
+            });
+            // Rellenar el input con la palabra actual
+            const current = document.getElementById('submitted-word-display').innerText;
+            if (current !== '...') {
+                document.getElementById('word-input').value = current;
+            }
         }
 
     </script>
