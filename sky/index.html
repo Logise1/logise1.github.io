@@ -62,10 +62,11 @@
             100% { transform: translateX(100vw); }
         }
 
-        /* LÍNEA DE LA MUERTE */
+        /* LÍNEA DE LA MUERTE - CORREGIDA */
         .death-line {
             position: absolute;
-            top: 15%; /* Ajustado visualmente para ~50 bloques */
+            /* CÁLCULO EXACTO: 8vh (Suelo) + (50 bloques * 21px (20px alto + 1px margen)) */
+            bottom: calc(8vh + (50 * 21px)); 
             left: 0;
             right: 0;
             height: 4px;
@@ -305,6 +306,14 @@
                 </button>
             </div>
 
+            <div id="round-wait-message" class="hidden text-center pop-in">
+                 <div class="bg-blue-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+                    <i data-lucide="hourglass" class="text-white" width="40" height="40"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800">¡Ronda Terminada!</h3>
+                <p class="text-slate-500">Mira los resultados en la pantalla grande.</p>
+            </div>
+
              <div id="eliminated-area" class="hidden text-center pop-in">
                 <div class="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
                     <i data-lucide="skull" class="text-white" width="40" height="40"></i>
@@ -333,7 +342,6 @@
                 const response = await fetch('categories.array');
                 if (response.ok) {
                     const text = await response.text();
-                    // Intentamos parsear como JSON, si falla, asumimos texto separado por saltos de línea
                     try {
                         const jsonCats = JSON.parse(text);
                         if (Array.isArray(jsonCats)) CATEGORIAS = jsonCats;
@@ -513,20 +521,20 @@
                 // Construir los bloques visuales
                 let blocksHTML = '';
                 
-                // 1. Bloques históricos (ya consolidados)
+                // 1. Bloques históricos (NEGROS - CONSOLIDADOS)
                 history.forEach(word => {
                     word.split('').forEach(char => {
-                        blocksHTML += `<div class="letter-block mb-[1px] bg-slate-100">${char}</div>`;
+                        // Aquí cambiamos el estilo a negro sólido
+                        blocksHTML += `<div class="letter-block mb-[1px] bg-slate-900 text-white border-slate-800">${char}</div>`;
                     });
-                    // Pequeño separador visual entre palabras (opcional, aquí no lo pongo para que sea sólido)
                 });
 
-                // 2. Bloques de la palabra actual (Animación Reveal)
+                // 2. Bloques de la palabra actual (AMARILLOS - REVEAL)
                 if (gameState === 'REVEAL' && p.currentWord) {
                      p.currentWord.split('').forEach((char, idx) => {
-                         // Animación escalonada
-                         blocksHTML += `<div class="letter-block mb-[1px] bg-yellow-100 border-yellow-400 pop-in" style="animation-delay: ${idx * 0.1}s">${char}</div>`;
-                     });
+                          // Aquí cambiamos el estilo a amarillo intenso
+                          blocksHTML += `<div class="letter-block mb-[1px] bg-yellow-400 border-yellow-600 text-black pop-in" style="animation-delay: ${idx * 0.1}s">${char}</div>`;
+                      });
                 }
 
                 // Altura para scroll
@@ -711,6 +719,7 @@
                         show('player-game-input');
                         hide('input-area');
                         hide('submitted-area');
+                        hide('round-wait-message');
                         show('eliminated-area');
                         return;
                     }
@@ -722,6 +731,7 @@
                         hide('player-lobby-wait');
                         show('player-game-input');
                         hide('eliminated-area');
+                        hide('round-wait-message');
                         
                         document.getElementById('player-category-display').innerText = category;
                         
@@ -738,7 +748,11 @@
                             updateIcons(); // update icons for the Edit button
                         }
                     } else if (gameState === 'REVEAL') {
-                        // Esperar a siguiente ronda
+                        // AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
+                        // Ocultamos tanto el input como el área de "Enviado" (donde está el botón cambiar)
+                        hide('input-area');
+                        hide('submitted-area');
+                        show('round-wait-message');
                     }
                 });
             });
@@ -763,6 +777,9 @@
         }
 
         function changeWord() {
+            // Permitir editar solo si estamos en PLAYING (aunque la UI ya debería estar oculta en REVEAL)
+            if (gameState !== 'PLAYING') return;
+
             // Permitir editar: set local UI to input mode
             show('input-area');
             hide('submitted-area');
