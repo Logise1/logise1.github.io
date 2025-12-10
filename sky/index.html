@@ -63,10 +63,11 @@
         }
 
         /* LÍNEA DE LA MUERTE - CORREGIDA */
+        /* CAMBIO: Ajustado a 30 bloques para que se vea en pantalla */
         .death-line {
             position: absolute;
-            /* CÁLCULO EXACTO: 8vh (Suelo) + (50 bloques * 21px (20px alto + 1px margen)) */
-            bottom: calc(8vh + (50 * 21px)); 
+            /* CÁLCULO: 8vh (Suelo) + (30 bloques * 21px) */
+            bottom: calc(8vh + (30 * 21px)); 
             left: 0;
             right: 0;
             height: 4px;
@@ -76,7 +77,7 @@
             pointer-events: none;
         }
         .death-line::after {
-            content: 'LÍMITE DE ELIMINACIÓN (50)';
+            content: 'LÍMITE DE ELIMINACIÓN (30)'; /* Actualizado texto */
             position: absolute;
             right: 20px;
             top: -25px;
@@ -232,12 +233,12 @@
             <!-- Las torres se generan aquí -->
         </div>
 
-        <!-- NEXT ROUND BUTTON -->
-        <div id="host-next-round" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pop-in text-center">
+        <!-- NEXT ROUND BUTTON - CAMBIO: Movido al fondo para no tapar -->
+        <div id="host-next-round" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pop-in text-center">
             <button onclick="startGame()" class="bg-white text-blue-600 px-10 py-5 rounded-full font-black text-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] hover:scale-110 hover:rotate-2 transition-all border-4 border-blue-100 flex items-center gap-3 cursor-pointer mb-4">
                 <span>SIGUIENTE RONDA</span> <i data-lucide="arrow-right"></i>
             </button>
-            <p class="text-white font-bold text-shadow">Los eliminados permanecen fuera.</p>
+            <p class="text-white font-bold text-shadow drop-shadow-md">Los eliminados permanecen fuera.</p>
         </div>
 
         <div class="ground"></div>
@@ -334,7 +335,8 @@
             "Bebidas", "Villanos", "Cosas Verdes", "Profesiones"
         ]; // Fallback por defecto
 
-        const MAX_BLOCKS = 50; // Límite de muerte
+        // CAMBIO: Reducido a 30 para coincidir con la pantalla visual
+        const MAX_BLOCKS = 30; // Límite de muerte
 
         // Cargar categorías desde archivo externo (fetch simulado)
         async function loadCategories() {
