@@ -12,7 +12,7 @@
     <!-- FIREBASE SDKs (Compatibles con Módulos ES) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN FIREBASE DEL USUARIO ---
@@ -40,22 +40,33 @@
         window.remotePlayers = {}; // Diccionario de jugadores remotos
         window.dbRef = { db, collection, doc, setDoc, onSnapshot, deleteDoc, COLLECTION_PATH };
         
-        // --- AUTENTICACIÓN CON CUSTOM TOKEN ---
+        // --- AUTENTICACIÓN ROBUSTA (CUSTOM TOKEN con FALLBACK) ---
         const initAuth = async () => {
             try {
-                // Verificamos si existe el token inyectado por el entorno
+                // Intentar usar Custom Token si existe
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    console.log("Intentando autenticación con Custom Token...");
                     const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
                     window.myPlayerId = userCredential.user.uid;
                     console.log("Conectado con Custom Token:", window.myPlayerId);
-                    
-                    // Configurar Listeners para otros jugadores
-                    setupNetworkListeners();
                 } else {
-                    console.error("No se encontró __initial_auth_token. La autenticación falló.");
+                    throw new Error("Token no encontrado, usando fallback.");
                 }
             } catch (error) {
-                console.error("Error en autenticación:", error);
+                console.warn("Fallo en Custom Token o no existe. Usando Anónimo como respaldo...", error);
+                try {
+                    const userCredential = await signInAnonymously(auth);
+                    window.myPlayerId = userCredential.user.uid;
+                    console.log("Conectado como Anónimo:", window.myPlayerId);
+                } catch (anonError) {
+                    console.error("Error fatal de autenticación:", anonError);
+                    alert("Error de conexión. Revisa la consola.");
+                }
+            }
+            
+            // Si logramos autenticarnos, iniciamos listeners
+            if (window.myPlayerId) {
+                setupNetworkListeners();
             }
         };
 
