@@ -389,114 +389,123 @@ async function isMachineOnline(lastSeenTimestamp) {
     /**
      * Renderiza la cuadrícula de máquinas y muestra Screenshot si existe
      */
-    async function renderMachines() {
-      machinesGridEl.innerHTML = "";
-      const allMachineNames = new Set([...Object.keys(machines), ...Object.keys(lockedMachines)]);
-      const sortedNames = Array.from(allMachineNames).sort();
+async function renderMachines() {
+  machinesGridEl.innerHTML = "";
+  const allMachineNames = new Set([...Object.keys(machines), ...Object.keys(lockedMachines)]);
+  const sortedNames = Array.from(allMachineNames).sort();
 
-      if (sortedNames.length === 0) {
-        machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas reportando...</p>";
-        return;
-      }
+  if (sortedNames.length === 0) {
+    machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas reportando...</p>";
+    return;
+  }
 
-      sortedNames.forEach(name => {
-        const node = machines[name] || {};
-        const isLocked = !!lockedMachines[name];
-        const status = node.status || {};
-        const info = node.info || { os: '...', user: '...', ip: '...', cwd: '...' };
-        const screenshotData = node.screenshot || null; // Datos de la captura
+  // CAMBIA ESTO: forEach por for...of
+  for (const name of sortedNames) {
+    const node = machines[name] || {};
+    const isLocked = !!lockedMachines[name];
+    const status = node.status || {};
+    const info = node.info || { os: '...', user: '...', ip: '...', cwd: '...' };
+    const screenshotData = node.screenshot || null;
 
-        const os = info.os ? atob_utf8(info.os) : '...';
-        const user = info.user ? atob_utf8(info.user) : '...'; 
-        const ip = info.ip ? atob_utf8(info.ip) : '...';
-        const cwd = info.cwd ? atob_utf8(info.cwd).replace(/\\+/g, '\\') : '...';
-        
-        const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
-        const el = machineTpl.content.cloneNode(true);
-        const cardDiv = el.querySelector('.machine-grid-card');
-        
-        const nameEl = el.querySelector('.name');
-        nameEl.textContent = name;
-        nameEl.onclick = async () => await selectMachine(name);
+    const os = info.os ? atob_utf8(info.os) : '...';
+    const user = info.user ? atob_utf8(info.user) : '...'; 
+    const ip = info.ip ? atob_utf8(info.ip) : '...';
+    const cwd = info.cwd ? atob_utf8(info.cwd).replace(/\\+/g, '\\') : '...';
+    
+    const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
+    const el = machineTpl.content.cloneNode(true);
+    const cardDiv = el.querySelector('.machine-grid-card');
+    
+    const nameEl = el.querySelector('.name');
+    nameEl.textContent = name;
+    nameEl.onclick = () => selectMachine(name); // Quita async aquí
 
-        el.querySelector('.sys-os').textContent = os;
-        el.querySelector('.sys-user').textContent = user;
-        el.querySelector('.sys-ip').textContent = ip;
-        el.querySelector('.sys-cwd').textContent = cwd;
-        el.querySelector('.sys-os').parentElement.dataset.tooltip = os;
-        el.querySelector('.sys-user').parentElement.dataset.tooltip = user;
-        el.querySelector('.sys-ip').parentElement.dataset.tooltip = ip;
-        el.querySelector('.sys-cwd').parentElement.dataset.tooltip = cwd;
+    el.querySelector('.sys-os').textContent = os;
+    el.querySelector('.sys-user').textContent = user;
+    el.querySelector('.sys-ip').textContent = ip;
+    el.querySelector('.sys-cwd').textContent = cwd;
+    el.querySelector('.sys-os').parentElement.dataset.tooltip = os;
+    el.querySelector('.sys-user').parentElement.dataset.tooltip = user;
+    el.querySelector('.sys-ip').parentElement.dataset.tooltip = ip;
+    el.querySelector('.sys-cwd').parentElement.dataset.tooltip = cwd;
 
-        // --- MANEJO DE SCREENSHOT EN GRID ---
-        const ssContainer = el.querySelector('.ss-container');
-        const ssImg = el.querySelector('.ss-preview');
-        
-        if (screenshotData && screenshotData.data) {
-            ssContainer.classList.remove('hidden');
-            ssImg.src = "data:image/png;base64," + screenshotData.data;
-            // Ocultamos algo de info si hay foto para que no quede muy largo
-            el.querySelector('.info-container').style.display = 'none'; 
-        }
-        // ------------------------------------
-
-        const stDot = el.querySelector('.state-dot');
-        const standardControls = el.querySelector('.standard-controls');
-        const lockedControls = el.querySelector('.locked-controls');
-        const lockBtnWrapper = el.querySelector('.lock-btn-wrapper');
-
-        if (isLocked) {
-          // --- MÁQUINA BLOQUEADA ---
-          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-red-700';
-          stDot.title = 'Bloqueado';
-          el.querySelector('.lastSeen').textContent = 'Bloqueado';
-          standardControls.style.display = 'none';
-          lockedControls.style.display = 'block';
-          lockBtnWrapper.style.display = 'none'; 
-          el.querySelector('.unlock-btn').onclick = () => sendUnlock(name);
-          cardDiv.classList.add('border-2', 'border-red-700');
-          el.querySelector('.sys-os').textContent = 'Bloqueado';
-          // Ocultar foto si está bloqueado? O dejarla? La dejamos.
-
-        } else if (lastSeen && await isMachineOnline(lastSeen.getTime() / 1000)) {
-          // --- MÁQUINA ONLINE ---
-          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-green-500';
-          stDot.title = 'Online';
-          el.querySelector('.lastSeen').textContent = `Visto: ${lastSeen.toLocaleString()}`;
-          lockedControls.style.display = 'none';
-          
-          standardControls.style.display = 'flex';
-
-          if (hasLockParam) {
-              lockBtnWrapper.style.display = 'block';
-              el.querySelector('.lock-btn').onclick = () => sendLock(name);
-          } else {
-              lockBtnWrapper.style.display = 'none';
-          }
-
-          el.querySelector('.shutdown-btn').onclick = () => sendQuickCommand(name, 'shutdown /s /t 0', 'Apagar');
-          el.querySelector('.restart-btn').onclick = () => sendQuickCommand(name, 'shutdown /r /t 0', 'Reiniciar');
-
-        } else {
-          // --- MÁQUINA OFFLINE ---
-          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
-          stDot.title = 'Offline';
-          el.querySelector('.lastSeen').textContent = lastSeen ? `Visto: ${lastSeen.toLocaleString()}` : "Nunca visto";
-          standardControls.style.display = 'none';
-          lockedControls.style.display = 'none';
-          lockBtnWrapper.style.display = 'none';
-        }
-        
-        if (name === selected) {
-          cardDiv.classList.add('ring-2', 'ring-cyan-500');
-        }
-        
-        machinesGridEl.appendChild(el);
-      });
+    const ssContainer = el.querySelector('.ss-container');
+    const ssImg = el.querySelector('.ss-preview');
+    
+    if (screenshotData && screenshotData.data) {
+      ssContainer.classList.remove('hidden');
+      ssImg.src = "data:image/png;base64," + screenshotData.data;
+      el.querySelector('.info-container').style.display = 'none'; 
     }
 
+    const stDot = el.querySelector('.state-dot');
+    const standardControls = el.querySelector('.standard-controls');
+    const lockedControls = el.querySelector('.locked-controls');
+    const lockBtnWrapper = el.querySelector('.lock-btn-wrapper');
+
+    if (isLocked) {
+      // --- MÁQUINA BLOQUEADA ---
+      stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-red-700';
+      stDot.title = 'Bloqueado';
+      el.querySelector('.lastSeen').textContent = 'Bloqueado';
+      standardControls.style.display = 'none';
+      lockedControls.style.display = 'block';
+      lockBtnWrapper.style.display = 'none'; 
+      el.querySelector('.unlock-btn').onclick = () => sendUnlock(name);
+      cardDiv.classList.add('border-2', 'border-red-700');
+      el.querySelector('.sys-os').textContent = 'Bloqueado';
+
+    } else if (lastSeen) {
+      // AÑADE AWAIT AQUÍ
+      const online = await isMachineOnline(lastSeen.getTime() / 1000);
+      
+      if (online) {
+        // --- MÁQUINA ONLINE ---
+        stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-green-500';
+        stDot.title = 'Online';
+        el.querySelector('.lastSeen').textContent = `Visto: ${lastSeen.toLocaleString()}`;
+        lockedControls.style.display = 'none';
+        
+        standardControls.style.display = 'flex';
+
+        if (hasLockParam) {
+          lockBtnWrapper.style.display = 'block';
+          el.querySelector('.lock-btn').onclick = () => sendLock(name);
+        } else {
+          lockBtnWrapper.style.display = 'none';
+        }
+
+        el.querySelector('.shutdown-btn').onclick = () => sendQuickCommand(name, 'shutdown /s /t 0', 'Apagar');
+        el.querySelector('.restart-btn').onclick = () => sendQuickCommand(name, 'shutdown /r /t 0', 'Reiniciar');
+
+      } else {
+        // --- MÁQUINA OFFLINE ---
+        stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
+        stDot.title = 'Offline';
+        el.querySelector('.lastSeen').textContent = lastSeen ? `Visto: ${lastSeen.toLocaleString()}` : "Nunca visto";
+        standardControls.style.display = 'none';
+        lockedControls.style.display = 'none';
+        lockBtnWrapper.style.display = 'none';
+      }
+    } else {
+      // --- MÁQUINA SIN lastSeen ---
+      stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
+      stDot.title = 'Offline';
+      el.querySelector('.lastSeen').textContent = "Nunca visto";
+      standardControls.style.display = 'none';
+      lockedControls.style.display = 'none';
+      lockBtnWrapper.style.display = 'none';
+    }
+    
+    if (name === selected) {
+      cardDiv.classList.add('ring-2', 'ring-cyan-500');
+    }
+    
+    machinesGridEl.appendChild(el);
+  }
+  }
     // --- Lógica de Selección y Consola ---
-    async function selectMachine(name) {
+    function selectMachine(name) {
       if (lockedMachines[name]) {
           showConfirm("Máquina Bloqueada", `La máquina ${name} está bloqueada. Desbloquéala primero para poder interactuar con ella.`, () => {}, null);
           return;
@@ -577,19 +586,20 @@ async function isMachineOnline(lastSeenTimestamp) {
       cmdInputEl.focus();
     }
 
-    function closePanel() {
-        if (globalResponseListener) globalResponseListener();
-        if (globalScreenshotListener) globalScreenshotListener();
-        globalResponseListener = null;
-        globalScreenshotListener = null;
-        selected = null;
-        panelEl.style.display = "none";
-        machinesGridEl.style.display = "grid";
-        autoSsStatusEl.style.display = "block"; // Mostrar indicador Auto-SS
-        currentCWD = "...";
-        updateConsolePrompt();
-        renderMachines();
-    }
+function closePanel() {
+    if (globalResponseListener) globalResponseListener();
+    if (globalScreenshotListener) globalScreenshotListener();
+    globalResponseListener = null;
+    globalScreenshotListener = null;
+    selected = null;
+    panelEl.style.display = "none";
+    machinesGridEl.style.display = "grid";
+    autoSsStatusEl.style.display = "block";
+    currentCWD = "...";
+    updateConsolePrompt();
+    // Añade async/await o .then()
+    renderMachines().catch(e => console.error("Error en renderMachines:", e));
+}
 
 
     // --- Lógica de Comandos ---
@@ -797,27 +807,27 @@ async function isMachineOnline(lastSeenTimestamp) {
     }
 
     // --- Inicialización y Listeners ---
-    function listenToFirebase() {
-      statusEl.textContent = "Conectado a Firebase.";
-      statusEl.classList.add('text-green-400');
-      autoSsStatusEl.style.display = "block"; // Mostrar indicador
+function listenToFirebase() {
+  statusEl.textContent = "Conectado a Firebase.";
+  statusEl.classList.add('text-green-400');
+  autoSsStatusEl.style.display = "block";
 
-      onValue(ref(db, 'machines'), async (snapshot) => {
-        machines = snapshot.val() || {};
-        renderMachines();
-      }, (error) => {
-        statusEl.textContent = `Error (machines): ${error.message}`;
-        statusEl.classList.add('text-red-400');
-      });
+  onValue(ref(db, 'machines'), (snapshot) => {
+    machines = snapshot.val() || {};
+    renderMachines().catch(e => console.error("Error en renderMachines:", e));
+  }, (error) => {
+    statusEl.textContent = `Error (machines): ${error.message}`;
+    statusEl.classList.add('text-red-400');
+  });
 
-      onValue(ref(db, 'lock'), async (snapshot) => {
-        lockedMachines = snapshot.val() || {};
-        renderMachines();
-      }, (error) => {
-        statusEl.textContent = `Error (lock): ${error.message}`;
-        statusEl.classList.add('text-red-400');
-      });
-    }
+  onValue(ref(db, 'lock'), (snapshot) => {
+    lockedMachines = snapshot.val() || {};
+    renderMachines().catch(e => console.error("Error en renderMachines:", e));
+  }, (error) => {
+    statusEl.textContent = `Error (lock): ${error.message}`;
+    statusEl.classList.add('text-red-400');
+  });
+}
     
     cmdFormEl.onsubmit = (e) => {
         e.preventDefault();
