@@ -49,5 +49,10 @@
     "image": "/assets/tradeator.png",
     "alt": "Tradeator",
     "link": "/tradeator"
+  },
+  {
+    "image": "/assets/tendrive.png",
+    "alt": "TenDrive",
+    "link": "/tendrive"
   }
 ]
