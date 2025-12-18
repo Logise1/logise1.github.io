@@ -757,9 +757,36 @@
             },
             handleFileUpload: async (fileList) => {
                 if (currentSection === 'trash') { driveApp.showAlert("Acción no permitida", "No puedes subir archivos a la papelera."); return; }
+                
                 let totalUploadSize = 0;
                 for (let i = 0; i < fileList.length; i++) totalUploadSize += fileList[i].size;
-                if (totalStorageBytes + totalUploadSize > MAX_STORAGE_BYTES) { driveApp.showAlert("Espacio Insuficiente", "Tu almacenamiento está lleno (20GB)."); return; }
+
+                // 1. Determine Target Owner based on Current Folder Context
+                let targetOwnerId = auth.currentUser.uid;
+                if (currentFolder && currentFolder !== 'shared_root' && currentFolder !== 'trash') {
+                    try {
+                        const folderDoc = await getDoc(doc(db, "assets", currentFolder));
+                        if (folderDoc.exists()) {
+                            targetOwnerId = folderDoc.data().ownerId;
+                        }
+                    } catch(e) { console.error("Error fetching folder owner:", e); }
+                }
+
+                // 2. Check Quota of Target Owner
+                let usedBytes = 0;
+                if (targetOwnerId === auth.currentUser.uid) {
+                    usedBytes = totalStorageBytes; // Use cached local value if it's me
+                } else {
+                    usedBytes = await driveApp.calculateStorage(targetOwnerId); // Fetch if it's someone else
+                }
+
+                if (usedBytes + totalUploadSize > MAX_STORAGE_BYTES) { 
+                    const msg = targetOwnerId === auth.currentUser.uid 
+                        ? "Tu almacenamiento está lleno (20GB)." 
+                        : "El propietario de la carpeta no tiene suficiente espacio (20GB).";
+                    driveApp.showAlert("Espacio Insuficiente", msg); 
+                    return; 
+                }
                 
                 const panel = document.getElementById('upload-panel'); const list = document.getElementById('upload-list'); panel.classList.remove('hidden');
                 const uploads = Array.from(fileList).map(file => {
@@ -776,7 +803,9 @@
                     if (res.status === 'fulfilled') {
                         const response = res.value; const downloadURL = response.fileUrl.startsWith('http') ? response.fileUrl : API_BASE + response.fileUrl;
                         successPayloads.push({
-                            ownerId: auth.currentUser.uid, parentId: currentFolder, name: u.file.name, type: 'file', mimeType: u.file.type, size: u.file.size, url: downloadURL, createdAt: serverTimestamp(), storageProvider: 'yyf'
+                            ownerId: targetOwnerId, // Assign ownership to folder owner
+                            parentId: currentFolder, 
+                            name: u.file.name, type: 'file', mimeType: u.file.type, size: u.file.size, url: downloadURL, createdAt: serverTimestamp(), storageProvider: 'yyf'
                         });
                         document.getElementById(`pct-${u.id}`).innerText = "Guardando...";
                     } else { document.getElementById(`pct-${u.id}`).innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Error'; }
