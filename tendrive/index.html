@@ -338,7 +338,7 @@
     <!-- Context Menu -->
     <div id="context-menu">
         <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4 text-slate-400"></i> Abrir</div>
-        <div class="context-item" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4 text-slate-400"></i> Compartir</div>
+        <div class="context-item" id="ctx-share" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4 text-slate-400"></i> Compartir</div>
         <div class="context-separator"></div>
         <div class="context-item danger" onclick="driveApp.ctxAction('delete')"><i class="fa-solid fa-trash w-4"></i> Eliminar</div>
     </div>
@@ -437,7 +437,22 @@
             formatBytes: (b,d=2) => { if(!+b) return '0 B'; const k=1024,dm=d<0?0:d,s=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(k)); return `${parseFloat((b/Math.pow(k,i)).toFixed(dm))} ${s[i]}`; },
 
             // (Selection, Context Menu, Nav logic identical to v5.1 but using updated CSS classes)
-            showContextMenu: (e, id, str) => { e.preventDefault(); e.stopPropagation(); const m = document.getElementById('context-menu'); ctxTargetId=id; ctxTargetData=JSON.parse(decodeURIComponent(str)); m.style.display='block'; m.style.left=`${e.pageX}px`; m.style.top=`${e.pageY}px`; },
+            showContextMenu: (e, id, str) => {
+                e.preventDefault(); e.stopPropagation();
+                const m = document.getElementById('context-menu');
+                ctxTargetId = id;
+                ctxTargetData = JSON.parse(decodeURIComponent(str));
+                
+                // Ocultar "Compartir" si es un archivo
+                const shareBtn = document.getElementById('ctx-share');
+                if (shareBtn) {
+                    shareBtn.style.display = ctxTargetData.type === 'folder' ? 'flex' : 'none';
+                }
+
+                m.style.display = 'block';
+                m.style.left = `${e.pageX}px`;
+                m.style.top = `${e.pageY}px`;
+            },
             ctxAction: (act) => {
                 document.getElementById('context-menu').style.display='none'; if(!ctxTargetId) return;
                 const ids = driveApp.getBatchIds(ctxTargetId);
@@ -499,6 +514,38 @@
                 g.appendChild(div);
             },
             
+            // --- PREVIEW LOGIC (AÑADIDO) ---
+            previewItem: (item) => {
+                const modal = document.getElementById('modal-preview');
+                const content = document.getElementById('preview-content');
+                const caption = document.getElementById('preview-caption');
+                const btn = document.getElementById('preview-download-btn');
+                const url = item.url.startsWith('http') ? item.url : API_BASE + item.url;
+                
+                content.innerHTML = '';
+                caption.innerText = item.name;
+                btn.href = url;
+                
+                if (item.mimeType && item.mimeType.startsWith('image/')) {
+                    content.innerHTML = `<img src="${url}" class="max-w-full max-h-full rounded-lg shadow-2xl object-contain">`;
+                } else if (item.mimeType && item.mimeType.startsWith('video/')) {
+                    content.innerHTML = `<video controls src="${url}" class="max-w-full max-h-full rounded-lg shadow-2xl"></video>`;
+                } else if (item.mimeType && item.mimeType.startsWith('audio/')) {
+                     content.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4"><i class="fa-solid fa-music text-6xl text-primary-500 mb-4"></i><audio controls src="${url}" class="w-64"></audio></div>`;
+                } else if (item.mimeType === 'application/pdf') {
+                     content.innerHTML = `<iframe src="${url}" class="w-full h-[80vh] rounded-lg border-none bg-white"></iframe>`;
+                } else {
+                     content.innerHTML = `<div class="text-center text-white"><i class="fa-solid fa-file text-9xl opacity-50 mb-4"></i><p class="text-xl">Vista previa no disponible</p></div>`;
+                }
+                modal.classList.remove('hidden');
+            },
+            closePreview: () => {
+                const modal = document.getElementById('modal-preview');
+                const content = document.getElementById('preview-content');
+                modal.classList.add('hidden');
+                content.innerHTML = ''; // Detener video/audio
+            },
+
             // --- ACTIONS & MODALS ---
             confirmMove: (ids, tid) => { driveApp.showConfirm('move', async()=>{ const b=writeBatch(db); (Array.isArray(ids)?ids:[ids]).forEach(i=>b.update(doc(db,"assets",i),{parentId:tid})); await b.commit(); }, Array.isArray(ids)&&ids.length>1); },
             confirmTrash: (id) => { const ids=driveApp.getBatchIds(id); driveApp.showConfirm('trash', async()=>{ const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:'trash'})); await b.commit(); }, ids.length>1); },
@@ -611,11 +658,21 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                // FIXED: Reset antes de iniciar para no borrar los nuevos listeners
+                driveApp.resetSession();
+
                 if (user.displayName) document.getElementById('display-username').innerText = user.displayName;
                 else getDoc(doc(db, "users", user.uid)).then(snap => { if (snap.exists()) document.getElementById('display-username').innerText = snap.data().username; });
                 const up = new URLSearchParams(window.location.search); if (up.get('id')) { app.navigate('shooter'); document.getElementById('s-download-id').value = up.get('id'); shooterApp.fetchPack(); } else app.navigate('drive');
-                driveApp.initUserListener(); driveApp.initStorageListener(); driveApp.resetSession(); driveApp.loadContent();
-            } else { driveApp.resetSession(); app.navigate('drive'); }
+                
+                // Iniciar listeners DESPUES del reset
+                driveApp.initUserListener(); 
+                driveApp.initStorageListener(); 
+                driveApp.loadContent();
+            } else { 
+                driveApp.resetSession(); 
+                app.navigate('drive'); 
+            }
         });
 
         // Shooter Logic
