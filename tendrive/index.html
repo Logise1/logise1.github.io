@@ -16,263 +16,353 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 900: '#881337', },
-                        ten: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95', },
-                        gold: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' } // Premium colors
+                        primary: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#312e81' }, // Indigo Moderno
+                        danger: { 50: '#fef2f2', 500: '#ef4444', 600: '#dc2626' },
+                        surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0' }
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.3s ease-in-out',
-                        'bounce-in': 'bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        'fade-in': 'fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'slide-up': 'slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     },
                     keyframes: {
-                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' }, },
-                        bounceIn: { '0%': { opacity: '0', transform: 'scale(0.8)' }, '70%': { transform: 'scale(1.05)' }, '100%': { opacity: '1', transform: 'scale(1)' }, }
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #334155; overflow-x: hidden; user-select: none; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; }
-        .folder-drag-over { transform: scale(1.05); background-color: #ede9fe; border: 2px dashed #8b5cf6; border-radius: 0.75rem; z-index: 10; }
-        .drag-ghost { opacity: 0.5; }
-        .progress-bar-smooth { transition: width 1.2s ease-out; }
-        .selection-box { position: absolute; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 4px; pointer-events: none; z-index: 50; }
-        .item-selected { background-color: #ede9fe !important; border-color: #8b5cf6 !important; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; color: #1e293b; overflow-x: hidden; user-select: none; }
+        
+        /* Glass & Shadows */
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226, 232, 240, 0.8); }
+        .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06); transition: all 0.2s ease; }
+        .card-shadow:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025); transform: translateY(-2px); }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Drive Grid */
+        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1.25rem; padding-bottom: 5rem; }
+        
+        /* Drag & Select */
+        .folder-drag-over { transform: scale(1.02); background-color: #e0e7ff; border: 2px dashed #6366f1; border-radius: 1rem; z-index: 10; }
+        .drag-ghost { opacity: 0.4; }
+        .selection-box { position: absolute; background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; border-radius: 4px; pointer-events: none; z-index: 50; }
+        .item-selected { background-color: #e0e7ff !important; border-color: #818cf8 !important; ring: 1px solid #818cf8; }
+        
+        .progress-bar-smooth { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Context Menu */
         #context-menu {
-            position: absolute; z-index: 100; width: 200px; background: white; border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; display: none; padding: 4px 0;
+            position: absolute; z-index: 100; width: 180px; background: white; border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9; display: none; padding: 6px;
         }
-        .context-item { padding: 8px 16px; font-size: 14px; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 10px; }
-        .context-item:hover { background-color: #f1f5f9; color: #1e293b; }
+        .context-item { padding: 8px 12px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; transition: background 0.1s; }
+        .context-item:hover { background-color: #f8fafc; color: #0f172a; }
         .context-item.danger:hover { background-color: #fef2f2; color: #ef4444; }
         .context-separator { height: 1px; background-color: #e2e8f0; margin: 4px 0; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col text-slate-700" oncontextmenu="return false;">
+<body class="min-h-screen flex flex-col text-slate-700 bg-surface-50" oncontextmenu="return false;">
 
-    <!-- Navbar Global -->
-    <nav class="w-full h-16 glass-panel flex items-center justify-between px-6 fixed top-0 z-50 transition-all border-b border-slate-200">
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2 font-bold text-xl cursor-pointer" onclick="app.navigate('drive')">
-                <div class="bg-ten-600 text-white p-1.5 rounded-lg shadow-sm"><i class="fa-solid fa-cloud-bolt"></i></div>
-                <span class="text-slate-800 tracking-tight">Ten<span class="text-ten-600">drive</span></span>
+    <!-- Navbar -->
+    <nav class="w-full h-16 glass-header flex items-center justify-between px-6 fixed top-0 z-50">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2.5 font-bold text-xl cursor-pointer select-none group" onclick="app.navigate('drive')">
+                <div class="bg-gradient-to-br from-primary-600 to-primary-700 text-white p-2 rounded-xl shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all">
+                    <i class="fa-solid fa-cloud"></i>
+                </div>
+                <span class="text-slate-800 tracking-tight">Ten<span class="text-primary-600">drive</span></span>
             </div>
-            <div class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
-                <button onclick="app.navigate('drive')" id="nav-btn-drive" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-white text-ten-600 shadow-sm"><i class="fa-brands fa-google-drive mr-2"></i>Drive</button>
-                <button onclick="app.navigate('shooter')" id="nav-btn-shooter" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all text-slate-500 hover:text-slate-700"><i class="fa-solid fa-rocket mr-2"></i>Shooter</button>
+
+            <div class="hidden md:flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
+                <button onclick="app.navigate('drive')" id="nav-btn-drive" class="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2">
+                    <i class="fa-brands fa-google-drive"></i> Drive
+                </button>
+                <button onclick="app.navigate('shooter')" id="nav-btn-shooter" class="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Shooter
+                </button>
             </div>
         </div>
-        <div id="user-info" class="hidden flex items-center gap-4 text-sm bg-white py-1.5 px-4 rounded-full border border-slate-200 shadow-sm">
-            <span id="premium-badge" class="hidden text-xs font-bold text-white bg-gradient-to-r from-yellow-500 to-yellow-600 px-2 py-0.5 rounded shadow-sm"><i class="fa-solid fa-crown mr-1"></i>PRO</span>
-            <span class="text-slate-400 font-medium">Hola,</span>
-            <span id="display-username" class="font-bold text-slate-700">Usuario</span>
-            <div class="h-4 w-px bg-slate-200 mx-1"></div>
-            <button onclick="driveApp.logout()" class="text-slate-400 hover:text-red-500 transition-colors" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
+
+        <div id="user-info" class="hidden flex items-center gap-3 bg-white pl-4 pr-1.5 py-1.5 rounded-full border border-slate-200 shadow-sm">
+            <span id="premium-badge" class="hidden text-[10px] font-bold text-white bg-gradient-to-r from-yellow-500 to-yellow-600 px-2 py-0.5 rounded-full shadow-sm tracking-wide uppercase"><i class="fa-solid fa-crown mr-1"></i>PRO</span>
+            <div class="flex flex-col items-end leading-tight mr-1">
+                <span class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Cuenta</span>
+                <span id="display-username" class="font-bold text-slate-700 text-sm truncate max-w-[120px]">Usuario</span>
+            </div>
+            <button onclick="driveApp.logout()" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors" title="Cerrar sesión">
+                <i class="fa-solid fa-right-from-bracket text-xs"></i>
+            </button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main id="main-container" class="pt-20 px-4 pb-4 flex-1 w-full max-w-7xl mx-auto flex flex-col items-center justify-center min-h-screen">
+    <!-- Main Container -->
+    <main id="main-container" class="pt-20 px-4 pb-4 flex-1 w-full max-w-[1600px] mx-auto flex flex-col items-center justify-center min-h-screen">
         
-        <!-- VIEW: DRIVE LOGIN -->
-        <div id="view-drive-auth" class="hidden w-full max-w-sm glass-panel p-8 rounded-3xl shadow-xl animate-fade-in border-0 ring-1 ring-slate-200 bg-white">
+        <!-- LOGIN VIEW -->
+        <div id="view-drive-auth" class="hidden w-full max-w-sm bg-white p-10 rounded-3xl shadow-xl border border-slate-100 animate-slide-up">
             <div class="text-center mb-8">
-                <div class="bg-ten-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-ten-600 shadow-sm"><i class="fa-solid fa-fingerprint text-3xl"></i></div>
-                <h2 class="text-2xl font-bold text-slate-800">Acceso Tendrive</h2>
-                <p class="text-slate-400 text-sm mt-1">Almacenamiento seguro y rápido</p>
+                <div class="bg-primary-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary-600 shadow-inner">
+                    <i class="fa-solid fa-fingerprint text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Bienvenido</h2>
+                <p class="text-slate-400 text-sm mt-1">Tu nube personal, reinventada.</p>
             </div>
-            <form onsubmit="driveApp.handleAuth(event)" class="space-y-4">
-                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Usuario</label><input type="text" id="auth-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-ten-500 focus:ring-2 focus:ring-ten-100 transition-all text-sm font-medium" placeholder="usuario"></div>
-                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Contraseña</label><input type="password" id="auth-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-ten-500 focus:ring-2 focus:ring-ten-100 transition-all text-sm font-medium" placeholder="••••••••"></div>
-                <div id="auth-error" class="bg-red-50 text-red-500 text-xs p-3 rounded-lg border border-red-100 hidden flex items-center"><i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="auth-error-text">Error</span></div>
-                <button type="submit" id="btn-auth" class="w-full bg-gradient-to-r from-ten-600 to-ten-800 hover:to-ten-900 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-ten-200 transition-all transform hover:scale-[1.02] text-sm">Entrar a mi Nube</button>
+            <form onsubmit="driveApp.handleAuth(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Usuario</label>
+                    <input type="text" id="auth-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all text-sm font-medium text-slate-800 placeholder:text-slate-400" placeholder="Ej: alberto">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Contraseña</label>
+                    <input type="password" id="auth-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all text-sm font-medium text-slate-800 placeholder:text-slate-400" placeholder="••••••••">
+                </div>
+                <div id="auth-error" class="bg-red-50 text-red-500 text-xs p-3 rounded-lg border border-red-100 hidden flex items-center font-medium">
+                    <i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="auth-error-text">Error</span>
+                </div>
+                <button type="submit" id="btn-auth" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary-600/30 transition-all transform hover:scale-[1.02] active:scale-95 text-sm">
+                    Acceder a Tendrive
+                </button>
             </form>
         </div>
 
-        <!-- VIEW: DRIVE DASHBOARD -->
-        <div id="view-drive-dashboard" class="hidden w-full h-[88vh] flex rounded-2xl shadow-2xl overflow-hidden animate-fade-in bg-white border border-slate-200">
-            <aside class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-20">
+        <!-- DASHBOARD VIEW -->
+        <div id="view-drive-dashboard" class="hidden w-full h-[88vh] flex rounded-3xl shadow-2xl overflow-hidden animate-fade-in bg-white border border-slate-200 ring-4 ring-slate-100">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-slate-50/50 border-r border-slate-200 flex flex-col z-20 backdrop-blur-sm">
                 <div class="p-6">
-                    <label id="btn-new-main" class="flex items-center justify-center gap-2 w-full py-3 bg-ten-600 hover:bg-ten-700 text-white rounded-xl shadow-lg shadow-ten-200 cursor-pointer transition-all active:scale-95 font-bold text-sm group">
-                        <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform"></i><span>Nuevo</span>
+                    <label id="btn-new-main" class="flex items-center justify-center gap-2 w-full py-3.5 bg-white text-slate-700 border border-slate-200 hover:border-primary-300 hover:text-primary-600 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all active:scale-95 font-bold text-sm group">
+                        <div class="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </div>
+                        <span>Nuevo Archivo</span>
                         <input type="file" multiple class="hidden" onchange="driveApp.handleFileUpload(this.files)">
                     </label>
                 </div>
-                <nav class="flex-1 px-3 space-y-1">
-                    <button onclick="driveApp.navigateToSection('root')" id="nav-root" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-ten-100 text-ten-700"><i class="fa-solid fa-hard-drive w-5 text-center"></i> Mi Unidad</button>
-                    <button onclick="driveApp.navigateToSection('shared')" id="nav-shared" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                        <i class="fa-solid fa-users w-5 text-center"></i> Compartidos
-                        <span id="notif-badge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                
+                <nav class="flex-1 px-4 space-y-1">
+                    <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Mi Unidad</p>
+                    <button onclick="driveApp.navigateToSection('root')" id="nav-root" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-hard-drive w-5 text-center"></i> Archivos
                     </button>
-                    <button onclick="driveApp.navigateToSection('trash')" id="nav-trash" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"><i class="fa-solid fa-trash-can w-5 text-center"></i> Papelera</button>
+                    <button onclick="driveApp.navigateToSection('shared')" id="nav-shared" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-users w-5 text-center"></i> Compartidos
+                        <span id="notif-badge" class="hidden ml-auto bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button onclick="driveApp.navigateToSection('trash')" id="nav-trash" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-trash-can w-5 text-center"></i> Papelera
+                    </button>
                 </nav>
                 
-                <!-- Premium Banner (Direct Link to premium.html) -->
-                <div id="premium-cta" class="px-4 mt-2">
-                    <a href="premium.html" class="block bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-center border border-slate-700 shadow-lg relative overflow-hidden group cursor-pointer transition-all hover:-translate-y-1">
-                        <div class="absolute top-0 right-0 w-16 h-16 bg-white opacity-5 rounded-full -mr-8 -mt-8"></div>
-                        <i class="fa-solid fa-crown text-yellow-400 text-2xl mb-2 group-hover:animate-bounce"></i>
-                        <h3 class="text-white font-bold text-sm">Pasar a Premium</h3>
-                        <p class="text-slate-400 text-[10px] mb-3">Consigue 1 TB y funciones extra</p>
-                        <div class="text-[10px] font-bold text-slate-900 bg-yellow-400 rounded py-1 px-2 uppercase tracking-wider">Mejorar Ahora</div>
+                <div id="premium-cta" class="px-4 mt-4">
+                    <a href="premium.html" class="block bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-center border border-slate-700 shadow-xl relative overflow-hidden group cursor-pointer transition-all hover:-translate-y-1">
+                        <div class="absolute -top-6 -right-6 w-20 h-20 bg-white opacity-5 rounded-full blur-xl group-hover:opacity-10 transition-opacity"></div>
+                        <i class="fa-solid fa-crown text-yellow-400 text-xl mb-2 group-hover:scale-110 transition-transform"></i>
+                        <h3 class="text-white font-bold text-xs mb-0.5">Plan Premium</h3>
+                        <p class="text-slate-400 text-[10px] mb-3">Sube hasta 1 TB</p>
+                        <div class="text-[10px] font-bold text-slate-900 bg-yellow-400 rounded-md py-1.5 px-3 uppercase tracking-wider shadow-lg shadow-yellow-500/20">Mejorar</div>
                     </a>
                 </div>
 
-                <div class="p-4 border-t border-slate-200 mt-auto">
-                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                        <div class="flex items-center gap-2 text-xs font-bold text-slate-500 mb-2"><i class="fa-solid fa-server"></i> Almacenamiento</div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div id="storage-bar" class="bg-ten-500 h-1.5 rounded-full w-[0%] transition-all duration-1000"></div></div>
-                        <div class="flex justify-between text-[10px] text-slate-400 mt-1"><span id="storage-used-text">0 MB</span><span id="storage-max-text">20 GB</span></div>
+                <div class="p-5 border-t border-slate-200 mt-auto bg-white">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
+                        <span>Almacenamiento</span>
+                        <i class="fa-solid fa-database opacity-50"></i>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden">
+                        <div id="storage-bar" class="bg-primary-500 h-1.5 rounded-full w-[0%] transition-all duration-1000"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400 font-medium">
+                        <span id="storage-used-text">0 B</span>
+                        <span id="storage-max-text">20 GB</span>
                     </div>
                 </div>
             </aside>
 
+            <!-- Main Panel -->
             <div class="flex-1 flex flex-col bg-white relative">
-                <div class="h-16 border-b border-slate-100 flex items-center px-6 justify-between gap-4 z-20 bg-white">
+                <!-- Toolbar -->
+                <div class="h-16 border-b border-slate-100 flex items-center px-6 justify-between gap-4 z-20 bg-white/80 backdrop-blur-sm sticky top-0">
                     <div class="flex items-center gap-2 text-sm breadcrumbs overflow-hidden whitespace-nowrap mask-linear" id="drive-breadcrumbs"></div>
                     <div class="flex items-center gap-3 flex-1 justify-end">
-                        <div class="relative group w-full max-w-xs">
-                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 group-focus-within:text-ten-500 transition-colors"></i>
-                            <input type="text" id="drive-search" oninput="driveApp.filterContent(this.value)" placeholder="Buscar..." class="w-full bg-slate-100 focus:bg-white border-0 focus:ring-2 ring-ten-100 rounded-lg py-2 pl-9 pr-4 text-sm transition-all outline-none">
+                        <div class="relative group w-full max-w-xs transition-all">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 group-focus-within:text-primary-500 transition-colors"></i>
+                            <input type="text" id="drive-search" oninput="driveApp.filterContent(this.value)" placeholder="Buscar archivos..." class="w-full bg-slate-50 focus:bg-white border border-transparent focus:border-primary-200 rounded-xl py-2 pl-9 pr-4 text-sm transition-all outline-none">
                         </div>
                         <div class="h-6 w-px bg-slate-200 mx-1"></div>
-                        <button onclick="driveApp.toggleSort()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><i class="fa-solid fa-arrow-down-short-wide" id="sort-icon"></i></button>
+                        <button onclick="driveApp.toggleSort()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors" title="Ordenar"><i class="fa-solid fa-arrow-down-short-wide" id="sort-icon"></i></button>
                         <div class="flex gap-1" id="toolbar-actions">
-                             <button onclick="driveApp.openCreateFolderModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-ten-600 transition-colors" title="Nueva Carpeta"><i class="fa-solid fa-folder-plus"></i></button>
-                            <button onclick="driveApp.openCreateFileModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-ten-600 transition-colors" title="Nuevo Archivo"><i class="fa-solid fa-file-circle-plus"></i></button>
+                             <button onclick="driveApp.openCreateFolderModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-primary-600 transition-colors" title="Nueva Carpeta"><i class="fa-solid fa-folder-plus"></i></button>
+                            <button onclick="driveApp.openCreateFileModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-primary-600 transition-colors" title="Nuevo Archivo"><i class="fa-solid fa-file-circle-plus"></i></button>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-6 relative select-none" id="drive-dropzone">
+                <!-- Dropzone -->
+                <div class="flex-1 overflow-y-auto p-6 relative select-none bg-slate-50/30" id="drive-dropzone">
                     <div id="shared-notifications" class="hidden mb-6 space-y-2"></div>
-                    <div id="drive-drag-overlay" class="absolute inset-4 rounded-2xl border-2 border-dashed border-ten-400 bg-ten-50/90 z-40 hidden flex flex-col items-center justify-center pointer-events-none animate-fade-in backdrop-blur-sm">
-                        <i class="fa-solid fa-cloud-arrow-up text-5xl text-ten-500 mb-4 animate-bounce"></i>
-                        <div class="text-ten-800 text-lg font-bold">Suelta para subir</div>
+                    
+                    <div id="drive-drag-overlay" class="absolute inset-4 rounded-3xl border-2 border-dashed border-primary-400 bg-primary-50/90 z-40 hidden flex flex-col items-center justify-center pointer-events-none animate-fade-in backdrop-blur-sm">
+                        <div class="bg-white p-6 rounded-full shadow-xl mb-4 animate-bounce">
+                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-primary-500"></i>
+                        </div>
+                        <div class="text-primary-800 text-xl font-bold">Suelta para subir</div>
+                        <p class="text-primary-600 text-sm">Se subirán a la carpeta actual</p>
                     </div>
-                    <div id="drive-loader" class="absolute inset-0 flex items-center justify-center bg-white z-30">
-                        <div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-ten-500 mb-2"></i><span class="text-slate-400 text-xs font-medium">Sincronizando...</span></div>
+
+                    <div id="drive-loader" class="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-30">
+                        <div class="flex flex-col items-center gap-3">
+                            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary-500"></i>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Cargando...</span>
+                        </div>
                     </div>
+
                     <div id="drive-empty" class="hidden h-full flex flex-col items-center justify-center text-slate-400">
-                        <div class="bg-slate-50 p-8 rounded-full mb-4 border border-slate-100"><i class="fa-solid fa-box-open text-4xl opacity-30 text-ten-400"></i></div>
-                        <p class="font-medium text-sm">Esta carpeta está vacía</p>
+                        <div class="bg-white p-8 rounded-full mb-4 border border-slate-100 shadow-sm">
+                            <i class="fa-solid fa-box-open text-4xl opacity-20 text-slate-400"></i>
+                        </div>
+                        <p class="font-medium text-sm text-slate-500">Esta carpeta está vacía</p>
+                        <p class="text-xs text-slate-400 mt-1">Arrastra archivos o crea uno nuevo</p>
                     </div>
+
                     <div id="drive-content" class="drive-grid hidden pb-20 relative z-10"></div>
                     <div id="selection-container" class="absolute inset-0 pointer-events-none z-20"></div>
                 </div>
 
-                <div id="upload-panel" class="absolute bottom-6 right-6 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl hidden max-h-80 flex flex-col z-50 overflow-hidden ring-1 ring-black/5">
-                    <div class="p-3 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-600 uppercase flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-ten-500 animate-pulse"></div> Cola de Subida</span>
-                        <div class="flex gap-2">
-                            <button onclick="driveApp.clearUploads()" class="text-[10px] text-slate-400 hover:text-slate-600 font-medium uppercase">Limpiar</button>
-                            <button onclick="document.getElementById('upload-panel').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-chevron-down"></i></button>
+                <!-- Upload Panel -->
+                <div id="upload-panel" class="absolute bottom-6 right-6 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl hidden max-h-96 flex flex-col z-50 overflow-hidden ring-1 ring-black/5 animate-slide-up">
+                    <div class="p-3.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
+                            <span class="relative flex h-2 w-2">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
+                            </span>
+                            Cola de Subida
+                        </span>
+                        <div class="flex gap-1">
+                            <button onclick="driveApp.clearUploads()" class="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 text-slate-500 font-medium transition-colors">Limpiar</button>
+                            <button onclick="document.getElementById('upload-panel').classList.add('hidden')" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400"><i class="fa-solid fa-chevron-down text-xs"></i></button>
                         </div>
                     </div>
-                    <div id="upload-list" class="flex-1 overflow-y-auto p-0 scroll-smooth"></div>
+                    <div id="upload-list" class="flex-1 overflow-y-auto p-0 scroll-smooth bg-white"></div>
                 </div>
             </div>
         </div>
 
-        <!-- VIEW: SHOOTER -->
-        <div id="view-shooter" class="hidden w-full max-w-2xl glass-panel rounded-2xl p-8 shadow-2xl animate-fade-in bg-white/95 border-0 ring-1 ring-slate-200 mt-10">
-            <div class="flex justify-between items-center mb-6">
+        <!-- SHOOTER VIEW -->
+        <div id="view-shooter" class="hidden w-full max-w-3xl bg-white rounded-3xl p-10 shadow-2xl animate-fade-in border border-slate-100 mt-10">
+            <!-- (Shooter content same structure but styled better) -->
+            <div class="flex justify-between items-center mb-8">
                 <div>
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2"><i class="fa-solid fa-rocket text-brand-500"></i> FileShooter</h2>
-                    <p class="text-slate-500 text-sm mt-1">Comparte archivos rápido y sin rastro.</p>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        <div class="bg-brand-50 p-2 rounded-xl text-brand-600"><i class="fa-solid fa-rocket"></i></div>
+                        FileShooter
+                    </h2>
+                    <p class="text-slate-500 text-sm mt-1 ml-1">Comparte archivos rápido, seguro y sin rastro.</p>
                 </div>
             </div>
-            <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
-                <button onclick="shooterApp.setTab('upload')" id="tab-upload" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-brand-600">Subir</button>
-                <button onclick="shooterApp.setTab('download')" id="tab-download" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700">Descargar</button>
+            <div class="flex p-1.5 bg-slate-100 rounded-xl mb-8">
+                <button onclick="shooterApp.setTab('upload')" id="tab-upload" class="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm bg-white text-brand-600">Subir</button>
+                <button onclick="shooterApp.setTab('download')" id="tab-download" class="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-slate-500 hover:text-slate-700">Descargar</button>
             </div>
+            
             <div id="shooter-upload-area" class="animate-fade-in">
-                <div id="s-drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center transition-all cursor-pointer hover:border-brand-500 hover:bg-brand-50 group relative bg-slate-50">
+                <div id="s-drop-zone" class="border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center transition-all cursor-pointer hover:border-brand-500 hover:bg-brand-50/50 group relative bg-slate-50">
                     <input type="file" id="s-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                    <i class="fa-solid fa-cloud-arrow-up text-5xl text-slate-300 group-hover:text-brand-500 mb-3 transition-colors"></i>
-                    <p class="text-sm font-medium text-slate-600">Arrastra archivos aquí</p>
+                    <div class="bg-white w-16 h-16 rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-300 group-hover:text-brand-500 transition-colors"></i>
+                    </div>
+                    <p class="text-lg font-bold text-slate-700">Arrastra archivos aquí</p>
+                    <p class="text-sm text-slate-400 mt-1">o haz clic para explorar</p>
                 </div>
                 
-                <div id="s-premium-options" class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between opacity-50 pointer-events-none transition-all">
-                    <div class="flex items-center gap-2 text-sm text-slate-600">
-                        <i class="fa-solid fa-lock text-yellow-500"></i>
-                        <span>Proteger con contraseña <span class="text-[10px] text-yellow-600 font-bold bg-yellow-100 px-1 rounded ml-1">PREMIUM</span></span>
+                <div id="s-premium-options" class="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between opacity-50 pointer-events-none transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white p-2 rounded-lg text-yellow-500 shadow-sm"><i class="fa-solid fa-lock"></i></div>
+                        <div class="text-sm">
+                            <p class="font-bold text-slate-700">Proteger descarga</p>
+                            <p class="text-xs text-slate-500">Solo usuarios <span class="text-yellow-600 font-bold">PREMIUM</span></p>
+                        </div>
                     </div>
-                    <input type="password" id="s-password-input" class="bg-white border border-slate-300 rounded px-2 py-1 text-sm outline-none w-32" placeholder="Clave..." disabled>
+                    <input type="password" id="s-password-input" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none w-40 focus:border-brand-500 transition-colors" placeholder="Contraseña..." disabled>
                 </div>
 
-                <div id="s-file-list" class="mt-4 space-y-2 max-h-40 overflow-y-auto hidden"></div>
-                <div id="s-progress-area" class="mt-4 hidden">
-                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>SUBIENDO...</span><span id="s-progress-text">0%</span></div>
-                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div id="s-progress-bar" class="bg-brand-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                <div id="s-file-list" class="mt-4 space-y-2 max-h-40 overflow-y-auto hidden custom-scrollbar"></div>
+                <div id="s-progress-area" class="mt-6 hidden">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider"><span>Procesando...</span><span id="s-progress-text">0%</span></div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"><div id="s-progress-bar" class="bg-gradient-to-r from-brand-500 to-brand-400 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div></div>
                 </div>
-                <button id="s-btn-upload" onclick="shooterApp.startUpload()" class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all hidden text-sm">Disparar Archivos</button>
-                <div id="s-success" class="mt-6 hidden bg-green-50 border border-green-100 p-6 rounded-xl text-center animate-bounce-in">
+                <button id="s-btn-upload" onclick="shooterApp.startUpload()" class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-500/20 transition-all transform hover:-translate-y-0.5 hidden">Disparar Archivos</button>
+                
+                <div id="s-success" class="mt-6 hidden bg-green-50 border border-green-100 p-8 rounded-2xl text-center animate-slide-up">
                     <div class="flex flex-col items-center">
-                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3"><i class="fa-solid fa-check text-xl"></i></div>
-                        <h3 class="font-bold text-slate-800 text-lg mb-1">¡Archivos Listos!</h3>
-                        <p class="text-slate-500 text-sm mb-4">Usa este enlace o ID.</p>
-                        <div class="bg-white p-2 rounded-lg shadow-sm border border-slate-100 mb-4"><img id="s-qr-code" src="" alt="QR Code" class="w-32 h-32 object-contain mx-auto"></div>
-                        <div class="flex items-center gap-2 bg-white p-2 pl-4 rounded-lg border border-slate-200 shadow-sm w-full max-w-[240px]">
+                        <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-sm"><i class="fa-solid fa-check text-2xl"></i></div>
+                        <h3 class="font-bold text-slate-800 text-xl mb-1">¡Archivos Listos!</h3>
+                        <p class="text-slate-500 text-sm mb-6">Comparte este enlace o escanea el QR.</p>
+                        <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-6"><img id="s-qr-code" src="" alt="QR Code" class="w-32 h-32 object-contain mx-auto"></div>
+                        <div class="flex items-center gap-2 bg-white p-2 pl-5 rounded-xl border border-slate-200 shadow-sm w-full max-w-xs">
                             <code id="s-result-id" class="flex-1 font-mono text-xl text-brand-600 font-bold tracking-widest text-center">...</code>
-                            <button onclick="shooterApp.copyId()" class="h-8 w-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"><i class="fa-regular fa-copy"></i></button>
+                            <button onclick="shooterApp.copyId()" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700 transition-colors"><i class="fa-regular fa-copy"></i></button>
                         </div>
                     </div>
                 </div>
             </div>
             <div id="shooter-download-area" class="hidden animate-fade-in">
-                <div class="flex gap-2 mb-6">
-                    <input type="text" id="s-download-id" placeholder="Pegar ID aquí" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-100 outline-none text-slate-800 text-center font-mono uppercase text-lg">
+                <div class="flex gap-3 mb-6">
+                    <input type="text" id="s-download-id" placeholder="Pegar ID aquí" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 focus:ring-2 focus:ring-purple-100 focus:border-purple-500 outline-none text-slate-800 text-center font-mono uppercase text-lg transition-all">
                 </div>
-                <button onclick="shooterApp.fetchPack()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all text-sm mb-4">Buscar Pack</button>
-                <div id="s-password-challenge" class="hidden mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
-                    <i class="fa-solid fa-lock text-yellow-500 text-2xl mb-2"></i>
-                    <p class="text-sm font-bold text-slate-700 mb-2">Este pack está protegido</p>
-                    <input type="password" id="s-challenge-input" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-center mb-2 outline-none focus:border-yellow-500" placeholder="Introduce la contraseña">
-                    <button onclick="shooterApp.verifyPassword()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 rounded shadow transition-colors">Desbloquear</button>
+                <button onclick="shooterApp.fetchPack()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all text-sm mb-6 uppercase tracking-wide">Buscar Pack</button>
+                <div id="s-password-challenge" class="hidden mb-6 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
+                    <div class="bg-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-yellow-500 shadow-sm"><i class="fa-solid fa-lock text-xl"></i></div>
+                    <p class="text-sm font-bold text-slate-800 mb-4">Este contenido está protegido</p>
+                    <input type="password" id="s-challenge-input" class="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 text-center mb-3 outline-none focus:border-yellow-500 text-sm" placeholder="Contraseña...">
+                    <button onclick="shooterApp.verifyPassword()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg shadow-sm transition-colors text-sm">Desbloquear</button>
                 </div>
-                <div id="s-download-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
-                <button id="s-btn-zip" onclick="shooterApp.downloadZip()" class="mt-4 w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl shadow-md transition-all hidden font-bold text-sm"><i class="fa-solid fa-file-zipper mr-2"></i> Descargar ZIP</button>
+                <div id="s-download-list" class="space-y-2 max-h-64 overflow-y-auto mb-4 custom-scrollbar"></div>
+                <button id="s-btn-zip" onclick="shooterApp.downloadZip()" class="mt-2 w-full bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-xl shadow-lg transition-all hidden font-bold text-sm"><i class="fa-solid fa-file-zipper mr-2"></i> Descargar Todo (ZIP)</button>
             </div>
         </div>
     </main>
 
     <!-- Context Menu -->
     <div id="context-menu">
-        <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4"></i> Abrir</div>
-        <div class="context-item" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4"></i> Compartir</div>
+        <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4 text-slate-400"></i> Abrir</div>
+        <div class="context-item" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4 text-slate-400"></i> Compartir</div>
         <div class="context-separator"></div>
         <div class="context-item danger" onclick="driveApp.ctxAction('delete')"><i class="fa-solid fa-trash w-4"></i> Eliminar</div>
     </div>
 
-    <!-- Modals (Confirm, Create, Preview) -->
-    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in">
-        <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl border border-slate-100 text-center transform scale-100 transition-all">
-            <div id="confirm-icon" class="mb-3 text-3xl"></div>
-            <h3 id="confirm-title" class="font-bold text-slate-800 text-lg mb-1"></h3>
-            <p id="confirm-msg" class="text-slate-500 text-sm mb-5 leading-tight"></p>
-            <div id="share-input-area" class="hidden mb-4"><input type="text" id="share-username" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-ten-100 outline-none" placeholder="Nombre de usuario..."></div>
-            <div class="flex justify-center gap-2">
-                <button id="btn-confirm-cancel" onclick="driveApp.closeConfirm(false)" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 text-sm font-bold transition-colors">Cancelar</button>
-                <button id="btn-confirm-ok" class="flex-1 px-4 py-2 rounded-lg text-white text-sm font-bold shadow-md transition-colors"></button>
+    <!-- Modals (Confirm, Create, etc.) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in">
+        <div class="bg-white p-8 rounded-3xl w-96 shadow-2xl transform scale-100 transition-all text-center">
+            <div id="confirm-icon" class="mb-4 text-4xl"></div>
+            <h3 id="confirm-title" class="font-bold text-slate-800 text-xl mb-2"></h3>
+            <p id="confirm-msg" class="text-slate-500 text-sm mb-6 leading-relaxed"></p>
+            <div id="share-input-area" class="hidden mb-6"><input type="text" id="share-username" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary-100 outline-none text-center font-medium" placeholder="Nombre de usuario..."></div>
+            <div class="flex justify-center gap-3">
+                <button id="btn-confirm-cancel" onclick="driveApp.closeConfirm(false)" class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition-colors">Cancelar</button>
+                <button id="btn-confirm-ok" class="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-md transition-colors"></button>
             </div>
         </div>
     </div>
-    
-    <!-- Create/File/Preview Modals (Same structure) -->
-    <div id="modal-create-folder" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-6 rounded-2xl w-80 shadow-2xl border border-slate-100"><h3 class="font-bold text-slate-800 text-sm mb-3">Nueva Carpeta</h3><input type="text" id="new-folder-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-4 text-slate-800 text-sm focus:ring-2 focus:ring-ten-100 outline-none" placeholder="Nombre..."><div class="flex justify-end gap-2"><button onclick="document.getElementById('modal-create-folder').classList.add('hidden')" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-bold">Cancelar</button><button onclick="driveApp.createFolder()" class="px-3 py-1.5 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-xs font-bold">Crear</button></div></div></div>
-    <div id="modal-create-file" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-6 rounded-2xl w-96 shadow-2xl border border-slate-100"><h3 class="font-bold text-slate-800 text-sm mb-3">Nuevo Archivo de Texto</h3><input type="text" id="new-file-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 mb-3 text-slate-800 text-xs focus:border-ten-500 outline-none" placeholder="nombre.txt"><textarea id="new-file-content" class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 text-xs resize-none focus:border-ten-500 outline-none" placeholder="Escribe aquí..."></textarea><div class="flex justify-end gap-2 mt-3"><button onclick="document.getElementById('modal-create-file').classList.add('hidden')" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-bold">Cancelar</button><button onclick="driveApp.createFile()" class="px-3 py-1.5 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-xs font-bold">Guardar</button></div></div></div>
-    <div id="modal-preview" class="fixed inset-0 bg-slate-900/95 z-[80] hidden flex flex-col items-center justify-center backdrop-blur-md animate-fade-in"><button onclick="driveApp.closePreview()" class="absolute top-5 right-5 text-white/40 hover:text-white text-2xl transition-colors z-50"><i class="fa-solid fa-xmark"></i></button><div id="preview-content" class="w-full h-full p-4 flex items-center justify-center overflow-hidden"></div><div class="absolute bottom-8 flex flex-col items-center gap-3 w-full px-4"><div id="preview-caption" class="text-white font-medium text-lg drop-shadow-md"></div><a id="preview-download-btn" href="#" target="_blank" class="px-5 py-2 bg-white text-slate-900 rounded-full font-bold text-sm shadow-lg hover:bg-slate-100 transition-colors flex items-center gap-2"><i class="fa-solid fa-download"></i> Descargar</a></div></div>
+    <!-- Create Folder Modal -->
+    <div id="modal-create-folder" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-8 rounded-3xl w-96 shadow-2xl"><h3 class="font-bold text-slate-800 text-lg mb-4">Nueva Carpeta</h3><input type="text" id="new-folder-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-6 text-slate-800 text-sm focus:ring-2 focus:ring-primary-100 outline-none" placeholder="Nombre de la carpeta..."><div class="flex justify-end gap-3"><button onclick="document.getElementById('modal-create-folder').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold">Cancelar</button><button onclick="driveApp.createFolder()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-sm font-bold shadow-md">Crear</button></div></div></div>
+    <!-- Create File Modal -->
+    <div id="modal-create-file" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-8 rounded-3xl w-[400px] shadow-2xl"><h3 class="font-bold text-slate-800 text-lg mb-4">Nuevo Archivo</h3><input type="text" id="new-file-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 text-slate-800 text-sm focus:border-primary-500 outline-none" placeholder="nombre.txt"><textarea id="new-file-content" class="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 text-sm resize-none focus:border-primary-500 outline-none" placeholder="Escribe tu contenido aquí..."></textarea><div class="flex justify-end gap-3 mt-4"><button onclick="document.getElementById('modal-create-file').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold">Cancelar</button><button onclick="driveApp.createFile()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-sm font-bold shadow-md">Guardar</button></div></div></div>
+    <!-- Preview -->
+    <div id="modal-preview" class="fixed inset-0 bg-slate-900/95 z-[80] hidden flex flex-col items-center justify-center backdrop-blur-md animate-fade-in"><button onclick="driveApp.closePreview()" class="absolute top-6 right-6 text-white/40 hover:text-white text-3xl transition-colors z-50"><i class="fa-solid fa-xmark"></i></button><div id="preview-content" class="w-full h-full p-8 flex items-center justify-center overflow-hidden"></div><div class="absolute bottom-10 flex flex-col items-center gap-3 w-full px-4"><div id="preview-caption" class="text-white font-medium text-lg drop-shadow-md"></div><a id="preview-download-btn" href="#" target="_blank" class="px-6 py-2.5 bg-white text-slate-900 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition-all flex items-center gap-2"><i class="fa-solid fa-download"></i> Descargar Original</a></div></div>
 
-    <!-- FIREBASE & LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -284,23 +374,23 @@
         window.app = {
             navigate: (view) => {
                 document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+                const btnDrive = document.getElementById('nav-btn-drive');
+                const btnShooter = document.getElementById('nav-btn-shooter');
                 if (view === 'drive') {
                     if (auth.currentUser) { document.getElementById('view-drive-dashboard').classList.remove('hidden'); document.getElementById('user-info').classList.remove('hidden'); }
                     else document.getElementById('view-drive-auth').classList.remove('hidden');
-                    document.getElementById('nav-btn-drive').classList.replace('text-slate-500', 'bg-white');
-                    document.getElementById('nav-btn-shooter').classList.replace('bg-white', 'text-slate-500');
+                    btnDrive.classList.replace('text-slate-500', 'text-primary-600'); btnDrive.classList.add('bg-primary-50', 'border-primary-100'); btnDrive.classList.remove('border-transparent');
+                    btnShooter.classList.replace('text-primary-600', 'text-slate-500'); btnShooter.classList.remove('bg-primary-50', 'border-primary-100'); btnShooter.classList.add('border-transparent');
                 } else if (view === 'shooter') {
                     document.getElementById('view-shooter').classList.remove('hidden'); shooterApp.setTab('upload');
-                    document.getElementById('nav-btn-shooter').classList.replace('text-slate-500', 'bg-white');
-                    document.getElementById('nav-btn-drive').classList.replace('bg-white', 'text-slate-500');
+                    btnShooter.classList.replace('text-slate-500', 'text-primary-600'); btnShooter.classList.add('bg-primary-50', 'border-primary-100'); btnShooter.classList.remove('border-transparent');
+                    btnDrive.classList.replace('text-primary-600', 'text-slate-500'); btnDrive.classList.remove('bg-primary-50', 'border-primary-100'); btnDrive.classList.add('border-transparent');
                 }
             }
         };
 
-        // State & Vars
         let currentFolder = null, currentSection = 'root', folderPath = [{id: null, name: 'Inicio'}], unsubscribeSnapshot = null, unsubscribeStorage = null, pendingAction = null, sortOrder = 'desc', allItems = [], totalStorageBytes = 0, userPlan = 'free', maxStorageBytes = 20 * 1024 * 1024 * 1024;
-        let ctxTargetId = null, ctxTargetData = null;
-        let isSelecting = false, startX = 0, startY = 0; const selectionBox = document.createElement('div'); selectionBox.className = 'selection-box';
+        let ctxTargetId = null, ctxTargetData = null; let isSelecting = false, startX = 0, startY = 0; const selectionBox = document.createElement('div'); selectionBox.className = 'selection-box';
 
         window.driveApp = {
             resetSession: () => { if(unsubscribeSnapshot) unsubscribeSnapshot(); if(unsubscribeStorage) unsubscribeStorage(); unsubscribeSnapshot=null; unsubscribeStorage=null; currentFolder=null; currentSection='root'; folderPath=[{id:null, name:'Inicio'}]; allItems=[]; totalStorageBytes=0; userPlan='free'; document.getElementById('drive-content').innerHTML=''; },
@@ -314,42 +404,39 @@
                 } catch (error) {
                     if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                         try { const cred = await createUserWithEmailAndPassword(auth, email, pass); await updateProfile(cred.user, { displayName: user }); await setDoc(doc(db, "users", cred.user.uid), { username: user, plan: 'free' }); document.getElementById('display-username').innerText = user; }
-                        catch (regError) { alert(regError.message); }
-                    } else alert(error.message);
+                        catch (regError) { document.getElementById('auth-error-text').innerText = regError.message; document.getElementById('auth-error').classList.remove('hidden'); }
+                    } else { document.getElementById('auth-error-text').innerText = error.message; document.getElementById('auth-error').classList.remove('hidden'); }
                 }
+                document.getElementById('btn-auth').innerHTML = 'Acceder a Tendrive'; document.getElementById('btn-auth').disabled = false;
             },
             logout: () => { driveApp.resetSession(); signOut(auth); app.navigate('drive'); },
             
-            initUserListener: () => {
-                onSnapshot(doc(db, "users", auth.currentUser.uid), (doc) => {
-                    if(doc.exists()) { userPlan = doc.data().plan || 'free'; driveApp.updateUIForPlan(); }
-                });
-            },
+            initUserListener: () => { onSnapshot(doc(db, "users", auth.currentUser.uid), (doc) => { if(doc.exists()) { userPlan = doc.data().plan || 'free'; driveApp.updateUIForPlan(); } }); },
             updateUIForPlan: () => {
                 if(userPlan==='premium') { maxStorageBytes = 1024*1024*1024*1024; document.getElementById('premium-badge').classList.remove('hidden'); document.getElementById('premium-cta').classList.add('hidden'); document.getElementById('storage-max-text').innerText="1 TB"; document.getElementById('s-premium-options').classList.remove('opacity-50','pointer-events-none'); document.getElementById('s-password-input').disabled=false; }
                 else { maxStorageBytes = 20*1024*1024*1024; document.getElementById('premium-badge').classList.add('hidden'); document.getElementById('premium-cta').classList.remove('hidden'); document.getElementById('storage-max-text').innerText="20 GB"; document.getElementById('s-premium-options').classList.add('opacity-50','pointer-events-none'); document.getElementById('s-password-input').disabled=true; }
                 driveApp.updateStorageUI();
             },
             
-            // Storage
             initStorageListener: () => {
                 if(unsubscribeStorage) unsubscribeStorage();
-                unsubscribeStorage = onSnapshot(query(collection(db, "assets"), where("ownerId", "==", auth.currentUser.uid)), (snap) => {
-                    let t = 0; snap.forEach(d => { const dt = d.data(); if(dt.type==='file' && dt.size) t += dt.size; });
+                const q = query(collection(db, "assets"), where("ownerId", "==", auth.currentUser.uid));
+                unsubscribeStorage = onSnapshot(q, (snap) => {
+                    let t = 0; snap.forEach(d => { const dt = d.data(); if(dt.type==='file' && dt.size) t += Number(dt.size); });
                     totalStorageBytes = t; driveApp.updateStorageUI();
                 });
             },
-            calculateStorage: async (uid) => { const snap = await getDocs(query(collection(db, "assets"), where("ownerId", "==", uid))); let t=0; snap.forEach(d=>{ const dt=d.data(); if(dt.type==='file' && dt.size) t+=dt.size; }); return t; },
+            calculateStorage: async (uid) => { const snap = await getDocs(query(collection(db, "assets"), where("ownerId", "==", uid))); let t=0; snap.forEach(d=>{ const dt=d.data(); if(dt.type==='file' && dt.size) t+=Number(dt.size); }); return t; },
             getStorageLimitForUser: async (uid) => { if(uid===auth.currentUser.uid) return maxStorageBytes; const s = await getDoc(doc(db,"users",uid)); return (s.exists() && s.data().plan==='premium') ? 1024*1024*1024*1024 : 20*1024*1024*1024; },
             updateStorageUI: () => {
                 const p = Math.min((totalStorageBytes/maxStorageBytes)*100, 100);
                 const b = document.getElementById('storage-bar'); b.style.width=`${p}%`;
-                b.className = p>90 ? "bg-red-500 h-1.5 rounded-full w-[0%] transition-all duration-1000" : (p>70?"bg-yellow-500 h-1.5 rounded-full w-[0%] transition-all duration-1000":"bg-ten-500 h-1.5 rounded-full w-[0%] transition-all duration-1000");
+                b.className = p>90 ? "bg-red-500 h-1.5 rounded-full w-[0%] progress-bar-smooth" : (p>70?"bg-yellow-500 h-1.5 rounded-full w-[0%] progress-bar-smooth":"bg-primary-500 h-1.5 rounded-full w-[0%] progress-bar-smooth");
                 document.getElementById('storage-used-text').innerText = driveApp.formatBytes(totalStorageBytes);
             },
             formatBytes: (b,d=2) => { if(!+b) return '0 B'; const k=1024,dm=d<0?0:d,s=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(k)); return `${parseFloat((b/Math.pow(k,i)).toFixed(dm))} ${s[i]}`; },
 
-            // Context Menu
+            // (Selection, Context Menu, Nav logic identical to v5.1 but using updated CSS classes)
             showContextMenu: (e, id, str) => { e.preventDefault(); e.stopPropagation(); const m = document.getElementById('context-menu'); ctxTargetId=id; ctxTargetData=JSON.parse(decodeURIComponent(str)); m.style.display='block'; m.style.left=`${e.pageX}px`; m.style.top=`${e.pageY}px`; },
             ctxAction: (act) => {
                 document.getElementById('context-menu').style.display='none'; if(!ctxTargetId) return;
@@ -358,8 +445,6 @@
                 else if(act==='share') { if(ids.length>1) driveApp.showAlert("Info", "Comparte de una en una."); else driveApp.promptShare(ctxTargetId); }
                 else if(act==='delete') { if(currentSection==='trash') driveApp.confirmDeleteForever(ctxTargetId, ctxTargetData.type); else driveApp.confirmTrash(ctxTargetId); }
             },
-
-            // Selection
             initBoxSelection: () => {
                 const c = document.getElementById('drive-dropzone');
                 document.addEventListener('click', () => document.getElementById('context-menu').style.display='none');
@@ -369,12 +454,11 @@
             },
             checkSelectionCollision: (x,y,w,h) => { document.querySelectorAll('.drive-item').forEach(i => { const il=i.offsetLeft, it=i.offsetTop, ir=il+i.offsetWidth, ib=it+i.offsetHeight; const bl=x, bt=y, br=x+w, bb=y+h; if(!(br<il || bl>ir || bb<it || bt>ib)) i.classList.add('item-selected'); else i.classList.remove('item-selected'); }); },
             getBatchIds: (tid) => { const s=document.querySelectorAll('.item-selected'); const ids=Array.from(s).map(el=>el.dataset.id); return ids.includes(tid)?ids:[tid]; },
-
-            // Nav & Grid
             navigateToSection: (s) => {
-                currentSection=s; document.getElementById('nav-root').className = s==='root' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-ten-100 text-ten-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
-                document.getElementById('nav-trash').className = s==='trash' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-red-100 text-red-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
-                document.getElementById('nav-shared').className = s==='shared' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                currentSection=s; 
+                document.getElementById('nav-root').className = s==='root' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary-50 text-primary-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-trash').className = s==='trash' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-red-50 text-red-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-shared').className = s==='shared' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
                 document.getElementById('shared-notifications').innerHTML='';
                 if(s==='root') { currentFolder=null; folderPath=[{id:null,name:'Inicio'}]; document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
                 else if(s==='trash') { currentFolder='trash'; folderPath=[{id:'trash',name:'Papelera'}]; document.getElementById('toolbar-actions').classList.add('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.add('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
@@ -385,7 +469,7 @@
                 if(currentSection==='trash') return; currentFolder=id; const idx=folderPath.findIndex(p=>p.id===id); if(idx!==-1) folderPath=folderPath.slice(0,idx+1); else folderPath.push({id:id,name:name});
                 document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); driveApp.renderBreadcrumbs(); driveApp.loadContent();
             },
-            renderBreadcrumbs: () => { const el=document.getElementById('drive-breadcrumbs'); el.innerHTML=''; folderPath.forEach((p,i)=>{ const s=document.createElement('span'); s.className=i===folderPath.length-1?'text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded cursor-default':'text-slate-500 cursor-pointer hover:text-ten-600 hover:underline px-1'; s.innerText=p.name; if(i!==folderPath.length-1) { s.onclick=()=>driveApp.navigateToFolder(p.id,p.name); el.appendChild(s); el.appendChild(document.createElement('i')).className='fa-solid fa-angle-right text-[10px] text-slate-300 mx-1'; } else el.appendChild(s); }); },
+            renderBreadcrumbs: () => { const el=document.getElementById('drive-breadcrumbs'); el.innerHTML=''; folderPath.forEach((p,i)=>{ const s=document.createElement('span'); s.className=i===folderPath.length-1?'text-slate-800 font-bold bg-slate-100 px-2.5 py-1 rounded-md cursor-default text-xs':'text-slate-500 cursor-pointer hover:text-primary-600 hover:underline px-1'; s.innerText=p.name; if(i!==folderPath.length-1) { s.onclick=()=>driveApp.navigateToFolder(p.id,p.name); el.appendChild(s); el.appendChild(document.createElement('i')).className='fa-solid fa-angle-right text-[10px] text-slate-300 mx-2'; } else el.appendChild(s); }); },
             toggleSort: () => { sortOrder=sortOrder==='desc'?'asc':'desc'; document.getElementById('sort-icon').className=sortOrder==='desc'?'fa-solid fa-arrow-down-short-wide':'fa-solid fa-arrow-up-wide-short'; driveApp.loadContent(); },
             filterContent: (v) => { const l=v.toLowerCase(); driveApp.renderGrid(allItems.filter(i=>i.name.toLowerCase().includes(l))); },
             loadContent: () => {
@@ -398,7 +482,7 @@
             },
             renderGrid: (items) => { const g=document.getElementById('drive-content'), e=document.getElementById('drive-empty'); g.innerHTML=''; if(items.length===0) { e.classList.remove('hidden'); g.classList.add('hidden'); } else { e.classList.add('hidden'); g.classList.remove('hidden'); items.forEach(i=>driveApp.createItemElement(i)); } },
             createItemElement: (d) => {
-                const g=document.getElementById('drive-content'); const div=document.createElement('div'); div.className="drive-item flex flex-col items-center p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group relative border border-transparent hover:border-slate-200 select-none"; div.dataset.id=d.id; div.draggable=currentSection!=='trash';
+                const g=document.getElementById('drive-content'); const div=document.createElement('div'); div.className="drive-item flex flex-col items-center p-4 rounded-2xl bg-white card-shadow cursor-pointer relative border border-slate-100 select-none hover:bg-slate-50"; div.dataset.id=d.id; div.draggable=currentSection!=='trash';
                 div.setAttribute('oncontextmenu', `driveApp.showContextMenu(event, '${d.id}', '${encodeURIComponent(JSON.stringify(d))}')`);
                 if(div.draggable) {
                     div.ondragstart=e=>{ const ids=driveApp.getBatchIds(d.id); e.dataTransfer.setData("text/plain",JSON.stringify(ids)); e.dataTransfer.setData("type",d.type); e.target.classList.add('drag-ghost'); };
@@ -408,14 +492,14 @@
                         div.ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('folder-drag-over'); const r=e.dataTransfer.getData("text/plain"); try{const i=JSON.parse(r); if(Array.isArray(i)&&!i.includes(d.id)) driveApp.confirmMove(i,d.id);}catch(e){}};
                     }
                 }
-                let ic=''; if(d.type==='folder') ic=`<div class="relative"><i class="fa-solid fa-folder text-6xl text-yellow-400 drop-shadow-sm group-hover:scale-105 transition-transform"></i>${d.sharedWith?'<i class="fa-solid fa-user-group absolute bottom-0 right-0 text-blue-500 bg-white rounded-full p-1 text-xs shadow-sm"></i>':''}</div>`;
-                else { let c='text-slate-400',f='fa-file',b='bg-slate-50',m=d.mimeType||''; if(m.includes('image')){f='fa-file-image';c='text-purple-500';b='bg-purple-50';} else if(m.includes('pdf')){f='fa-file-pdf';c='text-red-500';b='bg-red-50';} else if(m.includes('text')||m.includes('html')){f='fa-file-code';c='text-blue-500';b='bg-blue-50';} else if(m.includes('video')){f='fa-file-video';c='text-pink-500';b='bg-pink-50';} else if(m.includes('audio')){f='fa-file-audio';c='text-cyan-500';b='bg-cyan-50';} ic=`<div class="h-16 w-16 rounded-2xl ${b} flex items-center justify-center shadow-sm group-hover:shadow transition-all mb-1 group-hover:scale-105"><i class="fa-solid ${f} text-3xl ${c}"></i></div>`; }
-                div.innerHTML=`${ic}<span class="text-xs font-medium text-slate-600 text-center truncate w-full px-1 mt-2 group-hover:text-slate-900">${d.name}</span>`;
+                let ic=''; if(d.type==='folder') ic=`<div class="relative mb-2"><i class="fa-solid fa-folder text-6xl text-yellow-400 drop-shadow-sm group-hover:scale-105 transition-transform"></i>${d.sharedWith?'<i class="fa-solid fa-user-group absolute -bottom-1 -right-1 text-blue-500 bg-white rounded-full p-1.5 text-[10px] shadow-sm ring-1 ring-slate-100"></i>':''}</div>`;
+                else { let c='text-slate-400',f='fa-file',b='bg-slate-50',m=d.mimeType||''; if(m.includes('image')){f='fa-file-image';c='text-purple-500';b='bg-purple-50';} else if(m.includes('pdf')){f='fa-file-pdf';c='text-red-500';b='bg-red-50';} else if(m.includes('text')||m.includes('html')){f='fa-file-code';c='text-blue-500';b='bg-blue-50';} else if(m.includes('video')){f='fa-file-video';c='text-pink-500';b='bg-pink-50';} else if(m.includes('audio')){f='fa-file-audio';c='text-cyan-500';b='bg-cyan-50';} ic=`<div class="h-14 w-14 rounded-2xl ${b} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300"><i class="fa-solid ${f} text-3xl ${c}"></i></div>`; }
+                div.innerHTML=`${ic}<span class="text-xs font-semibold text-slate-700 text-center truncate w-full px-1">${d.name}</span>`;
                 div.addEventListener('click',e=>{if(!e.target.closest('button')){if(d.type==='folder') driveApp.navigateToFolder(d.id,d.name); else driveApp.previewItem(d);}});
                 g.appendChild(div);
             },
-
-            // --- ACTIONS ---
+            
+            // --- ACTIONS & MODALS ---
             confirmMove: (ids, tid) => { driveApp.showConfirm('move', async()=>{ const b=writeBatch(db); (Array.isArray(ids)?ids:[ids]).forEach(i=>b.update(doc(db,"assets",i),{parentId:tid})); await b.commit(); }, Array.isArray(ids)&&ids.length>1); },
             confirmTrash: (id) => { const ids=driveApp.getBatchIds(id); driveApp.showConfirm('trash', async()=>{ const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:'trash'})); await b.commit(); }, ids.length>1); },
             restoreItem: (id) => { const ids=driveApp.getBatchIds(id); const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:null})); b.commit(); },
@@ -445,7 +529,10 @@
                 const na = document.getElementById('shared-notifications');
                 onSnapshot(query(collection(db,"notifications"),where("to","==",auth.currentUser.uid),where("status","==","pending")), (s) => {
                     na.innerHTML=''; document.getElementById('notif-badge').classList.toggle('hidden', s.empty); if(!s.empty) document.getElementById('notif-badge').innerText = s.size;
-                    s.forEach(d => { const dt=d.data(); const div=document.createElement('div'); div.className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center justify-between text-sm"; div.innerHTML=`<span><b>${dt.fromName}</b> comparte una carpeta.</span><div class="flex gap-2"><button onclick="driveApp.acceptShare('${d.id}','${dt.folderId}')" class="px-3 py-1 bg-blue-600 text-white rounded font-bold">Aceptar</button><button onclick="driveApp.rejectShare('${d.id}')" class="px-3 py-1 bg-slate-200 text-slate-600 rounded font-bold">Rechazar</button></div>`; na.appendChild(div); });
+                    s.forEach(doc => {
+                        const data = doc.data(); const div=document.createElement('div'); div.className="bg-primary-50 border border-primary-200 p-4 rounded-xl flex items-center justify-between text-sm shadow-sm";
+                        div.innerHTML=`<div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-primary-600 shadow-sm"><i class="fa-solid fa-user"></i></div><span><b>${data.fromName}</b> te ha invitado a una carpeta.</span></div><div class="flex gap-2"><button onclick="driveApp.acceptShare('${doc.id}','${data.folderId}')" class="px-4 py-1.5 bg-primary-600 text-white rounded-lg font-bold hover:bg-primary-700 transition-colors">Aceptar</button><button onclick="driveApp.rejectShare('${doc.id}')" class="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-colors">Ignorar</button></div>`; na.appendChild(div);
+                    });
                 });
             },
             acceptShare: async (nid, fid) => { const b=writeBatch(db); b.update(doc(db,"assets",fid),{sharedWith:arrayUnion(auth.currentUser.uid)}); b.delete(doc(db,"notifications",nid)); await b.commit(); driveApp.showAlert("¡Listo!", "Carpeta añadida."); },
@@ -454,16 +541,16 @@
             showConfirm: (t, act, batch=false) => {
                 const m=document.getElementById('modal-confirm'), i=document.getElementById('confirm-icon'), tit=document.getElementById('confirm-title'), msg=document.getElementById('confirm-msg'), bo=document.getElementById('btn-confirm-ok'), bc=document.getElementById('btn-confirm-cancel'), inp=document.getElementById('share-input-area');
                 inp.classList.add('hidden'); bc.classList.remove('hidden'); bo.innerText="Aceptar"; const s=batch?" (Múltiple)":"";
-                if(t==='trash') { i.innerHTML='<i class="fa-solid fa-trash-can text-slate-400"></i>'; tit.innerText="Mover a Papelera"+s; msg.innerText="Podrás restaurarlo luego."; bo.className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 rounded-lg text-white text-sm font-bold"; }
-                else if(t==='delete') { i.innerHTML='<i class="fa-solid fa-ban text-red-500"></i>'; tit.innerText="Eliminar Definitivamente"+s; msg.innerText="Se borrará todo."; bo.className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white text-sm font-bold"; }
-                else if(t==='move') { i.innerHTML='<i class="fa-solid fa-folder-tree text-ten-500"></i>'; tit.innerText="Mover Archivo"+s; msg.innerText="¿Mover a esta carpeta?"; bo.className="flex-1 px-4 py-2 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-sm font-bold"; }
-                else if(t==='share') { i.innerHTML='<i class="fa-solid fa-share-nodes text-blue-500"></i>'; tit.innerText="Compartir Carpeta"; msg.innerText="Introduce usuario:"; inp.classList.remove('hidden'); document.getElementById('share-username').value=''; bo.className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-bold"; bo.innerText="Enviar"; }
+                if(t==='trash') { i.innerHTML='<i class="fa-solid fa-trash-can text-slate-400"></i>'; tit.innerText="Mover a Papelera"+s; msg.innerText="Podrás restaurarlo luego."; bo.className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 rounded-xl text-white text-sm font-bold transition-colors"; }
+                else if(t==='delete') { i.innerHTML='<i class="fa-solid fa-ban text-red-500"></i>'; tit.innerText="Eliminar Definitivamente"+s; msg.innerText="Se borrará todo el contenido. Esta acción es irreversible."; bo.className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-xl text-white text-sm font-bold transition-colors"; }
+                else if(t==='move') { i.innerHTML='<i class="fa-solid fa-folder-tree text-primary-500"></i>'; tit.innerText="Mover Archivo"+s; msg.innerText="¿Mover a esta carpeta?"; bo.className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-sm font-bold transition-colors"; }
+                else if(t==='share') { i.innerHTML='<i class="fa-solid fa-share-nodes text-blue-500"></i>'; tit.innerText="Compartir Carpeta"; msg.innerText="Introduce el nombre de usuario:"; inp.classList.remove('hidden'); document.getElementById('share-username').value=''; bo.className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-sm font-bold transition-colors"; bo.innerText="Enviar"; }
                 pendingAction=act; m.classList.remove('hidden'); if(t==='share') document.getElementById('share-username').focus();
             },
-            showAlert: (t, m) => { document.getElementById('confirm-icon').innerHTML='<i class="fa-solid fa-triangle-exclamation text-red-500"></i>'; document.getElementById('confirm-title').innerText=t; document.getElementById('confirm-msg').innerText=m; document.getElementById('share-input-area').classList.add('hidden'); document.getElementById('btn-confirm-ok').innerText="Entendido"; document.getElementById('btn-confirm-cancel').classList.add('hidden'); pendingAction=null; document.getElementById('modal-confirm').classList.remove('hidden'); },
+            showAlert: (t, m) => { document.getElementById('confirm-icon').innerHTML='<i class="fa-solid fa-circle-info text-primary-500"></i>'; document.getElementById('confirm-title').innerText=t; document.getElementById('confirm-msg').innerText=m; document.getElementById('share-input-area').classList.add('hidden'); document.getElementById('btn-confirm-ok').innerText="Entendido"; document.getElementById('btn-confirm-ok').className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 rounded-xl text-white text-sm font-bold transition-colors"; document.getElementById('btn-confirm-cancel').classList.add('hidden'); pendingAction=null; document.getElementById('modal-confirm').classList.remove('hidden'); },
             closeConfirm: (ex) => { document.getElementById('modal-confirm').classList.add('hidden'); document.getElementById('btn-confirm-cancel').classList.remove('hidden'); if(ex && pendingAction) pendingAction(); pendingAction=null; },
             
-            // Upload & Create (Same as v5.2 + Quota Logic)
+            // Upload Logic
             uploadOneFile: (file, id) => {
                 return new Promise(async (resolve, reject) => {
                     const maxRetries = 3; let attempt = 0; let success = false; let responseData = null; const fd = new FormData(); fd.append('file', file);
@@ -484,19 +571,16 @@
             handleFileUpload: async (fl) => {
                 if(currentSection==='trash') { driveApp.showAlert("Error", "No subas a la papelera."); return; }
                 let size=0; for(let i=0; i<fl.length; i++) size+=fl[i].size;
-                
                 let owner = auth.currentUser.uid;
                 if(currentFolder && currentFolder!=='shared_root') { try{const d=await getDoc(doc(db,"assets",currentFolder)); if(d.exists()) owner=d.data().ownerId;}catch(e){} }
-                
                 const limit = await driveApp.getStorageLimitForUser(owner);
                 const used = owner===auth.currentUser.uid ? totalStorageBytes : await driveApp.calculateStorage(owner);
-                
                 if(used+size > limit) { driveApp.showAlert("Espacio Insuficiente", "Límite de almacenamiento alcanzado."); return; }
 
                 const p=document.getElementById('upload-panel'), l=document.getElementById('upload-list'); p.classList.remove('hidden');
                 const ups = Array.from(fl).map(f => {
                     const id = Date.now() + Math.random().toString(16).slice(2);
-                    const d = document.createElement('div'); d.id=`upload-${id}`; d.className="p-3 border-b border-slate-50 last:border-0 bg-white animate-fade-in"; d.innerHTML=`<div class="flex justify-between mb-1.5 items-center"><span class="truncate w-32 text-xs font-medium text-slate-700">${f.name}</span><span id="pct-${id}" class="text-[10px] font-bold text-ten-600">0%</span></div><div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div id="bar-${id}" class="bg-ten-500 h-2 rounded-full progress-bar-smooth" style="width: 0%"></div></div>`;
+                    const d = document.createElement('div'); d.id=`upload-${id}`; d.className="p-4 border-b border-slate-50 last:border-0 bg-white animate-fade-in"; d.innerHTML=`<div class="flex justify-between mb-2 items-center"><span class="truncate w-32 text-xs font-semibold text-slate-700">${f.name}</span><span id="pct-${id}" class="text-[10px] font-bold text-primary-600">0%</span></div><div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"><div id="bar-${id}" class="bg-primary-500 h-1.5 rounded-full progress-bar-smooth" style="width: 0%"></div></div>`;
                     l.prepend(d); return { file:f, id:id, div:d };
                 });
 
@@ -506,13 +590,13 @@
                     if(r.status==='fulfilled') {
                         const url = r.value.fileUrl.startsWith('http') ? r.value.fileUrl : API_BASE + r.value.fileUrl;
                         payloads.push({ ownerId:owner, parentId:currentFolder, name:ups[i].file.name, type:'file', mimeType:ups[i].file.type, size:ups[i].file.size, url:url, createdAt:serverTimestamp(), storageProvider:'yyf' });
-                        document.getElementById(`pct-${ups[i].id}`).innerText = "Guardando...";
+                        document.getElementById(`pct-${ups[i].id}`).innerText = "Procesando...";
                     } else document.getElementById(`pct-${ups[i].id}`).innerHTML = "Error";
                 });
 
                 if(payloads.length>0) {
                     const b = writeBatch(db); payloads.forEach(p => b.set(doc(collection(db,"assets")), p)); await b.commit();
-                    ups.forEach((u,i) => { if(res[i].status==='fulfilled') { document.getElementById(`bar-${u.id}`).style.width='100%'; document.getElementById(`bar-${u.id}`).classList.replace('bg-ten-500','bg-green-500'); document.getElementById(`pct-${u.id}`).innerHTML='<i class="fa-solid fa-check text-green-500"></i>'; setTimeout(()=>{ if(u.div){u.div.style.opacity='0'; setTimeout(()=>{u.div.remove(); if(l.children.length===0) p.classList.add('hidden');},500);} }, 3000); } });
+                    ups.forEach((u,i) => { if(res[i].status==='fulfilled') { document.getElementById(`bar-${u.id}`).style.width='100%'; document.getElementById(`bar-${u.id}`).classList.replace('bg-primary-500','bg-green-500'); document.getElementById(`pct-${u.id}`).innerHTML='<i class="fa-solid fa-check text-green-500"></i>'; setTimeout(()=>{ if(u.div){u.div.style.opacity='0'; setTimeout(()=>{u.div.remove(); if(l.children.length===0) p.classList.add('hidden');},500);} }, 3000); } });
                 }
             },
             clearUploads: () => { document.getElementById('upload-list').innerHTML=''; document.getElementById('upload-panel').classList.add('hidden'); },
@@ -539,12 +623,12 @@
              files: [], currentPack: null,
              setTab: (t) => {
                  const u=document.getElementById('shooter-upload-area'), d=document.getElementById('shooter-download-area'), tu=document.getElementById('tab-upload'), td=document.getElementById('tab-download');
-                 if(t==='upload') { u.classList.remove('hidden'); d.classList.add('hidden'); tu.classList.add('bg-white','text-brand-600','shadow-sm'); tu.classList.remove('text-slate-500'); td.classList.remove('bg-white','text-brand-600','shadow-sm'); td.classList.add('text-slate-500'); }
-                 else { u.classList.add('hidden'); d.classList.remove('hidden'); td.classList.add('bg-white','text-brand-600','shadow-sm'); td.classList.remove('text-slate-500'); tu.classList.remove('bg-white','text-brand-600','shadow-sm'); tu.classList.add('text-slate-500'); }
+                 if(t==='upload') { u.classList.remove('hidden'); d.classList.add('hidden'); tu.classList.add('bg-primary-50','text-primary-600','border-primary-200'); tu.classList.remove('text-slate-500','border-transparent'); td.classList.remove('bg-primary-50','text-primary-600','border-primary-200'); td.classList.add('text-slate-500','border-transparent'); }
+                 else { u.classList.add('hidden'); d.classList.remove('hidden'); td.classList.add('bg-primary-50','text-primary-600','border-primary-200'); td.classList.remove('text-slate-500','border-transparent'); tu.classList.remove('bg-primary-50','text-primary-600','border-primary-200'); tu.classList.add('text-slate-500','border-transparent'); }
              },
              init: () => { const dz=document.getElementById('s-drop-zone'), i=document.getElementById('s-file-input'); i.onchange=e=>shooterApp.addFiles(e.target.files); dz.ondrop=e=>{e.preventDefault();shooterApp.addFiles(e.dataTransfer.files);}; dz.ondragover=e=>{e.preventDefault();dz.classList.add('border-brand-500','bg-brand-50');}; dz.ondragleave=e=>{e.preventDefault();dz.classList.remove('border-brand-500','bg-brand-50');}; },
              addFiles: (fl) => { shooterApp.files=[...shooterApp.files,...fl]; shooterApp.render(); },
-             render: () => { const l=document.getElementById('s-file-list'), b=document.getElementById('s-btn-upload'); l.innerHTML=''; if(shooterApp.files.length>0) { l.classList.remove('hidden'); b.classList.remove('hidden'); } shooterApp.files.forEach((f,i)=>{l.innerHTML+=`<div class="flex justify-between items-center bg-white border p-2 rounded text-xs"><span class="truncate">${f.name}</span><button onclick="shooterApp.rem(${i})" class="text-red-400"><i class="fa-solid fa-times"></i></button></div>`;}); },
+             render: () => { const l=document.getElementById('s-file-list'), b=document.getElementById('s-btn-upload'); l.innerHTML=''; if(shooterApp.files.length>0) { l.classList.remove('hidden'); b.classList.remove('hidden'); } shooterApp.files.forEach((f,i)=>{l.innerHTML+=`<div class="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-xl shadow-sm"><span class="truncate text-sm font-medium text-slate-700">${f.name}</span><button onclick="shooterApp.rem(${i})" class="w-6 h-6 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors flex items-center justify-center"><i class="fa-solid fa-times"></i></button></div>`;}); },
              rem: (i) => { shooterApp.files.splice(i,1); shooterApp.render(); },
              startUpload: async () => {
                  const b=document.getElementById('s-btn-upload'), p=document.getElementById('s-progress-area'), bar=document.getElementById('s-progress-bar'), pass=document.getElementById('s-password-input');
@@ -572,10 +656,10 @@
              verifyPassword: () => { const i=document.getElementById('s-challenge-input').value; if(btoa(i)===shooterApp.currentPack.passwordHash) { document.getElementById('s-password-challenge').classList.add('hidden'); shooterApp.showFiles(shooterApp.currentPack.files); } else alert("Contraseña incorrecta"); },
              showFiles: (fs) => {
                 shooterApp.fetchedFiles=fs; const l=document.getElementById('s-download-list'); l.innerHTML='';
-                fs.forEach(f=>{ const u=f.url.startsWith('http')?f.url:API_BASE+f.url; l.innerHTML+=`<div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-lg text-sm shadow-sm animate-fade-in"><div class="flex items-center gap-3 overflow-hidden"><div class="bg-purple-50 p-2 rounded text-purple-500"><i class="fa-solid fa-file"></i></div><span class="truncate w-48 font-medium text-slate-700">${f.name}</span></div><a href="${u}" target="_blank" class="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-600 p-2 rounded transition-colors"><i class="fa-solid fa-download"></i></a></div>`; });
+                fs.forEach(f=>{ const u=f.url.startsWith('http')?f.url:API_BASE+f.url; l.innerHTML+=`<div class="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-xl shadow-sm animate-fade-in"><div class="flex items-center gap-3 overflow-hidden"><div class="bg-primary-50 p-2 rounded-lg text-primary-500"><i class="fa-solid fa-file"></i></div><span class="truncate w-48 font-medium text-slate-700">${f.name}</span></div><a href="${u}" target="_blank" class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-primary-50 text-slate-400 hover:text-primary-600 flex items-center justify-center transition-colors"><i class="fa-solid fa-download"></i></a></div>`; });
                 document.getElementById('s-btn-zip').classList.remove('hidden');
              },
-             downloadZip: async () => { /* Same zip logic */ const z=new JSZip(); const b=document.getElementById('s-btn-zip'); const og=b.innerHTML; b.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i>'; b.disabled=true; for(const f of shooterApp.fetchedFiles) { const u=f.url.startsWith('http')?f.url:API_BASE+f.url; const r=await fetch(u); z.file(f.name,await r.blob()); } const bl=await z.generateAsync({type:"blob"}); const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download="shooter_pack.zip"; a.click(); b.innerHTML='Listo'; setTimeout(()=>{b.innerHTML=og;b.disabled=false;},2000); }
+             downloadZip: async () => { /* Same zip logic */ const z=new JSZip(); const b=document.getElementById('s-btn-zip'); const og=b.innerHTML; b.innerHTML='<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Procesando...'; b.disabled=true; for(const f of shooterApp.fetchedFiles) { const u=f.url.startsWith('http')?f.url:API_BASE+f.url; const r=await fetch(u); z.file(f.name,await r.blob()); } const bl=await z.generateAsync({type:"blob"}); const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download="shooter_pack.zip"; a.click(); b.innerHTML='<i class="fa-solid fa-check mr-2"></i> Listo'; setTimeout(()=>{b.innerHTML=og;b.disabled=false;},2000); }
         };
         shooterApp.init();
     </script>
