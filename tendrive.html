@@ -84,9 +84,9 @@
         }
         .drag-ghost { opacity: 0.5; }
         
-        /* Animación suave para la barra de progreso */
+        /* Animación suave para la barra de progreso (1.2s para que sea lenta y elegante) */
         .progress-bar-smooth {
-            transition: width 0.6s ease-out; 
+            transition: width 1.2s ease-out; 
         }
 
         /* Selection Box Styles */
@@ -388,7 +388,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyDh4pxMFbAN7w5ehnHnHM4Tk04rJMTcLkk",
@@ -541,15 +541,13 @@
                 });
             },
             
-            // Helpers for batch actions
             getBatchIds: (targetId) => {
                 const selectedEls = document.querySelectorAll('.item-selected');
                 const ids = Array.from(selectedEls).map(el => el.dataset.id);
-                // If target is in selection, return all selected. Else, return just target.
                 return ids.includes(targetId) ? ids : [targetId];
             },
 
-            // Navigation & Rendering
+            // Navigation
             navigateToSection: (s) => {
                 currentSection = s;
                 const r = document.getElementById('nav-root'), t = document.getElementById('nav-trash'), n = document.getElementById('btn-new-main');
@@ -623,13 +621,13 @@
                 const grid = document.getElementById('drive-content');
                 const div = document.createElement('div');
                 div.className = "drive-item flex flex-col items-center p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group relative border border-transparent hover:border-slate-200 select-none";
-                div.dataset.id = data.id; // Critical for selection
+                div.dataset.id = data.id; 
                 div.draggable = currentSection !== 'trash';
                 
                 if (div.draggable) {
                     div.ondragstart = (e) => {
                         const batchIds = driveApp.getBatchIds(data.id);
-                        e.dataTransfer.setData("text/plain", JSON.stringify(batchIds)); // Transfer Array of IDs
+                        e.dataTransfer.setData("text/plain", JSON.stringify(batchIds)); 
                         e.dataTransfer.setData("type", data.type);
                         e.target.classList.add('drag-ghost');
                     };
@@ -640,7 +638,6 @@
                         div.ondrop = (e) => {
                             e.preventDefault();
                             e.currentTarget.classList.remove('folder-drag-over');
-                            // Move logic
                             const rawIds = e.dataTransfer.getData("text/plain");
                             try {
                                 const ids = JSON.parse(rawIds);
@@ -682,48 +679,70 @@
                 grid.appendChild(div);
             },
 
-            // --- BATCH ACTIONS ---
+            // --- BATCH ACTIONS IMPLEMENTATION ---
             confirmMove: (itemIds, targetFolderId) => {
-                 driveApp.showConfirm('move', () => {
-                     // Ensure array
+                 driveApp.showConfirm('move', async () => {
                      const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
-                     ids.forEach(id => updateDoc(doc(db, "assets", id), { parentId: targetFolderId }));
+                     const batch = writeBatch(db);
+                     ids.forEach(id => {
+                         const ref = doc(db, "assets", id);
+                         batch.update(ref, { parentId: targetFolderId });
+                     });
+                     await batch.commit();
                  }, Array.isArray(itemIds) && itemIds.length > 1);
             },
             confirmTrash: (id, e) => {
                  e.stopPropagation();
                  const ids = driveApp.getBatchIds(id);
-                 driveApp.showConfirm('trash', () => {
-                    ids.forEach(itemId => updateDoc(doc(db, "assets", itemId), { parentId: 'trash' }));
+                 driveApp.showConfirm('trash', async () => {
+                    const batch = writeBatch(db);
+                    ids.forEach(itemId => {
+                        const ref = doc(db, "assets", itemId);
+                        batch.update(ref, { parentId: 'trash' });
+                    });
+                    await batch.commit();
                  }, ids.length > 1);
             },
             restoreItem: (id, e) => {
                 e.stopPropagation();
                 const ids = driveApp.getBatchIds(id);
-                ids.forEach(itemId => updateDoc(doc(db, "assets", itemId), { parentId: null }));
+                // Can't show confirm for restore usually, just do it
+                const batch = writeBatch(db);
+                ids.forEach(itemId => {
+                    const ref = doc(db, "assets", itemId);
+                    batch.update(ref, { parentId: null }); // Restore to root
+                });
+                batch.commit();
             },
             confirmDeleteForever: (id, type, e) => {
                 e.stopPropagation();
                  const ids = driveApp.getBatchIds(id);
-                 driveApp.showConfirm('delete', () => {
-                    ids.forEach(itemId => {
-                        // We need to know type for recursive delete, assume folder if we don't have it locally (simplified for batch)
-                        // Ideally we fetch doc to check type, but here we can just try deleteRecursive.
-                        // Since deleteRecursive checks type inside, it's safeish.
-                        driveApp.deleteRecursive(itemId);
-                    });
-                 }, ids.length > 1);
-            },
-            deleteRecursive: async (id) => {
-                // Check if folder
-                try {
-                    const snap = await getDocs(query(collection(db, "assets"), where("parentId", "==", id)));
-                    if (!snap.empty) { // Is a folder with content
-                        const promises = snap.docs.map(d => driveApp.deleteRecursive(d.id));
+                 driveApp.showConfirm('delete', async () => {
+                    // Complex batch delete logic
+                    // We need to gather all IDs first (recursive)
+                    let allToDelete = [];
+                    
+                    // Helper to gather all IDs
+                    const gather = async (rootId) => {
+                        allToDelete.push(rootId);
+                        // Check if folder by querying children
+                        const q = query(collection(db, "assets"), where("parentId", "==", rootId));
+                        const snap = await getDocs(q);
+                        const promises = snap.docs.map(d => gather(d.id));
                         await Promise.all(promises);
+                    };
+
+                    await Promise.all(ids.map(mid => gather(mid)));
+                    
+                    // Now batch delete in chunks of 500
+                    const chunkSize = 500;
+                    for (let i = 0; i < allToDelete.length; i += chunkSize) {
+                        const chunk = allToDelete.slice(i, i + chunkSize);
+                        const batch = writeBatch(db);
+                        chunk.forEach(delId => batch.delete(doc(db, "assets", delId)));
+                        await batch.commit();
                     }
-                    await deleteDoc(doc(db, "assets", id));
-                } catch(e) { console.error(e); }
+                 }, ids.length > 1);
             },
 
             showConfirm: (type, action, isBatch = false) => {
@@ -775,7 +794,7 @@
                 if (execute && pendingAction) pendingAction();
                 pendingAction = null;
             },
-            previewItem: (data) => { /* Same preview logic */
+            previewItem: (data) => {
                 const modal = document.getElementById('modal-preview');
                 const container = document.getElementById('preview-content');
                 const caption = document.getElementById('preview-caption');
@@ -792,7 +811,7 @@
             },
             closePreview: () => { document.getElementById('modal-preview').classList.add('hidden'); document.getElementById('preview-content').innerHTML = ''; },
             openCreateFolderModal: () => { document.getElementById('modal-create-folder').classList.remove('hidden'); document.getElementById('new-folder-name').focus(); },
-            createFolder: async () => { /* Same create folder logic */
+            createFolder: async () => {
                 const name = document.getElementById('new-folder-name').value.trim();
                 if (!name) return;
                 document.getElementById('modal-create-folder').classList.add('hidden');
@@ -800,7 +819,7 @@
                 await addDoc(collection(db, "assets"), { ownerId: auth.currentUser.uid, parentId: currentFolder, name: name, type: 'folder', createdAt: serverTimestamp() });
             },
             openCreateFileModal: () => { document.getElementById('modal-create-file').classList.remove('hidden'); document.getElementById('new-file-name').focus(); },
-            createFile: () => { /* Same create file logic */
+            createFile: () => {
                 let name = document.getElementById('new-file-name').value.trim();
                 const content = document.getElementById('new-file-content').value;
                 if (!name) return;
@@ -819,7 +838,6 @@
                     let attempt = 0;
                     let success = false;
                     let responseData = null;
-
                     const fd = new FormData();
                     fd.append('file', file);
 
@@ -827,8 +845,6 @@
                         try {
                             const xhr = new XMLHttpRequest();
                             xhr.open('POST', `${API_BASE}/api/upload`, true);
-                            
-                            // Promise wrapper for XHR
                             await new Promise((res, rej) => {
                                 xhr.upload.onprogress = (e) => {
                                     if (e.lengthComputable) {
@@ -838,26 +854,17 @@
                                     }
                                 };
                                 xhr.onload = () => {
-                                    if (xhr.status === 200) {
-                                        responseData = JSON.parse(xhr.responseText);
-                                        res();
-                                    } else {
-                                        rej(new Error(`Status ${xhr.status}`));
-                                    }
+                                    if (xhr.status === 200) { responseData = JSON.parse(xhr.responseText); res(); } 
+                                    else rej(new Error(`Status ${xhr.status}`));
                                 };
                                 xhr.onerror = () => rej(new Error("Network Error"));
                                 xhr.send(fd);
                             });
-                            
-                            success = true; // Loop exit
+                            success = true;
                         } catch (e) {
                             attempt++;
                             console.log(`Retry ${attempt}/${maxRetries} for ${file.name}`);
-                            if (attempt >= maxRetries) {
-                                reject(e);
-                                return;
-                            }
-                            // Silent wait before retry
+                            if (attempt >= maxRetries) { reject(e); return; }
                             await new Promise(r => setTimeout(r, 1500));
                         }
                     }
@@ -877,7 +884,6 @@
 
                 const uploads = Array.from(fileList).map(file => {
                     const id = Date.now() + Math.random().toString(16).slice(2);
-                    // UI Creation
                     const div = document.createElement('div');
                     div.id = `upload-${id}`;
                     div.className = "p-3 border-b border-slate-50 last:border-0 bg-white animate-fade-in";
@@ -897,18 +903,13 @@
                     return { file, id, div };
                 });
 
-                // 1. UPLOAD ALL TO SERVER (Parallel but tracked)
                 const results = await Promise.allSettled(uploads.map(u => driveApp.uploadOneFile(u.file, u.id)));
-
-                // 2. CHECK RESULTS AND UPDATE FIREBASE BATCH-LIKE
                 const successPayloads = [];
                 
                 for (let i = 0; i < results.length; i++) {
                     const u = uploads[i];
                     const res = results[i];
-                    
                     if (res.status === 'fulfilled') {
-                        // Prepare Metadata
                         const response = res.value;
                         const downloadURL = response.fileUrl.startsWith('http') ? response.fileUrl : API_BASE + response.fileUrl;
                         successPayloads.push({
@@ -922,21 +923,22 @@
                             createdAt: serverTimestamp(),
                             storageProvider: 'yyf'
                         });
-                        // Update UI to "Processing..."
                         document.getElementById(`pct-${u.id}`).innerText = "Guardando...";
                     } else {
-                        // Failed UI
                         document.getElementById(`pct-${u.id}`).innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i> Error';
                     }
                 }
 
-                // 3. ATOMIC-LIKE SAVE TO FIREBASE
                 if (successPayloads.length > 0) {
                     try {
-                        const promises = successPayloads.map(payload => addDoc(collection(db, "assets"), payload));
-                        await Promise.all(promises);
+                        // SINGLE BATCH REQUEST FOR ALL FILES
+                        const batch = writeBatch(db);
+                        successPayloads.forEach(payload => {
+                            const newDocRef = doc(collection(db, "assets")); // Client-side ID gen
+                            batch.set(newDocRef, payload);
+                        });
+                        await batch.commit();
                         
-                        // 4. FINAL UI UPDATE (Green Checks)
                         uploads.forEach((u, index) => {
                             if (results[index].status === 'fulfilled') {
                                 const bar = document.getElementById(`bar-${u.id}`);
@@ -944,7 +946,6 @@
                                 bar.style.width = '100%';
                                 bar.classList.replace('bg-ten-500', 'bg-green-500');
                                 pct.innerHTML = '<i class="fa-solid fa-check text-green-500 text-lg"></i>';
-                                // Auto remove
                                 setTimeout(() => {
                                     if(u.div) {
                                         u.div.style.opacity = '0';
