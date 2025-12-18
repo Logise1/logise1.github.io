@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tendrive Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: white; }
+        .glass-card { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl grid md:grid-cols-2 gap-8 items-center">
+        <!-- Info Section -->
+        <div class="space-y-6">
+            <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 mb-4">
+                Tendrive Premium
+            </h1>
+            <p class="text-slate-400 text-lg">Libera todo el potencial de tu nube personal.</p>
+            
+            <ul class="space-y-4 mt-8">
+                <li class="flex items-center gap-3 text-lg">
+                    <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500"><i class="fa-solid fa-hard-drive"></i></div>
+                    <span><b>1 TB</b> de Almacenamiento</span>
+                </li>
+                <li class="flex items-center gap-3 text-lg">
+                    <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500"><i class="fa-solid fa-lock"></i></div>
+                    <span>Protección con contraseña en Shooter</span>
+                </li>
+                <li class="flex items-center gap-3 text-lg">
+                    <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500"><i class="fa-solid fa-bolt"></i></div>
+                    <span>Velocidad de subida prioritaria</span>
+                </li>
+            </ul>
+            
+            <a href="index.html" class="inline-block mt-8 text-slate-500 hover:text-white transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Volver a la versión gratuita
+            </a>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="glass-card p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500 rounded-full filter blur-3xl opacity-10 -mr-10 -mt-10"></div>
+            
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-xl font-bold">Detalles de Pago</h3>
+                <div class="text-right">
+                    <p class="text-xs text-slate-400">Total a pagar</p>
+                    <p class="text-2xl font-bold text-yellow-400">4.99€</p>
+                </div>
+            </div>
+
+            <form id="payment-form" onsubmit="handlePayment(event)" class="space-y-5 relative z-10">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre en la tarjeta</label>
+                    <input type="text" required class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition-colors" placeholder="JUAN PEREZ">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Número de Tarjeta</label>
+                    <div class="relative">
+                        <input type="text" id="card-number" required maxlength="19" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 pl-10 text-white focus:border-yellow-500 outline-none transition-colors font-mono" placeholder="0000 0000 0000 0000">
+                        <i class="fa-regular fa-credit-card absolute left-3 top-3.5 text-slate-500"></i>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Caducidad</label>
+                        <input type="text" required placeholder="MM/YY" maxlength="5" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition-colors text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">CVV</label>
+                        <input type="text" required placeholder="123" maxlength="3" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white focus:border-yellow-500 outline-none transition-colors text-center">
+                    </div>
+                </div>
+
+                <div id="error-msg" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center"></div>
+
+                <button type="submit" id="pay-btn" class="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-4 rounded-xl shadow-lg transition-transform transform active:scale-95">
+                    Pagar y Activar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyDh4pxMFbAN7w5ehnHnHM4Tk04rJMTcLkk", authDomain: "pandadrive-af6b6.firebaseapp.com", databaseURL: "https://pandadrive-af6b6-default-rtdb.europe-west1.firebasedatabase.app", projectId: "pandadrive-af6b6", messagingSenderId: "682265494431", appId: "1:682265494431:web:c9e3276f3774b3501633aa", measurementId: "G-V1DG96TNWJ" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // LUHN ALGORITHM
+        function isValidLuhn(number) {
+            let sum = 0;
+            let shouldDouble = false;
+            // Loop through values starting at the rightmost side
+            for (let i = number.length - 1; i >= 0; i--) {
+                let digit = parseInt(number.charAt(i));
+
+                if (shouldDouble) {
+                    if ((digit *= 2) > 9) digit -= 9;
+                }
+
+                sum += digit;
+                shouldDouble = !shouldDouble;
+            }
+            return (sum % 10) == 0;
+        }
+
+        window.handlePayment = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('pay-btn');
+            const errorDiv = document.getElementById('error-msg');
+            const cardInput = document.getElementById('card-number');
+            
+            // Clean spaces
+            const cardNumber = cardInput.value.replace(/\s+/g, '');
+
+            // Validate
+            if (!/^\d+$/.test(cardNumber)) {
+                errorDiv.innerText = "La tarjeta solo debe contener números.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (!isValidLuhn(cardNumber)) {
+                errorDiv.innerText = "Número de tarjeta inválido (Fallo de verificación).";
+                errorDiv.classList.remove('hidden');
+                cardInput.classList.add('border-red-500');
+                return;
+            }
+
+            // Success Flow
+            errorDiv.classList.add('hidden');
+            cardInput.classList.remove('border-red-500');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Procesando...';
+
+            try {
+                // Fake processing delay
+                await new Promise(r => setTimeout(r, 2000));
+
+                // Update Firebase
+                if (currentUser) {
+                    await updateDoc(doc(db, "users", currentUser.uid), {
+                        plan: 'premium'
+                    });
+                }
+
+                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> ¡Pago Correcto!';
+                btn.classList.replace('from-yellow-500', 'from-green-500');
+                btn.classList.replace('to-yellow-600', 'to-green-600');
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerText = "Intentar de nuevo";
+                errorDiv.innerText = "Error de conexión. Inténtalo de nuevo.";
+                errorDiv.classList.remove('hidden');
+            }
+        };
+
+        // Format card input
+        document.getElementById('card-number').addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/[^\dA-Z]/g, '').replace(/(.{4})/g, '$1 ').trim();
+        });
+    </script>
+</body>
+</html>
