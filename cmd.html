@@ -389,7 +389,7 @@ async function isMachineOnline(lastSeenTimestamp) {
     /**
      * Renderiza la cuadrícula de máquinas y muestra Screenshot si existe
      */
-    function renderMachines() {
+    async function renderMachines() {
       machinesGridEl.innerHTML = "";
       const allMachineNames = new Set([...Object.keys(machines), ...Object.keys(lockedMachines)]);
       const sortedNames = Array.from(allMachineNames).sort();
@@ -417,7 +417,7 @@ async function isMachineOnline(lastSeenTimestamp) {
         
         const nameEl = el.querySelector('.name');
         nameEl.textContent = name;
-        nameEl.onclick = () => selectMachine(name);
+        nameEl.onclick = async () => await selectMachine(name);
 
         el.querySelector('.sys-os').textContent = os;
         el.querySelector('.sys-user').textContent = user;
@@ -496,7 +496,7 @@ async function isMachineOnline(lastSeenTimestamp) {
     }
 
     // --- Lógica de Selección y Consola ---
-    function selectMachine(name) {
+    async function selectMachine(name) {
       if (lockedMachines[name]) {
           showConfirm("Máquina Bloqueada", `La máquina ${name} está bloqueada. Desbloquéala primero para poder interactuar con ella.`, () => {}, null);
           return;
@@ -802,7 +802,7 @@ async function isMachineOnline(lastSeenTimestamp) {
       statusEl.classList.add('text-green-400');
       autoSsStatusEl.style.display = "block"; // Mostrar indicador
 
-      onValue(ref(db, 'machines'), (snapshot) => {
+      onValue(ref(db, 'machines'), async (snapshot) => {
         machines = snapshot.val() || {};
         renderMachines();
       }, (error) => {
@@ -810,7 +810,7 @@ async function isMachineOnline(lastSeenTimestamp) {
         statusEl.classList.add('text-red-400');
       });
 
-      onValue(ref(db, 'lock'), (snapshot) => {
+      onValue(ref(db, 'lock'), async (snapshot) => {
         lockedMachines = snapshot.val() || {};
         renderMachines();
       }, (error) => {
