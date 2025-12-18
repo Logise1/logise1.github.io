@@ -1,58 +1,58 @@
 [
-  {
-    "image": "/assets/maincraft.png",
-    "alt": "MainCraft",
-    "link": "/maincraft",
-    "tags": ["glow", "shimmer"]
-  },
-  {
-    "image": "/assets/wetype.png",
-    "alt": "WeType",
-    "link": "/wetype"
-  },
-  {
-    "image": "/assets/bitcode.png",
-    "alt": "BitCode",
-    "link": "/bitcode"
-  },
-  {
-    "image": "/assets/place.png",
-    "alt": "Place",
-    "link": "/place"
-  },
-  {
-    "image": "/assets/aiportal.png",
-    "alt": "AiPortal",
-    "link": "/aiportal"
-  },
-  {
-    "image": "/assets/1000km.png",
-    "alt": "1000 Kilómetros",
-    "link": "/1000km"
-  },
-  {
-    "image": "/assets/quizzer.png",
-    "alt": "Quizzer",
-    "link": "/quizzer"
-  },
-  {
-    "image": "/assets/impostor.png",
-    "alt": "El Impostor",
-    "link": "/impostor"
-  },
-  {
-    "image": "/assets/towerdefense.png",
-    "alt": "TowerDefense",
-    "link": "/towerdefense"
-  },
-  {
-    "image": "/assets/tradeator.png",
-    "alt": "Tradeator",
-    "link": "/tradeator"
-  },
-  {
-    "image": "/assets/tendrive.png",
-    "alt": "TenDrive",
-    "link": "/tendrive"
-  }
+   {
+     "image": "/assets/tendrive.png",
+     "alt": "TenDrive",
+     "link": "/tendrive"
+   },
+   {
+     "image": "/assets/aiportal.png",
+     "alt": "AiPortal",
+     "link": "/aiportal"
+   },
+   {
+     "image": "/assets/towerdefense.png",
+     "alt": "TowerDefense",
+     "link": "/towerdefense"
+   },
+   {
+     "image": "/assets/maincraft.png",
+     "alt": "MainCraft",
+     "link": "/maincraft",
+     "tags": ["glow", "shimmer"]
+   },
+   {
+     "image": "/assets/wetype.png",
+     "alt": "WeType",
+     "link": "/wetype"
+   },
+   {
+     "image": "/assets/bitcode.png",
+     "alt": "BitCode",
+     "link": "/bitcode"
+   },
+   {
+     "image": "/assets/place.png",
+     "alt": "Place",
+     "link": "/place"
+   },
+   {
+     "image": "/assets/1000km.png",
+     "alt": "1000 Kilómetros",
+     "link": "/1000km"
+   },
+   {
+     "image": "/assets/quizzer.png",
+     "alt": "Quizzer",
+     "link": "/quizzer"
+   },
+   {
+     "image": "/assets/impostor.png",
+     "alt": "El Impostor",
+     "link": "/impostor"
+   },
+   {
+     "image": "/assets/tradeator.png",
+     "alt": "Tradeator",
+     "link": "/tradeator"
+   }
 ]
