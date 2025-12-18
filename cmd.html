@@ -217,6 +217,7 @@
     let globalScreenshotListener = null;
     let lastScreenshotId = null;
     let currentCWD = "..."; 
+    let timeOffset = 0; // Variable para almacenar la diferencia horaria con el servidor
 
     // Comprobar el parámetro URL ?lock
     const urlParams = new URLSearchParams(window.location.search);
@@ -266,8 +267,54 @@
        }
     }
 
+    // --- FUNCIONES DE TIEMPO CON API ---
+    // Función para obtener el offset de tiempo con el servidor
+    async function initTimeOffset() {
+      try {
+        const response = await fetch("https://timeapi.bio/timeapi/time", {
+          method: "POST",
+          headers: {
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            "region": "Europe/Madrid",
+            "format": "json"
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const timeData = await response.json();
+        const serverTime = Math.floor(new Date(timeData.time).getTime() / 1000);
+        const localTime = Math.floor(Date.now() / 1000);
+        timeOffset = serverTime - localTime;
+        
+        console.log("Offset de tiempo calculado:", timeOffset, "segundos");
+        return timeOffset;
+      } catch (error) {
+        console.warn("Error usando API de tiempo, usando offset por defecto (-2 horas):", error);
+        timeOffset = -7200; // -2 horas en segundos (fallback)
+        return timeOffset;
+      }
+    }
+
+    // Función para ajustar timestamps usando el offset del servidor
     function adjustTimestamp(timestamp) {
-      return timestamp - (2 * 60 * 60); // 2 horas en segundos
+      return timestamp + timeOffset;
+    }
+
+    // Función para verificar si una máquina está online usando tiempo del servidor
+    function isMachineOnlineWithOffset(lastSeenTimestamp) {
+      const serverTime = Math.floor(Date.now() / 1000) + timeOffset;
+      return (serverTime - lastSeenTimestamp) < 30; // 30 segundos de tolerancia
+    }
+
+    // Obtener el tiempo del servidor actual
+    function getServerTime() {
+      return Math.floor(Date.now() / 1000) + timeOffset;
     }
     
     // --- Funciones de Modales ---
@@ -289,50 +336,22 @@
       confirmModal.style.display = 'flex';
       requestAnimationFrame(() => confirmModal.classList.remove('opacity-0'));
     }
-    // Nueva función para verificar si una máquina está online usando la API
-async function isMachineOnline(lastSeenTimestamp) {
-  try {
-    // Obtener el tiempo actual del servidor
-    const response = await fetch("https://timeapi.bio/timeapi/time", {
-      method: "POST",
-      headers: {
-        "Accept": "*/*",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        "region": "Europe/Madrid",
-        "format": "json"
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    const timeData = await response.json();
-    const serverTime = Math.floor(new Date(timeData.time).getTime() / 1000);
-    
-    // Verificar si la máquina se vio en los últimos 30 segundos (según tiempo del servidor)
-    return (serverTime - lastSeenTimestamp) < 30;
-    
-  } catch (error) {
-    console.warn("Error usando API de tiempo, usando tiempo local:", error);
-    // Fallback al método local si la API falla
-    return (Date.now() / 1000 - lastSeenTimestamp) < 30;
-  }
-}
+
     function hideConfirm() {
       confirmModal.classList.add('opacity-0');
       setTimeout(() => confirmModal.style.display = 'none', 200);
       onConfirmCallback = null;
     }
+
     function showScreenshot(name, b64data, timestamp) {
-      const ssDate = new Date(adjustTimestamp(timestamp) * 1000).toLocaleString();
+      const adjustedTimestamp = adjustTimestamp(timestamp);
+      const ssDate = new Date(adjustedTimestamp * 1000).toLocaleString();
       screenshotTitle.textContent = `Captura de ${name} (${ssDate})`;
       screenshotImage.src = "data:image/png;base64," + b64data; 
       screenshotModal.style.display = 'flex';
       requestAnimationFrame(() => screenshotModal.classList.remove('opacity-0'));
     }
+
     function hideScreenshot() {
       screenshotModal.classList.add('opacity-0');
       setTimeout(() => { 
@@ -340,11 +359,13 @@ async function isMachineOnline(lastSeenTimestamp) {
        screenshotImage.src = "";
       }, 200);
     }
+
     confirmBtnNo.onclick = hideConfirm;
     confirmBtnYes.onclick = () => {
       if (onConfirmCallback) onConfirmCallback();
       hideConfirm();
     };
+
     confirmInput.oninput = () => {
       const matchText = confirmMatch.textContent;
       if (confirmInput.value === matchText) {
@@ -355,9 +376,11 @@ async function isMachineOnline(lastSeenTimestamp) {
         confirmBtnYes.classList.add('opacity-50', 'cursor-not-allowed');
       }
     };
+
     function encodeKey(s) {
       return s.replace(/[.\$\[\]#\/ ]/g, "_");
     }
+
     function updateConsolePrompt() {
         if (!currentCWD || currentCWD === "...") {
             consoleInputSpan.textContent = "...>";
@@ -366,6 +389,7 @@ async function isMachineOnline(lastSeenTimestamp) {
             consoleInputSpan.textContent = `${cleanCWD}>`;
         }
     }
+
     function addToConsole(text, type = 'response') {
         const line = document.createElement('div');
         if (type === 'user') {
@@ -389,121 +413,111 @@ async function isMachineOnline(lastSeenTimestamp) {
     /**
      * Renderiza la cuadrícula de máquinas y muestra Screenshot si existe
      */
-async function renderMachines() {
-  machinesGridEl.innerHTML = "";
-  const allMachineNames = new Set([...Object.keys(machines), ...Object.keys(lockedMachines)]);
-  const sortedNames = Array.from(allMachineNames).sort();
+    function renderMachines() {
+      machinesGridEl.innerHTML = "";
+      const allMachineNames = new Set([...Object.keys(machines), ...Object.keys(lockedMachines)]);
+      const sortedNames = Array.from(allMachineNames).sort();
 
-  if (sortedNames.length === 0) {
-    machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas reportando...</p>";
-    return;
-  }
+      if (sortedNames.length === 0) {
+        machinesGridEl.innerHTML = "<p class='text-gray-400 col-span-full'>No hay máquinas reportando...</p>";
+        return;
+      }
 
-  // CAMBIA ESTO: forEach por for...of
-  for (const name of sortedNames) {
-    const node = machines[name] || {};
-    const isLocked = !!lockedMachines[name];
-    const status = node.status || {};
-    const info = node.info || { os: '...', user: '...', ip: '...', cwd: '...' };
-    const screenshotData = node.screenshot || null;
+      sortedNames.forEach(name => {
+        const node = machines[name] || {};
+        const isLocked = !!lockedMachines[name];
+        const status = node.status || {};
+        const info = node.info || { os: '...', user: '...', ip: '...', cwd: '...' };
+        const screenshotData = node.screenshot || null;
 
-    const os = info.os ? atob_utf8(info.os) : '...';
-    const user = info.user ? atob_utf8(info.user) : '...'; 
-    const ip = info.ip ? atob_utf8(info.ip) : '...';
-    const cwd = info.cwd ? atob_utf8(info.cwd).replace(/\\+/g, '\\') : '...';
-    
-    const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
-    const el = machineTpl.content.cloneNode(true);
-    const cardDiv = el.querySelector('.machine-grid-card');
-    
-    const nameEl = el.querySelector('.name');
-    nameEl.textContent = name;
-    nameEl.onclick = () => selectMachine(name); // Quita async aquí
-
-    el.querySelector('.sys-os').textContent = os;
-    el.querySelector('.sys-user').textContent = user;
-    el.querySelector('.sys-ip').textContent = ip;
-    el.querySelector('.sys-cwd').textContent = cwd;
-    el.querySelector('.sys-os').parentElement.dataset.tooltip = os;
-    el.querySelector('.sys-user').parentElement.dataset.tooltip = user;
-    el.querySelector('.sys-ip').parentElement.dataset.tooltip = ip;
-    el.querySelector('.sys-cwd').parentElement.dataset.tooltip = cwd;
-
-    const ssContainer = el.querySelector('.ss-container');
-    const ssImg = el.querySelector('.ss-preview');
-    
-    if (screenshotData && screenshotData.data) {
-      ssContainer.classList.remove('hidden');
-      ssImg.src = "data:image/png;base64," + screenshotData.data;
-      el.querySelector('.info-container').style.display = 'none'; 
-    }
-
-    const stDot = el.querySelector('.state-dot');
-    const standardControls = el.querySelector('.standard-controls');
-    const lockedControls = el.querySelector('.locked-controls');
-    const lockBtnWrapper = el.querySelector('.lock-btn-wrapper');
-
-    if (isLocked) {
-      // --- MÁQUINA BLOQUEADA ---
-      stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-red-700';
-      stDot.title = 'Bloqueado';
-      el.querySelector('.lastSeen').textContent = 'Bloqueado';
-      standardControls.style.display = 'none';
-      lockedControls.style.display = 'block';
-      lockBtnWrapper.style.display = 'none'; 
-      el.querySelector('.unlock-btn').onclick = () => sendUnlock(name);
-      cardDiv.classList.add('border-2', 'border-red-700');
-      el.querySelector('.sys-os').textContent = 'Bloqueado';
-
-    } else if (lastSeen) {
-      // AÑADE AWAIT AQUÍ
-      const online = await isMachineOnline(lastSeen.getTime() / 1000);
-      
-      if (online) {
-        // --- MÁQUINA ONLINE ---
-        stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-green-500';
-        stDot.title = 'Online';
-        el.querySelector('.lastSeen').textContent = `Visto: ${lastSeen.toLocaleString()}`;
-        lockedControls.style.display = 'none';
+        const os = info.os ? atob_utf8(info.os) : '...';
+        const user = info.user ? atob_utf8(info.user) : '...'; 
+        const ip = info.ip ? atob_utf8(info.ip) : '...';
+        const cwd = info.cwd ? atob_utf8(info.cwd).replace(/\\+/g, '\\') : '...';
         
-        standardControls.style.display = 'flex';
+        const lastSeenTimestamp = status.lastSeen ? adjustTimestamp(status.lastSeen) : null;
+        const lastSeen = lastSeenTimestamp ? new Date(lastSeenTimestamp * 1000) : null;
+        
+        const el = machineTpl.content.cloneNode(true);
+        const cardDiv = el.querySelector('.machine-grid-card');
+        
+        const nameEl = el.querySelector('.name');
+        nameEl.textContent = name;
+        nameEl.onclick = () => selectMachine(name);
 
-        if (hasLockParam) {
-          lockBtnWrapper.style.display = 'block';
-          el.querySelector('.lock-btn').onclick = () => sendLock(name);
-        } else {
-          lockBtnWrapper.style.display = 'none';
+        el.querySelector('.sys-os').textContent = os;
+        el.querySelector('.sys-user').textContent = user;
+        el.querySelector('.sys-ip').textContent = ip;
+        el.querySelector('.sys-cwd').textContent = cwd;
+        el.querySelector('.sys-os').parentElement.dataset.tooltip = os;
+        el.querySelector('.sys-user').parentElement.dataset.tooltip = user;
+        el.querySelector('.sys-ip').parentElement.dataset.tooltip = ip;
+        el.querySelector('.sys-cwd').parentElement.dataset.tooltip = cwd;
+
+        // --- MANEJO DE SCREENSHOT EN GRID ---
+        const ssContainer = el.querySelector('.ss-container');
+        const ssImg = el.querySelector('.ss-preview');
+        
+        if (screenshotData && screenshotData.data) {
+            ssContainer.classList.remove('hidden');
+            ssImg.src = "data:image/png;base64," + screenshotData.data;
+            el.querySelector('.info-container').style.display = 'none'; 
         }
 
-        el.querySelector('.shutdown-btn').onclick = () => sendQuickCommand(name, 'shutdown /s /t 0', 'Apagar');
-        el.querySelector('.restart-btn').onclick = () => sendQuickCommand(name, 'shutdown /r /t 0', 'Reiniciar');
+        const stDot = el.querySelector('.state-dot');
+        const standardControls = el.querySelector('.standard-controls');
+        const lockedControls = el.querySelector('.locked-controls');
+        const lockBtnWrapper = el.querySelector('.lock-btn-wrapper');
 
-      } else {
-        // --- MÁQUINA OFFLINE ---
-        stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
-        stDot.title = 'Offline';
-        el.querySelector('.lastSeen').textContent = lastSeen ? `Visto: ${lastSeen.toLocaleString()}` : "Nunca visto";
-        standardControls.style.display = 'none';
-        lockedControls.style.display = 'none';
-        lockBtnWrapper.style.display = 'none';
-      }
-    } else {
-      // --- MÁQUINA SIN lastSeen ---
-      stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
-      stDot.title = 'Offline';
-      el.querySelector('.lastSeen').textContent = "Nunca visto";
-      standardControls.style.display = 'none';
-      lockedControls.style.display = 'none';
-      lockBtnWrapper.style.display = 'none';
+        if (isLocked) {
+          // --- MÁQUINA BLOQUEADA ---
+          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-red-700';
+          stDot.title = 'Bloqueado';
+          el.querySelector('.lastSeen').textContent = 'Bloqueado';
+          standardControls.style.display = 'none';
+          lockedControls.style.display = 'block';
+          lockBtnWrapper.style.display = 'none'; 
+          el.querySelector('.unlock-btn').onclick = () => sendUnlock(name);
+          cardDiv.classList.add('border-2', 'border-red-700');
+          el.querySelector('.sys-os').textContent = 'Bloqueado';
+
+        } else if (lastSeenTimestamp && isMachineOnlineWithOffset(lastSeenTimestamp)) {
+          // --- MÁQUINA ONLINE (verificado con tiempo del servidor) ---
+          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-green-500';
+          stDot.title = 'Online';
+          el.querySelector('.lastSeen').textContent = `Visto: ${lastSeen.toLocaleString()}`;
+          lockedControls.style.display = 'none';
+          
+          standardControls.style.display = 'flex';
+
+          if (hasLockParam) {
+              lockBtnWrapper.style.display = 'block';
+              el.querySelector('.lock-btn').onclick = () => sendLock(name);
+          } else {
+              lockBtnWrapper.style.display = 'none';
+          }
+
+          el.querySelector('.shutdown-btn').onclick = () => sendQuickCommand(name, 'shutdown /s /t 0', 'Apagar');
+          el.querySelector('.restart-btn').onclick = () => sendQuickCommand(name, 'shutdown /r /t 0', 'Reiniciar');
+
+        } else {
+          // --- MÁQUINA OFFLINE ---
+          stDot.className = 'state-dot w-3 h-3 rounded-full flex-shrink-0 bg-gray-600';
+          stDot.title = 'Offline';
+          el.querySelector('.lastSeen').textContent = lastSeen ? `Visto: ${lastSeen.toLocaleString()}` : "Nunca visto";
+          standardControls.style.display = 'none';
+          lockedControls.style.display = 'none';
+          lockBtnWrapper.style.display = 'none';
+        }
+        
+        if (name === selected) {
+          cardDiv.classList.add('ring-2', 'ring-cyan-500');
+        }
+        
+        machinesGridEl.appendChild(el);
+      });
     }
-    
-    if (name === selected) {
-      cardDiv.classList.add('ring-2', 'ring-cyan-500');
-    }
-    
-    machinesGridEl.appendChild(el);
-  }
-  }
+
     // --- Lógica de Selección y Consola ---
     function selectMachine(name) {
       if (lockedMachines[name]) {
@@ -516,16 +530,18 @@ async function renderMachines() {
           return;
       }
       const status = machineNode.status || {};
-      const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
-      if (!lastSeen || (Date.now() - lastSeen.getTime()) >= 30000) {
-          showConfirm("Máquina Offline", `La máquina ${name} parece estar offline. (Última vez vista: ${lastSeen ? lastSeen.toLocaleString() : 'Nunca'}). No se puede conectar.`, () => {}, null);
+      const lastSeenTimestamp = status.lastSeen ? adjustTimestamp(status.lastSeen) : null;
+      
+      if (!lastSeenTimestamp || !isMachineOnlineWithOffset(lastSeenTimestamp)) {
+          const lastSeen = lastSeenTimestamp ? new Date(lastSeenTimestamp * 1000).toLocaleString() : 'Nunca';
+          showConfirm("Máquina Offline", `La máquina ${name} parece estar offline. (Última vez vista: ${lastSeen}). No se puede conectar.`, () => {}, null);
           return;
       }
 
       selected = name;
       panelEl.style.display = "block";
       machinesGridEl.style.display = "none";
-      autoSsStatusEl.style.display = "none"; // Ocultar indicador Auto-SS
+      autoSsStatusEl.style.display = "none";
       selNameEl.textContent = name;
       consoleOutputEl.innerHTML = ""; 
 
@@ -586,27 +602,21 @@ async function renderMachines() {
       cmdInputEl.focus();
     }
 
-function closePanel() {
-    if (globalResponseListener) globalResponseListener();
-    if (globalScreenshotListener) globalScreenshotListener();
-    globalResponseListener = null;
-    globalScreenshotListener = null;
-    selected = null;
-    panelEl.style.display = "none";
-    machinesGridEl.style.display = "grid";
-    autoSsStatusEl.style.display = "block";
-    currentCWD = "...";
-    updateConsolePrompt();
-    // Añade async/await o .then()
-    renderMachines().catch(e => console.error("Error en renderMachines:", e));
-}
-
+    function closePanel() {
+        if (globalResponseListener) globalResponseListener();
+        if (globalScreenshotListener) globalScreenshotListener();
+        globalResponseListener = null;
+        globalScreenshotListener = null;
+        selected = null;
+        panelEl.style.display = "none";
+        machinesGridEl.style.display = "grid";
+        autoSsStatusEl.style.display = "block";
+        currentCWD = "...";
+        updateConsolePrompt();
+        renderMachines();
+    }
 
     // --- Lógica de Comandos ---
-
-    /**
-     * Envía un comando a Firebase
-     */
     async function sendFirebaseCommand(name, cmd, cwd, clearAfter6s = true) {
         const id = "cmd-" + Date.now();
         const payload = { id: id, cmd: cmd, cwd: cwd };
@@ -625,7 +635,7 @@ function closePanel() {
                     } catch (e) {
                         console.error(`Error al borrar comando (${cmd}) para ${name}:`, e);
                     }
-                }, 6000); // 6 segundos
+                }, 6000);
             }
         } catch (e) {
             console.error(`Error al enviar comando: ${e.message}`);
@@ -678,6 +688,7 @@ function closePanel() {
         }
         return result;
     }
+
     function handleLocalCommand(cmd) {
         addToConsole(cmd, 'user'); 
         const cmdLower = cmd.toLowerCase().trim();
@@ -700,10 +711,6 @@ function closePanel() {
         }
     }
 
-
-    /**
-     * Envía un comando desde la consola
-     */
     async function sendConsoleCommand(cmd) {
       if (!selected) return addToConsole("Error: No hay ninguna máquina seleccionada.", 'error');
 
@@ -777,57 +784,51 @@ function closePanel() {
         );
     }
 
-    // --- NUEVO: Bucle automático de Screenshot ---
+    // --- Bucle automático de Screenshot (usando tiempo del servidor) ---
     function startAutoScreenshotLoop() {
         setInterval(() => {
-            // SOLO si no estamos en una consola (selected == null)
             if (!selected) {
-                const now = Date.now();
-                // Iterar sobre todas las máquinas
+                const serverNow = getServerTime();
+                
                 Object.keys(machines).forEach(name => {
                     const node = machines[name];
                     const status = node.status || {};
-                    // Calcular lastSeen
-                    const lastSeen = status.lastSeen ? new Date(adjustTimestamp(status.lastSeen) * 1000) : null;
                     
-                    // Solo enviar si la máquina se ha visto en los últimos 30 segundos (ONLINE)
-                    if (lastSeen && (now - lastSeen.getTime()) < 30000) {
-                        // Enviar comando silenciosamente
-                        // Usamos C:\ como CWD genérico
-                        sendFirebaseCommand(name, "/screenshot", "C:\\", true)
-                        .then(() => {
-                            // Opcional: Console log para debug
-                            // console.log(`Auto-screenshot enviado a ${name}`);
-                        })
-                        .catch(err => console.error("Auto-ss error:", err));
+                    if (status.lastSeen) {
+                        const lastSeen = adjustTimestamp(status.lastSeen);
+                        // Verificar online usando tiempo del servidor
+                        if ((serverNow - lastSeen) < 30) {
+                            sendFirebaseCommand(name, "/screenshot", "C:\\", true)
+                                .catch(err => console.error("Auto-ss error:", err));
+                        }
                     }
                 });
             }
-        }, 10000); // 10000 ms = 10 segundos
+        }, 10000); // 10 segundos
     }
 
     // --- Inicialización y Listeners ---
-function listenToFirebase() {
-  statusEl.textContent = "Conectado a Firebase.";
-  statusEl.classList.add('text-green-400');
-  autoSsStatusEl.style.display = "block";
+    function listenToFirebase() {
+      statusEl.textContent = "Conectado a Firebase.";
+      statusEl.classList.add('text-green-400');
+      autoSsStatusEl.style.display = "block";
 
-  onValue(ref(db, 'machines'), (snapshot) => {
-    machines = snapshot.val() || {};
-    renderMachines().catch(e => console.error("Error en renderMachines:", e));
-  }, (error) => {
-    statusEl.textContent = `Error (machines): ${error.message}`;
-    statusEl.classList.add('text-red-400');
-  });
+      onValue(ref(db, 'machines'), (snapshot) => {
+        machines = snapshot.val() || {};
+        renderMachines();
+      }, (error) => {
+        statusEl.textContent = `Error (machines): ${error.message}`;
+        statusEl.classList.add('text-red-400');
+      });
 
-  onValue(ref(db, 'lock'), (snapshot) => {
-    lockedMachines = snapshot.val() || {};
-    renderMachines().catch(e => console.error("Error en renderMachines:", e));
-  }, (error) => {
-    statusEl.textContent = `Error (lock): ${error.message}`;
-    statusEl.classList.add('text-red-400');
-  });
-}
+      onValue(ref(db, 'lock'), (snapshot) => {
+        lockedMachines = snapshot.val() || {};
+        renderMachines();
+      }, (error) => {
+        statusEl.textContent = `Error (lock): ${error.message}`;
+        statusEl.classList.add('text-red-400');
+      });
+    }
     
     cmdFormEl.onsubmit = (e) => {
         e.preventDefault();
@@ -837,16 +838,24 @@ function listenToFirebase() {
             cmdInputEl.value = "";
         }
     };
+    
     ssBtn.onclick = () => {
       if (selected) {
         sendConsoleCommand("/screenshot"); 
        }
     };
+    
     closePanelBtn.onclick = closePanel;
     screenshotCloseBtn.onclick = hideScreenshot; 
 
+    // Inicializar todo
     listenToFirebase();
-    startAutoScreenshotLoop(); // Iniciar el bucle
+    
+    // Inicializar el offset de tiempo y luego iniciar el bucle
+    initTimeOffset().then(() => {
+      startAutoScreenshotLoop();
+      console.log("Sistema inicializado con offset de tiempo:", timeOffset, "segundos");
+    });
 
   </script>
 </body>
