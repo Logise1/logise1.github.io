@@ -142,9 +142,7 @@
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-6 relative select-none" id="drive-dropzone">
-                    <!-- Notifications Area inside Shared Tab -->
                     <div id="shared-notifications" class="hidden mb-6 space-y-2"></div>
-
                     <div id="drive-drag-overlay" class="absolute inset-4 rounded-2xl border-2 border-dashed border-ten-400 bg-ten-50/90 z-40 hidden flex flex-col items-center justify-center pointer-events-none animate-fade-in backdrop-blur-sm">
                         <i class="fa-solid fa-cloud-arrow-up text-5xl text-ten-500 mb-4 animate-bounce"></i>
                         <div class="text-ten-800 text-lg font-bold">Suelta para subir</div>
@@ -677,26 +675,45 @@
                  }, ids.length > 1);
             },
             restoreItem: (id, e) => { e.stopPropagation(); const ids = driveApp.getBatchIds(id); const batch = writeBatch(db); ids.forEach(itemId => { const ref = doc(db, "assets", itemId); batch.update(ref, { parentId: null }); }); batch.commit(); },
+            
             confirmDeleteForever: (id, type, e) => {
-                e.stopPropagation(); const ids = driveApp.getBatchIds(id);
-                 driveApp.showConfirm('delete', async () => {
-                    let allToDelete = [];
-                    const gather = async (rootId) => {
-                        allToDelete.push(rootId);
-                        const q = query(collection(db, "assets"), where("parentId", "==", rootId));
-                        const snap = await getDocs(q);
-                        const promises = snap.docs.map(d => gather(d.id));
-                        await Promise.all(promises);
-                    };
-                    await Promise.all(ids.map(mid => gather(mid)));
-                    const chunkSize = 500;
-                    for (let i = 0; i < allToDelete.length; i += chunkSize) {
-                        const chunk = allToDelete.slice(i, i + chunkSize);
-                        const batch = writeBatch(db);
-                        chunk.forEach(delId => batch.delete(doc(db, "assets", delId)));
-                        await batch.commit();
+                e.stopPropagation();
+                const ids = driveApp.getBatchIds(id);
+                driveApp.showConfirm('delete', async () => {
+                    const btn = document.getElementById('btn-confirm-ok');
+                    const originalText = btn.innerText;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
+
+                    try {
+                        let allToDelete = [];
+                        
+                        const gather = async (rootId) => {
+                            allToDelete.push(rootId);
+                            const q = query(collection(db, "assets"), where("parentId", "==", rootId));
+                            const snap = await getDocs(q);
+                            await Promise.all(snap.docs.map(d => gather(d.id)));
+                        };
+
+                        await Promise.all(ids.map(id => gather(id)));
+
+                        const chunkSize = 500;
+                        for (let i = 0; i < allToDelete.length; i += chunkSize) {
+                            const chunk = allToDelete.slice(i, i + chunkSize);
+                            const batch = writeBatch(db);
+                            chunk.forEach(docId => {
+                                batch.delete(doc(db, "assets", docId));
+                            });
+                            await batch.commit();
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                        driveApp.closeConfirm(false);
                     }
-                 }, ids.length > 1);
+                }, ids.length > 1);
             },
             
             // Show Confirm with Input support for Share
