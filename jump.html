@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Wall Jumper - Hardcore Start</title>
+    <!-- Tailwind CSS para la UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js para el audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0a0a0a;
+            touch-action: none; /* Previene zoom y scroll en móviles */
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        .glow-text {
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+        }
+        /* Animación para el texto de Level Up */
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+        .level-up-anim {
+            animation: floatUp 2s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas del Juego -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        <!-- Start Screen -->
+        <div id="startScreen" class="text-center interactive bg-black/80 p-8 rounded-xl border border-cyan-500 shadow-[0_0_30px_rgba(0,255,255,0.3)] backdrop-blur-sm">
+            <h1 class="text-4xl md:text-6xl font-bold text-cyan-400 mb-4 glow-text">NEON JUMP</h1>
+            <h2 class="text-xl text-red-500 font-bold mb-4 tracking-widest">MODO HARDCORE</h2>
+            <p class="text-white mb-6 text-lg">Haz CLICK o TOCA para saltar<br>y cambiar de dirección.</p>
+            <div class="space-y-2 mb-6 text-sm text-gray-300">
+                <p>Nivel 1: ¡Empieza difícil!</p>
+                <p>Nivel 2: Muy difícil</p>
+                <p>Nivel 3+: Imposible</p>
+            </div>
+            <button id="startBtn" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded text-xl transition transform hover:scale-105 active:scale-95">
+                COMENZAR
+            </button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="hidden text-center interactive bg-black/90 p-8 rounded-xl border border-red-500 shadow-[0_0_30px_rgba(255,0,0,0.3)] backdrop-blur-sm">
+            <h1 class="text-4xl md:text-5xl font-bold text-red-500 mb-2 glow-text">GAME OVER</h1>
+            <p class="text-white text-xl mb-2">Puntuación: <span id="finalScore" class="text-yellow-400">0</span></p>
+            <p class="text-gray-400 text-lg mb-6">Alcanzaste el Nivel: <span id="finalLevel" class="text-white">1</span></p>
+            <button id="restartBtn" class="px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded text-xl transition transform hover:scale-105 active:scale-95">
+                REINTENTAR
+            </button>
+        </div>
+
+        <!-- HUD (Puntuación y Nivel) -->
+        <div id="hud" class="hidden absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+            <div>
+                <p class="text-white text-2xl font-bold drop-shadow-md">Score: <span id="scoreDisplay" class="text-cyan-300">0</span></p>
+                <p class="text-white text-xl font-bold drop-shadow-md">Level: <span id="levelDisplay" class="text-yellow-400">1</span></p>
+            </div>
+        </div>
+
+        <!-- Notificación de Nivel (Centrada) -->
+        <div id="levelNotification" class="absolute top-1/4 pointer-events-none text-center hidden">
+            <h2 class="text-5xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]">NIVEL UP!</h2>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN DEL JUEGO ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Elementos UI
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const hud = document.getElementById('hud');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const finalLevelDisplay = document.getElementById('finalLevel');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const levelNotification = document.getElementById('levelNotification');
+
+        // Estado del Juego
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+        let score = 0;
+        let level = 1;
+        let frames = 0;
+        let cameraY = 0;
+
+        // Configuración Física
+        const GRAVITY = 0.6;
+        const JUMP_FORCE = -11; // Un poco más fuerte para agilidad
+        const HORIZONTAL_SPEED = 6.5;
+        const MAX_FALL_SPEED = 12;
+
+        // Audio (Tone.js)
+        let synth, noiseSynth, membrane, levelUpSynth;
+        let audioInitialized = false;
+
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            
+            // Sintetizador para saltos
+            synth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.02, decay: 0.1, sustain: 0.1, release: 1 }
+            }).toDestination();
+            synth.volume.value = -8;
+
+            // Sintetizador para Game Over
+            noiseSynth = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { attack: 0.005, decay: 0.3, sustain: 0 }
+            }).toDestination();
+            noiseSynth.volume.value = -5;
+
+            // Sintetizador para Rebotes
+            membrane = new Tone.MembraneSynth().toDestination();
+            membrane.volume.value = -15;
+
+            // Sintetizador especial para Level Up
+            levelUpSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "sawtooth" },
+                envelope: { attack: 0.1, decay: 0.2, sustain: 0.2, release: 1.5 }
+            }).toDestination();
+            levelUpSynth.volume.value = -6;
+
+            audioInitialized = true;
+        }
+
+        function playJumpSound() {
+            if(!audioInitialized) return;
+            // Pentatónica menor para ambiente futurista
+            const notes = ["C5", "D#5", "F5", "G5", "A#5"]; 
+            const note = notes[Math.floor(Math.random() * notes.length)];
+            synth.triggerAttackRelease(note, "16n");
+        }
+
+        function playBounceSound() {
+            if(!audioInitialized) return;
+            membrane.triggerAttackRelease("C2", "32n");
+        }
+
+        function playCrashSound() {
+            if(!audioInitialized) return;
+            noiseSynth.triggerAttackRelease("8n");
+            synth.triggerAttackRelease(["C3", "F#3", "A#3"], "8n");
+        }
+
+        function playLevelUpSound() {
+            if(!audioInitialized) return;
+            // Acorde triunfal ascendente
+            levelUpSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+        }
+
+        // --- CLASES ---
+
+        class Player {
+            constructor() {
+                this.w = 20;
+                this.h = 20;
+                this.reset();
+            }
+
+            reset() {
+                this.x = canvas.width / 2 - this.w / 2;
+                this.y = canvas.height - 150;
+                this.vx = HORIZONTAL_SPEED;
+                this.vy = 0;
+                this.color = '#00ffcc';
+                this.isDead = false;
+                this.trail = [];
+            }
+
+            update() {
+                if (this.isDead) return;
+
+                // Física básica
+                this.vy += GRAVITY;
+                if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Estela (Trail)
+                if (frames % 2 === 0) {
+                    this.trail.push({x: this.x, y: this.y, alpha: 0.8});
+                }
+                // Limpiar estela
+                this.trail.forEach(t => t.alpha -= 0.05);
+                this.trail = this.trail.filter(t => t.alpha > 0);
+
+                // Rebote en paredes
+                if (this.x <= 0) {
+                    this.x = 0;
+                    this.vx *= -1;
+                    playBounceSound();
+                    createParticles(this.x, this.y + this.h/2, '#fff', 5);
+                } else if (this.x + this.w >= canvas.width) {
+                    this.x = canvas.width - this.w;
+                    this.vx *= -1;
+                    playBounceSound();
+                    createParticles(this.x + this.w, this.y + this.h/2, '#fff', 5);
+                }
+
+                // Muerte por caída (si sale de la pantalla por abajo respecto a la cámara)
+                if (this.y > cameraY + canvas.height + 50) {
+                    die();
+                }
+            }
+
+            jump() {
+                if (this.isDead) return;
+                this.vy = JUMP_FORCE;
+                this.vx *= -1; 
+                playJumpSound();
+                createParticles(this.x + this.w/2, this.y + this.h, this.color, 8);
+            }
+
+            draw() {
+                // Dibujar estela
+                this.trail.forEach(t => {
+                    ctx.fillStyle = `rgba(0, 255, 204, ${t.alpha * 0.5})`;
+                    ctx.fillRect(t.x, t.y, this.w, this.h);
+                });
+
+                // Dibujar jugador
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class Obstacle {
+            constructor(y, currentLevel) {
+                this.y = y;
+                this.h = 30; // Altura base
+                
+                // --- AJUSTE HARDCORE ---
+                // "Nivel 1 es como Nivel 4". Sumamos 3 al nivel actual para los cálculos de dificultad
+                let effectiveLevel = currentLevel + 3;
+
+                // Determinar tipo basado en nivel efectivo
+                // Ya desde el nivel 1 (efectivo 4) hay 50% de probabilidad de bloques móviles
+                let moveProbability = 0.5;
+
+                this.type = Math.random() < moveProbability ? 'MOVING_BLOCK' : 'WALL_SPIKE';
+                
+                if (this.type === 'WALL_SPIKE') {
+                    // Pinchos más largos desde el inicio
+                    let maxLen = Math.min(140, 40 + effectiveLevel * 10);
+                    this.w = 40 + Math.random() * maxLen; 
+                    
+                    this.side = Math.random() > 0.5 ? 'LEFT' : 'RIGHT';
+                    this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
+                    this.color = getLevelColor(currentLevel); // Color se mantiene según nivel real para feedback
+                } else {
+                    // MOVING_BLOCK
+                    this.w = Math.max(35, 100 - (effectiveLevel * 5)); // Bloques más pequeños
+                    this.x = Math.random() * (canvas.width - this.w);
+                    
+                    // Velocidad alta desde el inicio
+                    let speedBase = 2 + (effectiveLevel * 0.9);
+                    this.vx = speedBase * (Math.random() > 0.5 ? 1 : -1);
+                    this.color = '#ffaa00';
+                }
+            }
+
+            update() {
+                if (this.type === 'MOVING_BLOCK') {
+                    this.x += this.vx;
+                    if (this.x <= 0 || this.x + this.w >= canvas.width) {
+                        this.vx *= -1;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+
+                if (this.type === 'WALL_SPIKE') {
+                    ctx.beginPath();
+                    if (this.side === 'LEFT') {
+                        ctx.moveTo(0, this.y);
+                        ctx.lineTo(this.w, this.y + this.h/2);
+                        ctx.lineTo(0, this.y + this.h);
+                    } else {
+                        ctx.moveTo(canvas.width, this.y);
+                        ctx.lineTo(canvas.width - this.w, this.y + this.h/2);
+                        ctx.lineTo(canvas.width, this.y + this.h);
+                    }
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    // Detalles visuales
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(this.x + 5, this.y + 5, this.w - 10, this.h - 10);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 1;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.03;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // --- FUNCIONES AUXILIARES DE NIVEL ---
+
+        function getLevelColor(lvl) {
+            // Cambia el color de los pinchos según el nivel
+            if (lvl === 1) return '#ff0055'; // Rojo rosado
+            if (lvl === 2) return '#aa00ff'; // Violeta
+            if (lvl === 3) return '#0055ff'; // Azul
+            if (lvl >= 4) return '#ffaa00'; // Naranja peligro
+            return '#fff';
+        }
+
+        function checkLevelUp() {
+            // Subir de nivel cada 150 puntos (un poco más lento ya que es difícil)
+            let newLevel = Math.floor(score / 150) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                playLevelUpSound();
+                showLevelNotification();
+            }
+        }
+
+        function showLevelNotification() {
+            levelNotification.innerHTML = `<h2 class="text-5xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]">NIVEL ${level}</h2>`;
+            levelNotification.classList.remove('hidden');
+            levelNotification.classList.add('level-up-anim');
+            
+            setTimeout(() => {
+                levelNotification.classList.remove('level-up-anim');
+                levelNotification.classList.add('hidden');
+            }, 2000);
+        }
+
+        // --- VARIABLES GLOBALES ---
+        const player = new Player();
+        let obstacles = [];
+        let particles = [];
+        let nextObstacleY = 0;
+
+        // --- SISTEMA DEL JUEGO ---
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (gameState === 'MENU') {
+                player.reset(); 
+            }
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function startGame() {
+            initAudio();
+            gameState = 'PLAYING';
+            score = 0;
+            level = 1;
+            frames = 0;
+            cameraY = 0;
+            obstacles = [];
+            particles = [];
+            player.reset();
+            nextObstacleY = canvas.height - 300; 
+
+            // Generar un par de obstáculos iniciales
+            for(let i=0; i<3; i++) {
+                spawnObstacle();
+            }
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
+            scoreDisplay.innerText = "0";
+            levelDisplay.innerText = "1";
+            
+            loop();
+        }
+
+        function die() {
+            if (gameState === 'GAMEOVER') return;
+            gameState = 'GAMEOVER';
+            playCrashSound();
+            createParticles(player.x + player.w/2, player.y + player.h/2, '#ff0000', 30);
+            
+            finalScoreDisplay.innerText = Math.floor(score);
+            finalLevelDisplay.innerText = level;
+            hud.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function spawnObstacle() {
+            obstacles.push(new Obstacle(nextObstacleY, level));
+            
+            // --- AJUSTE HARDCORE ---
+            // Aumentamos el nivel efectivo para el cálculo del espacio
+            let effectiveLevel = level + 3; 
+            
+            // Cálculo de densidad (gap)
+            // Empezamos con huecos pequeños desde el nivel 1
+            let difficultyModifier = Math.min(80, (effectiveLevel - 1) * 10);
+            let baseGap = 180 - difficultyModifier;
+            let variation = Math.random() * 40;
+            
+            // Aseguramos un mínimo jugable
+            let gap = Math.max(90, baseGap + variation);
+            
+            nextObstacleY -= gap; 
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function checkCollisions() {
+            for (let obs of obstacles) {
+                let px = player.x;
+                let py = player.y;
+                let pw = player.w;
+                let ph = player.h;
+
+                let ox, oy, ow, oh;
+
+                if (obs.type === 'WALL_SPIKE') {
+                    oy = obs.y;
+                    oh = obs.h;
+                    // Hitbox ligeramente indulgente para pinchos
+                    if (obs.side === 'LEFT') {
+                        ox = 0;
+                        ow = obs.w - 8; 
+                    } else {
+                        ox = canvas.width - obs.w + 8;
+                        ow = obs.w - 8;
+                    }
+                } else {
+                    ox = obs.x;
+                    oy = obs.y;
+                    ow = obs.w;
+                    oh = obs.h;
+                }
+
+                // AABB Collision
+                if (px < ox + ow &&
+                    px + pw > ox &&
+                    py < oy + oh &&
+                    py + ph > oy) {
+                    die();
+                }
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            frames++;
+            player.update();
+            checkCollisions();
+
+            // Lógica de Cámara y Puntuación
+            let targetY = player.y - canvas.height * 0.6;
+            if (targetY < cameraY) {
+                let diff = cameraY - targetY;
+                cameraY = targetY; // Cámara directa para suavidad vertical
+                score += diff * 0.05; // Puntos basados en distancia
+                checkLevelUp();
+            } else {
+                // Scroll automático agresivo desde el inicio para forzar ritmo
+                let effectiveLevel = level + 3;
+                let autoScrollSpeed = 1.2 + (effectiveLevel * 0.15); 
+                cameraY -= autoScrollSpeed; 
+            }
+
+            // Generar obstáculos
+            if (cameraY < nextObstacleY + canvas.height + 200) {
+                spawnObstacle();
+            }
+
+            // Limpiar obstáculos viejos
+            obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 200);
+
+            // Actualizar entidades
+            obstacles.forEach(obs => obs.update());
+            particles.forEach(p => p.update());
+            particles = particles.filter(p => p.life > 0);
+
+            // Actualizar HUD
+            scoreDisplay.innerText = Math.floor(score);
+            levelDisplay.innerText = level;
+        }
+
+        function draw() {
+            // Fondo
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fondo dinámico (Cuadrícula cambia ligeramente con nivel)
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            let gridSize = 50;
+            let offsetY = -cameraY % gridSize;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            for (let y = offsetY; y < canvas.height; y += gridSize) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(0, -cameraY);
+
+            obstacles.forEach(obs => obs.draw());
+            player.draw();
+            particles.forEach(p => p.draw());
+
+            ctx.restore();
+            
+            // Viñeta
+            let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/3, canvas.width/2, canvas.height/2, canvas.height);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (gameState === 'PLAYING') {
+                requestAnimationFrame(loop);
+            }
+        }
+
+        // --- INPUTS ---
+        function handleInput(e) {
+            e.preventDefault(); 
+            if (gameState === 'PLAYING') {
+                player.jump();
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== 'BUTTON') handleInput(e);
+        });
+        
+        window.addEventListener('touchstart', (e) => {
+            if(e.target.tagName !== 'BUTTON') handleInput(e);
+        }, {passive: false});
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                if (gameState === 'PLAYING') player.jump();
+            }
+        });
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        // Inicio
+        player.y = canvas.height/2; 
+        draw();
+
+    </script>
+</body>
+</html>
