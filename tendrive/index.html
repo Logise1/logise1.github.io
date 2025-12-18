@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tendrive: Cloud & Shooter</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 900: '#881337', },
+                        ten: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95', },
+                        gold: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' } // Premium colors
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'bounce-in': 'bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' }, },
+                        bounceIn: { '0%': { opacity: '0', transform: 'scale(0.8)' }, '70%': { transform: 'scale(1.05)' }, '100%': { opacity: '1', transform: 'scale(1)' }, }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #334155; overflow-x: hidden; user-select: none; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; }
+        .folder-drag-over { transform: scale(1.05); background-color: #ede9fe; border: 2px dashed #8b5cf6; border-radius: 0.75rem; z-index: 10; }
+        .drag-ghost { opacity: 0.5; }
+        .progress-bar-smooth { transition: width 1.2s ease-out; }
+        .selection-box { position: absolute; background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; border-radius: 4px; pointer-events: none; z-index: 50; }
+        .item-selected { background-color: #ede9fe !important; border-color: #8b5cf6 !important; box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.1); }
+        
+        #context-menu {
+            position: absolute; z-index: 100; width: 200px; background: white; border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; display: none; padding: 4px 0;
+        }
+        .context-item { padding: 8px 16px; font-size: 14px; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .context-item:hover { background-color: #f1f5f9; color: #1e293b; }
+        .context-item.danger:hover { background-color: #fef2f2; color: #ef4444; }
+        .context-separator { height: 1px; background-color: #e2e8f0; margin: 4px 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-700" oncontextmenu="return false;">
+
+    <!-- Navbar Global -->
+    <nav class="w-full h-16 glass-panel flex items-center justify-between px-6 fixed top-0 z-50 transition-all border-b border-slate-200">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2 font-bold text-xl cursor-pointer" onclick="app.navigate('drive')">
+                <div class="bg-ten-600 text-white p-1.5 rounded-lg shadow-sm"><i class="fa-solid fa-cloud-bolt"></i></div>
+                <span class="text-slate-800 tracking-tight">Ten<span class="text-ten-600">drive</span></span>
+            </div>
+            <div class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                <button onclick="app.navigate('drive')" id="nav-btn-drive" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-white text-ten-600 shadow-sm"><i class="fa-brands fa-google-drive mr-2"></i>Drive</button>
+                <button onclick="app.navigate('shooter')" id="nav-btn-shooter" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all text-slate-500 hover:text-slate-700"><i class="fa-solid fa-rocket mr-2"></i>Shooter</button>
+            </div>
+        </div>
+        <div id="user-info" class="hidden flex items-center gap-4 text-sm bg-white py-1.5 px-4 rounded-full border border-slate-200 shadow-sm">
+            <span id="premium-badge" class="hidden text-xs font-bold text-white bg-gradient-to-r from-yellow-500 to-yellow-600 px-2 py-0.5 rounded shadow-sm"><i class="fa-solid fa-crown mr-1"></i>PRO</span>
+            <span class="text-slate-400 font-medium">Hola,</span>
+            <span id="display-username" class="font-bold text-slate-700">Usuario</span>
+            <div class="h-4 w-px bg-slate-200 mx-1"></div>
+            <button onclick="driveApp.logout()" class="text-slate-400 hover:text-red-500 transition-colors" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-container" class="pt-20 px-4 pb-4 flex-1 w-full max-w-7xl mx-auto flex flex-col items-center justify-center min-h-screen">
+        
+        <!-- VIEW: DRIVE LOGIN -->
+        <div id="view-drive-auth" class="hidden w-full max-w-sm glass-panel p-8 rounded-3xl shadow-xl animate-fade-in border-0 ring-1 ring-slate-200 bg-white">
+            <div class="text-center mb-8">
+                <div class="bg-ten-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-ten-600 shadow-sm"><i class="fa-solid fa-fingerprint text-3xl"></i></div>
+                <h2 class="text-2xl font-bold text-slate-800">Acceso Tendrive</h2>
+                <p class="text-slate-400 text-sm mt-1">Almacenamiento seguro y rápido</p>
+            </div>
+            <form onsubmit="driveApp.handleAuth(event)" class="space-y-4">
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Usuario</label><input type="text" id="auth-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-ten-500 focus:ring-2 focus:ring-ten-100 transition-all text-sm font-medium" placeholder="usuario"></div>
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Contraseña</label><input type="password" id="auth-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:outline-none focus:border-ten-500 focus:ring-2 focus:ring-ten-100 transition-all text-sm font-medium" placeholder="••••••••"></div>
+                <div id="auth-error" class="bg-red-50 text-red-500 text-xs p-3 rounded-lg border border-red-100 hidden flex items-center"><i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="auth-error-text">Error</span></div>
+                <button type="submit" id="btn-auth" class="w-full bg-gradient-to-r from-ten-600 to-ten-800 hover:to-ten-900 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-ten-200 transition-all transform hover:scale-[1.02] text-sm">Entrar a mi Nube</button>
+            </form>
+        </div>
+
+        <!-- VIEW: DRIVE DASHBOARD -->
+        <div id="view-drive-dashboard" class="hidden w-full h-[88vh] flex rounded-2xl shadow-2xl overflow-hidden animate-fade-in bg-white border border-slate-200">
+            <aside class="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-20">
+                <div class="p-6">
+                    <label id="btn-new-main" class="flex items-center justify-center gap-2 w-full py-3 bg-ten-600 hover:bg-ten-700 text-white rounded-xl shadow-lg shadow-ten-200 cursor-pointer transition-all active:scale-95 font-bold text-sm group">
+                        <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform"></i><span>Nuevo</span>
+                        <input type="file" multiple class="hidden" onchange="driveApp.handleFileUpload(this.files)">
+                    </label>
+                </div>
+                <nav class="flex-1 px-3 space-y-1">
+                    <button onclick="driveApp.navigateToSection('root')" id="nav-root" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-ten-100 text-ten-700"><i class="fa-solid fa-hard-drive w-5 text-center"></i> Mi Unidad</button>
+                    <button onclick="driveApp.navigateToSection('shared')" id="nav-shared" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+                        <i class="fa-solid fa-users w-5 text-center"></i> Compartidos
+                        <span id="notif-badge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button onclick="driveApp.navigateToSection('trash')" id="nav-trash" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"><i class="fa-solid fa-trash-can w-5 text-center"></i> Papelera</button>
+                </nav>
+                
+                <!-- Premium Banner (Direct Link to premium.html) -->
+                <div id="premium-cta" class="px-4 mt-2">
+                    <a href="premium.html" class="block bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-center border border-slate-700 shadow-lg relative overflow-hidden group cursor-pointer transition-all hover:-translate-y-1">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-white opacity-5 rounded-full -mr-8 -mt-8"></div>
+                        <i class="fa-solid fa-crown text-yellow-400 text-2xl mb-2 group-hover:animate-bounce"></i>
+                        <h3 class="text-white font-bold text-sm">Pasar a Premium</h3>
+                        <p class="text-slate-400 text-[10px] mb-3">Consigue 1 TB y funciones extra</p>
+                        <div class="text-[10px] font-bold text-slate-900 bg-yellow-400 rounded py-1 px-2 uppercase tracking-wider">Mejorar Ahora</div>
+                    </a>
+                </div>
+
+                <div class="p-4 border-t border-slate-200 mt-auto">
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-500 mb-2"><i class="fa-solid fa-server"></i> Almacenamiento</div>
+                        <div class="w-full bg-slate-100 rounded-full h-1.5 mb-1"><div id="storage-bar" class="bg-ten-500 h-1.5 rounded-full w-[0%] transition-all duration-1000"></div></div>
+                        <div class="flex justify-between text-[10px] text-slate-400 mt-1"><span id="storage-used-text">0 MB</span><span id="storage-max-text">20 GB</span></div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="flex-1 flex flex-col bg-white relative">
+                <div class="h-16 border-b border-slate-100 flex items-center px-6 justify-between gap-4 z-20 bg-white">
+                    <div class="flex items-center gap-2 text-sm breadcrumbs overflow-hidden whitespace-nowrap mask-linear" id="drive-breadcrumbs"></div>
+                    <div class="flex items-center gap-3 flex-1 justify-end">
+                        <div class="relative group w-full max-w-xs">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 group-focus-within:text-ten-500 transition-colors"></i>
+                            <input type="text" id="drive-search" oninput="driveApp.filterContent(this.value)" placeholder="Buscar..." class="w-full bg-slate-100 focus:bg-white border-0 focus:ring-2 ring-ten-100 rounded-lg py-2 pl-9 pr-4 text-sm transition-all outline-none">
+                        </div>
+                        <div class="h-6 w-px bg-slate-200 mx-1"></div>
+                        <button onclick="driveApp.toggleSort()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><i class="fa-solid fa-arrow-down-short-wide" id="sort-icon"></i></button>
+                        <div class="flex gap-1" id="toolbar-actions">
+                             <button onclick="driveApp.openCreateFolderModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-ten-600 transition-colors" title="Nueva Carpeta"><i class="fa-solid fa-folder-plus"></i></button>
+                            <button onclick="driveApp.openCreateFileModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-ten-600 transition-colors" title="Nuevo Archivo"><i class="fa-solid fa-file-circle-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 relative select-none" id="drive-dropzone">
+                    <div id="shared-notifications" class="hidden mb-6 space-y-2"></div>
+                    <div id="drive-drag-overlay" class="absolute inset-4 rounded-2xl border-2 border-dashed border-ten-400 bg-ten-50/90 z-40 hidden flex flex-col items-center justify-center pointer-events-none animate-fade-in backdrop-blur-sm">
+                        <i class="fa-solid fa-cloud-arrow-up text-5xl text-ten-500 mb-4 animate-bounce"></i>
+                        <div class="text-ten-800 text-lg font-bold">Suelta para subir</div>
+                    </div>
+                    <div id="drive-loader" class="absolute inset-0 flex items-center justify-center bg-white z-30">
+                        <div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-2xl text-ten-500 mb-2"></i><span class="text-slate-400 text-xs font-medium">Sincronizando...</span></div>
+                    </div>
+                    <div id="drive-empty" class="hidden h-full flex flex-col items-center justify-center text-slate-400">
+                        <div class="bg-slate-50 p-8 rounded-full mb-4 border border-slate-100"><i class="fa-solid fa-box-open text-4xl opacity-30 text-ten-400"></i></div>
+                        <p class="font-medium text-sm">Esta carpeta está vacía</p>
+                    </div>
+                    <div id="drive-content" class="drive-grid hidden pb-20 relative z-10"></div>
+                    <div id="selection-container" class="absolute inset-0 pointer-events-none z-20"></div>
+                </div>
+
+                <div id="upload-panel" class="absolute bottom-6 right-6 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl hidden max-h-80 flex flex-col z-50 overflow-hidden ring-1 ring-black/5">
+                    <div class="p-3 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-600 uppercase flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-ten-500 animate-pulse"></div> Cola de Subida</span>
+                        <div class="flex gap-2">
+                            <button onclick="driveApp.clearUploads()" class="text-[10px] text-slate-400 hover:text-slate-600 font-medium uppercase">Limpiar</button>
+                            <button onclick="document.getElementById('upload-panel').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-chevron-down"></i></button>
+                        </div>
+                    </div>
+                    <div id="upload-list" class="flex-1 overflow-y-auto p-0 scroll-smooth"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SHOOTER -->
+        <div id="view-shooter" class="hidden w-full max-w-2xl glass-panel rounded-2xl p-8 shadow-2xl animate-fade-in bg-white/95 border-0 ring-1 ring-slate-200 mt-10">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2"><i class="fa-solid fa-rocket text-brand-500"></i> FileShooter</h2>
+                    <p class="text-slate-500 text-sm mt-1">Comparte archivos rápido y sin rastro.</p>
+                </div>
+            </div>
+            <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
+                <button onclick="shooterApp.setTab('upload')" id="tab-upload" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all shadow-sm bg-white text-brand-600">Subir</button>
+                <button onclick="shooterApp.setTab('download')" id="tab-download" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-700">Descargar</button>
+            </div>
+            <div id="shooter-upload-area" class="animate-fade-in">
+                <div id="s-drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center transition-all cursor-pointer hover:border-brand-500 hover:bg-brand-50 group relative bg-slate-50">
+                    <input type="file" id="s-file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <i class="fa-solid fa-cloud-arrow-up text-5xl text-slate-300 group-hover:text-brand-500 mb-3 transition-colors"></i>
+                    <p class="text-sm font-medium text-slate-600">Arrastra archivos aquí</p>
+                </div>
+                
+                <div id="s-premium-options" class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between opacity-50 pointer-events-none transition-all">
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <i class="fa-solid fa-lock text-yellow-500"></i>
+                        <span>Proteger con contraseña <span class="text-[10px] text-yellow-600 font-bold bg-yellow-100 px-1 rounded ml-1">PREMIUM</span></span>
+                    </div>
+                    <input type="password" id="s-password-input" class="bg-white border border-slate-300 rounded px-2 py-1 text-sm outline-none w-32" placeholder="Clave..." disabled>
+                </div>
+
+                <div id="s-file-list" class="mt-4 space-y-2 max-h-40 overflow-y-auto hidden"></div>
+                <div id="s-progress-area" class="mt-4 hidden">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1"><span>SUBIENDO...</span><span id="s-progress-text">0%</span></div>
+                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div id="s-progress-bar" class="bg-brand-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                </div>
+                <button id="s-btn-upload" onclick="shooterApp.startUpload()" class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all hidden text-sm">Disparar Archivos</button>
+                <div id="s-success" class="mt-6 hidden bg-green-50 border border-green-100 p-6 rounded-xl text-center animate-bounce-in">
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3"><i class="fa-solid fa-check text-xl"></i></div>
+                        <h3 class="font-bold text-slate-800 text-lg mb-1">¡Archivos Listos!</h3>
+                        <p class="text-slate-500 text-sm mb-4">Usa este enlace o ID.</p>
+                        <div class="bg-white p-2 rounded-lg shadow-sm border border-slate-100 mb-4"><img id="s-qr-code" src="" alt="QR Code" class="w-32 h-32 object-contain mx-auto"></div>
+                        <div class="flex items-center gap-2 bg-white p-2 pl-4 rounded-lg border border-slate-200 shadow-sm w-full max-w-[240px]">
+                            <code id="s-result-id" class="flex-1 font-mono text-xl text-brand-600 font-bold tracking-widest text-center">...</code>
+                            <button onclick="shooterApp.copyId()" class="h-8 w-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="shooter-download-area" class="hidden animate-fade-in">
+                <div class="flex gap-2 mb-6">
+                    <input type="text" id="s-download-id" placeholder="Pegar ID aquí" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-100 outline-none text-slate-800 text-center font-mono uppercase text-lg">
+                </div>
+                <button onclick="shooterApp.fetchPack()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all text-sm mb-4">Buscar Pack</button>
+                <div id="s-password-challenge" class="hidden mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
+                    <i class="fa-solid fa-lock text-yellow-500 text-2xl mb-2"></i>
+                    <p class="text-sm font-bold text-slate-700 mb-2">Este pack está protegido</p>
+                    <input type="password" id="s-challenge-input" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-center mb-2 outline-none focus:border-yellow-500" placeholder="Introduce la contraseña">
+                    <button onclick="shooterApp.verifyPassword()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 rounded shadow transition-colors">Desbloquear</button>
+                </div>
+                <div id="s-download-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                <button id="s-btn-zip" onclick="shooterApp.downloadZip()" class="mt-4 w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl shadow-md transition-all hidden font-bold text-sm"><i class="fa-solid fa-file-zipper mr-2"></i> Descargar ZIP</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Context Menu -->
+    <div id="context-menu">
+        <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4"></i> Abrir</div>
+        <div class="context-item" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4"></i> Compartir</div>
+        <div class="context-separator"></div>
+        <div class="context-item danger" onclick="driveApp.ctxAction('delete')"><i class="fa-solid fa-trash w-4"></i> Eliminar</div>
+    </div>
+
+    <!-- Modals (Confirm, Create, Preview) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in">
+        <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl border border-slate-100 text-center transform scale-100 transition-all">
+            <div id="confirm-icon" class="mb-3 text-3xl"></div>
+            <h3 id="confirm-title" class="font-bold text-slate-800 text-lg mb-1"></h3>
+            <p id="confirm-msg" class="text-slate-500 text-sm mb-5 leading-tight"></p>
+            <div id="share-input-area" class="hidden mb-4"><input type="text" id="share-username" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-ten-100 outline-none" placeholder="Nombre de usuario..."></div>
+            <div class="flex justify-center gap-2">
+                <button id="btn-confirm-cancel" onclick="driveApp.closeConfirm(false)" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 text-sm font-bold transition-colors">Cancelar</button>
+                <button id="btn-confirm-ok" class="flex-1 px-4 py-2 rounded-lg text-white text-sm font-bold shadow-md transition-colors"></button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create/File/Preview Modals (Same structure) -->
+    <div id="modal-create-folder" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-6 rounded-2xl w-80 shadow-2xl border border-slate-100"><h3 class="font-bold text-slate-800 text-sm mb-3">Nueva Carpeta</h3><input type="text" id="new-folder-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-4 text-slate-800 text-sm focus:ring-2 focus:ring-ten-100 outline-none" placeholder="Nombre..."><div class="flex justify-end gap-2"><button onclick="document.getElementById('modal-create-folder').classList.add('hidden')" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-bold">Cancelar</button><button onclick="driveApp.createFolder()" class="px-3 py-1.5 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-xs font-bold">Crear</button></div></div></div>
+    <div id="modal-create-file" class="fixed inset-0 bg-slate-900/20 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-6 rounded-2xl w-96 shadow-2xl border border-slate-100"><h3 class="font-bold text-slate-800 text-sm mb-3">Nuevo Archivo de Texto</h3><input type="text" id="new-file-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 mb-3 text-slate-800 text-xs focus:border-ten-500 outline-none" placeholder="nombre.txt"><textarea id="new-file-content" class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 text-xs resize-none focus:border-ten-500 outline-none" placeholder="Escribe aquí..."></textarea><div class="flex justify-end gap-2 mt-3"><button onclick="document.getElementById('modal-create-file').classList.add('hidden')" class="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-xs font-bold">Cancelar</button><button onclick="driveApp.createFile()" class="px-3 py-1.5 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-xs font-bold">Guardar</button></div></div></div>
+    <div id="modal-preview" class="fixed inset-0 bg-slate-900/95 z-[80] hidden flex flex-col items-center justify-center backdrop-blur-md animate-fade-in"><button onclick="driveApp.closePreview()" class="absolute top-5 right-5 text-white/40 hover:text-white text-2xl transition-colors z-50"><i class="fa-solid fa-xmark"></i></button><div id="preview-content" class="w-full h-full p-4 flex items-center justify-center overflow-hidden"></div><div class="absolute bottom-8 flex flex-col items-center gap-3 w-full px-4"><div id="preview-caption" class="text-white font-medium text-lg drop-shadow-md"></div><a id="preview-download-btn" href="#" target="_blank" class="px-5 py-2 bg-white text-slate-900 rounded-full font-bold text-sm shadow-lg hover:bg-slate-100 transition-colors flex items-center gap-2"><i class="fa-solid fa-download"></i> Descargar</a></div></div>
+
+    <!-- FIREBASE & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, setDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, getDocs, writeBatch, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+        const firebaseConfig = { apiKey: "AIzaSyDh4pxMFbAN7w5ehnHnHM4Tk04rJMTcLkk", authDomain: "pandadrive-af6b6.firebaseapp.com", databaseURL: "https://pandadrive-af6b6-default-rtdb.europe-west1.firebasedatabase.app", projectId: "pandadrive-af6b6", messagingSenderId: "682265494431", appId: "1:682265494431:web:c9e3276f3774b3501633aa", measurementId: "G-V1DG96TNWJ" };
+        const fbApp = initializeApp(firebaseConfig); const auth = getAuth(fbApp); const db = getFirestore(fbApp); const API_BASE = 'https://yyf.mubilop.com';
+
+        window.app = {
+            navigate: (view) => {
+                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+                if (view === 'drive') {
+                    if (auth.currentUser) { document.getElementById('view-drive-dashboard').classList.remove('hidden'); document.getElementById('user-info').classList.remove('hidden'); }
+                    else document.getElementById('view-drive-auth').classList.remove('hidden');
+                    document.getElementById('nav-btn-drive').classList.replace('text-slate-500', 'bg-white');
+                    document.getElementById('nav-btn-shooter').classList.replace('bg-white', 'text-slate-500');
+                } else if (view === 'shooter') {
+                    document.getElementById('view-shooter').classList.remove('hidden'); shooterApp.setTab('upload');
+                    document.getElementById('nav-btn-shooter').classList.replace('text-slate-500', 'bg-white');
+                    document.getElementById('nav-btn-drive').classList.replace('bg-white', 'text-slate-500');
+                }
+            }
+        };
+
+        // State & Vars
+        let currentFolder = null, currentSection = 'root', folderPath = [{id: null, name: 'Inicio'}], unsubscribeSnapshot = null, unsubscribeStorage = null, pendingAction = null, sortOrder = 'desc', allItems = [], totalStorageBytes = 0, userPlan = 'free', maxStorageBytes = 20 * 1024 * 1024 * 1024;
+        let ctxTargetId = null, ctxTargetData = null;
+        let isSelecting = false, startX = 0, startY = 0; const selectionBox = document.createElement('div'); selectionBox.className = 'selection-box';
+
+        window.driveApp = {
+            resetSession: () => { if(unsubscribeSnapshot) unsubscribeSnapshot(); if(unsubscribeStorage) unsubscribeStorage(); unsubscribeSnapshot=null; unsubscribeStorage=null; currentFolder=null; currentSection='root'; folderPath=[{id:null, name:'Inicio'}]; allItems=[]; totalStorageBytes=0; userPlan='free'; document.getElementById('drive-content').innerHTML=''; },
+            handleAuth: async (e) => {
+                e.preventDefault(); const user = document.getElementById('auth-username').value.trim(); const pass = document.getElementById('auth-password').value; const email = `${user}@pandadrive.app`;
+                try {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                    const docRef = doc(db, "users", auth.currentUser.uid); const snap = await getDoc(docRef);
+                    if(!snap.exists()) await setDoc(docRef, { username: user, plan: 'free' });
+                    document.getElementById('display-username').innerText = user;
+                } catch (error) {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                        try { const cred = await createUserWithEmailAndPassword(auth, email, pass); await updateProfile(cred.user, { displayName: user }); await setDoc(doc(db, "users", cred.user.uid), { username: user, plan: 'free' }); document.getElementById('display-username').innerText = user; }
+                        catch (regError) { alert(regError.message); }
+                    } else alert(error.message);
+                }
+            },
+            logout: () => { driveApp.resetSession(); signOut(auth); app.navigate('drive'); },
+            
+            initUserListener: () => {
+                onSnapshot(doc(db, "users", auth.currentUser.uid), (doc) => {
+                    if(doc.exists()) { userPlan = doc.data().plan || 'free'; driveApp.updateUIForPlan(); }
+                });
+            },
+            updateUIForPlan: () => {
+                if(userPlan==='premium') { maxStorageBytes = 1024*1024*1024*1024; document.getElementById('premium-badge').classList.remove('hidden'); document.getElementById('premium-cta').classList.add('hidden'); document.getElementById('storage-max-text').innerText="1 TB"; document.getElementById('s-premium-options').classList.remove('opacity-50','pointer-events-none'); document.getElementById('s-password-input').disabled=false; }
+                else { maxStorageBytes = 20*1024*1024*1024; document.getElementById('premium-badge').classList.add('hidden'); document.getElementById('premium-cta').classList.remove('hidden'); document.getElementById('storage-max-text').innerText="20 GB"; document.getElementById('s-premium-options').classList.add('opacity-50','pointer-events-none'); document.getElementById('s-password-input').disabled=true; }
+                driveApp.updateStorageUI();
+            },
+            
+            // Storage
+            initStorageListener: () => {
+                if(unsubscribeStorage) unsubscribeStorage();
+                unsubscribeStorage = onSnapshot(query(collection(db, "assets"), where("ownerId", "==", auth.currentUser.uid)), (snap) => {
+                    let t = 0; snap.forEach(d => { const dt = d.data(); if(dt.type==='file' && dt.size) t += dt.size; });
+                    totalStorageBytes = t; driveApp.updateStorageUI();
+                });
+            },
+            calculateStorage: async (uid) => { const snap = await getDocs(query(collection(db, "assets"), where("ownerId", "==", uid))); let t=0; snap.forEach(d=>{ const dt=d.data(); if(dt.type==='file' && dt.size) t+=dt.size; }); return t; },
+            getStorageLimitForUser: async (uid) => { if(uid===auth.currentUser.uid) return maxStorageBytes; const s = await getDoc(doc(db,"users",uid)); return (s.exists() && s.data().plan==='premium') ? 1024*1024*1024*1024 : 20*1024*1024*1024; },
+            updateStorageUI: () => {
+                const p = Math.min((totalStorageBytes/maxStorageBytes)*100, 100);
+                const b = document.getElementById('storage-bar'); b.style.width=`${p}%`;
+                b.className = p>90 ? "bg-red-500 h-1.5 rounded-full w-[0%] transition-all duration-1000" : (p>70?"bg-yellow-500 h-1.5 rounded-full w-[0%] transition-all duration-1000":"bg-ten-500 h-1.5 rounded-full w-[0%] transition-all duration-1000");
+                document.getElementById('storage-used-text').innerText = driveApp.formatBytes(totalStorageBytes);
+            },
+            formatBytes: (b,d=2) => { if(!+b) return '0 B'; const k=1024,dm=d<0?0:d,s=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(k)); return `${parseFloat((b/Math.pow(k,i)).toFixed(dm))} ${s[i]}`; },
+
+            // Context Menu
+            showContextMenu: (e, id, str) => { e.preventDefault(); e.stopPropagation(); const m = document.getElementById('context-menu'); ctxTargetId=id; ctxTargetData=JSON.parse(decodeURIComponent(str)); m.style.display='block'; m.style.left=`${e.pageX}px`; m.style.top=`${e.pageY}px`; },
+            ctxAction: (act) => {
+                document.getElementById('context-menu').style.display='none'; if(!ctxTargetId) return;
+                const ids = driveApp.getBatchIds(ctxTargetId);
+                if(act==='open') { if(ctxTargetData.type==='folder') driveApp.navigateToFolder(ctxTargetId, ctxTargetData.name); else driveApp.previewItem(ctxTargetData); }
+                else if(act==='share') { if(ids.length>1) driveApp.showAlert("Info", "Comparte de una en una."); else driveApp.promptShare(ctxTargetId); }
+                else if(act==='delete') { if(currentSection==='trash') driveApp.confirmDeleteForever(ctxTargetId, ctxTargetData.type); else driveApp.confirmTrash(ctxTargetId); }
+            },
+
+            // Selection
+            initBoxSelection: () => {
+                const c = document.getElementById('drive-dropzone');
+                document.addEventListener('click', () => document.getElementById('context-menu').style.display='none');
+                c.addEventListener('mousedown', e => { if(e.target!==c && e.target.id!=='drive-content') return; if(e.button!==0) return; isSelecting=true; const r=c.getBoundingClientRect(); startX=e.clientX-r.left+c.scrollLeft; startY=e.clientY-r.top+c.scrollTop; selectionBox.style.width='0px'; selectionBox.style.height='0px'; selectionBox.style.left=startX+'px'; selectionBox.style.top=startY+'px'; document.getElementById('selection-container').appendChild(selectionBox); document.querySelectorAll('.item-selected').forEach(el=>el.classList.remove('item-selected')); });
+                c.addEventListener('mousemove', e => { if(!isSelecting) return; const r=c.getBoundingClientRect(); const cx=e.clientX-r.left+c.scrollLeft, cy=e.clientY-r.top+c.scrollTop; const w=Math.abs(cx-startX), h=Math.abs(cy-startY), l=Math.min(cx,startX), t=Math.min(cy,startY); selectionBox.style.width=w+'px'; selectionBox.style.height=h+'px'; selectionBox.style.left=l+'px'; selectionBox.style.top=t+'px'; driveApp.checkSelectionCollision(l,t,w,h); });
+                document.addEventListener('mouseup', () => { if(isSelecting) { isSelecting=false; if(selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox); }});
+            },
+            checkSelectionCollision: (x,y,w,h) => { document.querySelectorAll('.drive-item').forEach(i => { const il=i.offsetLeft, it=i.offsetTop, ir=il+i.offsetWidth, ib=it+i.offsetHeight; const bl=x, bt=y, br=x+w, bb=y+h; if(!(br<il || bl>ir || bb<it || bt>ib)) i.classList.add('item-selected'); else i.classList.remove('item-selected'); }); },
+            getBatchIds: (tid) => { const s=document.querySelectorAll('.item-selected'); const ids=Array.from(s).map(el=>el.dataset.id); return ids.includes(tid)?ids:[tid]; },
+
+            // Nav & Grid
+            navigateToSection: (s) => {
+                currentSection=s; document.getElementById('nav-root').className = s==='root' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-ten-100 text-ten-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-trash').className = s==='trash' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-red-100 text-red-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-shared').className = s==='shared' ? "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-700" : "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('shared-notifications').innerHTML='';
+                if(s==='root') { currentFolder=null; folderPath=[{id:null,name:'Inicio'}]; document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
+                else if(s==='trash') { currentFolder='trash'; folderPath=[{id:'trash',name:'Papelera'}]; document.getElementById('toolbar-actions').classList.add('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.add('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
+                else if(s==='shared') { currentFolder='shared_root'; folderPath=[{id:'shared_root',name:'Compartidos'}]; document.getElementById('toolbar-actions').classList.add('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.add('hidden'); document.getElementById('shared-notifications').classList.remove('hidden'); driveApp.loadNotifications(); }
+                driveApp.renderBreadcrumbs(); driveApp.loadContent();
+            },
+            navigateToFolder: (id,name) => {
+                if(currentSection==='trash') return; currentFolder=id; const idx=folderPath.findIndex(p=>p.id===id); if(idx!==-1) folderPath=folderPath.slice(0,idx+1); else folderPath.push({id:id,name:name});
+                document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); driveApp.renderBreadcrumbs(); driveApp.loadContent();
+            },
+            renderBreadcrumbs: () => { const el=document.getElementById('drive-breadcrumbs'); el.innerHTML=''; folderPath.forEach((p,i)=>{ const s=document.createElement('span'); s.className=i===folderPath.length-1?'text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded cursor-default':'text-slate-500 cursor-pointer hover:text-ten-600 hover:underline px-1'; s.innerText=p.name; if(i!==folderPath.length-1) { s.onclick=()=>driveApp.navigateToFolder(p.id,p.name); el.appendChild(s); el.appendChild(document.createElement('i')).className='fa-solid fa-angle-right text-[10px] text-slate-300 mx-1'; } else el.appendChild(s); }); },
+            toggleSort: () => { sortOrder=sortOrder==='desc'?'asc':'desc'; document.getElementById('sort-icon').className=sortOrder==='desc'?'fa-solid fa-arrow-down-short-wide':'fa-solid fa-arrow-up-wide-short'; driveApp.loadContent(); },
+            filterContent: (v) => { const l=v.toLowerCase(); driveApp.renderGrid(allItems.filter(i=>i.name.toLowerCase().includes(l))); },
+            loadContent: () => {
+                if(unsubscribeSnapshot) unsubscribeSnapshot(); document.getElementById('drive-loader').classList.remove('hidden');
+                let q; const uid=auth.currentUser.uid;
+                if(currentSection==='trash') q=query(collection(db,"assets"),where("ownerId","==",uid),where("parentId","==","trash"),orderBy("createdAt","desc"));
+                else if(currentSection==='shared' && currentFolder==='shared_root') q=query(collection(db,"assets"),where("sharedWith","array-contains",uid),where("type","==","folder"));
+                else { if(currentFolder===null) q=query(collection(db,"assets"),where("ownerId","==",uid),where("parentId","==",null),orderBy("type","desc"),orderBy("createdAt",sortOrder)); else q=query(collection(db,"assets"),where("parentId","==",currentFolder),orderBy("type","desc"),orderBy("createdAt",sortOrder)); }
+                unsubscribeSnapshot=onSnapshot(q,(s)=>{ document.getElementById('drive-loader').classList.add('hidden'); allItems=[]; s.forEach(d=>allItems.push({id:d.id,...d.data()})); driveApp.filterContent(document.getElementById('drive-search').value); });
+            },
+            renderGrid: (items) => { const g=document.getElementById('drive-content'), e=document.getElementById('drive-empty'); g.innerHTML=''; if(items.length===0) { e.classList.remove('hidden'); g.classList.add('hidden'); } else { e.classList.add('hidden'); g.classList.remove('hidden'); items.forEach(i=>driveApp.createItemElement(i)); } },
+            createItemElement: (d) => {
+                const g=document.getElementById('drive-content'); const div=document.createElement('div'); div.className="drive-item flex flex-col items-center p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group relative border border-transparent hover:border-slate-200 select-none"; div.dataset.id=d.id; div.draggable=currentSection!=='trash';
+                div.setAttribute('oncontextmenu', `driveApp.showContextMenu(event, '${d.id}', '${encodeURIComponent(JSON.stringify(d))}')`);
+                if(div.draggable) {
+                    div.ondragstart=e=>{ const ids=driveApp.getBatchIds(d.id); e.dataTransfer.setData("text/plain",JSON.stringify(ids)); e.dataTransfer.setData("type",d.type); e.target.classList.add('drag-ghost'); };
+                    div.ondragend=e=>e.target.classList.remove('drag-ghost');
+                    if(d.type==='folder') {
+                        div.ondragover=e=>{e.preventDefault();e.currentTarget.classList.add('folder-drag-over');}; div.ondragleave=e=>e.currentTarget.classList.remove('folder-drag-over');
+                        div.ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('folder-drag-over'); const r=e.dataTransfer.getData("text/plain"); try{const i=JSON.parse(r); if(Array.isArray(i)&&!i.includes(d.id)) driveApp.confirmMove(i,d.id);}catch(e){}};
+                    }
+                }
+                let ic=''; if(d.type==='folder') ic=`<div class="relative"><i class="fa-solid fa-folder text-6xl text-yellow-400 drop-shadow-sm group-hover:scale-105 transition-transform"></i>${d.sharedWith?'<i class="fa-solid fa-user-group absolute bottom-0 right-0 text-blue-500 bg-white rounded-full p-1 text-xs shadow-sm"></i>':''}</div>`;
+                else { let c='text-slate-400',f='fa-file',b='bg-slate-50',m=d.mimeType||''; if(m.includes('image')){f='fa-file-image';c='text-purple-500';b='bg-purple-50';} else if(m.includes('pdf')){f='fa-file-pdf';c='text-red-500';b='bg-red-50';} else if(m.includes('text')||m.includes('html')){f='fa-file-code';c='text-blue-500';b='bg-blue-50';} else if(m.includes('video')){f='fa-file-video';c='text-pink-500';b='bg-pink-50';} else if(m.includes('audio')){f='fa-file-audio';c='text-cyan-500';b='bg-cyan-50';} ic=`<div class="h-16 w-16 rounded-2xl ${b} flex items-center justify-center shadow-sm group-hover:shadow transition-all mb-1 group-hover:scale-105"><i class="fa-solid ${f} text-3xl ${c}"></i></div>`; }
+                div.innerHTML=`${ic}<span class="text-xs font-medium text-slate-600 text-center truncate w-full px-1 mt-2 group-hover:text-slate-900">${d.name}</span>`;
+                div.addEventListener('click',e=>{if(!e.target.closest('button')){if(d.type==='folder') driveApp.navigateToFolder(d.id,d.name); else driveApp.previewItem(d);}});
+                g.appendChild(div);
+            },
+
+            // --- ACTIONS ---
+            confirmMove: (ids, tid) => { driveApp.showConfirm('move', async()=>{ const b=writeBatch(db); (Array.isArray(ids)?ids:[ids]).forEach(i=>b.update(doc(db,"assets",i),{parentId:tid})); await b.commit(); }, Array.isArray(ids)&&ids.length>1); },
+            confirmTrash: (id) => { const ids=driveApp.getBatchIds(id); driveApp.showConfirm('trash', async()=>{ const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:'trash'})); await b.commit(); }, ids.length>1); },
+            restoreItem: (id) => { const ids=driveApp.getBatchIds(id); const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:null})); b.commit(); },
+            confirmDeleteForever: (id, type) => {
+                const ids = driveApp.getBatchIds(id);
+                driveApp.showConfirm('delete', async () => {
+                    const btn = document.getElementById('btn-confirm-ok'); const og = btn.innerText; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                    try {
+                        let all = [];
+                        const gather = async (rid) => { all.push(rid); const s = await getDocs(query(collection(db,"assets"),where("parentId","==",rid))); await Promise.all(s.docs.map(d=>gather(d.id))); };
+                        await Promise.all(ids.map(i=>gather(i)));
+                        for(let i=0; i<all.length; i+=500) { const c=all.slice(i,i+500); const b=writeBatch(db); c.forEach(x=>b.delete(doc(db,"assets",x))); await b.commit(); }
+                    } catch(e) { console.error(e); } finally { btn.disabled=false; btn.innerText=og; driveApp.closeConfirm(false); }
+                }, ids.length > 1);
+            },
+            promptShare: (fid) => {
+                driveApp.showConfirm('share', async () => {
+                    const u = document.getElementById('share-username').value.trim(); if(!u) return;
+                    const snap = await getDocs(query(collection(db,"users"),where("username","==",u)));
+                    if(snap.empty) { driveApp.showAlert("Error", "Usuario no encontrado."); return; }
+                    const tuid = snap.docs[0].id; if(tuid===auth.currentUser.uid) { driveApp.showAlert("Error", "No puedes compartir contigo mismo."); return; }
+                    await addDoc(collection(db,"notifications"), { from:auth.currentUser.uid, fromName:auth.currentUser.displayName||"Usuario", to:tuid, type:'share_request', folderId:fid, status:'pending', createdAt:serverTimestamp() });
+                    driveApp.showAlert("Enviado", `Solicitud enviada a ${u}.`);
+                });
+            },
+            loadNotifications: () => {
+                const na = document.getElementById('shared-notifications');
+                onSnapshot(query(collection(db,"notifications"),where("to","==",auth.currentUser.uid),where("status","==","pending")), (s) => {
+                    na.innerHTML=''; document.getElementById('notif-badge').classList.toggle('hidden', s.empty); if(!s.empty) document.getElementById('notif-badge').innerText = s.size;
+                    s.forEach(d => { const dt=d.data(); const div=document.createElement('div'); div.className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center justify-between text-sm"; div.innerHTML=`<span><b>${dt.fromName}</b> comparte una carpeta.</span><div class="flex gap-2"><button onclick="driveApp.acceptShare('${d.id}','${dt.folderId}')" class="px-3 py-1 bg-blue-600 text-white rounded font-bold">Aceptar</button><button onclick="driveApp.rejectShare('${d.id}')" class="px-3 py-1 bg-slate-200 text-slate-600 rounded font-bold">Rechazar</button></div>`; na.appendChild(div); });
+                });
+            },
+            acceptShare: async (nid, fid) => { const b=writeBatch(db); b.update(doc(db,"assets",fid),{sharedWith:arrayUnion(auth.currentUser.uid)}); b.delete(doc(db,"notifications",nid)); await b.commit(); driveApp.showAlert("¡Listo!", "Carpeta añadida."); },
+            rejectShare: async (nid) => { await deleteDoc(doc(db,"notifications",nid)); },
+            
+            showConfirm: (t, act, batch=false) => {
+                const m=document.getElementById('modal-confirm'), i=document.getElementById('confirm-icon'), tit=document.getElementById('confirm-title'), msg=document.getElementById('confirm-msg'), bo=document.getElementById('btn-confirm-ok'), bc=document.getElementById('btn-confirm-cancel'), inp=document.getElementById('share-input-area');
+                inp.classList.add('hidden'); bc.classList.remove('hidden'); bo.innerText="Aceptar"; const s=batch?" (Múltiple)":"";
+                if(t==='trash') { i.innerHTML='<i class="fa-solid fa-trash-can text-slate-400"></i>'; tit.innerText="Mover a Papelera"+s; msg.innerText="Podrás restaurarlo luego."; bo.className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 rounded-lg text-white text-sm font-bold"; }
+                else if(t==='delete') { i.innerHTML='<i class="fa-solid fa-ban text-red-500"></i>'; tit.innerText="Eliminar Definitivamente"+s; msg.innerText="Se borrará todo."; bo.className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-white text-sm font-bold"; }
+                else if(t==='move') { i.innerHTML='<i class="fa-solid fa-folder-tree text-ten-500"></i>'; tit.innerText="Mover Archivo"+s; msg.innerText="¿Mover a esta carpeta?"; bo.className="flex-1 px-4 py-2 bg-ten-600 hover:bg-ten-700 rounded-lg text-white text-sm font-bold"; }
+                else if(t==='share') { i.innerHTML='<i class="fa-solid fa-share-nodes text-blue-500"></i>'; tit.innerText="Compartir Carpeta"; msg.innerText="Introduce usuario:"; inp.classList.remove('hidden'); document.getElementById('share-username').value=''; bo.className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-bold"; bo.innerText="Enviar"; }
+                pendingAction=act; m.classList.remove('hidden'); if(t==='share') document.getElementById('share-username').focus();
+            },
+            showAlert: (t, m) => { document.getElementById('confirm-icon').innerHTML='<i class="fa-solid fa-triangle-exclamation text-red-500"></i>'; document.getElementById('confirm-title').innerText=t; document.getElementById('confirm-msg').innerText=m; document.getElementById('share-input-area').classList.add('hidden'); document.getElementById('btn-confirm-ok').innerText="Entendido"; document.getElementById('btn-confirm-cancel').classList.add('hidden'); pendingAction=null; document.getElementById('modal-confirm').classList.remove('hidden'); },
+            closeConfirm: (ex) => { document.getElementById('modal-confirm').classList.add('hidden'); document.getElementById('btn-confirm-cancel').classList.remove('hidden'); if(ex && pendingAction) pendingAction(); pendingAction=null; },
+            
+            // Upload & Create (Same as v5.2 + Quota Logic)
+            uploadOneFile: (file, id) => {
+                return new Promise(async (resolve, reject) => {
+                    const maxRetries = 3; let attempt = 0; let success = false; let responseData = null; const fd = new FormData(); fd.append('file', file);
+                    while (attempt < maxRetries && !success) {
+                        try {
+                            const xhr = new XMLHttpRequest(); xhr.open('POST', `${API_BASE}/api/upload`, true);
+                            await new Promise((res, rej) => {
+                                xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const p = (e.loaded/e.total)*100; document.getElementById(`bar-${id}`).style.width = `${p}%`; document.getElementById(`pct-${id}`).innerText = `${Math.round(p)}%`; }};
+                                xhr.onload = () => { if (xhr.status === 200) { responseData = JSON.parse(xhr.responseText); res(); } else rej(new Error(`Status ${xhr.status}`)); };
+                                xhr.onerror = () => rej(new Error("Network Error")); xhr.send(fd);
+                            });
+                            success = true;
+                        } catch (e) { attempt++; if (attempt >= maxRetries) { reject(e); return; } await new Promise(r => setTimeout(r, 1500)); }
+                    }
+                    resolve(responseData);
+                });
+            },
+            handleFileUpload: async (fl) => {
+                if(currentSection==='trash') { driveApp.showAlert("Error", "No subas a la papelera."); return; }
+                let size=0; for(let i=0; i<fl.length; i++) size+=fl[i].size;
+                
+                let owner = auth.currentUser.uid;
+                if(currentFolder && currentFolder!=='shared_root') { try{const d=await getDoc(doc(db,"assets",currentFolder)); if(d.exists()) owner=d.data().ownerId;}catch(e){} }
+                
+                const limit = await driveApp.getStorageLimitForUser(owner);
+                const used = owner===auth.currentUser.uid ? totalStorageBytes : await driveApp.calculateStorage(owner);
+                
+                if(used+size > limit) { driveApp.showAlert("Espacio Insuficiente", "Límite de almacenamiento alcanzado."); return; }
+
+                const p=document.getElementById('upload-panel'), l=document.getElementById('upload-list'); p.classList.remove('hidden');
+                const ups = Array.from(fl).map(f => {
+                    const id = Date.now() + Math.random().toString(16).slice(2);
+                    const d = document.createElement('div'); d.id=`upload-${id}`; d.className="p-3 border-b border-slate-50 last:border-0 bg-white animate-fade-in"; d.innerHTML=`<div class="flex justify-between mb-1.5 items-center"><span class="truncate w-32 text-xs font-medium text-slate-700">${f.name}</span><span id="pct-${id}" class="text-[10px] font-bold text-ten-600">0%</span></div><div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div id="bar-${id}" class="bg-ten-500 h-2 rounded-full progress-bar-smooth" style="width: 0%"></div></div>`;
+                    l.prepend(d); return { file:f, id:id, div:d };
+                });
+
+                const res = await Promise.allSettled(ups.map(u => driveApp.uploadOneFile(u.file, u.id)));
+                const payloads = [];
+                res.forEach((r,i) => {
+                    if(r.status==='fulfilled') {
+                        const url = r.value.fileUrl.startsWith('http') ? r.value.fileUrl : API_BASE + r.value.fileUrl;
+                        payloads.push({ ownerId:owner, parentId:currentFolder, name:ups[i].file.name, type:'file', mimeType:ups[i].file.type, size:ups[i].file.size, url:url, createdAt:serverTimestamp(), storageProvider:'yyf' });
+                        document.getElementById(`pct-${ups[i].id}`).innerText = "Guardando...";
+                    } else document.getElementById(`pct-${ups[i].id}`).innerHTML = "Error";
+                });
+
+                if(payloads.length>0) {
+                    const b = writeBatch(db); payloads.forEach(p => b.set(doc(collection(db,"assets")), p)); await b.commit();
+                    ups.forEach((u,i) => { if(res[i].status==='fulfilled') { document.getElementById(`bar-${u.id}`).style.width='100%'; document.getElementById(`bar-${u.id}`).classList.replace('bg-ten-500','bg-green-500'); document.getElementById(`pct-${u.id}`).innerHTML='<i class="fa-solid fa-check text-green-500"></i>'; setTimeout(()=>{ if(u.div){u.div.style.opacity='0'; setTimeout(()=>{u.div.remove(); if(l.children.length===0) p.classList.add('hidden');},500);} }, 3000); } });
+                }
+            },
+            clearUploads: () => { document.getElementById('upload-list').innerHTML=''; document.getElementById('upload-panel').classList.add('hidden'); },
+            openCreateFolderModal: () => { document.getElementById('modal-create-folder').classList.remove('hidden'); document.getElementById('new-folder-name').focus(); },
+            createFolder: async () => { const n=document.getElementById('new-folder-name').value.trim(); if(!n) return; document.getElementById('modal-create-folder').classList.add('hidden'); document.getElementById('new-folder-name').value=''; await addDoc(collection(db,"assets"), {ownerId:auth.currentUser.uid, parentId:currentFolder, name:n, type:'folder', createdAt:serverTimestamp()}); },
+            openCreateFileModal: () => { document.getElementById('modal-create-file').classList.remove('hidden'); document.getElementById('new-file-name').focus(); },
+            createFile: () => { let n=document.getElementById('new-file-name').value.trim(); const c=document.getElementById('new-file-content').value; if(!n) return; if(!n.includes('.')) n+='.txt'; document.getElementById('modal-create-file').classList.add('hidden'); document.getElementById('new-file-name').value=''; document.getElementById('new-file-content').value=''; driveApp.handleFileUpload([new File([c],n,{type:'text/plain'})]); }
+        };
+        
+        driveApp.initBoxSelection(); 
+        document.getElementById('btn-confirm-ok').addEventListener('click', () => driveApp.closeConfirm(true));
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                if (user.displayName) document.getElementById('display-username').innerText = user.displayName;
+                else getDoc(doc(db, "users", user.uid)).then(snap => { if (snap.exists()) document.getElementById('display-username').innerText = snap.data().username; });
+                const up = new URLSearchParams(window.location.search); if (up.get('id')) { app.navigate('shooter'); document.getElementById('s-download-id').value = up.get('id'); shooterApp.fetchPack(); } else app.navigate('drive');
+                driveApp.initUserListener(); driveApp.initStorageListener(); driveApp.resetSession(); driveApp.loadContent();
+            } else { driveApp.resetSession(); app.navigate('drive'); }
+        });
+
+        // Shooter Logic
+        window.shooterApp = {
+             files: [], currentPack: null,
+             setTab: (t) => {
+                 const u=document.getElementById('shooter-upload-area'), d=document.getElementById('shooter-download-area'), tu=document.getElementById('tab-upload'), td=document.getElementById('tab-download');
+                 if(t==='upload') { u.classList.remove('hidden'); d.classList.add('hidden'); tu.classList.add('bg-white','text-brand-600','shadow-sm'); tu.classList.remove('text-slate-500'); td.classList.remove('bg-white','text-brand-600','shadow-sm'); td.classList.add('text-slate-500'); }
+                 else { u.classList.add('hidden'); d.classList.remove('hidden'); td.classList.add('bg-white','text-brand-600','shadow-sm'); td.classList.remove('text-slate-500'); tu.classList.remove('bg-white','text-brand-600','shadow-sm'); tu.classList.add('text-slate-500'); }
+             },
+             init: () => { const dz=document.getElementById('s-drop-zone'), i=document.getElementById('s-file-input'); i.onchange=e=>shooterApp.addFiles(e.target.files); dz.ondrop=e=>{e.preventDefault();shooterApp.addFiles(e.dataTransfer.files);}; dz.ondragover=e=>{e.preventDefault();dz.classList.add('border-brand-500','bg-brand-50');}; dz.ondragleave=e=>{e.preventDefault();dz.classList.remove('border-brand-500','bg-brand-50');}; },
+             addFiles: (fl) => { shooterApp.files=[...shooterApp.files,...fl]; shooterApp.render(); },
+             render: () => { const l=document.getElementById('s-file-list'), b=document.getElementById('s-btn-upload'); l.innerHTML=''; if(shooterApp.files.length>0) { l.classList.remove('hidden'); b.classList.remove('hidden'); } shooterApp.files.forEach((f,i)=>{l.innerHTML+=`<div class="flex justify-between items-center bg-white border p-2 rounded text-xs"><span class="truncate">${f.name}</span><button onclick="shooterApp.rem(${i})" class="text-red-400"><i class="fa-solid fa-times"></i></button></div>`;}); },
+             rem: (i) => { shooterApp.files.splice(i,1); shooterApp.render(); },
+             startUpload: async () => {
+                 const b=document.getElementById('s-btn-upload'), p=document.getElementById('s-progress-area'), bar=document.getElementById('s-progress-bar'), pass=document.getElementById('s-password-input');
+                 b.classList.add('hidden'); p.classList.remove('hidden');
+                 try {
+                     const meta=[]; for(let i=0;i<shooterApp.files.length;i++) { const f=shooterApp.files[i]; const fd=new FormData(); fd.append('file',f); const r=await fetch(`${API_BASE}/api/upload`,{method:'POST',body:fd}); const j=await r.json(); meta.push({name:f.name, url:j.fileUrl, size:f.size}); bar.style.transition='width 0.5s ease'; bar.style.width=`${Math.round(((i+1)/shooterApp.files.length)*100)}%`; }
+                     const m={appName:"FileShooter", files:meta}; if(userPlan==='premium' && pass.value.trim()!=='') { m.isProtected=true; m.passwordHash=btoa(pass.value.trim()); }
+                     const mb=new Blob([JSON.stringify(m)],{type:'application/json'}); const mfd=new FormData(); mfd.append('file',mb,'fs_manifest.json');
+                     const mr=await fetch(`${API_BASE}/api/upload`,{method:'POST',body:mfd}); const mj=await mr.json();
+                     let pid=mj.fileId; try{const pt=mj.fileUrl.split('/'); if(pt.length>=3) pid=pt[2];}catch(e){}
+                     document.getElementById('s-result-id').innerText=pid; document.getElementById('s-qr-code').src=`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://logise1.github.io/tendrive?id=${pid}`)}`;
+                     document.getElementById('s-success').classList.remove('hidden'); p.classList.add('hidden'); shooterApp.files=[]; pass.value='';
+                 } catch(e) { alert('Error'); b.classList.remove('hidden'); }
+             },
+             copyId: () => navigator.clipboard.writeText(document.getElementById('s-result-id').innerText),
+             fetchPack: async () => {
+                const id=document.getElementById('s-download-id').value.trim(); if(!id) return;
+                try {
+                    let r=await fetch(`${API_BASE}/file/${id}/fs_manifest.json`); if(!r.ok) r=await fetch(`${API_BASE}/u/${id}.json`); if(!r.ok) throw new Error('Pack no encontrado');
+                    const d=await r.json();
+                    if(d.isProtected) { shooterApp.currentPack=d; document.getElementById('s-password-challenge').classList.remove('hidden'); document.getElementById('s-download-list').innerHTML=''; document.getElementById('s-btn-zip').classList.add('hidden'); return; }
+                    shooterApp.showFiles(d.files);
+                } catch(e) { alert(e.message); }
+             },
+             verifyPassword: () => { const i=document.getElementById('s-challenge-input').value; if(btoa(i)===shooterApp.currentPack.passwordHash) { document.getElementById('s-password-challenge').classList.add('hidden'); shooterApp.showFiles(shooterApp.currentPack.files); } else alert("Contraseña incorrecta"); },
+             showFiles: (fs) => {
+                shooterApp.fetchedFiles=fs; const l=document.getElementById('s-download-list'); l.innerHTML='';
+                fs.forEach(f=>{ const u=f.url.startsWith('http')?f.url:API_BASE+f.url; l.innerHTML+=`<div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-lg text-sm shadow-sm animate-fade-in"><div class="flex items-center gap-3 overflow-hidden"><div class="bg-purple-50 p-2 rounded text-purple-500"><i class="fa-solid fa-file"></i></div><span class="truncate w-48 font-medium text-slate-700">${f.name}</span></div><a href="${u}" target="_blank" class="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-600 p-2 rounded transition-colors"><i class="fa-solid fa-download"></i></a></div>`; });
+                document.getElementById('s-btn-zip').classList.remove('hidden');
+             },
+             downloadZip: async () => { /* Same zip logic */ const z=new JSZip(); const b=document.getElementById('s-btn-zip'); const og=b.innerHTML; b.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i>'; b.disabled=true; for(const f of shooterApp.fetchedFiles) { const u=f.url.startsWith('http')?f.url:API_BASE+f.url; const r=await fetch(u); z.file(f.name,await r.blob()); } const bl=await z.generateAsync({type:"blob"}); const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download="shooter_pack.zip"; a.click(); b.innerHTML='Listo'; setTimeout(()=>{b.innerHTML=og;b.disabled=false;},2000); }
+        };
+        shooterApp.init();
+    </script>
+</body>
+</html>
