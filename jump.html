@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Wall Jumper - Multiplayer</title>
+    <title>Pixel Wall Jumper - Ultimate</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js -->
@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const APP_ID = "pixel-jumper-v2-revert"; 
+        const APP_ID = "pixel-jumper-v3-final"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
         window.myPlayerId = null;
@@ -43,18 +43,15 @@
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
                     window.myPlayerId = userCredential.user.uid;
-                    console.log("Auth: Custom Token");
                 } else {
                     throw new Error("No token");
                 }
             } catch (error) {
-                console.warn("Auth: Fallback Anónimo");
+                console.warn("Auth fallback...");
                 try {
                     const userCredential = await signInAnonymously(auth);
                     window.myPlayerId = userCredential.user.uid;
-                } catch (anonError) {
-                    console.error("Auth Error Total", anonError);
-                }
+                } catch (e) { console.error(e); }
             }
             if (window.myPlayerId) setupNetworkListeners();
         };
@@ -74,7 +71,7 @@
                         window.remotePlayers[pid] = {
                             x: data.x,
                             y: data.y,
-                            vx: data.vx, // Sincronizamos dirección para los ojos
+                            vx: data.vx,
                             color: data.color || '#ffffff',
                             name: data.name || 'PX',
                             lastUpdate: now
@@ -98,10 +95,10 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #201a2e; /* Fondo oscuro retro */
+            background-color: #201a2e;
             touch-action: none;
-            font-family: 'Press Start 2P', cursive; /* Fuente Retro */
-            image-rendering: pixelated; /* Renderizado Pixel Perfect */
+            font-family: 'Press Start 2P', cursive;
+            image-rendering: pixelated;
         }
         canvas { display: block; }
         #ui-layer {
@@ -157,14 +154,14 @@
     <div id="ui-layer">
         <!-- Start Screen -->
         <div id="startScreen" class="pixel-card interactive max-w-md w-full">
-            <h1 class="text-2xl text-yellow-400 mb-6 leading-relaxed">PIXEL<br>JUMPER</h1>
+            <h1 class="text-2xl text-yellow-400 mb-6 leading-relaxed text-shadow-md">PIXEL<br>JUMPER</h1>
             
             <input type="text" id="playerNameInput" class="pixel-input" placeholder="NAME" maxlength="6">
 
             <p class="text-gray-300 text-xs mb-6 mt-4 leading-loose">
-                CLICK = SALT + GIRO<br>
-                PARED = REBOTE<br>
-                <span class="text-red-400">NO TOQUES ROJO</span>
+                CLICK = SALTAR + GIRAR<br>
+                SUBE RAPIDO<br>
+                <span class="text-red-400">EVITA EL ROJO</span>
             </p>
             
             <button id="startBtn" class="pixel-btn">START</button>
@@ -181,17 +178,16 @@
         <!-- HUD -->
         <div id="hud" class="hidden absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
             <div>
-                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md">SC: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
-                <p class="text-white text-xs shadow-black drop-shadow-md">LV: <span id="levelDisplay" class="text-green-400">1</span></p>
+                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md bg-black/50 p-1">SCORE: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
+                <p class="text-white text-xs shadow-black drop-shadow-md bg-black/50 p-1">LEVEL: <span id="levelDisplay" class="text-green-400">1</span></p>
             </div>
             <div class="text-right">
-                <p class="text-xs text-gray-400 mb-1">ONLINE</p>
-                <p id="onlineCount" class="text-blue-400 text-xs">1</p>
+                <p id="onlineCount" class="text-blue-400 text-xs bg-black/50 p-1">ONLINE: 1</p>
             </div>
         </div>
 
         <div id="levelNotification" class="absolute top-1/4 pointer-events-none text-center hidden">
-            <h2 class="text-2xl text-yellow-400 shadow-black drop-shadow-lg">LEVEL UP!</h2>
+            <h2 class="text-3xl text-yellow-400 shadow-black drop-shadow-lg animate-bounce">LEVEL UP!</h2>
         </div>
     </div>
 
@@ -207,15 +203,14 @@
             }
             range(min, max) { return min + this.next() * (max - min); }
         }
-        const GAME_SEED = 999; 
+        const GAME_SEED = 2025; // Nueva semilla
 
         // --- CONFIGURACIÓN ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        // Desactivar suavizado para Pixel Art
         ctx.imageSmoothingEnabled = false;
 
-        // UI
+        // UI Elements
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const hud = document.getElementById('hud');
@@ -229,6 +224,7 @@
         const nameInput = document.getElementById('playerNameInput');
         const onlineCountDisplay = document.getElementById('onlineCount');
 
+        // Estado
         let gameState = 'MENU';
         let score = 0;
         let level = 1;
@@ -236,57 +232,60 @@
         let cameraY = 0;
         let playerName = "PX";
 
-        // Física ajustada
-        const GRAVITY = 0.5;
-        const JUMP_FORCE = -10;
-        const HORIZONTAL_SPEED = 6; // Velocidad cómoda
-        const MAX_FALL_SPEED = 12;
+        // Física (Ajustada para ser más rápida)
+        const GRAVITY = 0.65;
+        const JUMP_FORCE = -12; // Salto más potente
+        const HORIZONTAL_SPEED = 7; // Más rápido
+        const MAX_FALL_SPEED = 14;
 
-        // --- AUDIO (Tone.js 8-bit Style) ---
-        let synth, noise, metal;
+        // Fondos por nivel
+        const LEVEL_COLORS = [
+            '#201a2e', // Nivel 1: Azul Oscuro
+            '#2e1a1a', // Nivel 2: Rojo Oscuro
+            '#1a2e1a', // Nivel 3: Verde Oscuro
+            '#2e2e1a', // Nivel 4: Amarillo Oscuro
+            '#1a2e2e'  // Nivel 5: Cian Oscuro
+        ];
+
+        // --- AUDIO ---
+        let synth, noise;
         let audioInit = false;
 
         async function initAudio() {
             if (audioInit) return;
             await Tone.start();
-            
-            // Sonido tipo Gameboy
             synth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "square" }, // Onda cuadrada = 8bit
+                oscillator: { type: "square" },
                 envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
             }).toDestination();
-            synth.volume.value = -10;
-
+            synth.volume.value = -12;
             noise = new Tone.NoiseSynth({
                 noise: { type: 'white' },
                 envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
             }).toDestination();
-            noise.volume.value = -12;
-
+            noise.volume.value = -15;
             audioInit = true;
         }
 
         function playJump() { if(audioInit) synth.triggerAttackRelease("C4", "32n"); }
-        function playBounce() { if(audioInit) synth.triggerAttackRelease("E3", "32n"); }
-        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "G1"], "8n"); }}
+        function playBounce() { if(audioInit) synth.triggerAttackRelease("G3", "32n"); }
+        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "F#2"], "8n"); }}
         function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "16n"); }
 
-        // --- CLASES PIXEL ART ---
+        // --- CLASES ---
 
         class Player {
             constructor(isLocal = true) {
-                this.w = 24; // Un poco más grande para ver los pixeles
-                this.h = 24;
+                this.w = 24; this.h = 24;
                 this.isLocal = isLocal;
                 this.reset();
             }
 
             reset() {
                 this.x = canvas.width / 2 - this.w / 2;
-                this.y = canvas.height - 100; // Empezamos abajo
-                this.vx = HORIZONTAL_SPEED; // Siempre moviéndose
+                this.y = canvas.height - 150;
+                this.vx = HORIZONTAL_SPEED;
                 this.vy = 0;
-                // Colores pastel retro
                 const colors = ['#FF77A8', '#29ADFF', '#00E436', '#FFCC00'];
                 this.color = this.isLocal ? colors[Math.floor(Math.random()*colors.length)] : '#fff';
                 this.isDead = false;
@@ -298,58 +297,48 @@
                 this.vy += GRAVITY;
                 if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
                 
-                // Movimiento constante horizontal
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Rebote en paredes
+                // Rebote Paredes
                 if (this.x <= 0) {
-                    this.x = 0; 
-                    this.vx *= -1; // Invertir velocidad
-                    playBounce();
-                    createPixelParticles(this.x, this.y + this.h/2, '#fff', 4);
+                    this.x = 0; this.vx *= -1; playBounce();
+                    createParticles(this.x, this.y + this.h/2, '#fff', 4);
                 } else if (this.x + this.w >= canvas.width) {
-                    this.x = canvas.width - this.w; 
-                    this.vx *= -1; // Invertir velocidad
-                    playBounce();
-                    createPixelParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
+                    this.x = canvas.width - this.w; this.vx *= -1; playBounce();
+                    createParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
                 }
 
+                // Muerte
                 if (this.y > cameraY + canvas.height + 50) die();
             }
 
             jump() {
                 if (this.isDead) return;
-                // SALTO Y CAMBIO DE DIRECCIÓN
                 this.vy = JUMP_FORCE;
-                this.vx *= -1; // CAMBIO DE DIRECCIÓN AL CLICKAR
+                this.vx *= -1; // CAMBIA DIRECCIÓN
                 playJump();
-                createPixelParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
+                createParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
             }
 
             draw() {
-                // Dibujar Sprite Pixelado
                 ctx.fillStyle = this.color;
-                // Cuerpo (bloque sólido con borde)
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
                 
-                // Borde interior para efecto 3D simple
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(Math.floor(this.x), Math.floor(this.y + this.h - 4), this.w, 4);
-                ctx.fillRect(Math.floor(this.x + this.w - 4), Math.floor(this.y), 4, this.h);
+                // Sombra 3D
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(Math.floor(this.x+2), Math.floor(this.y+this.h), this.w-4, 2);
 
-                // Ojos (Pixel blanco + pupila negra)
-                const eyeXOffset = (this.vx > 0) ? 14 : 4; // Mirar dirección
-                
+                // Ojos
+                const eyeXOffset = (this.vx > 0) ? 14 : 4;
                 ctx.fillStyle = 'white';
                 ctx.fillRect(Math.floor(this.x + eyeXOffset), Math.floor(this.y + 6), 6, 6);
                 ctx.fillStyle = 'black';
                 ctx.fillRect(Math.floor(this.x + eyeXOffset + (this.vx > 0 ? 4 : 0)), Math.floor(this.y + 8), 2, 2);
 
-                // Nombre
                 if (this.name) {
-                    ctx.fillStyle = "#aaa";
-                    ctx.font = "10px 'Press Start 2P'";
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "8px 'Press Start 2P'";
                     ctx.textAlign = "center";
                     ctx.fillText(this.name, this.x + this.w/2, this.y - 8);
                 }
@@ -360,77 +349,72 @@
             constructor(y, lvl, seed) {
                 const rng = new SeededRandom(seed + Math.floor(y));
                 this.y = y;
-                this.h = 32; // Bloques de 32px
+                this.h = 32;
                 
+                // Lógica de dificultad ajustada
+                // Nivel 1: Tiene obstáculos, pero estáticos
                 let moveProb = 0;
-                if (lvl >= 2) moveProb = 0.3;
-                if (lvl >= 5) moveProb = 0.6;
+                if (lvl >= 2) moveProb = 0.4;
+                if (lvl >= 4) moveProb = 0.7;
 
-                this.type = rng.next() < moveProb ? 'BLOCK' : 'SPIKE';
+                this.type = rng.next() < moveProb ? 'MOVING' : 'STATIC';
                 
-                if (this.type === 'SPIKE') {
-                    // Pinchos en paredes
-                    let maxLen = Math.min(100, 40 + lvl * 5);
-                    this.w = 40 + rng.next() * maxLen;
+                // Color temático opuesto al fondo para visibilidad
+                this.spikeColor = '#ff3333'; 
+
+                if (this.type === 'STATIC') {
+                    // Pinchos o Bloques fijos
+                    let maxLen = Math.min(120, 50 + lvl * 5);
+                    this.w = 50 + rng.next() * maxLen;
                     this.side = rng.next() > 0.5 ? 'LEFT' : 'RIGHT';
                     this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
-                    this.color = (lvl % 2 === 0) ? '#ff0044' : '#ff4400'; // Rojo/Naranja
+                    this.isSpike = true; // Todo lo estático pincha en los lados
                 } else {
-                    // Bloques flotantes
-                    this.w = Math.max(50, 90 - (lvl * 3));
+                    // Bloques móviles
+                    this.w = Math.max(60, 100 - (lvl * 4));
                     this.x = rng.next() * (canvas.width - this.w);
-                    let speed = 2 + (lvl * 0.5);
+                    let speed = 2.5 + (lvl * 0.6); // Más rápidos
                     this.vx = speed * (rng.next() > 0.5 ? 1 : -1);
-                    this.color = '#ffcc00'; // Dorado
+                    this.isSpike = false; // Se puede pisar (aunque el juego es vertical, mejor evitar tocar)
                 }
             }
 
             update() {
-                if (this.type === 'BLOCK') {
+                if (this.type === 'MOVING') {
                     this.x += this.vx;
                     if (this.x <= 0 || this.x + this.w >= canvas.width) this.vx *= -1;
                 }
             }
 
             draw() {
-                // Dibujar estilo ladrillo pixelado
-                if (this.type === 'SPIKE') {
-                    ctx.fillStyle = this.color;
-                    // Dibujar pinchos como "escaleras" (pixels)
+                if (this.isSpike) {
+                    ctx.fillStyle = this.spikeColor;
                     const steps = 4;
                     const stepH = this.h / steps;
-                    
                     if (this.side === 'LEFT') {
-                        // Base sólida
                         ctx.fillRect(0, this.y, this.w/2, this.h);
-                        // Pinchos
                         for(let i=0; i<steps; i++) {
                             let width = (this.w/2) * (1 - i/steps);
                             ctx.fillRect(this.w/2, this.y + (i*stepH), width, stepH);
                         }
                     } else {
-                        // Base
                         ctx.fillRect(canvas.width - this.w/2, this.y, this.w/2, this.h);
-                        // Pinchos
                         for(let i=0; i<steps; i++) {
                             let width = (this.w/2) * (1 - i/steps);
                             ctx.fillRect(canvas.width - this.w/2 - width, this.y + (i*stepH), width, stepH);
                         }
                     }
                 } else {
-                    // Bloque flotante (Ladrillo)
-                    ctx.fillStyle = '#8B4513'; // Marrón ladrillo
+                    // Bloque móvil
+                    ctx.fillStyle = '#FFB300'; 
                     ctx.fillRect(this.x, this.y, this.w, this.h);
+                    ctx.fillStyle = '#FFE082';
+                    ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8);
                     
-                    // Detalles de ladrillo
-                    ctx.fillStyle = '#A0522D'; // Ladrillo claro
-                    ctx.fillRect(this.x + 4, this.y + 4, this.w/2 - 6, this.h/2 - 6);
-                    ctx.fillRect(this.x + this.w/2 + 2, this.y + this.h/2 + 2, this.w/2 - 6, this.h/2 - 6);
-                    
-                    // Borde Pixel
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = '#000';
-                    ctx.strokeRect(this.x, this.y, this.w, this.h);
+                    // Ojos bloque
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(this.x + 10, this.y + 10, 4, 4);
+                    ctx.fillRect(this.x + this.w - 14, this.y + 10, 4, 4);
                 }
             }
         }
@@ -440,18 +424,15 @@
                 this.x = x; this.y = y;
                 this.vx = (Math.random() - 0.5) * 8;
                 this.vy = (Math.random() - 0.5) * 8;
-                this.life = 1; 
-                this.color = color; 
-                this.size = Math.floor(Math.random() * 6 + 2);
+                this.life = 1; this.color = color; 
+                this.size = Math.floor(Math.random() * 4 + 2);
             }
             update() { 
-                this.x += this.vx; this.y += this.vy; this.life -= 0.05; 
-                this.vy += 0.2; // Gravedad partículas
+                this.x += this.vx; this.y += this.vy; 
+                this.life -= 0.05; this.vy += 0.3; 
             }
             draw() { 
-                ctx.globalAlpha = this.life; 
-                ctx.fillStyle = this.color; 
-                // Cuadrados perfectos
+                ctx.globalAlpha = this.life; ctx.fillStyle = this.color; 
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
                 ctx.globalAlpha = 1; 
             }
@@ -473,8 +454,7 @@
         resize();
 
         function startGame() {
-            const name = nameInput.value.trim() || "PX";
-            playerName = name;
+            playerName = nameInput.value.trim() || "PX";
             player.name = playerName;
 
             initAudio();
@@ -487,10 +467,11 @@
             particles = [];
             player.reset();
             
-            // --- GENERACIÓN INICIAL ---
-            // Llenar la pantalla de plataformas desde abajo para que no esté vacío
-            nextObstacleY = canvas.height - 100;
-            while (nextObstacleY > -200) { // Generar hasta un poco por encima de la pantalla
+            // GENERACIÓN SEGURA
+            nextObstacleY = canvas.height - 200; // Empezar un poco arriba
+            
+            // Pre-llenar pantalla
+            while (nextObstacleY > -canvas.height) {
                 spawnObstacle();
             }
 
@@ -502,16 +483,21 @@
 
         function spawnObstacle() {
             obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
-            let gap = 160 - (Math.min(level, 10) * 5); // Reduce distancia con nivel
-            gap += Math.random() * 40;
-            nextObstacleY -= Math.max(100, gap);
+            
+            // Distancia entre obstáculos
+            let baseGap = 150; 
+            // A más nivel, un poco menos de espacio pero más aleatorio
+            let gap = baseGap - (Math.min(level, 10) * 3);
+            gap += Math.random() * 60; // Variación
+            
+            nextObstacleY -= Math.max(120, gap); // Mínimo 120px para pasar
         }
 
         function die() {
             if (gameState === 'GAMEOVER') return;
             gameState = 'GAMEOVER';
             playDead();
-            createPixelParticles(player.x, player.y, player.color, 20);
+            createParticles(player.x, player.y, player.color, 20);
             
             finalScoreDisplay.innerText = Math.floor(score);
             finalLevelDisplay.innerText = level;
@@ -520,24 +506,21 @@
 
             if (window.myPlayerId && window.dbRef) {
                 const docRef = window.dbRef.doc(window.dbRef.db, window.dbRef.COLLECTION_PATH, window.myPlayerId);
-                window.dbRef.deleteDoc(docRef).catch(console.error);
+                window.dbRef.deleteDoc(docRef).catch(()=>{});
             }
         }
 
-        function createPixelParticles(x, y, color, count) {
+        function createParticles(x, y, color, count) {
             for(let i=0; i<count; i++) particles.push(new Particle(x, y, color));
         }
 
         function checkCollisions() {
-            // Colisión AABB simple
+            let pBox = {l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h};
+            
             for (let obs of obstacles) {
-                // Definir cajas de colisión
-                let pBox = {l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h};
                 let oBox;
-
-                if (obs.type === 'SPIKE') {
-                    // Hitbox un poco más pequeña para ser justos
-                    let width = obs.w - 10;
+                if (obs.isSpike) {
+                    let width = obs.w - 8;
                     let x = (obs.side === 'LEFT') ? 0 : canvas.width - width;
                     oBox = {l: x, r: x + width, t: obs.y, b: obs.y + obs.h};
                 } else {
@@ -558,11 +541,11 @@
                 window.dbRef.setDoc(docRef, {
                     x: Math.round(player.x),
                     y: Math.round(player.y),
-                    vx: player.vx, // Importante para renderizar ojos remotos
+                    vx: player.vx, 
                     color: player.color,
                     name: playerName,
                     updatedAt: window.dbRef.serverTimestamp ? window.dbRef.serverTimestamp() : now
-                }).catch(e => {});
+                }).catch(()=>{});
             }
         }
 
@@ -573,71 +556,81 @@
             checkCollisions();
             sendNetUpdate();
 
-            // Cámara
+            // Cámara y Progresión
             let targetY = player.y - canvas.height * 0.6;
             if (targetY < cameraY) {
                 cameraY = targetY;
-                score += (cameraY - targetY) * 0.1; // Puntos
-                if (Math.floor(score/500) + 1 > level) {
-                    level++;
+                score += (cameraY - targetY) * 0.2; // Más puntos por distancia
+                
+                // Subir nivel cada 300 puntos (más rápido)
+                let newLevel = Math.floor(score/300) + 1;
+                if (newLevel > level) {
+                    level = newLevel;
                     playLvlUp();
                     levelNotification.classList.remove('hidden');
                     levelNotification.classList.add('level-up-anim');
                     setTimeout(() => levelNotification.classList.add('hidden'), 2000);
                 }
             } else {
-                cameraY -= (1 + level * 0.1); // Auto-scroll lento
+                // Auto-scroll agresivo
+                cameraY -= (1.5 + level * 0.2); 
             }
 
-            // Generar y Limpiar
-            if (cameraY < nextObstacleY + canvas.height + 200) spawnObstacle();
+            // Generar Obstáculos
+            if (cameraY < nextObstacleY + canvas.height + 300) {
+                spawnObstacle();
+            }
+
+            // Limpieza
             obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 200);
             obstacles.forEach(obs => obs.update());
             particles.forEach(p => p.update());
             particles = particles.filter(p => p.life > 0);
 
-            scoreDisplay.innerText = Math.floor(Math.abs(cameraY/10));
+            scoreDisplay.innerText = Math.floor(score);
             levelDisplay.innerText = level;
             
             let count = 1;
             if (window.remotePlayers) count += Object.keys(window.remotePlayers).length;
-            onlineCountDisplay.innerText = count;
+            onlineCountDisplay.innerText = `ONLINE: ${count}`;
         }
 
         function draw() {
-            // Fondo color sólido retro
-            ctx.fillStyle = '#201a2e'; 
+            // COLOR DE FONDO POR NIVEL
+            let bgIndex = (level - 1) % LEVEL_COLORS.length;
+            ctx.fillStyle = LEVEL_COLORS[bgIndex];
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Patrón de fondo (estrellas pixeladas estáticas)
-            ctx.fillStyle = '#2a233e';
-            for(let i=0; i<10; i++) {
-                let x = (i * 100 + cameraY/2) % canvas.width;
-                let y = (i * 200 + cameraY/2) % canvas.height;
+            // Estrellas estáticas
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            for(let i=0; i<15; i++) {
+                let x = (i * 97) % canvas.width;
+                let y = (i * 131 - cameraY*0.5) % canvas.height;
+                if(y < 0) y += canvas.height;
                 ctx.fillRect(x, y, 4, 4);
             }
 
             ctx.save();
-            ctx.translate(0, -Math.floor(cameraY)); // Pixel perfect cam
+            ctx.translate(0, -Math.floor(cameraY));
 
             obstacles.forEach(obs => obs.draw());
 
-            // Jugadores Remotos
+            // Jugadores Online
             if (window.remotePlayers) {
                 for (let pid in window.remotePlayers) {
                     const rp = window.remotePlayers[pid];
                     ctx.fillStyle = rp.color;
                     ctx.globalAlpha = 0.5;
                     ctx.fillRect(rp.x, rp.y, 24, 24);
-                    // Ojos remotos
+                    // Ojos
                     ctx.fillStyle = 'white';
                     let eyeOff = (rp.vx > 0) ? 14 : 4;
                     ctx.fillRect(rp.x + eyeOff, rp.y + 6, 6, 6);
                     // Nombre
-                    ctx.fillStyle = "#aaa";
-                    ctx.font = "10px 'Press Start 2P'";
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "8px 'Press Start 2P'";
                     ctx.textAlign = "center";
-                    ctx.fillText(rp.name, rp.x + 12, rp.y - 8);
+                    ctx.fillText(rp.name, rp.x + 12, rp.y - 10);
                     ctx.globalAlpha = 1;
                 }
             }
@@ -678,8 +671,8 @@
              gameOverScreen.classList.add('hidden');
         });
 
-        // Render inicial
-        player.y = canvas.height - 100;
+        // Inicio
+        player.y = canvas.height - 150;
         draw();
 
     </script>
