@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Moment.js (Fechas) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/es.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -21,12 +24,14 @@
                         surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0' }
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                        'slide-up': 'slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'fade-in': 'fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'slide-up': 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'toast-slide': 'toastSlide 0.3s ease-out forwards',
                     },
                     keyframes: {
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        toastSlide: { '0%': { opacity: '0', transform: 'translateX(100%)' }, '100%': { opacity: '1', transform: 'translateX(0)' } }
                     },
                     fontFamily: {
                         sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
@@ -38,21 +43,22 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        body { font-family: 'Inter', sans-serif; background: #f3f4f6; color: #1e293b; overflow-x: hidden; user-select: none; }
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; color: #1e293b; overflow: hidden; user-select: none; }
         
         /* Glass & Shadows */
-        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226, 232, 240, 0.8); }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(226, 232, 240, 1); }
         .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.06); transition: all 0.2s ease; }
         .card-shadow:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025); transform: translateY(-2px); }
         
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         /* Drive Grid */
-        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1.25rem; padding-bottom: 5rem; }
+        .drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; padding-bottom: 6rem; }
+        .drive-list { display: flex; flex-direction: column; gap: 4px; padding-bottom: 6rem; }
         
         /* Drag & Select */
         .folder-drag-over { transform: scale(1.02); background-color: #e0e7ff; border: 2px dashed #6366f1; border-radius: 1rem; z-index: 10; }
@@ -64,13 +70,18 @@
 
         /* Context Menu */
         #context-menu {
-            position: absolute; z-index: 100; width: 180px; background: white; border-radius: 12px;
+            position: absolute; z-index: 100; width: 200px; background: white; border-radius: 12px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9; display: none; padding: 6px;
         }
         .context-item { padding: 8px 12px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; transition: background 0.1s; }
         .context-item:hover { background-color: #f8fafc; color: #0f172a; }
         .context-item.danger:hover { background-color: #fef2f2; color: #ef4444; }
         .context-separator { height: 1px; background-color: #e2e8f0; margin: 4px 0; }
+
+        /* List View Styles */
+        .list-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; padding: 0.75rem 1.5rem; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
+        .list-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; padding: 0.5rem 1rem; border-radius: 0.75rem; align-items: center; font-size: 0.875rem; transition: background 0.15s; border: 1px solid transparent; }
+        .list-row:hover { background-color: #f8fafc; border-color: #f1f5f9; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col text-slate-700 bg-surface-50" oncontextmenu="return false;">
@@ -108,7 +119,7 @@
     </nav>
 
     <!-- Main Container -->
-    <main id="main-container" class="pt-20 px-4 pb-4 flex-1 w-full max-w-[1600px] mx-auto flex flex-col items-center justify-center min-h-screen">
+    <main id="main-container" class="pt-20 px-4 pb-4 flex-1 w-full max-w-[1800px] mx-auto flex flex-col items-center justify-center min-h-screen">
         
         <!-- LOGIN VIEW -->
         <div id="view-drive-auth" class="hidden w-full max-w-sm bg-white p-10 rounded-3xl shadow-xl border border-slate-100 animate-slide-up">
@@ -138,9 +149,10 @@
         </div>
 
         <!-- DASHBOARD VIEW -->
-        <div id="view-drive-dashboard" class="hidden w-full h-[88vh] flex rounded-3xl shadow-2xl overflow-hidden animate-fade-in bg-white border border-slate-200 ring-4 ring-slate-100">
+        <div id="view-drive-dashboard" class="hidden w-full h-[88vh] flex rounded-3xl shadow-2xl overflow-hidden animate-fade-in bg-white border border-slate-200 ring-4 ring-slate-100 relative">
+            
             <!-- Sidebar -->
-            <aside class="w-64 bg-slate-50/50 border-r border-slate-200 flex flex-col z-20 backdrop-blur-sm">
+            <aside class="w-60 bg-slate-50/50 border-r border-slate-200 flex flex-col z-20 backdrop-blur-sm shrink-0">
                 <div class="p-6">
                     <label id="btn-new-main" class="flex items-center justify-center gap-2 w-full py-3.5 bg-white text-slate-700 border border-slate-200 hover:border-primary-300 hover:text-primary-600 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all active:scale-95 font-bold text-sm group">
                         <div class="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-colors">
@@ -151,10 +163,13 @@
                     </label>
                 </div>
                 
-                <nav class="flex-1 px-4 space-y-1">
-                    <p class="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Mi Unidad</p>
+                <nav class="flex-1 px-3 space-y-1">
+                    <p class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Mi Unidad</p>
                     <button onclick="driveApp.navigateToSection('root')" id="nav-root" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
                         <i class="fa-solid fa-hard-drive w-5 text-center"></i> Archivos
+                    </button>
+                    <button onclick="driveApp.navigateToSection('starred')" id="nav-starred" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fa-solid fa-star w-5 text-center"></i> Destacados
                     </button>
                     <button onclick="driveApp.navigateToSection('shared')" id="nav-shared" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
                         <i class="fa-solid fa-users w-5 text-center"></i> Compartidos
@@ -191,16 +206,18 @@
             </aside>
 
             <!-- Main Panel -->
-            <div class="flex-1 flex flex-col bg-white relative">
+            <div class="flex-1 flex flex-col bg-white relative overflow-hidden">
                 <!-- Toolbar -->
-                <div class="h-16 border-b border-slate-100 flex items-center px-6 justify-between gap-4 z-20 bg-white/80 backdrop-blur-sm sticky top-0">
-                    <div class="flex items-center gap-2 text-sm breadcrumbs overflow-hidden whitespace-nowrap mask-linear" id="drive-breadcrumbs"></div>
-                    <div class="flex items-center gap-3 flex-1 justify-end">
-                        <div class="relative group w-full max-w-xs transition-all">
+                <div class="h-16 border-b border-slate-100 flex items-center px-6 justify-between gap-4 z-20 bg-white/80 backdrop-blur-sm sticky top-0 shrink-0">
+                    <div class="flex items-center gap-2 text-sm breadcrumbs overflow-hidden whitespace-nowrap mask-linear flex-1" id="drive-breadcrumbs"></div>
+                    <div class="flex items-center gap-3 flex-none justify-end">
+                        <div class="relative group w-full max-w-[200px] transition-all">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 group-focus-within:text-primary-500 transition-colors"></i>
-                            <input type="text" id="drive-search" oninput="driveApp.filterContent(this.value)" placeholder="Buscar archivos..." class="w-full bg-slate-50 focus:bg-white border border-transparent focus:border-primary-200 rounded-xl py-2 pl-9 pr-4 text-sm transition-all outline-none">
+                            <input type="text" id="drive-search" oninput="driveApp.filterContent(this.value)" placeholder="Buscar..." class="w-full bg-slate-50 focus:bg-white border border-transparent focus:border-primary-200 rounded-xl py-2 pl-9 pr-4 text-sm transition-all outline-none">
                         </div>
                         <div class="h-6 w-px bg-slate-200 mx-1"></div>
+                        <button onclick="driveApp.toggleView()" id="btn-view-toggle" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors" title="Cambiar Vista"><i class="fa-solid fa-list"></i></button>
+                        <button onclick="driveApp.toggleInfoPanel()" id="btn-info-toggle" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors" title="Detalles"><i class="fa-solid fa-circle-info"></i></button>
                         <button onclick="driveApp.toggleSort()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors" title="Ordenar"><i class="fa-solid fa-arrow-down-short-wide" id="sort-icon"></i></button>
                         <div class="flex gap-1" id="toolbar-actions">
                              <button onclick="driveApp.openCreateFolderModal()" class="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-primary-600 transition-colors" title="Nueva Carpeta"><i class="fa-solid fa-folder-plus"></i></button>
@@ -209,8 +226,8 @@
                     </div>
                 </div>
 
-                <!-- Dropzone -->
-                <div class="flex-1 overflow-y-auto p-6 relative select-none bg-slate-50/30" id="drive-dropzone">
+                <!-- Dropzone & Content -->
+                <div class="flex-1 overflow-y-auto p-6 relative select-none bg-slate-50/30 custom-scroll" id="drive-dropzone">
                     <div id="shared-notifications" class="hidden mb-6 space-y-2"></div>
                     
                     <div id="drive-drag-overlay" class="absolute inset-4 rounded-3xl border-2 border-dashed border-primary-400 bg-primary-50/90 z-40 hidden flex flex-col items-center justify-center pointer-events-none animate-fade-in backdrop-blur-sm">
@@ -229,11 +246,20 @@
                     </div>
 
                     <div id="drive-empty" class="hidden h-full flex flex-col items-center justify-center text-slate-400">
-                        <div class="bg-white p-8 rounded-full mb-4 border border-slate-100 shadow-sm">
-                            <i class="fa-solid fa-box-open text-4xl opacity-20 text-slate-400"></i>
+                        <div class="relative mb-6">
+                            <div class="absolute inset-0 bg-primary-100 rounded-full blur-xl opacity-50"></div>
+                            <img src="https://cdni.iconscout.com/illustration/premium/thumb/folder-is-empty-illustration-download-in-svg-png-gif-file-formats--no-data-nothing-here-user-interface-pack-design-development-illustrations-4757343.png" alt="Empty" class="w-48 h-48 object-contain relative z-10 opacity-75 grayscale mix-blend-multiply">
                         </div>
-                        <p class="font-medium text-sm text-slate-500">Esta carpeta está vacía</p>
-                        <p class="text-xs text-slate-400 mt-1">Arrastra archivos o crea uno nuevo</p>
+                        <p class="font-bold text-lg text-slate-600">Esta carpeta está vacía</p>
+                        <p class="text-sm text-slate-400 mt-1">Arrastra archivos o usa el botón +</p>
+                    </div>
+
+                    <!-- List Header (Solo visible en modo lista) -->
+                    <div id="drive-list-header" class="hidden list-header sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10 mb-2 rounded-lg">
+                        <div>Nombre</div>
+                        <div>Propietario</div>
+                        <div>Fecha</div>
+                        <div>Tamaño</div>
                     </div>
 
                     <div id="drive-content" class="drive-grid hidden pb-20 relative z-10"></div>
@@ -255,9 +281,23 @@
                             <button onclick="document.getElementById('upload-panel').classList.add('hidden')" class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-400"><i class="fa-solid fa-chevron-down text-xs"></i></button>
                         </div>
                     </div>
-                    <div id="upload-list" class="flex-1 overflow-y-auto p-0 scroll-smooth bg-white"></div>
+                    <div id="upload-list" class="flex-1 overflow-y-auto p-0 scroll-smooth bg-white custom-scroll"></div>
                 </div>
             </div>
+
+            <!-- Details Panel (Right Sidebar) -->
+            <aside id="details-panel" class="w-0 bg-white border-l border-slate-200 flex flex-col transition-all duration-300 overflow-hidden shrink-0">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <span class="text-sm font-bold text-slate-700">Detalles</span>
+                    <button onclick="driveApp.toggleInfoPanel()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <div id="details-content" class="p-6 flex-1 overflow-y-auto custom-scroll">
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 text-center">
+                        <i class="fa-regular fa-image text-4xl mb-3 opacity-30"></i>
+                        <p class="text-sm">Selecciona un elemento<br>para ver sus detalles</p>
+                    </div>
+                </div>
+            </aside>
         </div>
 
         <!-- SHOOTER VIEW -->
@@ -337,13 +377,18 @@
 
     <!-- Context Menu -->
     <div id="context-menu">
-        <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4 text-slate-400"></i> Abrir</div>
+        <div class="context-item" onclick="driveApp.ctxAction('open')"><i class="fa-solid fa-folder-open w-4 text-slate-400"></i> Abrir / Vista Previa</div>
+        <div class="context-item" id="ctx-star" onclick="driveApp.ctxAction('star')"><i class="fa-solid fa-star w-4 text-slate-400"></i> <span id="ctx-star-text">Destacar</span></div>
+        <div class="context-item" onclick="driveApp.ctxAction('rename')"><i class="fa-solid fa-pen w-4 text-slate-400"></i> Renombrar</div>
         <div class="context-item" id="ctx-share" onclick="driveApp.ctxAction('share')"><i class="fa-solid fa-share-nodes w-4 text-slate-400"></i> Compartir</div>
         <div class="context-separator"></div>
         <div class="context-item danger" onclick="driveApp.ctxAction('delete')"><i class="fa-solid fa-trash w-4"></i> Eliminar</div>
     </div>
 
-    <!-- Modals (Confirm, Create, etc.) -->
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Modals (Confirm, Create, Rename, etc.) -->
     <div id="modal-confirm" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in">
         <div class="bg-white p-8 rounded-3xl w-96 shadow-2xl transform scale-100 transition-all text-center">
             <div id="confirm-icon" class="mb-4 text-4xl"></div>
@@ -356,6 +401,19 @@
             </div>
         </div>
     </div>
+    
+    <!-- Rename Modal -->
+    <div id="modal-rename" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in">
+        <div class="bg-white p-8 rounded-3xl w-96 shadow-2xl">
+            <h3 class="font-bold text-slate-800 text-lg mb-4">Renombrar</h3>
+            <input type="text" id="rename-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-6 text-slate-800 text-sm focus:ring-2 focus:ring-primary-100 outline-none">
+            <div class="flex justify-end gap-3">
+                <button onclick="document.getElementById('modal-rename').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold">Cancelar</button>
+                <button onclick="driveApp.confirmRename()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-sm font-bold shadow-md">Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Folder Modal -->
     <div id="modal-create-folder" class="fixed inset-0 bg-slate-900/40 z-[70] hidden flex items-center justify-center backdrop-blur-sm animate-fade-in"><div class="bg-white p-8 rounded-3xl w-96 shadow-2xl"><h3 class="font-bold text-slate-800 text-lg mb-4">Nueva Carpeta</h3><input type="text" id="new-folder-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-6 text-slate-800 text-sm focus:ring-2 focus:ring-primary-100 outline-none" placeholder="Nombre de la carpeta..."><div class="flex justify-end gap-3"><button onclick="document.getElementById('modal-create-folder').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-bold">Cancelar</button><button onclick="driveApp.createFolder()" class="px-5 py-2 bg-primary-600 hover:bg-primary-700 rounded-xl text-white text-sm font-bold shadow-md">Crear</button></div></div></div>
     <!-- Create File Modal -->
@@ -393,7 +451,11 @@
         let ctxTargetId = null, ctxTargetData = null; let isSelecting = false, startX = 0, startY = 0; const selectionBox = document.createElement('div'); selectionBox.className = 'selection-box';
 
         window.driveApp = {
+            viewMode: 'grid', // 'grid' or 'list'
+            showDetails: false,
+            
             resetSession: () => { if(unsubscribeSnapshot) unsubscribeSnapshot(); if(unsubscribeStorage) unsubscribeStorage(); unsubscribeSnapshot=null; unsubscribeStorage=null; currentFolder=null; currentSection='root'; folderPath=[{id:null, name:'Inicio'}]; allItems=[]; totalStorageBytes=0; userPlan='free'; document.getElementById('drive-content').innerHTML=''; },
+            
             handleAuth: async (e) => {
                 e.preventDefault(); const user = document.getElementById('auth-username').value.trim(); const pass = document.getElementById('auth-password').value; const email = `${user}@pandadrive.app`;
                 try {
@@ -436,69 +498,254 @@
             },
             formatBytes: (b,d=2) => { if(!+b) return '0 B'; const k=1024,dm=d<0?0:d,s=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(k)); return `${parseFloat((b/Math.pow(k,i)).toFixed(dm))} ${s[i]}`; },
 
-            // (Selection, Context Menu, Nav logic identical to v5.1 but using updated CSS classes)
+            // --- VIEW & UI UTILS ---
+            toggleView: () => {
+                driveApp.viewMode = driveApp.viewMode === 'grid' ? 'list' : 'grid';
+                const btn = document.getElementById('btn-view-toggle');
+                btn.innerHTML = driveApp.viewMode === 'grid' ? '<i class="fa-solid fa-list"></i>' : '<i class="fa-solid fa-border-all"></i>';
+                
+                // Toggle List Header
+                if (driveApp.viewMode === 'list') document.getElementById('drive-list-header').classList.remove('hidden');
+                else document.getElementById('drive-list-header').classList.add('hidden');
+
+                driveApp.renderGrid(allItems); // Re-render logic handles layout
+            },
+            
+            toggleInfoPanel: () => {
+                driveApp.showDetails = !driveApp.showDetails;
+                const panel = document.getElementById('details-panel');
+                const btn = document.getElementById('btn-info-toggle');
+                if (driveApp.showDetails) {
+                    panel.style.width = '320px';
+                    btn.classList.add('text-primary-600', 'bg-primary-50');
+                } else {
+                    panel.style.width = '0px';
+                    btn.classList.remove('text-primary-600', 'bg-primary-50');
+                }
+            },
+            
+            updateDetailsPanel: (d) => {
+                if (!d) {
+                    document.getElementById('details-content').innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 text-center"><i class="fa-regular fa-image text-4xl mb-3 opacity-30"></i><p class="text-sm">Selecciona un elemento<br>para ver sus detalles</p></div>`;
+                    return;
+                }
+                const icon = d.type === 'folder' ? '<i class="fa-solid fa-folder text-yellow-400 text-4xl"></i>' : '<i class="fa-solid fa-file text-slate-400 text-4xl"></i>';
+                const date = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleString() : 'Desconocida';
+                const size = d.size ? driveApp.formatBytes(d.size) : '--';
+                
+                document.getElementById('details-content').innerHTML = `
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-3 shadow-sm border border-slate-100">${icon}</div>
+                        <h3 class="font-bold text-slate-800 text-center break-all">${d.name}</h3>
+                        <span class="text-xs text-slate-400 uppercase tracking-wider font-bold mt-1">${d.type === 'folder' ? 'Carpeta' : d.mimeType.split('/').pop().toUpperCase()}</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-400 font-bold uppercase block mb-1">Tipo</span>
+                            <span class="text-sm font-medium text-slate-700">${d.mimeType || 'Carpeta'}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-400 font-bold uppercase block mb-1">Tamaño</span>
+                            <span class="text-sm font-medium text-slate-700">${size}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-400 font-bold uppercase block mb-1">Ubicación</span>
+                            <span class="text-sm font-medium text-slate-700">${folderPath.map(f=>f.name).join(' / ')}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-400 font-bold uppercase block mb-1">Creado</span>
+                            <span class="text-sm font-medium text-slate-700">${date}</span>
+                        </div>
+                    </div>
+                `;
+            },
+
+            showToast: (msg, type = 'success') => {
+                const c = document.getElementById('toast-container');
+                const t = document.createElement('div');
+                const color = type === 'success' ? 'bg-slate-800 text-white' : 'bg-red-500 text-white';
+                const icon = type === 'success' ? 'fa-check' : 'fa-exclamation-circle';
+                
+                t.className = `${color} px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-bold min-w-[200px] animate-toast-slide pointer-events-auto`;
+                t.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
+                
+                c.appendChild(t);
+                setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 300) }, 3000);
+            },
+
+            // --- CONTEXT MENU & ACTIONS ---
             showContextMenu: (e, id, str) => {
                 e.preventDefault(); e.stopPropagation();
                 const m = document.getElementById('context-menu');
                 ctxTargetId = id;
                 ctxTargetData = JSON.parse(decodeURIComponent(str));
                 
-                // Ocultar "Compartir" si es un archivo
+                // Show/Hide context items based on context
                 const shareBtn = document.getElementById('ctx-share');
-                if (shareBtn) {
-                    shareBtn.style.display = ctxTargetData.type === 'folder' ? 'flex' : 'none';
-                }
+                if (shareBtn) shareBtn.style.display = ctxTargetData.type === 'folder' ? 'flex' : 'none';
+                
+                const starText = document.getElementById('ctx-star-text');
+                if (starText) starText.innerText = ctxTargetData.isStarred ? "Quitar Destacado" : "Destacar";
+
+                // Position calculation to avoid overflow
+                let x = e.pageX; let y = e.pageY;
+                if (x + 200 > window.innerWidth) x -= 200;
+                if (y + 200 > window.innerHeight) y -= 200;
 
                 m.style.display = 'block';
-                m.style.left = `${e.pageX}px`;
-                m.style.top = `${e.pageY}px`;
+                m.style.left = `${x}px`;
+                m.style.top = `${y}px`;
+                
+                // Select item on right click too
+                driveApp.selectSingleItem(id);
+                driveApp.updateDetailsPanel(ctxTargetData);
             },
+            
             ctxAction: (act) => {
                 document.getElementById('context-menu').style.display='none'; if(!ctxTargetId) return;
                 const ids = driveApp.getBatchIds(ctxTargetId);
+                
                 if(act==='open') { if(ctxTargetData.type==='folder') driveApp.navigateToFolder(ctxTargetId, ctxTargetData.name); else driveApp.previewItem(ctxTargetData); }
-                else if(act==='share') { if(ids.length>1) driveApp.showAlert("Info", "Comparte de una en una."); else driveApp.promptShare(ctxTargetId); }
+                else if(act==='share') { if(ids.length>1) driveApp.showToast("Selecciona solo una carpeta", "error"); else driveApp.promptShare(ctxTargetId); }
                 else if(act==='delete') { if(currentSection==='trash') driveApp.confirmDeleteForever(ctxTargetId, ctxTargetData.type); else driveApp.confirmTrash(ctxTargetId); }
+                else if(act==='rename') { document.getElementById('rename-input').value = ctxTargetData.name; document.getElementById('modal-rename').classList.remove('hidden'); }
+                else if(act==='star') { driveApp.toggleStar(ctxTargetId, ctxTargetData.isStarred); }
             },
-            initBoxSelection: () => {
-                const c = document.getElementById('drive-dropzone');
-                document.addEventListener('click', () => document.getElementById('context-menu').style.display='none');
-                c.addEventListener('mousedown', e => { if(e.target!==c && e.target.id!=='drive-content') return; if(e.button!==0) return; isSelecting=true; const r=c.getBoundingClientRect(); startX=e.clientX-r.left+c.scrollLeft; startY=e.clientY-r.top+c.scrollTop; selectionBox.style.width='0px'; selectionBox.style.height='0px'; selectionBox.style.left=startX+'px'; selectionBox.style.top=startY+'px'; document.getElementById('selection-container').appendChild(selectionBox); document.querySelectorAll('.item-selected').forEach(el=>el.classList.remove('item-selected')); });
-                c.addEventListener('mousemove', e => { if(!isSelecting) return; const r=c.getBoundingClientRect(); const cx=e.clientX-r.left+c.scrollLeft, cy=e.clientY-r.top+c.scrollTop; const w=Math.abs(cx-startX), h=Math.abs(cy-startY), l=Math.min(cx,startX), t=Math.min(cy,startY); selectionBox.style.width=w+'px'; selectionBox.style.height=h+'px'; selectionBox.style.left=l+'px'; selectionBox.style.top=t+'px'; driveApp.checkSelectionCollision(l,t,w,h); });
-                document.addEventListener('mouseup', () => { if(isSelecting) { isSelecting=false; if(selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox); }});
+
+            confirmRename: async () => {
+                const newName = document.getElementById('rename-input').value.trim();
+                document.getElementById('modal-rename').classList.add('hidden');
+                if(!newName || newName === ctxTargetData.name) return;
+                
+                try {
+                    await updateDoc(doc(db, "assets", ctxTargetId), { name: newName });
+                    driveApp.showToast("Renombrado correctamente");
+                } catch(e) {
+                    driveApp.showToast("Error al renombrar", "error");
+                }
             },
-            checkSelectionCollision: (x,y,w,h) => { document.querySelectorAll('.drive-item').forEach(i => { const il=i.offsetLeft, it=i.offsetTop, ir=il+i.offsetWidth, ib=it+i.offsetHeight; const bl=x, bt=y, br=x+w, bb=y+h; if(!(br<il || bl>ir || bb<it || bt>ib)) i.classList.add('item-selected'); else i.classList.remove('item-selected'); }); },
-            getBatchIds: (tid) => { const s=document.querySelectorAll('.item-selected'); const ids=Array.from(s).map(el=>el.dataset.id); return ids.includes(tid)?ids:[tid]; },
+
+            toggleStar: async (id, currentStatus) => {
+                try {
+                    await updateDoc(doc(db, "assets", id), { isStarred: !currentStatus });
+                    driveApp.showToast(currentStatus ? "Quitado de destacados" : "Añadido a destacados");
+                } catch(e) { console.error(e); }
+            },
+
+            // --- NAVIGATION & CONTENT LOADING ---
             navigateToSection: (s) => {
                 currentSection=s; 
-                document.getElementById('nav-root').className = s==='root' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary-50 text-primary-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
-                document.getElementById('nav-trash').className = s==='trash' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-red-50 text-red-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
-                document.getElementById('nav-shared').className = s==='shared' ? "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700" : "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-root').className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-starred').className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-trash').className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                document.getElementById('nav-shared').className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors";
+                
+                if(s==='root') document.getElementById('nav-root').classList.replace('text-slate-600', 'text-primary-700'); 
+                if(s==='root') document.getElementById('nav-root').classList.add('bg-primary-50');
+
+                if(s==='starred') document.getElementById('nav-starred').classList.replace('text-slate-600', 'text-yellow-600'); 
+                if(s==='starred') document.getElementById('nav-starred').classList.add('bg-yellow-50');
+                
+                if(s==='trash') document.getElementById('nav-trash').classList.replace('text-slate-600', 'text-red-700'); 
+                if(s==='trash') document.getElementById('nav-trash').classList.add('bg-red-50');
+
+                if(s==='shared') document.getElementById('nav-shared').classList.replace('text-slate-600', 'text-blue-700'); 
+                if(s==='shared') document.getElementById('nav-shared').classList.add('bg-blue-50');
+
                 document.getElementById('shared-notifications').innerHTML='';
-                if(s==='root') { currentFolder=null; folderPath=[{id:null,name:'Inicio'}]; document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
-                else if(s==='trash') { currentFolder='trash'; folderPath=[{id:'trash',name:'Papelera'}]; document.getElementById('toolbar-actions').classList.add('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.add('hidden'); document.getElementById('shared-notifications').classList.add('hidden'); }
-                else if(s==='shared') { currentFolder='shared_root'; folderPath=[{id:'shared_root',name:'Compartidos'}]; document.getElementById('toolbar-actions').classList.add('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.add('hidden'); document.getElementById('shared-notifications').classList.remove('hidden'); driveApp.loadNotifications(); }
+                const tools = document.getElementById('toolbar-actions');
+                const btnNew = document.getElementById('btn-new-main');
+
+                if(s==='root') { 
+                    currentFolder=null; folderPath=[{id:null,name:'Inicio'}]; 
+                    tools.classList.remove('opacity-50','pointer-events-none'); 
+                    btnNew.classList.remove('hidden'); 
+                    document.getElementById('shared-notifications').classList.add('hidden'); 
+                } else if(s==='starred') {
+                     currentFolder='starred'; folderPath=[{id:'starred',name:'Destacados'}];
+                     tools.classList.add('opacity-50','pointer-events-none'); 
+                     btnNew.classList.add('hidden');
+                } else if(s==='trash') { 
+                    currentFolder='trash'; folderPath=[{id:'trash',name:'Papelera'}]; 
+                    tools.classList.add('opacity-50','pointer-events-none'); 
+                    btnNew.classList.add('hidden'); 
+                    document.getElementById('shared-notifications').classList.add('hidden'); 
+                } else if(s==='shared') { 
+                    currentFolder='shared_root'; folderPath=[{id:'shared_root',name:'Compartidos'}]; 
+                    tools.classList.add('opacity-50','pointer-events-none'); 
+                    btnNew.classList.add('hidden'); 
+                    document.getElementById('shared-notifications').classList.remove('hidden'); 
+                    driveApp.loadNotifications(); 
+                }
                 driveApp.renderBreadcrumbs(); driveApp.loadContent();
             },
+            
             navigateToFolder: (id,name) => {
-                if(currentSection==='trash') return; currentFolder=id; const idx=folderPath.findIndex(p=>p.id===id); if(idx!==-1) folderPath=folderPath.slice(0,idx+1); else folderPath.push({id:id,name:name});
-                document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); document.getElementById('btn-new-main').classList.remove('hidden'); driveApp.renderBreadcrumbs(); driveApp.loadContent();
+                if(currentSection==='trash') return; 
+                currentFolder=id; 
+                const idx=folderPath.findIndex(p=>p.id===id); 
+                if(idx!==-1) folderPath=folderPath.slice(0,idx+1); else folderPath.push({id:id,name:name});
+                
+                document.getElementById('toolbar-actions').classList.remove('opacity-50','pointer-events-none'); 
+                document.getElementById('btn-new-main').classList.remove('hidden'); 
+                driveApp.renderBreadcrumbs(); driveApp.loadContent();
             },
+            
             renderBreadcrumbs: () => { const el=document.getElementById('drive-breadcrumbs'); el.innerHTML=''; folderPath.forEach((p,i)=>{ const s=document.createElement('span'); s.className=i===folderPath.length-1?'text-slate-800 font-bold bg-slate-100 px-2.5 py-1 rounded-md cursor-default text-xs':'text-slate-500 cursor-pointer hover:text-primary-600 hover:underline px-1'; s.innerText=p.name; if(i!==folderPath.length-1) { s.onclick=()=>driveApp.navigateToFolder(p.id,p.name); el.appendChild(s); el.appendChild(document.createElement('i')).className='fa-solid fa-angle-right text-[10px] text-slate-300 mx-2'; } else el.appendChild(s); }); },
             toggleSort: () => { sortOrder=sortOrder==='desc'?'asc':'desc'; document.getElementById('sort-icon').className=sortOrder==='desc'?'fa-solid fa-arrow-down-short-wide':'fa-solid fa-arrow-up-wide-short'; driveApp.loadContent(); },
             filterContent: (v) => { const l=v.toLowerCase(); driveApp.renderGrid(allItems.filter(i=>i.name.toLowerCase().includes(l))); },
+            
             loadContent: () => {
                 if(unsubscribeSnapshot) unsubscribeSnapshot(); document.getElementById('drive-loader').classList.remove('hidden');
                 let q; const uid=auth.currentUser.uid;
+                
                 if(currentSection==='trash') q=query(collection(db,"assets"),where("ownerId","==",uid),where("parentId","==","trash"),orderBy("createdAt","desc"));
+                else if(currentSection==='starred') q=query(collection(db,"assets"),where("ownerId","==",uid),where("isStarred","==",true),orderBy("createdAt","desc"));
                 else if(currentSection==='shared' && currentFolder==='shared_root') q=query(collection(db,"assets"),where("sharedWith","array-contains",uid),where("type","==","folder"));
-                else { if(currentFolder===null) q=query(collection(db,"assets"),where("ownerId","==",uid),where("parentId","==",null),orderBy("type","desc"),orderBy("createdAt",sortOrder)); else q=query(collection(db,"assets"),where("parentId","==",currentFolder),orderBy("type","desc"),orderBy("createdAt",sortOrder)); }
+                else { 
+                    if(currentFolder===null) q=query(collection(db,"assets"),where("ownerId","==",uid),where("parentId","==",null),orderBy("type","desc"),orderBy("createdAt",sortOrder)); 
+                    else q=query(collection(db,"assets"),where("parentId","==",currentFolder),orderBy("type","desc"),orderBy("createdAt",sortOrder)); 
+                }
+                
                 unsubscribeSnapshot=onSnapshot(q,(s)=>{ document.getElementById('drive-loader').classList.add('hidden'); allItems=[]; s.forEach(d=>allItems.push({id:d.id,...d.data()})); driveApp.filterContent(document.getElementById('drive-search').value); });
             },
-            renderGrid: (items) => { const g=document.getElementById('drive-content'), e=document.getElementById('drive-empty'); g.innerHTML=''; if(items.length===0) { e.classList.remove('hidden'); g.classList.add('hidden'); } else { e.classList.add('hidden'); g.classList.remove('hidden'); items.forEach(i=>driveApp.createItemElement(i)); } },
+
+            // --- RENDERING ---
+            renderGrid: (items) => { 
+                const g=document.getElementById('drive-content'), e=document.getElementById('drive-empty'); 
+                g.innerHTML=''; 
+                
+                // Switch Grid/List Classes
+                if(driveApp.viewMode === 'list') {
+                    g.classList.remove('drive-grid'); g.classList.add('drive-list');
+                } else {
+                    g.classList.add('drive-grid'); g.classList.remove('drive-list');
+                }
+
+                if(items.length===0) { e.classList.remove('hidden'); g.classList.add('hidden'); } 
+                else { e.classList.add('hidden'); g.classList.remove('hidden'); items.forEach(i=>driveApp.createItemElement(i)); } 
+            },
+            
             createItemElement: (d) => {
-                const g=document.getElementById('drive-content'); const div=document.createElement('div'); div.className="drive-item flex flex-col items-center p-4 rounded-2xl bg-white card-shadow cursor-pointer relative border border-slate-100 select-none hover:bg-slate-50"; div.dataset.id=d.id; div.draggable=currentSection!=='trash';
+                const g=document.getElementById('drive-content'); 
+                const div=document.createElement('div'); 
+                div.dataset.id=d.id; 
+                div.draggable=currentSection!=='trash';
+                
+                // Common Handlers
                 div.setAttribute('oncontextmenu', `driveApp.showContextMenu(event, '${d.id}', '${encodeURIComponent(JSON.stringify(d))}')`);
+                div.addEventListener('click',e=>{
+                    if(!e.target.closest('button')){
+                        // Single click selects and shows info
+                        driveApp.selectSingleItem(d.id);
+                        driveApp.updateDetailsPanel(d);
+                    }
+                });
+                div.addEventListener('dblclick', () => {
+                   if(d.type==='folder') driveApp.navigateToFolder(d.id,d.name); else driveApp.previewItem(d);
+                });
+
+                // --- DRAG LOGIC ---
                 if(div.draggable) {
                     div.ondragstart=e=>{ const ids=driveApp.getBatchIds(d.id); e.dataTransfer.setData("text/plain",JSON.stringify(ids)); e.dataTransfer.setData("type",d.type); e.target.classList.add('drag-ghost'); };
                     div.ondragend=e=>e.target.classList.remove('drag-ghost');
@@ -507,14 +754,77 @@
                         div.ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('folder-drag-over'); const r=e.dataTransfer.getData("text/plain"); try{const i=JSON.parse(r); if(Array.isArray(i)&&!i.includes(d.id)) driveApp.confirmMove(i,d.id);}catch(e){}};
                     }
                 }
-                let ic=''; if(d.type==='folder') ic=`<div class="relative mb-2"><i class="fa-solid fa-folder text-6xl text-yellow-400 drop-shadow-sm group-hover:scale-105 transition-transform"></i>${d.sharedWith?'<i class="fa-solid fa-user-group absolute -bottom-1 -right-1 text-blue-500 bg-white rounded-full p-1.5 text-[10px] shadow-sm ring-1 ring-slate-100"></i>':''}</div>`;
-                else { let c='text-slate-400',f='fa-file',b='bg-slate-50',m=d.mimeType||''; if(m.includes('image')){f='fa-file-image';c='text-purple-500';b='bg-purple-50';} else if(m.includes('pdf')){f='fa-file-pdf';c='text-red-500';b='bg-red-50';} else if(m.includes('text')||m.includes('html')){f='fa-file-code';c='text-blue-500';b='bg-blue-50';} else if(m.includes('video')){f='fa-file-video';c='text-pink-500';b='bg-pink-50';} else if(m.includes('audio')){f='fa-file-audio';c='text-cyan-500';b='bg-cyan-50';} ic=`<div class="h-14 w-14 rounded-2xl ${b} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300"><i class="fa-solid ${f} text-3xl ${c}"></i></div>`; }
-                div.innerHTML=`${ic}<span class="text-xs font-semibold text-slate-700 text-center truncate w-full px-1">${d.name}</span>`;
-                div.addEventListener('click',e=>{if(!e.target.closest('button')){if(d.type==='folder') driveApp.navigateToFolder(d.id,d.name); else driveApp.previewItem(d);}});
+
+                // --- RENDER CONTENT BASED ON VIEW MODE ---
+                if (driveApp.viewMode === 'list') {
+                     div.className="list-row cursor-pointer relative select-none group";
+                     const iconClass = d.type === 'folder' ? 'fa-folder text-yellow-400' : 'fa-file text-slate-400';
+                     const date = d.createdAt ? new Date(d.createdAt.seconds*1000).toLocaleDateString() : '-';
+                     const size = d.size ? driveApp.formatBytes(d.size) : '-';
+                     
+                     div.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <i class="fa-solid ${iconClass} text-lg"></i>
+                            <span class="truncate font-medium text-slate-700">${d.name}</span>
+                            ${d.isStarred ? '<i class="fa-solid fa-star text-xs text-yellow-400"></i>' : ''}
+                        </div>
+                        <div class="text-xs text-slate-500">Yo</div>
+                        <div class="text-xs text-slate-500">${date}</div>
+                        <div class="text-xs text-slate-500">${size}</div>
+                     `;
+                } else {
+                    // GRID MODE
+                    div.className="drive-item flex flex-col items-center p-4 rounded-2xl bg-white card-shadow cursor-pointer relative border border-slate-100 select-none hover:bg-slate-50 transition-all duration-200";
+                    
+                    let ic=''; 
+                    if(d.type==='folder') ic=`<div class="relative mb-2"><i class="fa-solid fa-folder text-6xl text-yellow-400 drop-shadow-sm group-hover:scale-105 transition-transform"></i>${d.sharedWith?'<i class="fa-solid fa-user-group absolute -bottom-1 -right-1 text-blue-500 bg-white rounded-full p-1.5 text-[10px] shadow-sm ring-1 ring-slate-100"></i>':''}</div>`;
+                    else { 
+                        let c='text-slate-400',f='fa-file',b='bg-slate-50',m=d.mimeType||''; 
+                        if(m.includes('image')){f='fa-file-image';c='text-purple-500';b='bg-purple-50';} else if(m.includes('pdf')){f='fa-file-pdf';c='text-red-500';b='bg-red-50';} else if(m.includes('text')||m.includes('html')){f='fa-file-code';c='text-blue-500';b='bg-blue-50';} else if(m.includes('video')){f='fa-file-video';c='text-pink-500';b='bg-pink-50';} else if(m.includes('audio')){f='fa-file-audio';c='text-cyan-500';b='bg-cyan-50';} 
+                        ic=`<div class="h-14 w-14 rounded-2xl ${b} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300"><i class="fa-solid ${f} text-3xl ${c}"></i></div>`; 
+                    }
+                    
+                    div.innerHTML=`
+                        ${d.isStarred ? '<div class="absolute top-2 right-2 text-yellow-400 text-xs"><i class="fa-solid fa-star"></i></div>' : ''}
+                        ${ic}
+                        <span class="text-xs font-semibold text-slate-700 text-center truncate w-full px-1">${d.name}</span>
+                    `;
+                }
                 g.appendChild(div);
             },
-            
-            // --- PREVIEW LOGIC (AÑADIDO) ---
+
+            selectSingleItem: (id) => {
+                 document.querySelectorAll('.item-selected').forEach(el=>el.classList.remove('item-selected'));
+                 const el = document.querySelector(`[data-id="${id}"]`);
+                 if(el) el.classList.add('item-selected');
+            },
+
+            // --- BOX SELECTION ---
+            initBoxSelection: () => {
+                const c = document.getElementById('drive-dropzone');
+                document.addEventListener('click', () => document.getElementById('context-menu').style.display='none');
+                c.addEventListener('mousedown', e => { 
+                    if(e.target!==c && e.target.id!=='drive-content') return; 
+                    if(e.button!==0) return; 
+                    isSelecting=true; 
+                    
+                    // Clear panel on empty click
+                    driveApp.updateDetailsPanel(null);
+
+                    const r=c.getBoundingClientRect(); 
+                    startX=e.clientX-r.left+c.scrollLeft; 
+                    startY=e.clientY-r.top+c.scrollTop; 
+                    selectionBox.style.width='0px'; selectionBox.style.height='0px'; selectionBox.style.left=startX+'px'; selectionBox.style.top=startY+'px'; 
+                    document.getElementById('selection-container').appendChild(selectionBox); 
+                    document.querySelectorAll('.item-selected').forEach(el=>el.classList.remove('item-selected')); 
+                });
+                c.addEventListener('mousemove', e => { if(!isSelecting) return; const r=c.getBoundingClientRect(); const cx=e.clientX-r.left+c.scrollLeft, cy=e.clientY-r.top+c.scrollTop; const w=Math.abs(cx-startX), h=Math.abs(cy-startY), l=Math.min(cx,startX), t=Math.min(cy,startY); selectionBox.style.width=w+'px'; selectionBox.style.height=h+'px'; selectionBox.style.left=l+'px'; selectionBox.style.top=t+'px'; driveApp.checkSelectionCollision(l,t,w,h); });
+                document.addEventListener('mouseup', () => { if(isSelecting) { isSelecting=false; if(selectionBox.parentNode) selectionBox.parentNode.removeChild(selectionBox); }});
+            },
+            checkSelectionCollision: (x,y,w,h) => { document.querySelectorAll('.drive-item, .list-row').forEach(i => { const il=i.offsetLeft, it=i.offsetTop, ir=il+i.offsetWidth, ib=it+i.offsetHeight; const bl=x, bt=y, br=x+w, bb=y+h; if(!(br<il || bl>ir || bb<it || bt>ib)) i.classList.add('item-selected'); else i.classList.remove('item-selected'); }); },
+            getBatchIds: (tid) => { const s=document.querySelectorAll('.item-selected'); const ids=Array.from(s).map(el=>el.dataset.id); return ids.includes(tid)?ids:[tid]; },
+
+            // --- PREVIEW LOGIC ---
             previewItem: (item) => {
                 const modal = document.getElementById('modal-preview');
                 const content = document.getElementById('preview-content');
@@ -543,13 +853,14 @@
                 const modal = document.getElementById('modal-preview');
                 const content = document.getElementById('preview-content');
                 modal.classList.add('hidden');
-                content.innerHTML = ''; // Detener video/audio
+                content.innerHTML = ''; 
             },
 
             // --- ACTIONS & MODALS ---
-            confirmMove: (ids, tid) => { driveApp.showConfirm('move', async()=>{ const b=writeBatch(db); (Array.isArray(ids)?ids:[ids]).forEach(i=>b.update(doc(db,"assets",i),{parentId:tid})); await b.commit(); }, Array.isArray(ids)&&ids.length>1); },
-            confirmTrash: (id) => { const ids=driveApp.getBatchIds(id); driveApp.showConfirm('trash', async()=>{ const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:'trash'})); await b.commit(); }, ids.length>1); },
-            restoreItem: (id) => { const ids=driveApp.getBatchIds(id); const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:null})); b.commit(); },
+            confirmMove: (ids, tid) => { driveApp.showConfirm('move', async()=>{ const b=writeBatch(db); (Array.isArray(ids)?ids:[ids]).forEach(i=>b.update(doc(db,"assets",i),{parentId:tid})); await b.commit(); driveApp.showToast("Elementos movidos"); }, Array.isArray(ids)&&ids.length>1); },
+            confirmTrash: (id) => { const ids=driveApp.getBatchIds(id); driveApp.showConfirm('trash', async()=>{ const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:'trash'})); await b.commit(); driveApp.showToast("Movido a la papelera"); }, ids.length>1); },
+            restoreItem: (id) => { const ids=driveApp.getBatchIds(id); const b=writeBatch(db); ids.forEach(i=>b.update(doc(db,"assets",i),{parentId:null})); b.commit(); driveApp.showToast("Elemento restaurado"); },
+            
             confirmDeleteForever: (id, type) => {
                 const ids = driveApp.getBatchIds(id);
                 driveApp.showConfirm('delete', async () => {
@@ -559,19 +870,22 @@
                         const gather = async (rid) => { all.push(rid); const s = await getDocs(query(collection(db,"assets"),where("parentId","==",rid))); await Promise.all(s.docs.map(d=>gather(d.id))); };
                         await Promise.all(ids.map(i=>gather(i)));
                         for(let i=0; i<all.length; i+=500) { const c=all.slice(i,i+500); const b=writeBatch(db); c.forEach(x=>b.delete(doc(db,"assets",x))); await b.commit(); }
-                    } catch(e) { console.error(e); } finally { btn.disabled=false; btn.innerText=og; driveApp.closeConfirm(false); }
+                        driveApp.showToast("Eliminado definitivamente");
+                    } catch(e) { console.error(e); driveApp.showToast("Error al eliminar", "error"); } finally { btn.disabled=false; btn.innerText=og; driveApp.closeConfirm(false); }
                 }, ids.length > 1);
             },
+            
             promptShare: (fid) => {
                 driveApp.showConfirm('share', async () => {
                     const u = document.getElementById('share-username').value.trim(); if(!u) return;
                     const snap = await getDocs(query(collection(db,"users"),where("username","==",u)));
-                    if(snap.empty) { driveApp.showAlert("Error", "Usuario no encontrado."); return; }
-                    const tuid = snap.docs[0].id; if(tuid===auth.currentUser.uid) { driveApp.showAlert("Error", "No puedes compartir contigo mismo."); return; }
+                    if(snap.empty) { driveApp.showToast("Usuario no encontrado", "error"); return; }
+                    const tuid = snap.docs[0].id; if(tuid===auth.currentUser.uid) { driveApp.showToast("No puedes compartir contigo mismo", "error"); return; }
                     await addDoc(collection(db,"notifications"), { from:auth.currentUser.uid, fromName:auth.currentUser.displayName||"Usuario", to:tuid, type:'share_request', folderId:fid, status:'pending', createdAt:serverTimestamp() });
-                    driveApp.showAlert("Enviado", `Solicitud enviada a ${u}.`);
+                    driveApp.showToast(`Solicitud enviada a ${u}`);
                 });
             },
+            
             loadNotifications: () => {
                 const na = document.getElementById('shared-notifications');
                 onSnapshot(query(collection(db,"notifications"),where("to","==",auth.currentUser.uid),where("status","==","pending")), (s) => {
@@ -582,7 +896,7 @@
                     });
                 });
             },
-            acceptShare: async (nid, fid) => { const b=writeBatch(db); b.update(doc(db,"assets",fid),{sharedWith:arrayUnion(auth.currentUser.uid)}); b.delete(doc(db,"notifications",nid)); await b.commit(); driveApp.showAlert("¡Listo!", "Carpeta añadida."); },
+            acceptShare: async (nid, fid) => { const b=writeBatch(db); b.update(doc(db,"assets",fid),{sharedWith:arrayUnion(auth.currentUser.uid)}); b.delete(doc(db,"notifications",nid)); await b.commit(); driveApp.showToast("Carpeta añadida a compartidos"); },
             rejectShare: async (nid) => { await deleteDoc(doc(db,"notifications",nid)); },
             
             showConfirm: (t, act, batch=false) => {
@@ -616,10 +930,10 @@
                 });
             },
             handleFileUpload: async (fl) => {
-                if(currentSection==='trash') { driveApp.showAlert("Error", "No subas a la papelera."); return; }
+                if(currentSection==='trash') { driveApp.showToast("No subas a la papelera", "error"); return; }
                 let size=0; for(let i=0; i<fl.length; i++) size+=fl[i].size;
                 let owner = auth.currentUser.uid;
-                if(currentFolder && currentFolder!=='shared_root') { try{const d=await getDoc(doc(db,"assets",currentFolder)); if(d.exists()) owner=d.data().ownerId;}catch(e){} }
+                if(currentFolder && currentFolder!=='shared_root' && currentFolder !== 'starred') { try{const d=await getDoc(doc(db,"assets",currentFolder)); if(d.exists()) owner=d.data().ownerId;}catch(e){} }
                 const limit = await driveApp.getStorageLimitForUser(owner);
                 const used = owner===auth.currentUser.uid ? totalStorageBytes : await driveApp.calculateStorage(owner);
                 if(used+size > limit) { driveApp.showAlert("Espacio Insuficiente", "Límite de almacenamiento alcanzado."); return; }
@@ -631,24 +945,71 @@
                     l.prepend(d); return { file:f, id:id, div:d };
                 });
 
-                const res = await Promise.allSettled(ups.map(u => driveApp.uploadOneFile(u.file, u.id)));
-                const payloads = [];
-                res.forEach((r,i) => {
-                    if(r.status==='fulfilled') {
-                        const url = r.value.fileUrl.startsWith('http') ? r.value.fileUrl : API_BASE + r.value.fileUrl;
-                        payloads.push({ ownerId:owner, parentId:currentFolder, name:ups[i].file.name, type:'file', mimeType:ups[i].file.type, size:ups[i].file.size, url:url, createdAt:serverTimestamp(), storageProvider:'yyf' });
-                        document.getElementById(`pct-${ups[i].id}`).innerText = "Procesando...";
-                    } else document.getElementById(`pct-${ups[i].id}`).innerHTML = "Error";
-                });
+                // --- CONCURRENCY POOL (10 at a time) ---
+                const concurrencyLimit = 10;
+                const executing = [];
+                
+                for (const u of ups) {
+                    const p = driveApp.uploadOneFile(u.file, u.id).then(async (response) => {
+                        // Success Logic
+                        const url = response.fileUrl.startsWith('http') ? response.fileUrl : API_BASE + response.fileUrl;
+                        let pid = currentFolder;
+                        if(currentSection === 'starred') pid = null; 
+                        
+                        // Guardado Inmediato
+                        await addDoc(collection(db, "assets"), {
+                            ownerId: owner,
+                            parentId: pid,
+                            name: u.file.name,
+                            type: 'file',
+                            mimeType: u.file.type,
+                            size: u.file.size,
+                            url: url,
+                            createdAt: serverTimestamp(),
+                            storageProvider: 'yyf',
+                            isStarred: false
+                        });
 
-                if(payloads.length>0) {
-                    const b = writeBatch(db); payloads.forEach(p => b.set(doc(collection(db,"assets")), p)); await b.commit();
-                    ups.forEach((u,i) => { if(res[i].status==='fulfilled') { document.getElementById(`bar-${u.id}`).style.width='100%'; document.getElementById(`bar-${u.id}`).classList.replace('bg-primary-500','bg-green-500'); document.getElementById(`pct-${u.id}`).innerHTML='<i class="fa-solid fa-check text-green-500"></i>'; setTimeout(()=>{ if(u.div){u.div.style.opacity='0'; setTimeout(()=>{u.div.remove(); if(l.children.length===0) p.classList.add('hidden');},500);} }, 3000); } });
+                        // UI Update (Silent, no main toast per file)
+                        document.getElementById(`pct-${u.id}`).innerText = "100%";
+                        document.getElementById(`bar-${u.id}`).style.width='100%'; 
+                        document.getElementById(`bar-${u.id}`).classList.replace('bg-primary-500','bg-green-500'); 
+                        document.getElementById(`pct-${u.id}`).innerHTML='<i class="fa-solid fa-check text-green-500"></i>'; 
+                        
+                        setTimeout(()=>{ 
+                            if(u.div){
+                                u.div.style.opacity='0'; 
+                                setTimeout(()=>{
+                                    u.div.remove(); 
+                                    if(l.children.length===0) document.getElementById('upload-panel').classList.add('hidden');
+                                },500);
+                            } 
+                        }, 3000);
+
+                    }).catch((err) => {
+                        document.getElementById(`pct-${u.id}`).innerHTML = "Error";
+                        console.error(err);
+                    });
+
+                    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+                    executing.push(e);
+                    if (executing.length >= concurrencyLimit) {
+                        await Promise.race(executing);
+                    }
                 }
+                
+                await Promise.all(executing);
+                driveApp.showToast("Todos los archivos procesados");
             },
             clearUploads: () => { document.getElementById('upload-list').innerHTML=''; document.getElementById('upload-panel').classList.add('hidden'); },
             openCreateFolderModal: () => { document.getElementById('modal-create-folder').classList.remove('hidden'); document.getElementById('new-folder-name').focus(); },
-            createFolder: async () => { const n=document.getElementById('new-folder-name').value.trim(); if(!n) return; document.getElementById('modal-create-folder').classList.add('hidden'); document.getElementById('new-folder-name').value=''; await addDoc(collection(db,"assets"), {ownerId:auth.currentUser.uid, parentId:currentFolder, name:n, type:'folder', createdAt:serverTimestamp()}); },
+            createFolder: async () => { 
+                const n=document.getElementById('new-folder-name').value.trim(); if(!n) return; 
+                document.getElementById('modal-create-folder').classList.add('hidden'); 
+                document.getElementById('new-folder-name').value=''; 
+                await addDoc(collection(db,"assets"), {ownerId:auth.currentUser.uid, parentId:currentFolder, name:n, type:'folder', createdAt:serverTimestamp()}); 
+                driveApp.showToast("Carpeta creada");
+            },
             openCreateFileModal: () => { document.getElementById('modal-create-file').classList.remove('hidden'); document.getElementById('new-file-name').focus(); },
             createFile: () => { let n=document.getElementById('new-file-name').value.trim(); const c=document.getElementById('new-file-content').value; if(!n) return; if(!n.includes('.')) n+='.txt'; document.getElementById('modal-create-file').classList.add('hidden'); document.getElementById('new-file-name').value=''; document.getElementById('new-file-content').value=''; driveApp.handleFileUpload([new File([c],n,{type:'text/plain'})]); }
         };
@@ -658,14 +1019,11 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // FIXED: Reset antes de iniciar para no borrar los nuevos listeners
                 driveApp.resetSession();
-
                 if (user.displayName) document.getElementById('display-username').innerText = user.displayName;
                 else getDoc(doc(db, "users", user.uid)).then(snap => { if (snap.exists()) document.getElementById('display-username').innerText = snap.data().username; });
                 const up = new URLSearchParams(window.location.search); if (up.get('id')) { app.navigate('shooter'); document.getElementById('s-download-id').value = up.get('id'); shooterApp.fetchPack(); } else app.navigate('drive');
                 
-                // Iniciar listeners DESPUES del reset
                 driveApp.initUserListener(); 
                 driveApp.initStorageListener(); 
                 driveApp.loadContent();
