@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Wall Jumper - Turbo</title>
+    <title>Pixel Wall Jumper - Fixed Score</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js -->
@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const APP_ID = "pixel-jumper-turbo"; 
+        const APP_ID = "pixel-jumper-fixed-score"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
         window.myPlayerId = null;
@@ -94,7 +94,7 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #201a2e;
+            background-color: #050505;
             touch-action: none;
             font-family: 'Press Start 2P', cursive;
             image-rendering: pixelated;
@@ -107,91 +107,133 @@
         }
         .interactive { pointer-events: auto; }
         
+        /* SHAKE ANIMATION */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-screen {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
         .pixel-card {
-            background-color: #2d2345;
-            border: 4px solid #fff;
-            box-shadow: 8px 8px 0px #000;
+            background-color: #0f0f1a;
+            border: 4px solid #333;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
             padding: 2rem;
             text-align: center;
+            max-width: 90%;
+            width: 400px;
         }
         
         .pixel-btn {
-            background-color: #ffcc00;
+            background-color: #222;
             border: 4px solid #fff;
-            color: #000;
+            color: #fff;
             padding: 15px 20px;
             font-family: 'Press Start 2P', cursive;
             font-size: 16px;
             cursor: pointer;
-            box-shadow: 4px 4px 0px #000;
+            box-shadow: 0 5px 0 #000;
             transition: transform 0.1s;
             margin-top: 20px;
             width: 100%;
         }
         .pixel-btn:active {
-            transform: translate(4px, 4px);
-            box-shadow: 0px 0px 0px #000;
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #000;
         }
 
         .pixel-input {
             background-color: #000;
-            border: 2px solid #fff;
-            color: #00ff00;
+            border: 2px solid #555;
+            color: #00ffaa;
             font-family: 'Press Start 2P', cursive;
-            padding: 10px;
+            padding: 15px;
             text-align: center;
             width: 100%;
             margin-bottom: 10px;
             outline: none;
+            text-transform: uppercase;
+        }
+        .pixel-input:focus {
+            border-color: #00ffaa;
+        }
+
+        .homescreen-logo {
+            text-shadow: 4px 4px 0px #000;
+            line-height: 1.5;
         }
     </style>
 </head>
-<body>
+<body id="gameBody">
 
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
-        <!-- Start Screen -->
-        <div id="startScreen" class="pixel-card interactive max-w-md w-full">
-            <h1 class="text-3xl text-yellow-400 mb-6 leading-relaxed text-shadow-md">PIXEL<br>JUMPER</h1>
+        <!-- Home Screen -->
+        <div id="startScreen" class="pixel-card interactive">
+            <h1 class="text-3xl text-purple-400 mb-8 homescreen-logo">NEON<br>JUMPER</h1>
             
-            <input type="text" id="playerNameInput" class="pixel-input" placeholder="NAME" maxlength="6">
+            <div class="mb-6">
+                <label class="text-xs text-gray-500 mb-2 block">NOMBRE DE PILOTO</label>
+                <input type="text" id="playerNameInput" class="pixel-input" placeholder="JUGADOR" maxlength="8">
+            </div>
 
-            <p class="text-gray-300 text-xs mb-6 mt-4 leading-loose">
-                CLICK = SALTAR + GIRAR<br>
-                ¡SUBE RAPIDO!<br>
-                <span class="text-red-400">EVITA EL ROJO</span>
+            <p class="text-gray-400 text-[10px] mb-6 leading-loose">
+                CLICK PARA SALTAR Y GIRAR<br>
+                SUBE SIN PARAR<br>
+                <span class="text-red-500">EVITA EL ROJO</span>
             </p>
             
-            <button id="startBtn" class="pixel-btn">START</button>
+            <button id="startBtn" class="pixel-btn text-purple-400 hover:text-white">JUGAR</button>
         </div>
 
         <!-- Game Over Screen -->
         <div id="gameOverScreen" class="hidden pixel-card interactive">
-            <h1 class="text-2xl text-red-500 mb-4">GAME OVER</h1>
-            <p class="text-white text-sm mb-4">SCORE: <span id="finalScore" class="text-yellow-400">0</span></p>
-            <p class="text-white text-sm mb-6">NIVEL: <span id="finalLevel" class="text-green-400">1</span></p>
-            <button id="restartBtn" class="pixel-btn" style="background-color: #ff4444; color: white;">RETRY</button>
+            <h1 class="text-3xl text-red-500 mb-6 homescreen-logo">MUERTO</h1>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+                <div class="bg-black/50 p-2 border border-gray-700">
+                    <div class="text-gray-500 text-[10px]">PUNTOS</div>
+                    <span id="finalScore" class="text-yellow-400">0</span>
+                </div>
+                <div class="bg-black/50 p-2 border border-gray-700">
+                    <div class="text-gray-500 text-[10px]">NIVEL</div>
+                    <span id="finalLevel" class="text-purple-400">1</span>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="pixel-btn" style="border-color: #ff4444; color: #ff4444;">REINTENTAR</button>
+            <button id="homeBtn" class="mt-4 text-[10px] text-gray-500 hover:text-white underline p-2">VOLVER AL MENU</button>
         </div>
 
         <!-- HUD -->
         <div id="hud" class="hidden absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
             <div>
-                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md bg-black/50 p-2 border-2 border-white">SCORE: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
-                <p class="text-white text-xs shadow-black drop-shadow-md bg-black/50 p-2 border-2 border-white">LEVEL: <span id="levelDisplay" class="text-green-400">1</span></p>
+                <p class="text-gray-300 text-[10px] mb-2 bg-black/80 p-2 border border-gray-800 rounded shadow-lg">SCORE: <span id="scoreDisplay" class="text-yellow-200">0</span></p>
             </div>
             <div class="text-right">
-                <p id="onlineCount" class="text-blue-400 text-xs bg-black/50 p-2 border-2 border-white">ONLINE: 1</p>
+                <p id="onlineCount" class="text-blue-300 text-[10px] bg-black/80 p-2 border border-gray-800 rounded shadow-lg">ONLINE: 1</p>
             </div>
         </div>
 
         <div id="levelNotification" class="absolute top-1/4 pointer-events-none text-center hidden">
-            <h2 class="text-4xl text-yellow-400 shadow-black drop-shadow-lg animate-bounce stroke-black">LEVEL UP!</h2>
+            <h2 class="text-4xl text-purple-400 animate-pulse homescreen-logo">LEVEL UP!</h2>
         </div>
     </div>
 
     <script>
-        // --- RNG DETERMINISTA ---
+        // --- RNG ---
         class SeededRandom {
             constructor(seed) { this.seed = seed; }
             next() {
@@ -202,28 +244,28 @@
             }
             range(min, max) { return min + this.next() * (max - min); }
         }
-        const GAME_SEED = 42; 
+        const GAME_SEED = 1234; 
 
         // --- CONFIGURACIÓN ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const body = document.getElementById('gameBody');
         ctx.imageSmoothingEnabled = false;
 
-        // UI Elements
+        // UI
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const hud = document.getElementById('hud');
         const scoreDisplay = document.getElementById('scoreDisplay');
-        const levelDisplay = document.getElementById('levelDisplay');
         const finalScoreDisplay = document.getElementById('finalScore');
         const finalLevelDisplay = document.getElementById('finalLevel');
         const startBtn = document.getElementById('startBtn');
         const restartBtn = document.getElementById('restartBtn');
+        const homeBtn = document.getElementById('homeBtn');
         const levelNotification = document.getElementById('levelNotification');
         const nameInput = document.getElementById('playerNameInput');
         const onlineCountDisplay = document.getElementById('onlineCount');
 
-        // Estado
         let gameState = 'MENU';
         let score = 0;
         let level = 1;
@@ -231,20 +273,25 @@
         let cameraY = 0;
         let playerName = "PX";
 
-        // Física (Más rápida = Más diversión)
-        const GRAVITY = 0.65;
-        const JUMP_FORCE = -12.5; 
-        const HORIZONTAL_SPEED = 7.5; 
-        const MAX_FALL_SPEED = 15;
+        // --- CARGAR NOMBRE GUARDADO ---
+        const savedName = localStorage.getItem('pixelJumperName');
+        if (savedName) {
+            nameInput.value = savedName;
+            playerName = savedName;
+        }
 
-        // Fondos por nivel (Ciclo de colores vibrantes oscuros)
+        // --- FÍSICA FÁCIL (EASY MODE) ---
+        const GRAVITY = 0.55; 
+        const JUMP_FORCE = -11.5; 
+        const HORIZONTAL_SPEED = 6; 
+        const MAX_FALL_SPEED = 12;
+
         const LEVEL_COLORS = [
-            '#201a2e', // Nvl 1: Púrpura
-            '#0d2b2a', // Nvl 2: Cian oscuro
-            '#3b1e1e', // Nvl 3: Rojo ladrillo
-            '#1e3b22', // Nvl 4: Verde bosque
-            '#3b341e', // Nvl 5: Dorado oscuro
-            '#000000'  // Nvl 6: Vacío
+            '#050510', // Deep Blue
+            '#100505', // Deep Red
+            '#051005', // Deep Green
+            '#100510', // Deep Purple
+            '#000000'  // Void
         ];
 
         // --- AUDIO ---
@@ -255,22 +302,26 @@
             if (audioInit) return;
             await Tone.start();
             synth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "square" },
-                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.02, decay: 0.2, sustain: 0.1, release: 0.5 }
             }).toDestination();
-            synth.volume.value = -12;
+            synth.volume.value = -10;
+            
+            const reverb = new Tone.Reverb(2).toDestination();
+            synth.connect(reverb);
+
             noise = new Tone.NoiseSynth({
-                noise: { type: 'white' },
-                envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
+                noise: { type: 'pink' },
+                envelope: { attack: 0.01, decay: 0.3, sustain: 0 }
             }).toDestination();
-            noise.volume.value = -15;
+            noise.volume.value = -12;
             audioInit = true;
         }
 
-        function playJump() { if(audioInit) synth.triggerAttackRelease("C4", "32n"); }
-        function playBounce() { if(audioInit) synth.triggerAttackRelease("A3", "32n"); }
-        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "C1"], "8n"); }}
-        function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "16n"); }
+        function playJump() { if(audioInit) synth.triggerAttackRelease("C3", "16n"); }
+        function playBounce() { if(audioInit) synth.triggerAttackRelease("G2", "32n"); }
+        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "G1"], "4n"); }}
+        function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C3", "E3", "G3", "C4"], "8n"); }
 
         // --- CLASES ---
 
@@ -286,7 +337,7 @@
                 this.y = canvas.height - 150;
                 this.vx = HORIZONTAL_SPEED;
                 this.vy = 0;
-                const colors = ['#FF00FF', '#00FFFF', '#00FF00', '#FFFF00']; // Neón 8-bit
+                const colors = ['#00ffaa', '#00ccff', '#ff00ff', '#ffff00']; 
                 this.color = this.isLocal ? colors[Math.floor(Math.random()*colors.length)] : '#fff';
                 this.isDead = false;
             }
@@ -300,7 +351,6 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Rebote Paredes
                 if (this.x <= 0) {
                     this.x = 0; this.vx *= -1; playBounce();
                     createParticles(this.x, this.y + this.h/2, '#fff', 4);
@@ -309,39 +359,33 @@
                     createParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
                 }
 
-                // Muerte (Más margen abajo)
-                if (this.y > cameraY + canvas.height + 100) die();
+                if (this.y > cameraY + canvas.height + 200) die();
             }
 
             jump() {
                 if (this.isDead) return;
                 this.vy = JUMP_FORCE;
-                this.vx *= -1; // CLICK = SALT + GIRO
+                this.vx *= -1; 
                 playJump();
                 createParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
             }
 
             draw() {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
                 ctx.fillStyle = this.color;
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
-                
-                // Efecto bisel
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-                ctx.strokeRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
+                ctx.shadowBlur = 0;
 
-                // Ojos
                 const eyeXOffset = (this.vx > 0) ? 14 : 4;
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = '#000';
                 ctx.fillRect(Math.floor(this.x + eyeXOffset), Math.floor(this.y + 6), 6, 6);
-                ctx.fillStyle = 'black';
-                ctx.fillRect(Math.floor(this.x + eyeXOffset + (this.vx > 0 ? 4 : 0)), Math.floor(this.y + 8), 2, 2);
-
+                
                 if (this.name) {
-                    ctx.fillStyle = "#fff";
+                    ctx.fillStyle = "#aaa";
                     ctx.font = "8px 'Press Start 2P'";
                     ctx.textAlign = "center";
-                    ctx.fillText(this.name, this.x + this.w/2, this.y - 8);
+                    ctx.fillText(this.name, this.x + this.w/2, this.y - 10);
                 }
             }
         }
@@ -352,27 +396,22 @@
                 this.y = y;
                 this.h = 32;
                 
-                // DIFICULTAD: Siempre hay obstáculos, incluso en nivel 1
-                let moveProb = 0.3; // 30% bloques móviles nivel 1
-                if (lvl >= 2) moveProb = 0.5;
-                if (lvl >= 4) moveProb = 0.8;
+                let moveProb = 0.2; 
+                if (lvl >= 3) moveProb = 0.5;
 
                 this.type = rng.next() < moveProb ? 'MOVING' : 'STATIC';
-                
-                this.spikeColor = '#ff0040'; // Rojo neón peligroso
+                this.spikeColor = '#ff0055'; 
 
                 if (this.type === 'STATIC') {
-                    // Pinchos laterales
-                    let maxLen = Math.min(150, 60 + lvl * 10);
-                    this.w = 60 + rng.next() * maxLen;
+                    let maxLen = Math.min(130, 50 + lvl * 8);
+                    this.w = 50 + rng.next() * maxLen;
                     this.side = rng.next() > 0.5 ? 'LEFT' : 'RIGHT';
                     this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
                     this.isSpike = true; 
                 } else {
-                    // Bloques centrales móviles
-                    this.w = Math.max(70, 120 - (lvl * 5));
+                    this.w = Math.max(80, 140 - (lvl * 5)); 
                     this.x = rng.next() * (canvas.width - this.w);
-                    let speed = 2 + (lvl * 0.5); 
+                    let speed = 1.5 + (lvl * 0.4); 
                     this.vx = speed * (rng.next() > 0.5 ? 1 : -1);
                     this.isSpike = false; 
                 }
@@ -387,12 +426,15 @@
 
             draw() {
                 if (this.isSpike) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = this.spikeColor;
                     ctx.fillStyle = this.spikeColor;
+                    
                     const steps = 4;
                     const stepH = this.h / steps;
                     if (this.side === 'LEFT') {
-                        ctx.fillRect(0, this.y, this.w/2, this.h); // Base
-                        for(let i=0; i<steps; i++) { // Puntas pixeladas
+                        ctx.fillRect(0, this.y, this.w/2, this.h);
+                        for(let i=0; i<steps; i++) {
                             let width = (this.w/2) * (1 - i/steps);
                             ctx.fillRect(this.w/2, this.y + (i*stepH), width, stepH);
                         }
@@ -403,18 +445,16 @@
                             ctx.fillRect(canvas.width - this.w/2 - width, this.y + (i*stepH), width, stepH);
                         }
                     }
+                    ctx.shadowBlur = 0;
                 } else {
-                    // Bloque móvil
-                    ctx.fillStyle = '#ffbb00'; 
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#ccaa00';
+                    ctx.fillStyle = '#ccaa00'; 
                     ctx.fillRect(this.x, this.y, this.w, this.h);
-                    ctx.fillStyle = '#ffe082'; // Brillo
-                    ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8);
                     
-                    // Cara Bloque
-                    ctx.fillStyle = 'black';
-                    ctx.fillRect(this.x + 15, this.y + 12, 4, 4);
-                    ctx.fillRect(this.x + this.w - 19, this.y + 12, 4, 4);
-                    ctx.fillRect(this.x + 20, this.y + 20, this.w - 40, 2); // Boca
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8); 
+                    ctx.shadowBlur = 0;
                 }
             }
         }
@@ -422,18 +462,21 @@
         class Particle {
             constructor(x, y, color) {
                 this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 10;
-                this.vy = (Math.random() - 0.5) * 10;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
                 this.life = 1; this.color = color; 
-                this.size = Math.floor(Math.random() * 5 + 3);
+                this.size = Math.floor(Math.random() * 3 + 2);
             }
             update() { 
                 this.x += this.vx; this.y += this.vy; 
-                this.life -= 0.08; this.vy += 0.5; 
+                this.life -= 0.04; 
             }
             draw() { 
-                ctx.globalAlpha = this.life; ctx.fillStyle = this.color; 
+                ctx.globalAlpha = this.life; 
+                ctx.shadowBlur = 5; ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color; 
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1; 
             }
         }
@@ -454,8 +497,12 @@
         resize();
 
         function startGame() {
-            playerName = nameInput.value.trim() || "PX";
+            const nameInputVal = nameInput.value.trim().toUpperCase() || "PX";
+            playerName = nameInputVal;
             player.name = playerName;
+            
+            // GUARDAR NOMBRE
+            localStorage.setItem('pixelJumperName', playerName);
 
             initAudio();
             gameState = 'PLAYING';
@@ -467,10 +514,11 @@
             particles = [];
             player.reset();
             
-            // GENERACIÓN INICIAL MASIVA
-            nextObstacleY = canvas.height - 250; 
-            
-            // Pre-llenar pantalla + 1 pantalla extra arriba
+            // Reset Shake
+            body.classList.remove('shake-screen');
+
+            // GENERACIÓN SEGURA
+            nextObstacleY = canvas.height - 200; 
             while (nextObstacleY > -canvas.height) {
                 spawnObstacle();
             }
@@ -483,17 +531,20 @@
 
         function spawnObstacle() {
             obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
-            
-            let baseGap = 160; 
-            let gap = baseGap - (Math.min(level, 15) * 4); // Se estrecha
-            gap += Math.random() * 50; 
-            
-            nextObstacleY -= Math.max(130, gap); // Mínimo 130px para asegurar jugabilidad
+            let baseGap = 180; 
+            let gap = baseGap - (Math.min(level, 10) * 3);
+            gap += Math.random() * 40; 
+            nextObstacleY -= Math.max(150, gap); 
         }
 
         function die() {
             if (gameState === 'GAMEOVER') return;
             gameState = 'GAMEOVER';
+            
+            // SCREEN SHAKE EFECTO
+            body.classList.add('shake-screen');
+            setTimeout(() => body.classList.remove('shake-screen'), 500);
+
             playDead();
             createParticles(player.x, player.y, player.color, 25);
             
@@ -513,16 +564,16 @@
         }
 
         function checkCollisions() {
-            let pBox = {l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h};
+            let pBox = {l: player.x + 4, r: player.x + player.w - 4, t: player.y + 4, b: player.y + player.h - 4}; 
             
             for (let obs of obstacles) {
                 let oBox;
                 if (obs.isSpike) {
-                    let width = obs.w - 8; // Hitbox indulgente
+                    let width = obs.w - 12; 
                     let x = (obs.side === 'LEFT') ? 0 : canvas.width - width;
-                    oBox = {l: x, r: x + width, t: obs.y, b: obs.y + obs.h};
+                    oBox = {l: x, r: x + width, t: obs.y + 4, b: obs.y + obs.h - 4};
                 } else {
-                    oBox = {l: obs.x, r: obs.x + obs.w, t: obs.y, b: obs.y + obs.h};
+                    oBox = {l: obs.x + 2, r: obs.x + obs.w - 2, t: obs.y + 2, b: obs.y + obs.h - 2};
                 }
 
                 if (pBox.l < oBox.r && pBox.r > oBox.l && pBox.t < oBox.b && pBox.b > oBox.t) {
@@ -554,17 +605,15 @@
             checkCollisions();
             sendNetUpdate();
 
-            // Cámara y Progresión ACELERADA
             let targetY = player.y - canvas.height * 0.6;
             if (targetY < cameraY) {
                 let diff = cameraY - targetY;
                 cameraY = targetY;
                 
-                // SISTEMA DE PUNTOS BOOSTED (1 pixel = 1 punto)
-                score += diff; 
-                
-                // SUBIR NIVEL CADA 600 PUNTOS (aprox 2 pantallas)
-                let newLevel = Math.floor(score / 600) + 1;
+                // CORRECCIÓN PUNTOS: SUMAMOS LA DIFERENCIA POSITIVA
+                score += diff * 0.5;
+
+                let newLevel = Math.floor(score / 500) + 1;
                 if (newLevel > level) {
                     level = newLevel;
                     playLvlUp();
@@ -573,23 +622,19 @@
                     setTimeout(() => levelNotification.classList.add('hidden'), 2000);
                 }
             } else {
-                // AUTO-SCROLL RÁPIDO QUE ESCALA
-                cameraY -= (2.0 + level * 0.3); 
+                cameraY -= (0.8 + level * 0.15); 
             }
 
-            // Generar
             if (cameraY < nextObstacleY + canvas.height + 300) {
                 spawnObstacle();
             }
 
-            // Limpieza
             obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 300);
             obstacles.forEach(obs => obs.update());
             particles.forEach(p => p.update());
             particles = particles.filter(p => p.life > 0);
 
             scoreDisplay.innerText = Math.floor(score);
-            levelDisplay.innerText = level;
             
             let count = 1;
             if (window.remotePlayers) count += Object.keys(window.remotePlayers).length;
@@ -597,18 +642,16 @@
         }
 
         function draw() {
-            // COLOR DE FONDO POR NIVEL
             let bgIndex = (level - 1) % LEVEL_COLORS.length;
             ctx.fillStyle = LEVEL_COLORS[bgIndex];
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Estrellas
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            for(let i=0; i<20; i++) {
-                let x = (i * 83) % canvas.width;
-                let y = (i * 113 - cameraY*0.8) % canvas.height;
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            for(let i=0; i<30; i++) {
+                let x = (i * 47) % canvas.width;
+                let y = (i * 93 - cameraY*0.2) % canvas.height;
                 if(y < 0) y += canvas.height;
-                ctx.fillRect(x, y, 3, 3);
+                ctx.fillRect(x, y, 2, 2);
             }
 
             ctx.save();
@@ -616,20 +659,15 @@
 
             obstacles.forEach(obs => obs.draw());
 
-            // Jugadores Online
             if (window.remotePlayers) {
                 for (let pid in window.remotePlayers) {
                     const rp = window.remotePlayers[pid];
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = rp.color;
                     ctx.fillStyle = rp.color;
-                    ctx.globalAlpha = 0.5;
+                    ctx.globalAlpha = 0.4;
                     ctx.fillRect(rp.x, rp.y, 24, 24);
-                    ctx.fillStyle = 'white';
-                    let eyeOff = (rp.vx > 0) ? 14 : 4;
-                    ctx.fillRect(rp.x + eyeOff, rp.y + 6, 6, 6);
-                    ctx.fillStyle = "#fff";
-                    ctx.font = "8px 'Press Start 2P'";
-                    ctx.textAlign = "center";
-                    ctx.fillText(rp.name, rp.x + 12, rp.y - 10);
+                    ctx.shadowBlur = 0;
                     ctx.globalAlpha = 1;
                 }
             }
@@ -638,6 +676,12 @@
             particles.forEach(p => p.draw());
 
             ctx.restore();
+
+            let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/3, canvas.width/2, canvas.height/2, canvas.height);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,canvas.width, canvas.height);
         }
 
         function loop() {
@@ -646,7 +690,6 @@
             if (gameState === 'PLAYING') requestAnimationFrame(loop);
         }
 
-        // INPUTS
         function handleInput(e) {
             e.preventDefault();
             if (gameState === 'PLAYING') player.jump();
@@ -665,9 +708,17 @@
         });
 
         startBtn.addEventListener('click', startGame);
-        restartBtn.addEventListener('click', () => {
-             startScreen.classList.remove('hidden');
-             gameOverScreen.classList.add('hidden');
+        restartBtn.addEventListener('click', startGame);
+        
+        homeBtn.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            gameState = 'MENU';
+            player.reset();
+            player.y = canvas.height - 150;
+            cameraY = 0;
+            body.classList.remove('shake-screen');
+            draw();
         });
 
         player.y = canvas.height - 150;
