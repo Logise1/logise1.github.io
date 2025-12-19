@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Wall Jumper - Fixed Score</title>
+    <title>Pixel Wall Jumper - Small Mode</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js -->
@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const APP_ID = "pixel-jumper-fixed-score"; 
+        const APP_ID = "pixel-jumper-small-v3"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
         window.myPlayerId = null;
@@ -280,7 +280,7 @@
             playerName = savedName;
         }
 
-        // --- FÍSICA FÁCIL (EASY MODE) ---
+        // --- FÍSICA Y CONFIGURACIÓN ---
         const GRAVITY = 0.55; 
         const JUMP_FORCE = -11.5; 
         const HORIZONTAL_SPEED = 6; 
@@ -327,7 +327,9 @@
 
         class Player {
             constructor(isLocal = true) {
-                this.w = 24; this.h = 24;
+                // JUGADOR UN POCO MÁS PEQUEÑO PARA MEJORAR LA SENSACIÓN
+                this.w = 20; 
+                this.h = 20;
                 this.isLocal = isLocal;
                 this.reset();
             }
@@ -377,9 +379,9 @@
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
                 ctx.shadowBlur = 0;
 
-                const eyeXOffset = (this.vx > 0) ? 14 : 4;
+                const eyeXOffset = (this.vx > 0) ? 12 : 3;
                 ctx.fillStyle = '#000';
-                ctx.fillRect(Math.floor(this.x + eyeXOffset), Math.floor(this.y + 6), 6, 6);
+                ctx.fillRect(Math.floor(this.x + eyeXOffset), Math.floor(this.y + 5), 5, 5);
                 
                 if (this.name) {
                     ctx.fillStyle = "#aaa";
@@ -394,7 +396,7 @@
             constructor(y, lvl, seed) {
                 const rng = new SeededRandom(seed + Math.floor(y));
                 this.y = y;
-                this.h = 32;
+                this.h = 28; // Plataformas más finas
                 
                 let moveProb = 0.2; 
                 if (lvl >= 3) moveProb = 0.5;
@@ -403,13 +405,16 @@
                 this.spikeColor = '#ff0055'; 
 
                 if (this.type === 'STATIC') {
-                    let maxLen = Math.min(130, 50 + lvl * 8);
-                    this.w = 50 + rng.next() * maxLen;
+                    // PINCHOS MÁS PEQUEÑOS Y DISCRETOS
+                    let maxLen = Math.min(100, 30 + lvl * 6);
+                    this.w = 30 + rng.next() * maxLen;
                     this.side = rng.next() > 0.5 ? 'LEFT' : 'RIGHT';
                     this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
                     this.isSpike = true; 
                 } else {
-                    this.w = Math.max(80, 140 - (lvl * 5)); 
+                    // BLOQUES FLOTANTES MÁS PEQUEÑOS (MENOS SUPERFICIE SEGURA)
+                    // Empiezan en 80px y se reducen hasta 40px
+                    this.w = Math.max(40, 80 - (lvl * 3)); 
                     this.x = rng.next() * (canvas.width - this.w);
                     let speed = 1.5 + (lvl * 0.4); 
                     this.vx = speed * (rng.next() > 0.5 ? 1 : -1);
@@ -426,11 +431,11 @@
 
             draw() {
                 if (this.isSpike) {
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 5; // Menos brillo para distraer menos
                     ctx.shadowColor = this.spikeColor;
                     ctx.fillStyle = this.spikeColor;
                     
-                    const steps = 4;
+                    const steps = 3; // Menos pasos, más simple
                     const stepH = this.h / steps;
                     if (this.side === 'LEFT') {
                         ctx.fillRect(0, this.y, this.w/2, this.h);
@@ -447,13 +452,14 @@
                     }
                     ctx.shadowBlur = 0;
                 } else {
+                    // BLOQUES PEQUEÑOS
                     ctx.shadowBlur = 5;
                     ctx.shadowColor = '#ccaa00';
                     ctx.fillStyle = '#ccaa00'; 
                     ctx.fillRect(this.x, this.y, this.w, this.h);
                     
                     ctx.fillStyle = '#000';
-                    ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8); 
+                    ctx.fillRect(this.x + 3, this.y + 3, this.w - 6, this.h - 6); 
                     ctx.shadowBlur = 0;
                 }
             }
@@ -531,10 +537,11 @@
 
         function spawnObstacle() {
             obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
-            let baseGap = 180; 
-            let gap = baseGap - (Math.min(level, 10) * 3);
+            // HUECOS GRANDES PERO OBSTÁCULOS PEQUEÑOS
+            let baseGap = 160; 
+            let gap = baseGap - (Math.min(level, 10) * 2); // Reducción de gap más lenta
             gap += Math.random() * 40; 
-            nextObstacleY -= Math.max(150, gap); 
+            nextObstacleY -= Math.max(140, gap); 
         }
 
         function die() {
@@ -569,7 +576,7 @@
             for (let obs of obstacles) {
                 let oBox;
                 if (obs.isSpike) {
-                    let width = obs.w - 12; 
+                    let width = obs.w - 8; 
                     let x = (obs.side === 'LEFT') ? 0 : canvas.width - width;
                     oBox = {l: x, r: x + width, t: obs.y + 4, b: obs.y + obs.h - 4};
                 } else {
@@ -609,8 +616,6 @@
             if (targetY < cameraY) {
                 let diff = cameraY - targetY;
                 cameraY = targetY;
-                
-                // CORRECCIÓN PUNTOS: SUMAMOS LA DIFERENCIA POSITIVA
                 score += diff * 0.5;
 
                 let newLevel = Math.floor(score / 500) + 1;
