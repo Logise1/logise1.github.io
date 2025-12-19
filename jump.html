@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Wall Jumper - Ultimate</title>
+    <title>Pixel Wall Jumper - Turbo</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js -->
@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const APP_ID = "pixel-jumper-v3-final"; 
+        const APP_ID = "pixel-jumper-turbo"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
         window.myPlayerId = null;
@@ -47,7 +47,6 @@
                     throw new Error("No token");
                 }
             } catch (error) {
-                console.warn("Auth fallback...");
                 try {
                     const userCredential = await signInAnonymously(auth);
                     window.myPlayerId = userCredential.user.uid;
@@ -154,13 +153,13 @@
     <div id="ui-layer">
         <!-- Start Screen -->
         <div id="startScreen" class="pixel-card interactive max-w-md w-full">
-            <h1 class="text-2xl text-yellow-400 mb-6 leading-relaxed text-shadow-md">PIXEL<br>JUMPER</h1>
+            <h1 class="text-3xl text-yellow-400 mb-6 leading-relaxed text-shadow-md">PIXEL<br>JUMPER</h1>
             
             <input type="text" id="playerNameInput" class="pixel-input" placeholder="NAME" maxlength="6">
 
             <p class="text-gray-300 text-xs mb-6 mt-4 leading-loose">
                 CLICK = SALTAR + GIRAR<br>
-                SUBE RAPIDO<br>
+                ¡SUBE RAPIDO!<br>
                 <span class="text-red-400">EVITA EL ROJO</span>
             </p>
             
@@ -178,16 +177,16 @@
         <!-- HUD -->
         <div id="hud" class="hidden absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
             <div>
-                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md bg-black/50 p-1">SCORE: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
-                <p class="text-white text-xs shadow-black drop-shadow-md bg-black/50 p-1">LEVEL: <span id="levelDisplay" class="text-green-400">1</span></p>
+                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md bg-black/50 p-2 border-2 border-white">SCORE: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
+                <p class="text-white text-xs shadow-black drop-shadow-md bg-black/50 p-2 border-2 border-white">LEVEL: <span id="levelDisplay" class="text-green-400">1</span></p>
             </div>
             <div class="text-right">
-                <p id="onlineCount" class="text-blue-400 text-xs bg-black/50 p-1">ONLINE: 1</p>
+                <p id="onlineCount" class="text-blue-400 text-xs bg-black/50 p-2 border-2 border-white">ONLINE: 1</p>
             </div>
         </div>
 
         <div id="levelNotification" class="absolute top-1/4 pointer-events-none text-center hidden">
-            <h2 class="text-3xl text-yellow-400 shadow-black drop-shadow-lg animate-bounce">LEVEL UP!</h2>
+            <h2 class="text-4xl text-yellow-400 shadow-black drop-shadow-lg animate-bounce stroke-black">LEVEL UP!</h2>
         </div>
     </div>
 
@@ -203,7 +202,7 @@
             }
             range(min, max) { return min + this.next() * (max - min); }
         }
-        const GAME_SEED = 2025; // Nueva semilla
+        const GAME_SEED = 42; 
 
         // --- CONFIGURACIÓN ---
         const canvas = document.getElementById('gameCanvas');
@@ -232,19 +231,20 @@
         let cameraY = 0;
         let playerName = "PX";
 
-        // Física (Ajustada para ser más rápida)
+        // Física (Más rápida = Más diversión)
         const GRAVITY = 0.65;
-        const JUMP_FORCE = -12; // Salto más potente
-        const HORIZONTAL_SPEED = 7; // Más rápido
-        const MAX_FALL_SPEED = 14;
+        const JUMP_FORCE = -12.5; 
+        const HORIZONTAL_SPEED = 7.5; 
+        const MAX_FALL_SPEED = 15;
 
-        // Fondos por nivel
+        // Fondos por nivel (Ciclo de colores vibrantes oscuros)
         const LEVEL_COLORS = [
-            '#201a2e', // Nivel 1: Azul Oscuro
-            '#2e1a1a', // Nivel 2: Rojo Oscuro
-            '#1a2e1a', // Nivel 3: Verde Oscuro
-            '#2e2e1a', // Nivel 4: Amarillo Oscuro
-            '#1a2e2e'  // Nivel 5: Cian Oscuro
+            '#201a2e', // Nvl 1: Púrpura
+            '#0d2b2a', // Nvl 2: Cian oscuro
+            '#3b1e1e', // Nvl 3: Rojo ladrillo
+            '#1e3b22', // Nvl 4: Verde bosque
+            '#3b341e', // Nvl 5: Dorado oscuro
+            '#000000'  // Nvl 6: Vacío
         ];
 
         // --- AUDIO ---
@@ -268,9 +268,9 @@
         }
 
         function playJump() { if(audioInit) synth.triggerAttackRelease("C4", "32n"); }
-        function playBounce() { if(audioInit) synth.triggerAttackRelease("G3", "32n"); }
-        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "F#2"], "8n"); }}
-        function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "16n"); }
+        function playBounce() { if(audioInit) synth.triggerAttackRelease("A3", "32n"); }
+        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "C1"], "8n"); }}
+        function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "16n"); }
 
         // --- CLASES ---
 
@@ -286,7 +286,7 @@
                 this.y = canvas.height - 150;
                 this.vx = HORIZONTAL_SPEED;
                 this.vy = 0;
-                const colors = ['#FF77A8', '#29ADFF', '#00E436', '#FFCC00'];
+                const colors = ['#FF00FF', '#00FFFF', '#00FF00', '#FFFF00']; // Neón 8-bit
                 this.color = this.isLocal ? colors[Math.floor(Math.random()*colors.length)] : '#fff';
                 this.isDead = false;
             }
@@ -309,14 +309,14 @@
                     createParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
                 }
 
-                // Muerte
-                if (this.y > cameraY + canvas.height + 50) die();
+                // Muerte (Más margen abajo)
+                if (this.y > cameraY + canvas.height + 100) die();
             }
 
             jump() {
                 if (this.isDead) return;
                 this.vy = JUMP_FORCE;
-                this.vx *= -1; // CAMBIA DIRECCIÓN
+                this.vx *= -1; // CLICK = SALT + GIRO
                 playJump();
                 createParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
             }
@@ -325,9 +325,10 @@
                 ctx.fillStyle = this.color;
                 ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
                 
-                // Sombra 3D
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(Math.floor(this.x+2), Math.floor(this.y+this.h), this.w-4, 2);
+                // Efecto bisel
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.strokeRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
 
                 // Ojos
                 const eyeXOffset = (this.vx > 0) ? 14 : 4;
@@ -351,31 +352,29 @@
                 this.y = y;
                 this.h = 32;
                 
-                // Lógica de dificultad ajustada
-                // Nivel 1: Tiene obstáculos, pero estáticos
-                let moveProb = 0;
-                if (lvl >= 2) moveProb = 0.4;
-                if (lvl >= 4) moveProb = 0.7;
+                // DIFICULTAD: Siempre hay obstáculos, incluso en nivel 1
+                let moveProb = 0.3; // 30% bloques móviles nivel 1
+                if (lvl >= 2) moveProb = 0.5;
+                if (lvl >= 4) moveProb = 0.8;
 
                 this.type = rng.next() < moveProb ? 'MOVING' : 'STATIC';
                 
-                // Color temático opuesto al fondo para visibilidad
-                this.spikeColor = '#ff3333'; 
+                this.spikeColor = '#ff0040'; // Rojo neón peligroso
 
                 if (this.type === 'STATIC') {
-                    // Pinchos o Bloques fijos
-                    let maxLen = Math.min(120, 50 + lvl * 5);
-                    this.w = 50 + rng.next() * maxLen;
+                    // Pinchos laterales
+                    let maxLen = Math.min(150, 60 + lvl * 10);
+                    this.w = 60 + rng.next() * maxLen;
                     this.side = rng.next() > 0.5 ? 'LEFT' : 'RIGHT';
                     this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
-                    this.isSpike = true; // Todo lo estático pincha en los lados
+                    this.isSpike = true; 
                 } else {
-                    // Bloques móviles
-                    this.w = Math.max(60, 100 - (lvl * 4));
+                    // Bloques centrales móviles
+                    this.w = Math.max(70, 120 - (lvl * 5));
                     this.x = rng.next() * (canvas.width - this.w);
-                    let speed = 2.5 + (lvl * 0.6); // Más rápidos
+                    let speed = 2 + (lvl * 0.5); 
                     this.vx = speed * (rng.next() > 0.5 ? 1 : -1);
-                    this.isSpike = false; // Se puede pisar (aunque el juego es vertical, mejor evitar tocar)
+                    this.isSpike = false; 
                 }
             }
 
@@ -392,8 +391,8 @@
                     const steps = 4;
                     const stepH = this.h / steps;
                     if (this.side === 'LEFT') {
-                        ctx.fillRect(0, this.y, this.w/2, this.h);
-                        for(let i=0; i<steps; i++) {
+                        ctx.fillRect(0, this.y, this.w/2, this.h); // Base
+                        for(let i=0; i<steps; i++) { // Puntas pixeladas
                             let width = (this.w/2) * (1 - i/steps);
                             ctx.fillRect(this.w/2, this.y + (i*stepH), width, stepH);
                         }
@@ -406,15 +405,16 @@
                     }
                 } else {
                     // Bloque móvil
-                    ctx.fillStyle = '#FFB300'; 
+                    ctx.fillStyle = '#ffbb00'; 
                     ctx.fillRect(this.x, this.y, this.w, this.h);
-                    ctx.fillStyle = '#FFE082';
+                    ctx.fillStyle = '#ffe082'; // Brillo
                     ctx.fillRect(this.x + 4, this.y + 4, this.w - 8, this.h - 8);
                     
-                    // Ojos bloque
+                    // Cara Bloque
                     ctx.fillStyle = 'black';
-                    ctx.fillRect(this.x + 10, this.y + 10, 4, 4);
-                    ctx.fillRect(this.x + this.w - 14, this.y + 10, 4, 4);
+                    ctx.fillRect(this.x + 15, this.y + 12, 4, 4);
+                    ctx.fillRect(this.x + this.w - 19, this.y + 12, 4, 4);
+                    ctx.fillRect(this.x + 20, this.y + 20, this.w - 40, 2); // Boca
                 }
             }
         }
@@ -422,14 +422,14 @@
         class Particle {
             constructor(x, y, color) {
                 this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 8;
-                this.vy = (Math.random() - 0.5) * 8;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
                 this.life = 1; this.color = color; 
-                this.size = Math.floor(Math.random() * 4 + 2);
+                this.size = Math.floor(Math.random() * 5 + 3);
             }
             update() { 
                 this.x += this.vx; this.y += this.vy; 
-                this.life -= 0.05; this.vy += 0.3; 
+                this.life -= 0.08; this.vy += 0.5; 
             }
             draw() { 
                 ctx.globalAlpha = this.life; ctx.fillStyle = this.color; 
@@ -467,10 +467,10 @@
             particles = [];
             player.reset();
             
-            // GENERACIÓN SEGURA
-            nextObstacleY = canvas.height - 200; // Empezar un poco arriba
+            // GENERACIÓN INICIAL MASIVA
+            nextObstacleY = canvas.height - 250; 
             
-            // Pre-llenar pantalla
+            // Pre-llenar pantalla + 1 pantalla extra arriba
             while (nextObstacleY > -canvas.height) {
                 spawnObstacle();
             }
@@ -484,20 +484,18 @@
         function spawnObstacle() {
             obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
             
-            // Distancia entre obstáculos
-            let baseGap = 150; 
-            // A más nivel, un poco menos de espacio pero más aleatorio
-            let gap = baseGap - (Math.min(level, 10) * 3);
-            gap += Math.random() * 60; // Variación
+            let baseGap = 160; 
+            let gap = baseGap - (Math.min(level, 15) * 4); // Se estrecha
+            gap += Math.random() * 50; 
             
-            nextObstacleY -= Math.max(120, gap); // Mínimo 120px para pasar
+            nextObstacleY -= Math.max(130, gap); // Mínimo 130px para asegurar jugabilidad
         }
 
         function die() {
             if (gameState === 'GAMEOVER') return;
             gameState = 'GAMEOVER';
             playDead();
-            createParticles(player.x, player.y, player.color, 20);
+            createParticles(player.x, player.y, player.color, 25);
             
             finalScoreDisplay.innerText = Math.floor(score);
             finalLevelDisplay.innerText = level;
@@ -520,7 +518,7 @@
             for (let obs of obstacles) {
                 let oBox;
                 if (obs.isSpike) {
-                    let width = obs.w - 8;
+                    let width = obs.w - 8; // Hitbox indulgente
                     let x = (obs.side === 'LEFT') ? 0 : canvas.width - width;
                     oBox = {l: x, r: x + width, t: obs.y, b: obs.y + obs.h};
                 } else {
@@ -556,14 +554,17 @@
             checkCollisions();
             sendNetUpdate();
 
-            // Cámara y Progresión
+            // Cámara y Progresión ACELERADA
             let targetY = player.y - canvas.height * 0.6;
             if (targetY < cameraY) {
+                let diff = cameraY - targetY;
                 cameraY = targetY;
-                score += (cameraY - targetY) * 0.2; // Más puntos por distancia
                 
-                // Subir nivel cada 300 puntos (más rápido)
-                let newLevel = Math.floor(score/300) + 1;
+                // SISTEMA DE PUNTOS BOOSTED (1 pixel = 1 punto)
+                score += diff; 
+                
+                // SUBIR NIVEL CADA 600 PUNTOS (aprox 2 pantallas)
+                let newLevel = Math.floor(score / 600) + 1;
                 if (newLevel > level) {
                     level = newLevel;
                     playLvlUp();
@@ -572,17 +573,17 @@
                     setTimeout(() => levelNotification.classList.add('hidden'), 2000);
                 }
             } else {
-                // Auto-scroll agresivo
-                cameraY -= (1.5 + level * 0.2); 
+                // AUTO-SCROLL RÁPIDO QUE ESCALA
+                cameraY -= (2.0 + level * 0.3); 
             }
 
-            // Generar Obstáculos
+            // Generar
             if (cameraY < nextObstacleY + canvas.height + 300) {
                 spawnObstacle();
             }
 
             // Limpieza
-            obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 200);
+            obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 300);
             obstacles.forEach(obs => obs.update());
             particles.forEach(p => p.update());
             particles = particles.filter(p => p.life > 0);
@@ -601,13 +602,13 @@
             ctx.fillStyle = LEVEL_COLORS[bgIndex];
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Estrellas estáticas
+            // Estrellas
             ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            for(let i=0; i<15; i++) {
-                let x = (i * 97) % canvas.width;
-                let y = (i * 131 - cameraY*0.5) % canvas.height;
+            for(let i=0; i<20; i++) {
+                let x = (i * 83) % canvas.width;
+                let y = (i * 113 - cameraY*0.8) % canvas.height;
                 if(y < 0) y += canvas.height;
-                ctx.fillRect(x, y, 4, 4);
+                ctx.fillRect(x, y, 3, 3);
             }
 
             ctx.save();
@@ -622,11 +623,9 @@
                     ctx.fillStyle = rp.color;
                     ctx.globalAlpha = 0.5;
                     ctx.fillRect(rp.x, rp.y, 24, 24);
-                    // Ojos
                     ctx.fillStyle = 'white';
                     let eyeOff = (rp.vx > 0) ? 14 : 4;
                     ctx.fillRect(rp.x + eyeOff, rp.y + 6, 6, 6);
-                    // Nombre
                     ctx.fillStyle = "#fff";
                     ctx.font = "8px 'Press Start 2P'";
                     ctx.textAlign = "center";
@@ -671,7 +670,6 @@
              gameOverScreen.classList.add('hidden');
         });
 
-        // Inicio
         player.y = canvas.height - 150;
         draw();
 
