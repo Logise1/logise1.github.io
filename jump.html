@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Wall Jumper - Multiplayer</title>
+    <title>Pixel Wall Jumper - Multiplayer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Fuente Pixel Art -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
-    <!-- FIREBASE SDKs (Compatibles con Módulos ES) -->
+    <!-- FIREBASE SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN FIREBASE DEL USUARIO ---
         const firebaseConfig = {
             apiKey: "AIzaSyAQOCfjlM3HbeJe9d5A7Cgvul5RmndlCbE",
             authDomain: "jumper-4e0b2.firebaseapp.com",
@@ -26,51 +27,38 @@
             measurementId: "G-GTD3T9FYKK"
         };
 
-        // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // ID de la app para la estructura de rutas
-        const APP_ID = "neon-jumper-v2"; 
+        const APP_ID = "pixel-jumper-v1"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
-        // Variables Globales de Red
         window.myPlayerId = null;
-        window.remotePlayers = {}; // Diccionario de jugadores remotos
+        window.remotePlayers = {}; 
         window.dbRef = { db, collection, doc, setDoc, onSnapshot, deleteDoc, COLLECTION_PATH };
         
-        // --- AUTENTICACIÓN ROBUSTA (CUSTOM TOKEN con FALLBACK) ---
         const initAuth = async () => {
             try {
-                // Intentar usar Custom Token si existe
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    console.log("Intentando autenticación con Custom Token...");
                     const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
                     window.myPlayerId = userCredential.user.uid;
-                    console.log("Conectado con Custom Token:", window.myPlayerId);
+                    console.log("Auth: Custom Token");
                 } else {
-                    throw new Error("Token no encontrado, usando fallback.");
+                    throw new Error("No token");
                 }
             } catch (error) {
-                console.warn("Fallo en Custom Token o no existe. Usando Anónimo como respaldo...", error);
+                console.warn("Auth: Fallback Anónimo");
                 try {
                     const userCredential = await signInAnonymously(auth);
                     window.myPlayerId = userCredential.user.uid;
-                    console.log("Conectado como Anónimo:", window.myPlayerId);
                 } catch (anonError) {
-                    console.error("Error fatal de autenticación:", anonError);
-                    alert("Error de conexión. Revisa la consola.");
+                    console.error("Auth Error Total", anonError);
                 }
             }
-            
-            // Si logramos autenticarnos, iniciamos listeners
-            if (window.myPlayerId) {
-                setupNetworkListeners();
-            }
+            if (window.myPlayerId) setupNetworkListeners();
         };
 
-        // Iniciar Auth
         initAuth();
 
         function setupNetworkListeners() {
@@ -80,33 +68,27 @@
                 snapshot.docChanges().forEach((change) => {
                     const data = change.doc.data();
                     const pid = change.doc.id;
-                    
-                    if (pid === window.myPlayerId) return; // Ignorar mi propio jugador
+                    if (pid === window.myPlayerId) return;
 
                     if (change.type === "added" || change.type === "modified") {
-                        // Guardar estado del jugador remoto
                         window.remotePlayers[pid] = {
                             x: data.x,
-                            y: data.y, // Nota: Y en el mundo (no pantalla)
+                            y: data.y,
+                            vx: data.vx, // Sincronizamos dirección para los ojos
                             color: data.color || '#ffffff',
-                            name: data.name || 'Anon',
+                            name: data.name || 'PX',
                             lastUpdate: now
                         };
                     }
-                    if (change.type === "removed") {
-                        delete window.remotePlayers[pid];
-                    }
+                    if (change.type === "removed") delete window.remotePlayers[pid];
                 });
             });
         }
 
-        // Sistema de limpieza de jugadores inactivos (Opcional, ejecutado por clientes)
         setInterval(() => {
             const now = Date.now();
             for (let pid in window.remotePlayers) {
-                if (now - window.remotePlayers[pid].lastUpdate > 10000) { // 10 seg sin señal
-                    delete window.remotePlayers[pid];
-                }
+                if (now - window.remotePlayers[pid].lastUpdate > 10000) delete window.remotePlayers[pid];
             }
         }, 5000);
     </script>
@@ -116,9 +98,10 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #0a0a0a;
+            background-color: #201a2e; /* Fondo oscuro retro */
             touch-action: none;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Press Start 2P', cursive; /* Fuente Retro */
+            image-rendering: pixelated; /* Renderizado Pixel Perfect */
         }
         canvas { display: block; }
         #ui-layer {
@@ -127,29 +110,43 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
         .interactive { pointer-events: auto; }
-        .glow-text { text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc; }
-        @keyframes floatUp {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
-        }
-        .level-up-anim { animation: floatUp 2s ease-out forwards; }
         
-        /* Input estilo Neon */
-        .neon-input {
-            background: rgba(0,0,0,0.5);
-            border: 2px solid #00ffcc;
-            color: white;
-            padding: 10px;
-            font-family: inherit;
-            font-size: 1.2rem;
+        .pixel-card {
+            background-color: #2d2345;
+            border: 4px solid #fff;
+            box-shadow: 8px 8px 0px #000;
+            padding: 2rem;
             text-align: center;
-            outline: none;
-            box-shadow: 0 0 10px rgba(0,255,204,0.3);
-            margin-bottom: 20px;
-            width: 80%;
         }
-        .neon-input:focus {
-            box-shadow: 0 0 20px rgba(0,255,204,0.6);
+        
+        .pixel-btn {
+            background-color: #ffcc00;
+            border: 4px solid #fff;
+            color: #000;
+            padding: 15px 20px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s;
+            margin-top: 20px;
+            width: 100%;
+        }
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .pixel-input {
+            background-color: #000;
+            border: 2px solid #fff;
+            color: #00ff00;
+            font-family: 'Press Start 2P', cursive;
+            padding: 10px;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 10px;
+            outline: none;
         }
     </style>
 </head>
@@ -159,74 +156,65 @@
 
     <div id="ui-layer">
         <!-- Start Screen -->
-        <div id="startScreen" class="text-center interactive bg-black/80 p-8 rounded-xl border border-cyan-500 shadow-[0_0_30px_rgba(0,255,255,0.3)] backdrop-blur-sm max-w-md w-full">
-            <h1 class="text-4xl md:text-6xl font-bold text-cyan-400 mb-4 glow-text">NEON JUMP</h1>
-            <p class="text-white mb-4 text-sm">Multijugador Online</p>
+        <div id="startScreen" class="pixel-card interactive max-w-md w-full">
+            <h1 class="text-2xl text-yellow-400 mb-6 leading-relaxed">PIXEL<br>JUMPER</h1>
             
-            <input type="text" id="playerNameInput" class="neon-input rounded" placeholder="Tu Nombre" maxlength="10">
+            <input type="text" id="playerNameInput" class="pixel-input" placeholder="NAME" maxlength="6">
 
-            <p class="text-gray-400 text-xs mb-6">Todos juegan con los mismos obstáculos.<br>¡Compite por la altura!</p>
+            <p class="text-gray-300 text-xs mb-6 mt-4 leading-loose">
+                CLICK = SALT<br>
+                PARED = REBOTE<br>
+                <span class="text-red-400">NO TOQUES ROJO</span>
+            </p>
             
-            <button id="startBtn" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded text-xl transition transform hover:scale-105 active:scale-95 w-full">
-                UNIRSE A LA SALA
-            </button>
+            <button id="startBtn" class="pixel-btn">START</button>
         </div>
 
         <!-- Game Over Screen -->
-        <div id="gameOverScreen" class="hidden text-center interactive bg-black/90 p-8 rounded-xl border border-red-500 shadow-[0_0_30px_rgba(255,0,0,0.3)] backdrop-blur-sm">
-            <h1 class="text-4xl md:text-5xl font-bold text-red-500 mb-2 glow-text">GAME OVER</h1>
-            <p class="text-white text-xl mb-2">Puntuación: <span id="finalScore" class="text-yellow-400">0</span></p>
-            <p class="text-gray-400 text-lg mb-6">Nivel alcanzado: <span id="finalLevel" class="text-white">1</span></p>
-            <button id="restartBtn" class="px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded text-xl transition transform hover:scale-105 active:scale-95">
-                REINTENTAR
-            </button>
+        <div id="gameOverScreen" class="hidden pixel-card interactive">
+            <h1 class="text-2xl text-red-500 mb-4">GAME OVER</h1>
+            <p class="text-white text-sm mb-4">SCORE: <span id="finalScore" class="text-yellow-400">0</span></p>
+            <p class="text-white text-sm mb-6">NIVEL: <span id="finalLevel" class="text-green-400">1</span></p>
+            <button id="restartBtn" class="pixel-btn" style="background-color: #ff4444; color: white;">RETRY</button>
         </div>
 
         <!-- HUD -->
         <div id="hud" class="hidden absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
             <div>
-                <p class="text-white text-2xl font-bold drop-shadow-md">Score: <span id="scoreDisplay" class="text-cyan-300">0</span></p>
-                <p class="text-white text-xl font-bold drop-shadow-md">Level: <span id="levelDisplay" class="text-yellow-400">1</span></p>
+                <p class="text-white text-xs mb-2 shadow-black drop-shadow-md">SC: <span id="scoreDisplay" class="text-yellow-400">0</span></p>
+                <p class="text-white text-xs shadow-black drop-shadow-md">LV: <span id="levelDisplay" class="text-green-400">1</span></p>
             </div>
             <div class="text-right">
-                <p class="text-xs text-gray-400">Jugadores Online</p>
-                <p id="onlineCount" class="text-green-400 font-bold">1</p>
+                <p class="text-xs text-gray-400 mb-1">ONLINE</p>
+                <p id="onlineCount" class="text-blue-400 text-xs">1</p>
             </div>
         </div>
 
         <div id="levelNotification" class="absolute top-1/4 pointer-events-none text-center hidden">
-            <h2 class="text-5xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]">NIVEL UP!</h2>
+            <h2 class="text-2xl text-yellow-400 shadow-black drop-shadow-lg">LEVEL UP!</h2>
         </div>
     </div>
 
     <script>
-        // --- UTILIDAD: GENERADOR DE NÚMEROS ALEATORIOS CON SEMILLA (SEED) ---
-        // Esto permite que todos los jugadores vean los mismos obstáculos en las mismas coordenadas Y.
+        // --- RNG DETERMINISTA ---
         class SeededRandom {
-            constructor(seed) {
-                this.seed = seed;
-            }
-            // Algoritmo mulberry32 simple
+            constructor(seed) { this.seed = seed; }
             next() {
                 var t = this.seed += 0x6D2B79F5;
                 t = Math.imul(t ^ (t >>> 15), t | 1);
                 t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
                 return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
             }
-            // Helper para rango
-            range(min, max) {
-                return min + this.next() * (max - min);
-            }
+            range(min, max) { return min + this.next() * (max - min); }
         }
+        const GAME_SEED = 999; 
 
-        // Usamos una semilla fija basada en la hora actual (cambia cada hora) para que todos sincronicen,
-        // o una semilla fija absoluta para este juego 'eterno'. Usaremos fija absoluta para simplicidad.
-        const GAME_SEED = 12345; 
-
-        // --- CONFIGURACIÓN DEL JUEGO ---
+        // --- CONFIGURACIÓN ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
+        // Desactivar suavizado para Pixel Art
+        ctx.imageSmoothingEnabled = false;
+
         // UI
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
@@ -246,59 +234,62 @@
         let level = 1;
         let frames = 0;
         let cameraY = 0;
-        let playerName = "Anon";
+        let playerName = "PX";
 
-        // Física
-        const GRAVITY = 0.6;
-        const JUMP_FORCE = -11;
-        const HORIZONTAL_SPEED = 6.5;
-        const MAX_FALL_SPEED = 12;
+        // Física ajustada
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -10;
+        const HORIZONTAL_SPEED = 5; // Un poco más lento para controlar mejor
+        const MAX_FALL_SPEED = 10;
 
-        // --- AUDIO ---
-        let synth, noiseSynth, membrane, levelUpSynth;
-        let audioInitialized = false;
+        // --- AUDIO (Tone.js 8-bit Style) ---
+        let synth, noise, metal;
+        let audioInit = false;
 
         async function initAudio() {
-            if (audioInitialized) return;
+            if (audioInit) return;
             await Tone.start();
-            synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.02, decay: 0.1, sustain: 0.1, release: 1 } }).toDestination();
-            synth.volume.value = -8;
-            noiseSynth = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.005, decay: 0.3, sustain: 0 } }).toDestination();
-            noiseSynth.volume.value = -5;
-            membrane = new Tone.MembraneSynth().toDestination();
-            membrane.volume.value = -15;
-            levelUpSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.2, release: 1.5 } }).toDestination();
-            levelUpSynth.volume.value = -6;
-            audioInitialized = true;
+            
+            // Sonido tipo Gameboy
+            synth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "square" }, // Onda cuadrada = 8bit
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+            }).toDestination();
+            synth.volume.value = -10;
+
+            noise = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
+            }).toDestination();
+            noise.volume.value = -12;
+
+            audioInit = true;
         }
 
-        function playJumpSound() { if(audioInitialized) synth.triggerAttackRelease(["C5","E5"][Math.floor(Math.random()*2)], "16n"); }
-        function playBounceSound() { if(audioInitialized) membrane.triggerAttackRelease("C2", "32n"); }
-        function playCrashSound() { if(audioInitialized) { noiseSynth.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C3", "F#3"], "8n"); }}
-        function playLevelUpSound() { if(audioInitialized) levelUpSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n"); }
+        function playJump() { if(audioInit) synth.triggerAttackRelease("C4", "32n"); }
+        function playBounce() { if(audioInit) synth.triggerAttackRelease("E3", "32n"); }
+        function playDead() { if(audioInit) { noise.triggerAttackRelease("8n"); synth.triggerAttackRelease(["C2", "G1"], "8n"); }}
+        function playLvlUp() { if(audioInit) synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "16n"); }
 
-        // --- CLASES ---
+        // --- CLASES PIXEL ART ---
 
         class Player {
             constructor(isLocal = true) {
-                this.w = 20;
-                this.h = 20;
+                this.w = 24; // Un poco más grande para ver los pixeles
+                this.h = 24;
                 this.isLocal = isLocal;
                 this.reset();
             }
 
             reset() {
                 this.x = canvas.width / 2 - this.w / 2;
-                this.y = canvas.height - 150;
-                this.vx = HORIZONTAL_SPEED;
+                this.y = canvas.height - 100; // Empezamos abajo
+                this.vx = HORIZONTAL_SPEED; // Siempre moviéndose
                 this.vy = 0;
-                this.color = this.isLocal ? '#00ffcc' : '#ffffff';
+                // Colores pastel retro
+                const colors = ['#FF77A8', '#29ADFF', '#00E436', '#FFCC00'];
+                this.color = this.isLocal ? colors[Math.floor(Math.random()*colors.length)] : '#fff';
                 this.isDead = false;
-                this.trail = [];
-                // Generar color aleatorio persistente para el jugador local
-                if (this.isLocal) {
-                    this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                }
             }
 
             update() {
@@ -306,155 +297,163 @@
 
                 this.vy += GRAVITY;
                 if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
+                
+                // Movimiento constante horizontal
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Trail
-                if (frames % 3 === 0) this.trail.push({x: this.x, y: this.y, alpha: 0.8});
-                this.trail.forEach(t => t.alpha -= 0.05);
-                this.trail = this.trail.filter(t => t.alpha > 0);
-
-                // Paredes
+                // Rebote en paredes (SOLO aquí cambia la dirección)
                 if (this.x <= 0) {
-                    this.x = 0; this.vx *= -1; playBounceSound();
-                    createParticles(this.x, this.y + this.h/2, '#fff', 5);
+                    this.x = 0; 
+                    this.vx = Math.abs(HORIZONTAL_SPEED); // Forzar derecha
+                    playBounce();
+                    createPixelParticles(this.x, this.y + this.h/2, '#fff', 4);
                 } else if (this.x + this.w >= canvas.width) {
-                    this.x = canvas.width - this.w; this.vx *= -1; playBounceSound();
-                    createParticles(this.x + this.w, this.y + this.h/2, '#fff', 5);
+                    this.x = canvas.width - this.w; 
+                    this.vx = -Math.abs(HORIZONTAL_SPEED); // Forzar izquierda
+                    playBounce();
+                    createPixelParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
                 }
 
-                // Caída
                 if (this.y > cameraY + canvas.height + 50) die();
             }
 
             jump() {
                 if (this.isDead) return;
+                // SOLO SALTO VERTICAL, NO CAMBIA VX
                 this.vy = JUMP_FORCE;
-                this.vx *= -1; 
-                playJumpSound();
-                createParticles(this.x + this.w/2, this.y + this.h, this.color, 8);
+                playJump();
+                createPixelParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
             }
 
             draw() {
-                // Dibujar Trail
-                this.trail.forEach(t => {
-                    ctx.fillStyle = this.color; 
-                    ctx.globalAlpha = t.alpha * 0.4;
-                    ctx.fillRect(t.x, t.y, this.w, this.h);
-                    ctx.globalAlpha = 1;
-                });
-
+                // Dibujar Sprite Pixelado
                 ctx.fillStyle = this.color;
-                ctx.shadowBlur = this.isLocal ? 15 : 5;
-                ctx.shadowColor = this.color;
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Cuerpo (bloque sólido con borde)
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
                 
+                // Borde interior para efecto 3D simple
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y + this.h - 4), this.w, 4);
+                ctx.fillRect(Math.floor(this.x + this.w - 4), Math.floor(this.y), 4, this.h);
+
+                // Ojos (Pixel blanco + pupila negra)
+                const eyeXOffset = (this.vx > 0) ? 14 : 4; // Mirar dirección
+                
+                ctx.fillStyle = 'white';
+                ctx.fillRect(Math.floor(this.x + eyeXOffset), Math.floor(this.y + 6), 6, 6);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(Math.floor(this.x + eyeXOffset + (this.vx > 0 ? 4 : 0)), Math.floor(this.y + 8), 2, 2);
+
                 // Nombre
                 if (this.name) {
-                    ctx.fillStyle = "white";
-                    ctx.font = "10px Arial";
+                    ctx.fillStyle = "#aaa";
+                    ctx.font = "10px 'Press Start 2P'";
                     ctx.textAlign = "center";
-                    ctx.fillText(this.name, this.x + this.w/2, this.y - 5);
+                    ctx.fillText(this.name, this.x + this.w/2, this.y - 8);
                 }
-                
-                ctx.shadowBlur = 0;
             }
         }
 
         class Obstacle {
             constructor(y, lvl, seed) {
-                // USAR RNG DETERMINISTA PARA QUE TODOS LOS CLIENTES GENEREN LO MISMO
-                // La semilla depende de la posición Y (índice del obstáculo) para ser consistente
                 const rng = new SeededRandom(seed + Math.floor(y));
-
                 this.y = y;
-                this.h = 30;
+                this.h = 32; // Bloques de 32px
                 
-                let moveProbability = 0;
-                if (lvl >= 2) moveProbability = 0.3;
-                if (lvl >= 3) moveProbability = 0.5;
+                let moveProb = 0;
+                if (lvl >= 2) moveProb = 0.3;
+                if (lvl >= 5) moveProb = 0.6;
 
-                this.type = rng.next() < moveProbability ? 'MOVING_BLOCK' : 'WALL_SPIKE';
+                this.type = rng.next() < moveProb ? 'BLOCK' : 'SPIKE';
                 
-                if (this.type === 'WALL_SPIKE') {
-                    let maxLen = Math.min(120, 40 + lvl * 10);
+                if (this.type === 'SPIKE') {
+                    // Pinchos en paredes
+                    let maxLen = Math.min(100, 40 + lvl * 5);
                     this.w = 40 + rng.next() * maxLen;
                     this.side = rng.next() > 0.5 ? 'LEFT' : 'RIGHT';
                     this.x = this.side === 'LEFT' ? 0 : canvas.width - this.w;
-                    this.color = getLevelColor(lvl);
+                    this.color = (lvl % 2 === 0) ? '#ff0044' : '#ff4400'; // Rojo/Naranja
                 } else {
-                    this.w = Math.max(40, 100 - (lvl * 5));
+                    // Bloques flotantes
+                    this.w = Math.max(50, 90 - (lvl * 3));
                     this.x = rng.next() * (canvas.width - this.w);
-                    let speedBase = 2 + (lvl * 0.8);
-                    this.vx = speedBase * (rng.next() > 0.5 ? 1 : -1);
-                    this.color = '#ffaa00';
-                    
-                    // IMPORTANTE: Para sincronizar bloques móviles, su posición inicial debe ser determinista
-                    // pero su movimiento depende del tiempo. Aquí simplificamos para que reboten igual
-                    this.initialX = this.x;
+                    let speed = 2 + (lvl * 0.5);
+                    this.vx = speed * (rng.next() > 0.5 ? 1 : -1);
+                    this.color = '#ffcc00'; // Dorado
                 }
             }
 
             update() {
-                if (this.type === 'MOVING_BLOCK') {
+                if (this.type === 'BLOCK') {
                     this.x += this.vx;
                     if (this.x <= 0 || this.x + this.w >= canvas.width) this.vx *= -1;
                 }
             }
 
             draw() {
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
-
-                if (this.type === 'WALL_SPIKE') {
-                    ctx.beginPath();
+                // Dibujar estilo ladrillo pixelado
+                if (this.type === 'SPIKE') {
+                    ctx.fillStyle = this.color;
+                    // Dibujar pinchos como "escaleras" (pixels)
+                    const steps = 4;
+                    const stepH = this.h / steps;
+                    
                     if (this.side === 'LEFT') {
-                        ctx.moveTo(0, this.y); ctx.lineTo(this.w, this.y + this.h/2); ctx.lineTo(0, this.y + this.h);
+                        // Base sólida
+                        ctx.fillRect(0, this.y, this.w/2, this.h);
+                        // Pinchos
+                        for(let i=0; i<steps; i++) {
+                            let width = (this.w/2) * (1 - i/steps);
+                            ctx.fillRect(this.w/2, this.y + (i*stepH), width, stepH);
+                        }
                     } else {
-                        ctx.moveTo(canvas.width, this.y); ctx.lineTo(canvas.width - this.w, this.y + this.h/2); ctx.lineTo(canvas.width, this.y + this.h);
+                        // Base
+                        ctx.fillRect(canvas.width - this.w/2, this.y, this.w/2, this.h);
+                        // Pinchos
+                        for(let i=0; i<steps; i++) {
+                            let width = (this.w/2) * (1 - i/steps);
+                            ctx.fillRect(canvas.width - this.w/2 - width, this.y + (i*stepH), width, stepH);
+                        }
                     }
-                    ctx.fill();
                 } else {
+                    // Bloque flotante (Ladrillo)
+                    ctx.fillStyle = '#8B4513'; // Marrón ladrillo
                     ctx.fillRect(this.x, this.y, this.w, this.h);
+                    
+                    // Detalles de ladrillo
+                    ctx.fillStyle = '#A0522D'; // Ladrillo claro
+                    ctx.fillRect(this.x + 4, this.y + 4, this.w/2 - 6, this.h/2 - 6);
+                    ctx.fillRect(this.x + this.w/2 + 2, this.y + this.h/2 + 2, this.w/2 - 6, this.h/2 - 6);
+                    
+                    // Borde Pixel
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#000';
+                    ctx.strokeRect(this.x, this.y, this.w, this.h);
                 }
-                ctx.shadowBlur = 0;
             }
         }
 
         class Particle {
             constructor(x, y, color) {
                 this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 6;
-                this.vy = (Math.random() - 0.5) * 6;
-                this.life = 1; this.color = color; this.size = Math.random() * 4 + 2;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.life = 1; 
+                this.color = color; 
+                this.size = Math.floor(Math.random() * 6 + 2);
             }
-            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.03; }
-            draw() { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
-        }
-
-        // --- FUNCIONES AUXILIARES ---
-        function getLevelColor(lvl) {
-            if (lvl === 1) return '#ff0055';
-            if (lvl === 2) return '#aa00ff';
-            if (lvl === 3) return '#0055ff';
-            return '#ffaa00';
-        }
-
-        function checkLevelUp() {
-            let newLevel = Math.floor(score / 100) + 1;
-            if (newLevel > level) {
-                level = newLevel;
-                playLevelUpSound();
-                showLevelNotification();
+            update() { 
+                this.x += this.vx; this.y += this.vy; this.life -= 0.05; 
+                this.vy += 0.2; // Gravedad partículas
             }
-        }
-
-        function showLevelNotification() {
-            levelNotification.innerHTML = `<h2 class="text-5xl font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]">NIVEL ${level}</h2>`;
-            levelNotification.classList.remove('hidden');
-            levelNotification.classList.add('level-up-anim');
-            setTimeout(() => { levelNotification.classList.remove('level-up-anim'); levelNotification.classList.add('hidden'); }, 2000);
+            draw() { 
+                ctx.globalAlpha = this.life; 
+                ctx.fillStyle = this.color; 
+                // Cuadrados perfectos
+                ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.size, this.size);
+                ctx.globalAlpha = 1; 
+            }
         }
 
         // --- GLOBAL ---
@@ -462,7 +461,7 @@
         let obstacles = [];
         let particles = [];
         let nextObstacleY = 0;
-        let lastNetworkUpdate = 0;
+        let lastNetUpdate = 0;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -473,12 +472,8 @@
         resize();
 
         function startGame() {
-            const nameVal = nameInput.value.trim();
-            if(!nameVal) {
-                alert("Por favor, introduce un nombre.");
-                return;
-            }
-            playerName = nameVal;
+            const name = nameInput.value.trim() || "PX";
+            playerName = name;
             player.name = playerName;
 
             initAudio();
@@ -490,184 +485,166 @@
             obstacles = [];
             particles = [];
             player.reset();
-            nextObstacleY = canvas.height - 300; 
-
-            // Generar obstáculos iniciales
-            for(let i=0; i<3; i++) spawnObstacle();
+            
+            // --- GENERACIÓN INICIAL ---
+            // Llenar la pantalla de plataformas desde abajo para que no esté vacío
+            nextObstacleY = canvas.height - 100;
+            while (nextObstacleY > -200) { // Generar hasta un poco por encima de la pantalla
+                spawnObstacle();
+            }
 
             startScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
             hud.classList.remove('hidden');
-            scoreDisplay.innerText = "0";
-            levelDisplay.innerText = "1";
-            
             loop();
+        }
+
+        function spawnObstacle() {
+            obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
+            let gap = 160 - (Math.min(level, 10) * 5); // Reduce distancia con nivel
+            gap += Math.random() * 40;
+            nextObstacleY -= Math.max(100, gap);
         }
 
         function die() {
             if (gameState === 'GAMEOVER') return;
             gameState = 'GAMEOVER';
-            playCrashSound();
-            createParticles(player.x + player.w/2, player.y + player.h/2, '#ff0000', 30);
+            playDead();
+            createPixelParticles(player.x, player.y, player.color, 20);
+            
             finalScoreDisplay.innerText = Math.floor(score);
             finalLevelDisplay.innerText = level;
             hud.classList.add('hidden');
             gameOverScreen.classList.remove('hidden');
 
-            // Eliminar jugador de la BD al morir (opcional, o dejarlo como fantasma muerto)
             if (window.myPlayerId && window.dbRef) {
-               // Podríamos borrarlo o marcarlo como muerto. Lo borramos para limpiar.
-               const docRef = window.dbRef.doc(window.dbRef.db, window.dbRef.COLLECTION_PATH, window.myPlayerId);
-               window.dbRef.deleteDoc(docRef).catch(e => console.log(e));
+                const docRef = window.dbRef.doc(window.dbRef.db, window.dbRef.COLLECTION_PATH, window.myPlayerId);
+                window.dbRef.deleteDoc(docRef).catch(console.error);
             }
         }
 
-        function spawnObstacle() {
-            // Usamos GAME_SEED para que todos los clientes tengan la misma base
-            obstacles.push(new Obstacle(nextObstacleY, level, GAME_SEED));
-            
-            let difficultyModifier = Math.min(80, (level - 1) * 10);
-            let baseGap = 180 - difficultyModifier;
-            // Usar RNG para el gap también si queremos sincronización perfecta de posición Y
-            const rng = new SeededRandom(GAME_SEED + Math.abs(Math.floor(nextObstacleY)));
-            let variation = rng.range(0, 40);
-            
-            let gap = Math.max(100, baseGap + variation);
-            nextObstacleY -= gap; 
-        }
-
-        function createParticles(x, y, color, count) {
-            for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+        function createPixelParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) particles.push(new Particle(x, y, color));
         }
 
         function checkCollisions() {
+            // Colisión AABB simple
             for (let obs of obstacles) {
-                let px = player.x, py = player.y, pw = player.w, ph = player.h;
-                let ox, oy, ow, oh;
+                // Definir cajas de colisión
+                let pBox = {l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h};
+                let oBox;
 
-                if (obs.type === 'WALL_SPIKE') {
-                    oy = obs.y; oh = obs.h;
-                    if (obs.side === 'LEFT') { ox = 0; ow = obs.w - 8; } 
-                    else { ox = canvas.width - obs.w + 8; ow = obs.w - 8; }
+                if (obs.type === 'SPIKE') {
+                    // Hitbox un poco más pequeña para ser justos
+                    let width = obs.w - 10;
+                    let x = (obs.side === 'LEFT') ? 0 : canvas.width - width;
+                    oBox = {l: x, r: x + width, t: obs.y, b: obs.y + obs.h};
                 } else {
-                    ox = obs.x; oy = obs.y; ow = obs.w; oh = obs.h;
+                    oBox = {l: obs.x, r: obs.x + obs.w, t: obs.y, b: obs.y + obs.h};
                 }
 
-                if (px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy) {
+                if (pBox.l < oBox.r && pBox.r > oBox.l && pBox.t < oBox.b && pBox.b > oBox.t) {
                     die();
                 }
             }
         }
 
-        function sendNetworkUpdate() {
+        function sendNetUpdate() {
             const now = Date.now();
-            if (now - lastNetworkUpdate > 100 && window.myPlayerId && window.dbRef && gameState === 'PLAYING') { // 10 FPS limit
-                lastNetworkUpdate = now;
+            if (now - lastNetUpdate > 100 && window.myPlayerId && gameState === 'PLAYING') {
+                lastNetUpdate = now;
                 const docRef = window.dbRef.doc(window.dbRef.db, window.dbRef.COLLECTION_PATH, window.myPlayerId);
                 window.dbRef.setDoc(docRef, {
                     x: Math.round(player.x),
                     y: Math.round(player.y),
+                    vx: player.vx, // Importante para renderizar ojos remotos
                     color: player.color,
                     name: playerName,
                     updatedAt: window.dbRef.serverTimestamp ? window.dbRef.serverTimestamp() : now
-                }).catch(err => console.error("Error subiendo posición:", err));
+                }).catch(e => {});
             }
         }
 
         function update() {
             if (gameState !== 'PLAYING') return;
-
             frames++;
             player.update();
             checkCollisions();
-            sendNetworkUpdate();
+            sendNetUpdate();
 
             // Cámara
             let targetY = player.y - canvas.height * 0.6;
             if (targetY < cameraY) {
-                let diff = cameraY - targetY;
-                cameraY = targetY; 
-                score += diff * 0.05; 
-                checkLevelUp();
+                cameraY = targetY;
+                score += (cameraY - targetY) * 0.1; // Puntos
+                if (Math.floor(score/500) + 1 > level) {
+                    level++;
+                    playLvlUp();
+                    levelNotification.classList.remove('hidden');
+                    levelNotification.classList.add('level-up-anim');
+                    setTimeout(() => levelNotification.classList.add('hidden'), 2000);
+                }
             } else {
-                let autoScrollSpeed = 1 + (level * 0.2); 
-                cameraY -= autoScrollSpeed; 
+                cameraY -= (1 + level * 0.1); // Auto-scroll lento
             }
 
-            // Gestión Obstáculos
+            // Generar y Limpiar
             if (cameraY < nextObstacleY + canvas.height + 200) spawnObstacle();
             obstacles = obstacles.filter(obs => obs.y < cameraY + canvas.height + 200);
             obstacles.forEach(obs => obs.update());
-            
             particles.forEach(p => p.update());
             particles = particles.filter(p => p.life > 0);
 
-            scoreDisplay.innerText = Math.floor(score);
+            scoreDisplay.innerText = Math.floor(Math.abs(cameraY/10));
             levelDisplay.innerText = level;
-
-            // Actualizar conteo online
-            let count = 1; // Yo
+            
+            let count = 1;
             if (window.remotePlayers) count += Object.keys(window.remotePlayers).length;
             onlineCountDisplay.innerText = count;
         }
 
         function draw() {
-            // Fondo
-            ctx.fillStyle = '#0a0a0a';
+            // Fondo color sólido retro
+            ctx.fillStyle = '#201a2e'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Grid
-            ctx.strokeStyle = '#1a1a1a';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            let gridSize = 50;
-            let offsetY = -cameraY % gridSize;
-            for (let x = 0; x < canvas.width; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
-            for (let y = offsetY; y < canvas.height; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
-            ctx.stroke();
+            // Patrón de fondo (estrellas pixeladas estáticas)
+            ctx.fillStyle = '#2a233e';
+            for(let i=0; i<10; i++) {
+                let x = (i * 100 + cameraY/2) % canvas.width;
+                let y = (i * 200 + cameraY/2) % canvas.height;
+                ctx.fillRect(x, y, 4, 4);
+            }
 
             ctx.save();
-            ctx.translate(0, -cameraY);
+            ctx.translate(0, -Math.floor(cameraY)); // Pixel perfect cam
 
-            // 1. Dibujar Obstáculos (Sincronizados)
             obstacles.forEach(obs => obs.draw());
 
-            // 2. Dibujar JUGADORES REMOTOS
+            // Jugadores Remotos
             if (window.remotePlayers) {
                 for (let pid in window.remotePlayers) {
                     const rp = window.remotePlayers[pid];
-                    
-                    // Interpolación visual simple para suavidad (opcional, aquí dibujamos directo)
                     ctx.fillStyle = rp.color;
-                    ctx.globalAlpha = 0.5; // Fantasmas transparentes
-                    ctx.shadowBlur = 5;
-                    ctx.shadowColor = rp.color;
-                    ctx.fillRect(rp.x, rp.y, 20, 20); // Tamaño fijo 20x20
-                    
-                    // Nombre remoto
-                    ctx.fillStyle = "white";
-                    ctx.font = "10px Arial";
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillRect(rp.x, rp.y, 24, 24);
+                    // Ojos remotos
+                    ctx.fillStyle = 'white';
+                    let eyeOff = (rp.vx > 0) ? 14 : 4;
+                    ctx.fillRect(rp.x + eyeOff, rp.y + 6, 6, 6);
+                    // Nombre
+                    ctx.fillStyle = "#aaa";
+                    ctx.font = "10px 'Press Start 2P'";
                     ctx.textAlign = "center";
-                    ctx.fillText(rp.name, rp.x + 10, rp.y - 8);
-                    
-                    ctx.shadowBlur = 0;
+                    ctx.fillText(rp.name, rp.x + 12, rp.y - 8);
                     ctx.globalAlpha = 1;
                 }
             }
 
-            // 3. Dibujar Mi Jugador
             if (gameState === 'PLAYING') player.draw();
-            
             particles.forEach(p => p.draw());
 
             ctx.restore();
-            
-            // Viñeta
-            let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/3, canvas.width/2, canvas.height/2, canvas.height);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.6)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0,0,canvas.width, canvas.height);
         }
 
         function loop() {
@@ -676,20 +653,32 @@
             if (gameState === 'PLAYING') requestAnimationFrame(loop);
         }
 
-        // --- INPUTS ---
-        function handleInput(e) { e.preventDefault(); if (gameState === 'PLAYING') player.jump(); }
-        window.addEventListener('mousedown', (e) => { if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e); });
-        window.addEventListener('touchstart', (e) => { if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e); }, {passive: false});
-        window.addEventListener('keydown', (e) => { if (e.code === 'Space' || e.code === 'ArrowUp') { if (gameState === 'PLAYING') player.jump(); } });
+        // INPUTS
+        function handleInput(e) {
+            e.preventDefault();
+            if (gameState === 'PLAYING') player.jump();
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e);
+        });
+        window.addEventListener('touchstart', (e) => {
+            if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleInput(e);
+        }, {passive: false});
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                if (gameState === 'PLAYING') player.jump();
+            }
+        });
 
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', () => {
-             // Volver al menú para poner nombre o resetear
              startScreen.classList.remove('hidden');
              gameOverScreen.classList.add('hidden');
         });
 
-        player.y = canvas.height/2; 
+        // Render inicial
+        player.y = canvas.height - 100;
         draw();
 
     </script>
