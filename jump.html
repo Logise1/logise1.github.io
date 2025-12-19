@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const APP_ID = "pixel-jumper-v1"; 
+        const APP_ID = "pixel-jumper-v2-revert"; 
         const COLLECTION_PATH = `artifacts/${APP_ID}/public/data/players`;
 
         window.myPlayerId = null;
@@ -162,7 +162,7 @@
             <input type="text" id="playerNameInput" class="pixel-input" placeholder="NAME" maxlength="6">
 
             <p class="text-gray-300 text-xs mb-6 mt-4 leading-loose">
-                CLICK = SALT<br>
+                CLICK = SALT + GIRO<br>
                 PARED = REBOTE<br>
                 <span class="text-red-400">NO TOQUES ROJO</span>
             </p>
@@ -239,8 +239,8 @@
         // Física ajustada
         const GRAVITY = 0.5;
         const JUMP_FORCE = -10;
-        const HORIZONTAL_SPEED = 5; // Un poco más lento para controlar mejor
-        const MAX_FALL_SPEED = 10;
+        const HORIZONTAL_SPEED = 6; // Velocidad cómoda
+        const MAX_FALL_SPEED = 12;
 
         // --- AUDIO (Tone.js 8-bit Style) ---
         let synth, noise, metal;
@@ -302,15 +302,15 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Rebote en paredes (SOLO aquí cambia la dirección)
+                // Rebote en paredes
                 if (this.x <= 0) {
                     this.x = 0; 
-                    this.vx = Math.abs(HORIZONTAL_SPEED); // Forzar derecha
+                    this.vx *= -1; // Invertir velocidad
                     playBounce();
                     createPixelParticles(this.x, this.y + this.h/2, '#fff', 4);
                 } else if (this.x + this.w >= canvas.width) {
                     this.x = canvas.width - this.w; 
-                    this.vx = -Math.abs(HORIZONTAL_SPEED); // Forzar izquierda
+                    this.vx *= -1; // Invertir velocidad
                     playBounce();
                     createPixelParticles(this.x + this.w, this.y + this.h/2, '#fff', 4);
                 }
@@ -320,8 +320,9 @@
 
             jump() {
                 if (this.isDead) return;
-                // SOLO SALTO VERTICAL, NO CAMBIA VX
+                // SALTO Y CAMBIO DE DIRECCIÓN
                 this.vy = JUMP_FORCE;
+                this.vx *= -1; // CAMBIO DE DIRECCIÓN AL CLICKAR
                 playJump();
                 createPixelParticles(this.x + this.w/2, this.y + this.h, this.color, 6);
             }
