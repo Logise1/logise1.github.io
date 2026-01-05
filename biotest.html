@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BioTest v5 | Audio & Gráficos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Tone.js (Audio) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Chart.js (Graphics) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f8fafc; /* Light Slate 50 */
+            color: #334155; /* Slate 700 */
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(#e2e8f0 1px, transparent 1px),
+                radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .tech-font { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Cards - Light Glassmorphism */
+        .sensor-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.5rem;
+        }
+        
+        .sensor-active {
+            border-color: #0ea5e9; /* Sky 500 */
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+        }
+
+        /* Sensor Visualizers */
+        .wave-line {
+            width: 4px;
+            background: #0ea5e9;
+            margin: 0 2px;
+            border-radius: 2px;
+            animation: wave 1s infinite ease-in-out;
+        }
+        @keyframes wave {
+            0%, 100% { height: 10px; opacity: 0.5; }
+            50% { height: 30px; opacity: 1; }
+        }
+
+        /* Buttons */
+        .btn-sensor {
+            background: #0f172a; /* Slate 900 */
+            color: white;
+            border: 1px solid #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .btn-sensor:active { transform: scale(0.96); background: #334155; }
+        .btn-sensor:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
+
+        .btn-secondary {
+            background: white;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-secondary:hover { border-color: #cbd5e1; background: #f8fafc; }
+
+        /* Inputs - Light Mode */
+        input[type="number"], input[type="text"] {
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            color: #0f172a;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: all 0.2s;
+        }
+        input:focus { outline: none; border-color: #0ea5e9; background: white; }
+        
+        /* Animations */
+        .slide-enter { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Typography Accents */
+        .text-accent { color: #0ea5e9; }
+        .bg-accent { background-color: #0ea5e9; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4 pb-12 select-none">
+
+    <!-- HUD Header -->
+    <header class="w-full max-w-lg flex justify-between items-center py-6 mb-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-200">
+                <i class="fa-solid fa-dna text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900 leading-none">BioTest<span class="text-accent">.Pro</span></h1>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest tech-font font-bold">Clinical_Grade_v5</p>
+            </div>
+        </div>
+        <div id="sensor-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm">
+            <div class="w-2 h-2 rounded-full bg-slate-300" id="sensor-dot"></div>
+            <span class="text-[10px] font-bold text-slate-400">STANDBY</span>
+        </div>
+    </header>
+
+    <!-- MAIN INTERFACE -->
+    <main id="main-container" class="w-full max-w-lg relative">
+
+        <!-- 1. INTRO & PERMISSIONS -->
+        <section id="screen-intro" class="slide-enter text-center pt-8">
+            <h2 class="text-4xl font-extrabold mb-4 text-slate-800 tracking-tight">Calibración de Sensores</h2>
+            <p class="text-slate-500 mb-8 text-base leading-relaxed max-w-xs mx-auto">
+                Utilizaremos el giroscopio y el sistema háptico de tu dispositivo para un análisis físico real.
+            </p>
+
+            <div class="sensor-card p-8 mb-8 text-center">
+                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fa-solid fa-wave-square text-3xl text-blue-500"></i>
+                </div>
+                
+                <p class="text-sm font-medium text-slate-600 mb-6">Requiere acceso a acelerómetros y salida de audio para feedback en tiempo real.</p>
+                
+                <button onclick="requestSensors()" class="btn-sensor w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-3">
+                    <i class="fa-solid fa-power-off"></i> Iniciar Sistema
+                </button>
+            </div>
+
+            <div class="text-xs text-slate-400 font-medium">
+                <i class="fa-solid fa-volume-high mr-1"></i> SUBE EL VOLUMEN
+            </div>
+        </section>
+
+        <!-- 2. DATA ENTRY (Manual) -->
+        <section id="screen-data" class="hidden slide-enter">
+            <div class="sensor-card p-6">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-sm"><i class="fa-solid fa-user"></i></span>
+                        Perfil del Sujeto
+                    </h3>
+                    <span class="text-xs font-bold bg-slate-100 px-2 py-1 rounded text-slate-500">01 / 04</span>
+                </div>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="text-xs text-slate-500 uppercase font-bold mb-2 block ml-1">Edad</label>
+                        <input type="number" id="input-age" class="w-full p-4 rounded-xl text-xl font-bold" placeholder="Ej: 30">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-slate-500 uppercase font-bold mb-2 block ml-1">Altura (cm)</label>
+                            <input type="number" id="input-height" class="w-full p-4 rounded-xl font-bold" placeholder="175">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 uppercase font-bold mb-2 block ml-1">Peso (kg)</label>
+                            <input type="number" id="input-weight" class="w-full p-4 rounded-xl font-bold" placeholder="75">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 uppercase font-bold mb-2 block ml-1">Género</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectGender(0, this)" class="gender-btn btn-secondary p-4 rounded-xl text-sm font-bold transition-all">Hombre</button>
+                            <button onclick="selectGender(1, this)" class="gender-btn btn-secondary p-4 rounded-xl text-sm font-bold transition-all">Mujer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="goToTest('balance')" class="btn-sensor w-full mt-8 py-4 rounded-xl font-bold shadow-lg shadow-blue-500/20">
+                    Continuar a Pruebas <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- TEST 1: BALANCE (Gyroscope) -->
+        <section id="screen-balance" class="hidden slide-enter text-center">
+            <div class="sensor-card p-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="text-left">
+                        <h3 class="text-2xl font-bold text-slate-800">Equilibrio</h3>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Sensor Giroscópico</p>
+                    </div>
+                    <div class="w-10 h-10 bg-cyan-50 rounded-full flex items-center justify-center text-cyan-500">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                </div>
+                
+                <div class="mb-8 py-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center border-4 border-slate-200 relative shadow-inner">
+                        <div id="balance-bubble" class="w-5 h-5 bg-cyan-500 rounded-full shadow-lg shadow-cyan-500/50 transition-transform duration-75"></div>
+                        <!-- Crosshair -->
+                        <div class="absolute w-full h-px bg-slate-200 top-1/2 left-0 pointer-events-none"></div>
+                        <div class="absolute h-full w-px bg-slate-200 left-1/2 top-0 pointer-events-none"></div>
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 mt-4 uppercase tracking-wide">Nivelador Digital</p>
+                </div>
+
+                <p class="text-sm text-slate-600 mb-6 font-medium px-4">
+                    1. Ponte a la pata coja.<br>
+                    2. Sostén el móvil <strong>plano en el pecho</strong>.<br>
+                    3. Cierra los ojos al oír el pitido.
+                </p>
+
+                <div id="balance-ui-start">
+                    <button onclick="startBalanceTest()" class="btn-sensor w-full py-4 rounded-xl font-bold">
+                        Comenzar Test (10s)
+                    </button>
+                </div>
+
+                <div id="balance-ui-running" class="hidden">
+                    <div class="text-5xl font-mono font-bold text-slate-800 mb-2 tracking-tighter" id="balance-timer">10.0</div>
+                    <div class="text-xs text-rose-500 font-bold animate-pulse uppercase">Analizando Estabilidad...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TEST 2: JUMPS (Accelerometer) -->
+        <section id="screen-jumps" class="hidden slide-enter text-center">
+            <div class="sensor-card p-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="text-left">
+                        <h3 class="text-2xl font-bold text-slate-800">Potencia</h3>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Acelerómetro 3-Ejes</p>
+                    </div>
+                    <div class="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center text-amber-500">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                </div>
+
+                <div class="mb-6 h-20 flex items-end justify-center gap-1 bg-slate-50 rounded-xl border border-slate-100 p-2 overflow-hidden" id="accel-viz">
+                    <!-- Dynamic Bars -->
+                </div>
+
+                <div class="bg-slate-900 rounded-2xl p-6 mb-8 text-white shadow-xl shadow-slate-900/10">
+                    <span class="text-xs text-slate-400 uppercase font-bold">Repeticiones (Saltos/Sentadillas)</span>
+                    <div class="text-7xl font-mono font-bold text-amber-400 mt-2" id="jump-counter">0</div>
+                </div>
+
+                <button id="btn-jump-start" onclick="startJumpTest()" class="btn-sensor w-full py-4 rounded-xl font-bold">
+                    Iniciar Detección (30s)
+                </button>
+                <div id="jump-timer-display" class="hidden text-3xl font-mono font-bold text-slate-700 mt-4">30s</div>
+            </div>
+        </section>
+
+        <!-- TEST 3: TAPPING (Touch Speed) -->
+        <section id="screen-tapping" class="hidden slide-enter text-center">
+            <div class="sensor-card p-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="text-left">
+                        <h3 class="text-2xl font-bold text-slate-800">Reflejos</h3>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Pantalla Táctil</p>
+                    </div>
+                    <div class="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-500">
+                        <i class="fa-solid fa-fingerprint"></i>
+                    </div>
+                </div>
+
+                <p class="text-sm text-slate-600 mb-6 font-medium">
+                    Usa dos dedos alternos (índice y corazón).<br>
+                    Golpea tan rápido como puedas.
+                </p>
+
+                <div class="relative mb-6">
+                    <button id="tap-btn" ontouchstart="handleTap(event)" onclick="handleTap(event)" class="w-full h-40 bg-slate-100 rounded-2xl border-4 border-slate-200 active:bg-purple-100 active:border-purple-400 transition-all flex items-center justify-center overflow-hidden relative shadow-inner">
+                        <span class="z-10 text-2xl font-black text-slate-300 pointer-events-none uppercase tracking-widest" id="tap-cta">TAP ZONE</span>
+                        <div id="tap-ripple" class="absolute inset-0 bg-purple-500/10 scale-0 rounded-full transition-transform duration-75"></div>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-end px-2">
+                    <div class="text-left">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Taps</div>
+                        <div class="text-4xl font-mono font-bold text-purple-600" id="tap-count">0</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Tiempo</div>
+                        <div class="text-4xl font-mono font-bold text-slate-700" id="tap-timer">10.0</div>
+                    </div>
+                </div>
+                
+                <button id="tap-start-btn" onclick="startTapTest()" class="btn-sensor w-full mt-8 py-4 rounded-xl font-bold">
+                    Iniciar Test (10s)
+                </button>
+            </div>
+        </section>
+
+        <!-- QUIZ (Compact) -->
+        <section id="screen-quiz" class="hidden slide-enter">
+            <div class="sensor-card p-6">
+                <div class="flex justify-between mb-6 border-b border-slate-100 pb-4">
+                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Fase Final: Hábitos</span>
+                    <span class="text-xs font-mono font-bold text-slate-400" id="quiz-counter">1/10</span>
+                </div>
+                
+                <h3 class="text-xl font-bold text-slate-800 mb-8 min-h-[3rem] leading-tight" id="quiz-question">...</h3>
+                
+                <div class="grid gap-3" id="quiz-options">
+                    <!-- Options injected -->
+                </div>
+            </div>
+        </section>
+
+        <!-- LOADING -->
+        <section id="screen-loading" class="hidden text-center pt-20">
+            <div class="w-24 h-24 mx-auto border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin mb-6"></div>
+            <h2 class="text-xl font-bold text-slate-800">Generando Informe...</h2>
+            <p class="text-sm text-slate-500 mt-2">Compilando datos biométricos</p>
+        </section>
+
+        <!-- RESULTS -->
+        <section id="screen-results" class="hidden slide-enter pb-20">
+            <!-- Summary Card -->
+            <div class="bg-white rounded-3xl border border-slate-200 p-8 mb-6 shadow-xl shadow-slate-200/50 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-amber-400"></div>
+                
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Estimación Biológica</p>
+                <h1 class="text-7xl font-extrabold text-slate-800 mb-1 tracking-tighter leading-none" id="final-age">--</h1>
+                <p class="text-slate-500 text-sm font-medium mb-8">Años de Esperanza de Vida</p>
+                
+                <div class="inline-flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-bold text-slate-600" id="bio-age-display">BioEdad: --</span>
+                </div>
+            </div>
+
+            <!-- Chart Container -->
+            <div class="sensor-card p-6 mb-6">
+                <h4 class="text-sm font-bold text-slate-700 mb-4 text-center uppercase">Análisis de Rendimiento</h4>
+                <div class="relative h-64 w-full">
+                    <canvas id="resultsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Detailed Stats -->
+            <div class="grid gap-4">
+                <div class="sensor-card p-4 flex justify-between items-center border-l-4 border-cyan-400">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Estabilidad</div>
+                        <div class="text-lg font-bold text-slate-800" id="res-balance-text">--</div>
+                    </div>
+                    <div class="text-xl font-mono font-bold text-cyan-600" id="res-balance-val">0.0</div>
+                </div>
+
+                <div class="sensor-card p-4 flex justify-between items-center border-l-4 border-amber-400">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Potencia</div>
+                        <div class="text-lg font-bold text-slate-800" id="res-jumps-text">--</div>
+                    </div>
+                    <div class="text-xl font-mono font-bold text-amber-600" id="res-jumps-val">0</div>
+                </div>
+
+                <div class="sensor-card p-4 flex justify-between items-center border-l-4 border-purple-400">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Reflejos</div>
+                        <div class="text-lg font-bold text-slate-800" id="res-tap-text">--</div>
+                    </div>
+                    <div class="text-xl font-mono font-bold text-purple-600" id="res-tap-val">0</div>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full mt-8 bg-slate-900 text-white p-5 rounded-xl font-bold shadow-lg hover:bg-slate-800 transition transform hover:scale-[1.01]">
+                <i class="fa-solid fa-rotate-right mr-2"></i> NUEVO ANÁLISIS
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        // --- AUDIO ENGINE (TONE.JS) ---
+        let synth;
+        let isAudioInit = false;
+
+        async function initAudio() {
+            if(isAudioInit) return;
+            await Tone.start();
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            synth.volume.value = -5;
+            isAudioInit = true;
+            playSuccess(true); // Short init sound
+        }
+
+        function playClick() {
+            if(!isAudioInit) return;
+            // Short high blip
+            synth.triggerAttackRelease("C6", "32n");
+        }
+
+        function playPing() {
+            if(!isAudioInit) return;
+            // Radar ping style
+            synth.triggerAttackRelease("E5", "16n", Tone.now(), 0.1);
+        }
+
+        function playSuccess(isShort = false) {
+            if(!isAudioInit) return;
+            if(isShort) {
+                synth.triggerAttackRelease(["C5", "E5"], "8n");
+            } else {
+                // Major Chord
+                const now = Tone.now();
+                synth.triggerAttackRelease("C5", "8n", now);
+                synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                synth.triggerAttackRelease("G5", "8n", now + 0.2);
+                synth.triggerAttackRelease("C6", "4n", now + 0.3);
+            }
+        }
+
+        function playBeep() {
+            if(!isAudioInit) return;
+            synth.triggerAttackRelease("A4", "16n");
+        }
+
+        // --- GLOBAL STATE ---
+        const state = {
+            gender: null,
+            age: 0,
+            height: 0,
+            weight: 0,
+            sensors: {
+                balanceScore: 0, 
+                jumps: 0,
+                taps: 0
+            },
+            quizAnswers: [],
+            currQ: 0
+        };
+
+        // --- 1. PERMISSIONS & SETUP ---
+        async function requestSensors() {
+            await initAudio(); // User interaction trigger
+            
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permissionState = await DeviceMotionEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        initSensors();
+                    } else {
+                        alert("Permiso denegado. Modo Simulación.");
+                        initSensors(true);
+                    }
+                } catch (e) {
+                    initSensors(true);
+                }
+            } else {
+                initSensors();
+            }
+        }
+
+        function initSensors(fallback = false) {
+            const status = document.getElementById('sensor-status');
+            const dot = document.getElementById('sensor-dot');
+            const text = status.querySelector('span');
+
+            if(fallback) {
+                text.innerText = "SIMULATOR";
+                text.className = "text-[10px] font-bold text-amber-500";
+                dot.className = "w-2 h-2 rounded-full bg-amber-400";
+            } else {
+                text.innerText = "ACTIVE";
+                text.className = "text-[10px] font-bold text-emerald-500";
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                
+                window.addEventListener('devicemotion', handleMotion, true);
+                window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-data').classList.remove('hidden');
+            playClick();
+        }
+
+        function selectGender(g, btn) {
+            playClick();
+            state.gender = g;
+            document.querySelectorAll('.gender-btn').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white', 'border-transparent', 'shadow-md');
+                b.classList.add('btn-secondary');
+            });
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('bg-blue-600', 'text-white', 'border-transparent', 'shadow-md');
+        }
+
+        function goToTest(testId) {
+            playClick();
+            if(testId === 'balance') {
+                state.age = parseInt(document.getElementById('input-age').value) || 30;
+                state.height = parseInt(document.getElementById('input-height').value) || 170;
+                state.weight = parseInt(document.getElementById('input-weight').value) || 70;
+                if(state.gender === null) { alert("Selecciona género"); return; }
+                
+                document.getElementById('screen-data').classList.add('hidden');
+                document.getElementById('screen-balance').classList.remove('hidden');
+                
+                window.isBalancePreview = true;
+            }
+        }
+
+        // --- SENSOR LOGIC ---
+        let isMeasuringBalance = false;
+        let isMeasuringJumps = false;
+        let balanceReadings = [];
+        let lastJumpTime = 0;
+
+        function handleOrientation(event) {
+            if(isMeasuringBalance || window.isBalancePreview) {
+                const b = event.beta || 0; 
+                const g = event.gamma || 0;
+                
+                const bubble = document.getElementById('balance-bubble');
+                if(bubble) {
+                    const x = Math.max(-40, Math.min(40, g)); 
+                    const y = Math.max(-40, Math.min(40, b - 60)); // holding upright-ish
+                    bubble.style.transform = `translate(${x}px, ${y}px)`;
+                }
+
+                if(isMeasuringBalance) {
+                    balanceReadings.push({b, g});
+                }
+            }
+        }
+
+        function handleMotion(event) {
+            if(isMeasuringJumps) {
+                const acc = event.accelerationIncludingGravity;
+                if(!acc) return;
+                const mag = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+                const gForce = mag / 9.8;
+
+                // Visualizer
+                const bar = document.createElement('div');
+                bar.className = 'w-1 bg-amber-400 mx-px rounded-full';
+                bar.style.height = Math.min(100, (gForce * 20)) + '%';
+                const viz = document.getElementById('accel-viz');
+                viz.appendChild(bar);
+                if(viz.children.length > 30) viz.removeChild(viz.children[0]);
+
+                const now = Date.now();
+                if(now - lastJumpTime > 600) { 
+                    if(gForce > 1.6) { 
+                        state.sensors.jumps++;
+                        document.getElementById('jump-counter').innerText = state.sensors.jumps;
+                        lastJumpTime = now;
+                        playPing(); // Sound on jump
+                    }
+                }
+            }
+        }
+
+        // --- TEST FLOWS ---
+        
+        // 1. BALANCE
+        function startBalanceTest() {
+            playClick();
+            window.isBalancePreview = false;
+            isMeasuringBalance = true;
+            balanceReadings = [];
+            
+            document.getElementById('balance-ui-start').classList.add('hidden');
+            document.getElementById('balance-ui-running').classList.remove('hidden');
+
+            let timeLeft = 10;
+            const timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('balance-timer').innerText = timeLeft.toFixed(1);
+                if(timeLeft % 1 === 0) playBeep(); // Audio tick
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    finishBalance();
+                }
+            }, 1000);
+        }
+
+        function finishBalance() {
+            isMeasuringBalance = false;
+            playSuccess(true);
+            
+            // Calc variance
+            let score = 0;
+            if(balanceReadings.length > 10) {
+                let prev = balanceReadings[0];
+                let totalDelta = 0;
+                for(let i=1; i<balanceReadings.length; i++) {
+                    let curr = balanceReadings[i];
+                    totalDelta += Math.abs(curr.b - prev.b) + Math.abs(curr.g - prev.g);
+                    prev = curr;
+                }
+                score = totalDelta / balanceReadings.length;
+            } else {
+                score = Math.random() * 2 + 0.5; // Sim
+            }
+            state.sensors.balanceScore = score;
+            
+            document.getElementById('screen-balance').classList.add('hidden');
+            document.getElementById('screen-jumps').classList.remove('hidden');
+        }
+
+        // 2. JUMPS
+        function startJumpTest() {
+            playClick();
+            isMeasuringJumps = true;
+            state.sensors.jumps = 0;
+            document.getElementById('btn-jump-start').classList.add('hidden');
+            document.getElementById('jump-timer-display').classList.remove('hidden');
+
+            let timeLeft = 30;
+            const timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('jump-timer-display').innerText = timeLeft + "s";
+                if(timeLeft <= 5 && timeLeft > 0) playBeep();
+
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    isMeasuringJumps = false;
+                    playSuccess(true);
+                    document.getElementById('screen-jumps').classList.add('hidden');
+                    document.getElementById('screen-tapping').classList.remove('hidden');
+                }
+            }, 1000);
+        }
+
+        // 3. TAPPING
+        let tapActive = false;
+        function startTapTest() {
+            if(tapActive) return;
+            playClick();
+            tapActive = true;
+            state.sensors.taps = 0;
+            document.getElementById('tap-count').innerText = 0;
+            document.getElementById('tap-start-btn').classList.add('opacity-50', 'pointer-events-none');
+            
+            document.getElementById('tap-cta').innerText = "GO!";
+            document.getElementById('tap-cta').className = "z-10 text-6xl font-black text-purple-200 pointer-events-none animate-pulse";
+
+            let timeLeft = 10;
+            const timer = setInterval(() => {
+                timeLeft -= 0.1;
+                document.getElementById('tap-timer').innerText = Math.abs(timeLeft).toFixed(1);
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    tapActive = false;
+                    playSuccess(true);
+                    finishTapping();
+                }
+            }, 100);
+        }
+
+        function handleTap(e) {
+            if(!tapActive) return;
+            e.preventDefault(); 
+            state.sensors.taps++;
+            document.getElementById('tap-count').innerText = state.sensors.taps;
+            
+            // Audio Feedback on tap
+            // Pitch goes up slightly as you tap more
+            if(isAudioInit && state.sensors.taps % 5 === 0) {
+                 synth.triggerAttackRelease("C6", "64n");
+            }
+
+            // Visual
+            const btn = document.getElementById('tap-btn');
+            btn.style.transform = "scale(0.98)";
+            setTimeout(() => btn.style.transform = "scale(1)", 50);
+        }
+
+        function finishTapping() {
+            document.getElementById('screen-tapping').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            renderQuiz();
+        }
+
+        // --- QUIZ ---
+        const quizData = [
+            { t: "¿Fumas?", o: [{t:"No",v:0}, {t:"Sí",v:-5}, {t:"Social",v:-2}] },
+            { t: "¿Bebes alcohol?", o: [{t:"No",v:0}, {t:"Moderado",v:-2}, {t:"Mucho",v:-6}] },
+            { t: "¿Duermes 7-8h?", o: [{t:"Sí",v:2}, {t:"No",v:-3}] },
+            { t: "¿Estrés diario?", o: [{t:"Bajo",v:1}, {t:"Alto",v:-4}] },
+            { t: "¿Familia longeva?", o: [{t:"Sí (>85)",v:3}, {t:"No",v:0}] },
+            { t: "¿Comes verdura?", o: [{t:"Diario",v:2}, {t:"Poco",v:-2}] },
+            { t: "¿Presión Arterial?", o: [{t:"Normal",v:0}, {t:"Alta",v:-4}, {t:"No sé",v:-1}] },
+            { t: "¿Tomas azúcar?", o: [{t:"Poco",v:1}, {t:"Mucho",v:-3}] },
+            { t: "¿Vida Social?", o: [{t:"Activa",v:1}, {t:"Solitaria",v:-2}] },
+            { t: "¿Tienes propósito?", o: [{t:"Sí",v:2}, {t:"No",v:0}] }
+        ];
+
+        function renderQuiz() {
+            if(state.currQ >= quizData.length) {
+                calcFinal();
+                return;
+            }
+            const q = quizData[state.currQ];
+            document.getElementById('quiz-counter').innerText = (state.currQ + 1) + "/" + quizData.length;
+            document.getElementById('quiz-question').innerText = q.t;
+            
+            const area = document.getElementById('quiz-options');
+            area.innerHTML = '';
+            q.o.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-white p-4 rounded-xl text-left border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition font-medium text-slate-700 shadow-sm mb-2";
+                btn.innerText = opt.t;
+                btn.onclick = () => {
+                    playClick();
+                    state.quizAnswers.push(opt.v);
+                    state.currQ++;
+                    renderQuiz();
+                };
+                area.appendChild(btn);
+            });
+        }
+
+        // --- FINAL RESULTS ---
+        function calcFinal() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-loading').classList.remove('hidden');
+
+            setTimeout(() => {
+                playSuccess(false); // Play full victory sound
+                
+                // Logic
+                let base = state.gender === 1 ? 85 : 80;
+                const quizMod = state.quizAnswers.reduce((a,b)=>a+b, 0);
+                
+                let sensorMod = 0;
+                let balText = "Normal";
+                let jumpText = "Medio";
+                let tapText = "Normal";
+
+                // Scores for Chart (0-100)
+                let s_bal = 50;
+                let s_pow = 50;
+                let s_ref = 50;
+
+                // Balance
+                if(state.sensors.balanceScore < 0.8) { sensorMod += 2; balText = "Excelente"; s_bal=90; }
+                else if(state.sensors.balanceScore > 2.5) { sensorMod -= 2; balText = "Bajo"; s_bal=30; }
+                else s_bal = 60;
+
+                // Jumps
+                if(state.sensors.jumps > 25) { sensorMod += 2; jumpText = "Alto"; s_pow=90; }
+                else if(state.sensors.jumps < 12) { sensorMod -= 1; jumpText = "Bajo"; s_pow=40; }
+                else s_pow = 65;
+
+                // Taps
+                if(state.sensors.taps > 55) { sensorMod += 1; tapText = "Rápido"; s_ref=85; }
+                else if(state.sensors.taps < 35) { sensorMod -= 1; tapText = "Lento"; s_ref=40; }
+                else s_ref = 60;
+
+                let finalAge = base + quizMod + sensorMod;
+                if(finalAge > 100) finalAge = 100;
+                if(finalAge < state.age) finalAge = state.age + 1;
+                const bioAge = state.age - (sensorMod + (quizMod * 0.5));
+
+                // DOM
+                document.getElementById('final-age').innerText = Math.floor(finalAge);
+                document.getElementById('bio-age-display').innerText = "BioEdad: " + Math.floor(bioAge);
+                document.getElementById('res-balance-text').innerText = balText;
+                document.getElementById('res-balance-val').innerText = state.sensors.balanceScore.toFixed(2);
+                document.getElementById('res-jumps-text').innerText = jumpText;
+                document.getElementById('res-jumps-val').innerText = state.sensors.jumps;
+                document.getElementById('res-tap-text').innerText = tapText;
+                document.getElementById('res-tap-val').innerText = state.sensors.taps;
+
+                // Chart.js
+                const ctx = document.getElementById('resultsChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Estabilidad (Core)', 'Potencia (Cardio)', 'Reflejos (Neuro)'],
+                        datasets: [{
+                            label: 'Tu Rendimiento',
+                            data: [s_bal, s_pow, s_ref],
+                            fill: true,
+                            backgroundColor: 'rgba(14, 165, 233, 0.2)',
+                            borderColor: 'rgb(14, 165, 233)',
+                            pointBackgroundColor: 'rgb(14, 165, 233)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(14, 165, 233)'
+                        }]
+                    },
+                    options: {
+                        elements: { line: { borderWidth: 3 } },
+                        scales: {
+                            r: {
+                                angleLines: { display: true },
+                                suggestedMin: 0,
+                                suggestedMax: 100,
+                                ticks: { display: false } // clean look
+                            }
+                        }
+                    }
+                });
+
+                document.getElementById('screen-loading').classList.add('hidden');
+                document.getElementById('screen-results').classList.remove('hidden');
+
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
