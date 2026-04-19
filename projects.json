@@ -17,7 +17,7 @@
    {
      "image": "/assets/maincraft.png",
      "alt": "MainCraft",
-     "link": "/maincraft",
+     "link": "https://logicraftweb.netlify.app/",
      "tags": ["glow", "shimmer"]
    },
    {
