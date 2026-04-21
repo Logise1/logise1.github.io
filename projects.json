@@ -1,5 +1,16 @@
 [
    {
+     "image": "/assets/maincraft.png",
+     "alt": "MainCraft",
+     "link": "https://logicraftweb.netlify.app/",
+     "tags": ["glow", "shimmer"]
+   },
+   {
+     "image": "/assets/tag.png",
+     "alt": "Tag",
+     "link": "/tag"
+   },
+   {
      "image": "/assets/tendrive.png",
      "alt": "TenDrive",
      "link": "/tendrive"
@@ -13,12 +24,6 @@
      "image": "/assets/towerdefense.png",
      "alt": "TowerDefense",
      "link": "/towerdefense"
-   },
-   {
-     "image": "/assets/maincraft.png",
-     "alt": "MainCraft",
-     "link": "https://logicraftweb.netlify.app/",
-     "tags": ["glow", "shimmer"]
    },
    {
      "image": "/assets/wetype.png",
