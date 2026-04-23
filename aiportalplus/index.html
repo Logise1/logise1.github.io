@@ -251,34 +251,34 @@
         </div>
 
         <!-- CHAT VIEW (FIXED POSITIONING FOR MOBILE) -->
-        <div id="view-chat" class="fixed inset-0 bg-white z-[60] hidden flex flex-col h-[100dvh]">
-            <div class="px-6 py-4 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                    <button onclick="app.navigate('home')" class="text-gray-400 hover:text-indigo-600"><i class="fa-solid fa-arrow-left text-lg"></i></button>
-                    <div id="chat-header-info" class="flex items-center gap-3"></div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="app.openVoiceChat(window.app.state.currentBot)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-colors border border-indigo-200" title="Pasar a chat de voz">
-                        <i class="fa-solid fa-microphone"></i> <span class="hidden sm:inline">Voz</span>
-                    </button>
-                    <button onclick="app.askClearChat()" class="text-gray-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50 transition-all"><i class="fa-solid fa-trash-can"></i></button>
-                </div>
-            </div>
+        <div id="view-chat" class="fixed inset-0 bg-white z-[60] hidden flex flex-row h-[100dvh]">
             
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth bg-white"></div>
-            
-            <!-- Image Preview Area -->
-            <div id="img-preview-container" class="px-4 pb-2 bg-white hidden flex-shrink-0">
-                <div class="relative inline-block">
-                    <img id="img-preview" src="" class="h-20 w-auto rounded-lg border border-gray-300 shadow-sm object-cover">
-                    <button onclick="app.clearImageAttachment()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"><i class="fa-solid fa-xmark"></i></button>
+            <!-- Sidebar for Chats -->
+            <div id="chat-sidebar" class="absolute md:relative z-20 h-full w-64 bg-gray-50 border-r border-gray-200 flex-col transition-all hidden md:flex shadow-2xl md:shadow-none">
+                <div class="px-4 py-4 border-b border-gray-200 flex justify-between items-center bg-white shrink-0">
+                    <h3 class="font-bold text-gray-800"><i class="fa-solid fa-comments text-indigo-500 mr-2"></i> Mis Chats</h3>
+                    <button onclick="app.toggleChatSidebar()" class="md:hidden text-gray-500 hover:text-indigo-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
+                <div id="chat-sidebar-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
             </div>
 
-            <!-- Chat Input (WITH SAFE AREA PADDING) -->
-            <div id="chat-input-container" class="p-4 bg-white border-t border-gray-200 flex-shrink-0 pb-safe">
-                <div class="max-w-4xl mx-auto relative flex gap-2 items-end">
-                    <button onclick="document.getElementById('file-input').click()" class="bg-gray-100 hover:bg-gray-200 text-gray-500 p-3 rounded-xl transition-colors h-[50px] w-[50px] flex items-center justify-center shrink-0">
+            <!-- Main Chat Area -->
+            <div class="flex-1 flex flex-col h-full relative overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                    <div class="flex items-center gap-4">
+                        <button onclick="app.navigate('home')" class="text-gray-400 hover:text-indigo-600"><i class="fa-solid fa-arrow-left text-lg"></i></button>
+                        <button onclick="app.toggleChatSidebar()" class="md:hidden text-gray-400 hover:text-indigo-600"><i class="fa-solid fa-bars text-lg"></i></button>
+                        <div id="chat-header-info" class="flex items-center gap-3"></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="app.openVoiceChat(window.app.state.currentBot)" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-colors border border-indigo-200" title="Pasar a chat de voz">
+                            <i class="fa-solid fa-microphone"></i> <span class="hidden sm:inline">Voz</span>
+                        </button>
+                        <button onclick="app.askClearChat()" class="text-gray-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-50 transition-all"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+                
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth bg-white"></div>
                         <i class="fa-solid fa-paperclip text-lg"></i>
                     </button>
                     <input type="file" id="file-input" accept="image/*" class="hidden" onchange="app.handleImageUpload(this)">
@@ -290,6 +290,7 @@
                     </button>
                 </div>
                 <div id="chat-status-msg" class="text-center text-xs text-red-500 mt-2 hidden font-medium"></div>
+            </div>
             </div>
         </div>
 
@@ -352,7 +353,7 @@
                 inputs: { name: document.getElementById('input-name'), desc: document.getElementById('input-desc'), tag: document.getElementById('input-tag'), system: document.getElementById('input-system'), isPrivate: document.getElementById('input-private'), isPaid: document.getElementById('input-paid'), isDan: document.getElementById('input-dan'), price: document.getElementById('input-price'), message: document.getElementById('message-input') },
                 priceContainer: document.getElementById('price-container'), 
                 avatarPreview: document.getElementById('avatar-preview'), avatarUploadStatus: document.getElementById('avatar-upload-status'),
-                chat: { container: document.getElementById('chat-messages'), header: document.getElementById('chat-header-info'), sendBtn: document.getElementById('send-btn'), statusMsg: document.getElementById('chat-status-msg'), imgPreview: document.getElementById('img-preview-container'), imgPreviewSrc: document.getElementById('img-preview') },
+                chat: { container: document.getElementById('chat-messages'), header: document.getElementById('chat-header-info'), sendBtn: document.getElementById('send-btn'), statusMsg: document.getElementById('chat-status-msg'), imgPreview: document.getElementById('img-preview-container'), imgPreviewSrc: document.getElementById('img-preview'), sidebar: document.getElementById('chat-sidebar'), sidebarList: document.getElementById('chat-sidebar-list') },
                 leaderboardList: document.getElementById('leaderboard-list'), tabBots: document.getElementById('tab-bots'), tabUsers: document.getElementById('tab-users'),
                 modal: { overlay: document.getElementById('global-modal'), content: document.getElementById('modal-content'), title: document.getElementById('modal-title'), msg: document.getElementById('modal-msg'), actions: document.getElementById('modal-actions'), icon: document.getElementById('modal-icon') }
             };
@@ -543,6 +544,48 @@
             } catch (e) { window.app.showModal({ title: "Error", body: "Pago fallido.", icon: 'warning', buttons: [{ text: "OK" }] }); }
         };
 
+        const toggleChatSidebar = () => {
+            if (els.chat.sidebar) {
+                els.chat.sidebar.classList.toggle('hidden');
+                els.chat.sidebar.classList.toggle('flex');
+            }
+        };
+
+        const loadChatSidebar = async () => {
+            if (!window.app.state.user || !els.chat.sidebarList) return;
+            els.chat.sidebarList.innerHTML = '<div class="text-center py-4 text-xs text-gray-400"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+            try {
+                const chatsSnap = await getDocs(collection(db, 'artifacts', appId, 'users', window.app.state.user.uid, 'chats'));
+                const chatIds = [];
+                chatsSnap.forEach(doc => chatIds.push(doc.id));
+
+                els.chat.sidebarList.innerHTML = '';
+                if(chatIds.length === 0) {
+                    els.chat.sidebarList.innerHTML = '<div class="text-center p-4 text-xs text-gray-400">No hay chats recientes</div>';
+                    return;
+                }
+
+                chatIds.forEach(botId => {
+                    const bot = window.app.state.bots.find(b => b.id === botId);
+                    if (bot) {
+                        const isCurrent = window.app.state.currentBot && window.app.state.currentBot.id === bot.id;
+                        const div = document.createElement('div');
+                        div.className = `p-2 rounded-lg cursor-pointer flex items-center gap-3 transition-colors ${isCurrent ? 'bg-indigo-100 border border-indigo-200' : 'hover:bg-gray-200 border border-transparent'}`;
+                        div.onclick = () => {
+                            if (window.innerWidth < 768) toggleChatSidebar(); // auto close on mobile
+                            window.app.openChat(bot);
+                        };
+                        const avatarHtml = bot.avatar && !bot.avatar.startsWith('http') ? `<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-sm shadow-sm">${bot.avatar}</div>` : `<img src="${bot.avatar}" class="w-8 h-8 rounded-full object-cover shadow-sm">`;
+                        div.innerHTML = `${avatarHtml} <div class="flex-1 min-w-0"><h4 class="text-sm font-bold text-gray-900 truncate">${bot.name}</h4></div>`;
+                        els.chat.sidebarList.appendChild(div);
+                    }
+                });
+            } catch(e) {
+                console.error(e);
+                els.chat.sidebarList.innerHTML = '<div class="text-center p-4 text-xs text-red-400">Error al cargar</div>';
+            }
+        };
+
         const openChat = async (bot) => {
             window.app.state.currentBot = bot; 
             window.app.state.chatHistory = []; 
@@ -563,6 +606,7 @@
             els.chat.header.innerHTML = `${avatarImg} <div><h3 class="font-bold text-gray-900 leading-tight flex items-center">${bot.name} ${danBadge}</h3><span class="text-xs bg-gray-100 px-2 rounded text-gray-500">${bot.tag}</span></div>`;
 
             window.app.navigate('chat');
+            window.app.loadChatSidebar();
 
             // Cargar Historial desde Firestore
             if (window.app.state.user) {
@@ -574,7 +618,7 @@
 
                     if (chatSnap.exists() && chatSnap.data().messages && chatSnap.data().messages.length > 0) {
                         const messages = chatSnap.data().messages;
-                        window.app.state.chatHistory = messages; // Cargar a la memoria de Mistral
+                        window.app.state.chatHistory = messages.map(m => ({ role: m.role, content: m.content })); // Cargar a la memoria de Mistral sin ts
                         
                         // Renderizar mensajes previos
                         messages.forEach(msg => {
@@ -797,7 +841,7 @@
             try {
                 const chatDocRef = doc(db, 'artifacts', appId, 'users', window.app.state.user.uid, 'chats', botId);
                 await setDoc(chatDocRef, {
-                    messages: arrayUnion({ role, content })
+                    messages: arrayUnion({ role, content, ts: Date.now() })
                 }, { merge: true });
             } catch (e) {
                 console.error("Error saving chat message:", e);
@@ -1102,7 +1146,7 @@
         window.app = {
             ...window.app,
             init, showModal, hideModal, showAuth, toggleAuthMode, handleAuth, logout, navigate, togglePriceInput, loadBots, handleSearch, filterBots, renderBots,
-            handleBotClick, showPaymentModal, showChatModeSelection, processPayment, openChat, openVoiceChat, likeBot, startCreation, editBot, goToPromptEditor, publishBot, deleteBot, askClearChat, clearChat, appendMessage, saveChatMessage, sendMessage, stopChat, switchLeaderboardTab, showLeaderboard, backToDetails,
+            handleBotClick, showPaymentModal, showChatModeSelection, processPayment, toggleChatSidebar, loadChatSidebar, openChat, openVoiceChat, likeBot, startCreation, editBot, goToPromptEditor, publishBot, deleteBot, askClearChat, clearChat, appendMessage, saveChatMessage, sendMessage, stopChat, switchLeaderboardTab, showLeaderboard, backToDetails,
             handleImageUpload, clearImageAttachment, downloadImage, generateImage, handleAvatarUpload
         };
         
