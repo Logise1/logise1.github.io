@@ -598,7 +598,7 @@
                                 tempMarkdown = tempMarkdown.replace(/\[IMG:(.*?)\]/g, (match, prompt) => {
                                     const encodedPrompt = encodeURIComponent(prompt);
                                     const seed = (prompt.length * 42) % 1000;
-                                    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=1000&enhance=true&seed=${seed}&nologo=true`;
+                                    const url = `https://freeai.logise1123.workers.dev/image/${encodedPrompt}?raw=true&nologo=true&seed=${seed}`;
                                     return `\n\n<div class="my-2 w-72 aspect-square relative group"><img src="${url}" class="rounded-lg w-full h-full object-cover border border-gray-200"></div>\n\n`;
                                 });
                                 window.app.appendMessage(msg.role, tempMarkdown);
@@ -1058,7 +1058,7 @@
             const encodedPrompt = encodeURIComponent(prompt);
             // Usamos un seed consistente para que en el historial cargue la misma imagen
             const seed = (prompt.length * 42) % 1000;
-            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=1000&enhance=true&seed=${seed}&nologo=true`;
+            const url = `https://freeai.logise1123.workers.dev/image/${encodedPrompt}?raw=true&nologo=true&seed=${seed}`;
             const img = new Image();
             img.src = url;
             img.onload = () => {
