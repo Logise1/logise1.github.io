@@ -7,10 +7,14 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js Library for the 3D Pyramid -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <style>
         /* Usar la fuente Inter como predeterminada */
@@ -18,10 +22,25 @@
             font-family: 'Inter', sans-serif;
             background-color: #ffffff; /* Fondo blanco */
             color: #111827; /* Texto oscuro */
+            /* Necesario para que el contenido pase por encima del background z-0 */
+        position: relative; 
+    }
+
+    /* --- ESTILOS DE POLKA DOTS --- */
+    .polka-pattern {
+        /* Puntos mucho más sutiles: opacidad al 6% y tamaño ligeramente menor (10%) */
+        background-image: radial-gradient(rgba(0, 0, 0, 0.06) 10%, transparent 11%);
+        background-size: 20px 20px;
+        background-position: 0 0;
+    }
+
+    /* Máscara para difuminar los puntos desde la esquina inferior izquierda */
+    .mask-bottom-left {
+            -webkit-mask-image: radial-gradient(circle 60vw at 0% 100%, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            mask-image: radial-gradient(circle 60vw at 0% 100%, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
         }
 
         /* --- NUEVOS ESTILOS Y ANIMACIONES PARA GLOW Y SHIMMER --- */
-
         /* Animación para el efecto "glow" en la TARJETA */
         @keyframes glow-animation {
             0% { box-shadow: 0 0 5px #facc15; } /* Amarillo tenue */
@@ -40,7 +59,6 @@
         }
 
         /* El efecto shimmer se aplica a la tarjeta entera usando un pseudo-elemento */
-        /* NECESITA que el contenedor (la <a>) tenga 'relative' y 'overflow-hidden' */
         .card-animate-shimmer::after {
             content: '';
             position: absolute;
@@ -58,20 +76,27 @@
             );
             
             transform: translateX(-100%) skewX(-20deg); /* Empieza fuera, a la izquierda */
-            animation: card-shimmer-animation 1.5s infinite linear; /* MÁS RÁPIDO: cambiado de 2.5s a 1.5s */
+            animation: card-shimmer-animation 1.5s infinite linear; /* MÁS RÁPIDO */
             animation-delay: 0.5s; /* Un pequeño retraso */
             z-index: 5; /* Por encima de la imagen */
             pointer-events: none; /* Para que no bloquee el clic */
             filter: blur(5px); /* Suaviza los bordes del brillo */
         }
-        /* --- FIN DE NUEVOS ESTILOS --- */
-
     </style>
 </head>
-<body class="antialiased relative min-h-screen">
+<body class="antialiased min-h-screen overflow-x-hidden">
 
-    <!-- Contenedor principal -->
-    <div class="container mx-auto max-w-6xl px-6 py-12 md:py-20 mb-16">
+    <!-- Capa 1: Polka dots permanentes abajo a la izquierda -->
+    <div class="fixed inset-0 pointer-events-none z-[0] polka-pattern mask-bottom-left transition-opacity duration-500" id="corner-dots"></div>
+    
+    <!-- Capa 2: Pantalla completa de polka dots (Oculto por defecto) -->
+    <div class="fixed inset-0 pointer-events-none z-[0] polka-pattern opacity-0 transition-opacity duration-500" id="full-dots"></div>
+
+    <!-- Capa 3: Contenedor para la pirámide 3D -->
+    <div id="pyramid-container" class="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center opacity-0 transition-opacity duration-500 hidden"></div>
+
+    <!-- Contenedor principal (Se eleva el Z-index para estar sobre los puntos) -->
+    <div class="container mx-auto max-w-6xl px-6 py-12 md:py-20 mb-16 relative z-[10]">
 
         <!-- Encabezado -->
         <header class="text-center mb-16">
@@ -93,7 +118,7 @@
     </div>
 
     <!-- Botón flotante para beme.html abajo a la derecha -->
-    <a href="beme" class="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl font-semibold hover:bg-gray-700 hover:scale-105 transition-all duration-300 border border-gray-700">
+    <a href="beme.html" class="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl font-semibold hover:bg-gray-700 hover:scale-105 transition-all duration-300 border border-gray-700">
         beme.html
     </a>
 
@@ -106,53 +131,162 @@
                 projectGrid.innerHTML = ''; // Limpiar cualquier contenido
                 projects.forEach(project => {
 
-                    // --- NUEVA Lógica para aplicar efectos a la tarjeta ---
                     let cardEffectClass = '';
-                    let utilityClass = ''; // Clase de utilidad (para overflow-hidden)
+                    let utilityClass = ''; 
 
                     if (project.tags && Array.isArray(project.tags)) {
                         const lowerCaseTags = project.tags.map(t => t.toLowerCase());
                         
-                        // Priorizamos shimmer si ambos están presentes
                         if (lowerCaseTags.includes('shimmer')) {
                             cardEffectClass = 'card-animate-shimmer';
-                            utilityClass = 'overflow-hidden'; // Shimmer NECESITA overflow-hidden
+                            utilityClass = 'overflow-hidden'; 
                         } else if (lowerCaseTags.includes('glow')) {
                             cardEffectClass = 'card-animate-glow';
-                            // Glow NO debe tener overflow-hidden, así que utilityClass queda vacía
                         }
-                        // Otros tags como "new" simplemente se ignoran para los efectos visuales de la tarjeta
                     }
-                    // --- Fin de la nueva lógica ---
 
                     const projectCard = `
-                        <!-- Se quita 'overflow-hidden' de las clases base -->
-                        <!-- Se añaden ${cardEffectClass} y ${utilityClass} (que tendrá overflow-hidden SÓLO para shimmer) -->
-                        <a href="${project.link}" class="relative block rounded-lg shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white ${cardEffectClass} ${utilityClass}">
-                            <!-- Ya no se insertan los tags HTML aquí -->
-                            <!-- Se añade 'rounded-lg' a la imagen para que respete los bordes redondeados (importante para 'glow') -->
-                            <img src="${project.image}" alt="${project.alt}" class="w-full h-auto rounded-lg" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
+                        <a href="${project.link || '#'}" class="relative block rounded-lg shadow-lg transform hover:-translate-y-2 transition-transform duration-300 w-full max-w-sm border border-gray-200 bg-white ${cardEffectClass} ${utilityClass}">
+                            <img src="${project.image}" alt="${project.alt || 'Proyecto'}" class="w-full h-auto rounded-lg" onerror="this.onerror=null;this.src='https://placehold.co/600x400/eeeeee/333333?text=Error+al+cargar';">
                         </a>
                     `;
                     projectGrid.innerHTML += projectCard;
                 });
             };
 
-            // Intentar cargar desde projects.json
+            // Intentar cargar desde projects.json (si falla o no existe, pone un aviso)
             fetch('projects.json')
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok ' + response.statusText);
-                    }
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
                 })
-                .then(data => {
-                    renderProjects(data);
-                })
+                .then(data => renderProjects(data))
                 .catch(error => {
                     console.error('Hubo un problema al cargar los proyectos:', error);
-                    projectGrid.innerHTML = '<p class="text-center text-red-500 col-span-full">No se pudieron cargar los proyectos. Por favor, asegúrate de que el archivo projects.json existe y es correcto.</p>';
+                    // Mock data fallback en caso de que no haya projects.json en el entorno de pruebas
+                    renderProjects([
+                        { image: "https://placehold.co/600x400/facc15/ffffff?text=Proyecto+1", tags: ["glow"], link: "#" },
+                        { image: "https://placehold.co/600x400/3b82f6/ffffff?text=Proyecto+2", tags: ["shimmer"], link: "#" },
+                        { image: "https://placehold.co/600x400/ef4444/ffffff?text=Proyecto+3", tags: [], link: "#" }
+                    ]);
                 });
+
+            let isAnimating = false;
+            let scene, camera, renderer, pyramid;
+            let animationFrameId;
+
+            const fullDotsLayer = document.getElementById('full-dots');
+            const cornerDotsLayer = document.getElementById('corner-dots');
+            const pyramidCont = document.getElementById('pyramid-container');
+
+            // Setup de Three.js
+            function initThreeJS() {
+                scene = new THREE.Scene();
+                
+                // Configurar cámara (campo de visión, aspecto, near, far)
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5; // Lo alejamos para que se vea pequeña
+                
+                // Configurar el renderizador con fondo transparente
+                renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                pyramidCont.appendChild(renderer.domElement);
+
+                // Crear la geometría de pirámide de 4 lados (Cono de 4 segmentos)
+                const geometry = new THREE.ConeGeometry(1, 1.5, 4); // radio: 1, altura: 1.5, segmentos radiales: 4
+                
+                // Material amarillo y que reacciona a luces
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0xfacc15, // Amarillo
+                    roughness: 0.3,
+                    metalness: 0.1,
+                    flatShading: true // Mantiene el aspecto facetado de una pirámide
+                });
+                
+                pyramid = new THREE.Mesh(geometry, material);
+                scene.add(pyramid);
+
+                // Luces para dar volumen 3D
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 10, 5);
+                scene.add(directionalLight);
+
+                // Reaccionar al cambio de tamaño de pantalla
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            // Loop de animación 3D
+            function animatePyramid() {
+                if(!isAnimating) return;
+                
+                animationFrameId = requestAnimationFrame(animatePyramid);
+                
+                if (pyramid) {
+                    pyramid.rotation.y += 0.05; // Rotar sobre el eje Y
+                    pyramid.rotation.x += 0.01; // Ligero cabeceo
+                    pyramid.rotation.z += 0.01;
+                }
+                
+                renderer.render(scene, camera);
+            }
+
+            // Manejar el evento Clic en cualquier parte del documento
+            document.body.addEventListener('click', (e) => {
+                // Prevenir que el click se solape repetidamente si la animación ya corre
+                if (isAnimating) return;
+                isAnimating = true;
+
+                // 1. Mostrar los "polka dots" en toda la pantalla
+                fullDotsLayer.classList.remove('opacity-0');
+                fullDotsLayer.classList.add('opacity-100');
+
+                // 2. Inicializar Three.js si es la primera vez
+                if (!scene) {
+                    initThreeJS();
+                }
+
+                // 3. Mostrar el contenedor 3D
+                pyramidCont.classList.remove('hidden');
+                // Pequeño delay para permitir que el display block actúe antes de animar opacidad
+                setTimeout(() => {
+                    pyramidCont.classList.remove('opacity-0');
+                    pyramidCont.classList.add('opacity-100');
+                }, 20);
+
+                // 4. Iniciar animación 3D
+                animatePyramid();
+
+                // 5. Temporizador para desaparecer todo después de 3 segundos
+                setTimeout(() => {
+                    // Desvanecer puntos completos y pirámide
+                    fullDotsLayer.classList.remove('opacity-100');
+                    fullDotsLayer.classList.add('opacity-0');
+
+                    pyramidCont.classList.remove('opacity-100');
+                    pyramidCont.classList.add('opacity-0');
+
+                    // Esperar a que acabe la transición (500ms) para ocultarlo del todo y parar renderizados
+                    setTimeout(() => {
+                        pyramidCont.classList.add('hidden');
+                        cancelAnimationFrame(animationFrameId);
+                        
+                        // Reseteo la rotación para el siguiente click
+                        if (pyramid) {
+                            pyramid.rotation.set(0, 0, 0);
+                        }
+                        
+                        isAnimating = false;
+                    }, 500);
+
+                }, 3000); // 3 Segundos
+            });
         });
     </script>
 </body>
