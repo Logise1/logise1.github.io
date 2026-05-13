@@ -28,16 +28,16 @@
 
     /* --- ESTILOS DE POLKA DOTS --- */
     .polka-pattern {
-        /* Puntos mucho más sutiles: opacidad al 6% y tamaño ligeramente menor (10%) */
-        background-image: radial-gradient(rgba(0, 0, 0, 0.06) 10%, transparent 11%);
+        /* Puntos negros opacos */
+        background-image: radial-gradient(#000000 10%, transparent 11%);
         background-size: 20px 20px;
         background-position: 0 0;
     }
 
-    /* Máscara para difuminar los puntos desde la esquina inferior izquierda */
+    /* Máscara para difuminar los puntos desde la esquina inferior izquierda con MENOR RANGO */
     .mask-bottom-left {
-            -webkit-mask-image: radial-gradient(circle 60vw at 0% 100%, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-            mask-image: radial-gradient(circle 60vw at 0% 100%, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            -webkit-mask-image: radial-gradient(circle 25vw at 0% 100%, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            mask-image: radial-gradient(circle 25vw at 0% 100%, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
         }
 
         /* --- NUEVOS ESTILOS Y ANIMACIONES PARA GLOW Y SHIMMER --- */
