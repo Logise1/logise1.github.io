@@ -10,7 +10,7 @@
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         body {
@@ -168,11 +168,41 @@
     </div>
 
     <!-- El padding inferior (pb-32) asegura que el contenido no quede oculto detrás de la pradera -->
-    <div class="container mx-auto max-w-6xl px-4 sm:px-6 py-16 md:py-24 pb-32 mb-16 relative z-10 flex flex-col items-center">
+    <div class="container mx-auto max-w-6xl px-4 sm:px-6 py-12 md:py-16 pb-32 mb-16 relative z-10 flex flex-col items-center">
 
-        <!-- Encabezado con tamaños responsivos para que no se corte -->
+        <!-- Contenedor Responsivo para los 2 Anuncios -->
+        <div class="w-full flex flex-col sm:flex-row justify-center items-center gap-6 mb-12">
+            <!-- Anuncio 1 -->
+            <div class="flex items-center justify-center bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg p-1 overflow-hidden w-full max-w-[468px] h-[68px]">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '917d4a415c71dfff37fb2b4273f47380',
+                        'format' : 'iframe',
+                        'height' : 60,
+                        'width' : 468,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/917d4a415c71dfff37fb2b4273f47380/invoke.js"></script>
+            </div>
+
+            <!-- Anuncio 2 -->
+            <div class="flex items-center justify-center bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg p-1 overflow-hidden w-full max-w-[468px] h-[68px]">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '917d4a415c71dfff37fb2b4273f47380',
+                        'format' : 'iframe',
+                        'height' : 60,
+                        'width' : 468,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="https://www.highperformanceformat.com/917d4a415c71dfff37fb2b4273f47380/invoke.js"></script>
+            </div>
+        </div>
+
+        <!-- Encabezado -->
         <header class="text-center mb-20 flex flex-col items-center w-full">
-            <!-- Solución al texto cortado: p-2 (padding) y leading-normal -->
             <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-blue-50 to-blue-200 drop-shadow-[0_4px_12px_rgba(255,255,255,0.1)] px-4 py-2 leading-normal break-words">
                 Logise
             </h1>
@@ -197,6 +227,7 @@
         </main>
     </div>
 
+    <!-- Enlace flotante lateral -->
     <a href="beme.html" class="fixed bottom-8 right-8 z-50 group flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)] font-medium tracking-wide hover:bg-white/20 hover:scale-105 transition-all duration-300 border border-white/20">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-300 group-hover:text-cyan-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
