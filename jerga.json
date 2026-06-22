@@ -1,0 +1,81 @@
+{
+  "comb": [
+    "farewell/a/g-04.png",
+    "farewell/a/g-04b.png"
+  ],
+  "peine": [
+    "farewell/a/g-04.png",
+    "farewell/a/g-04b.png"
+  ],
+  "paja": ["resort/a/12-d.png"],
+  "heart": [
+    "city/a/s1.png",
+    "site/a/s2.png",
+    "resort/a/11-x.png",
+    "ridge/a/b-secb.png",
+    "temple/a/void.png",
+    "reflection/a/12b.png",
+    "summit/a/b-08.png",
+    "core/a/space.png"
+  ],
+  "corazon": [
+    "city/a/s1.png",
+    "site/a/s2.png",
+    "resort/a/11-x.png",
+    "ridge/a/b-secb.png",
+    "temple/a/void.png",
+    "reflection/a/12b.png",
+    "summit/a/b-08.png",
+    "core/a/space.png"
+  ],
+  "cassette": [
+    "city/a/s0.png",
+    "site/a/s0.png",
+    "resort/a/s0.png",
+    "ridge/a/a-01x.png",
+    "temple/a/a-00x.png",
+    "reflection/a/08b.png",
+    "summit/a/a-04b.png",
+    "core/a/0x.png"
+  ],
+  "cinta": [
+    "city/a/s0.png",
+    "site/a/s0.png",
+    "resort/a/s0.png",
+    "ridge/a/a-01x.png",
+    "temple/a/a-00x.png",
+    "reflection/a/08b.png",
+    "summit/a/a-04b.png",
+    "core/a/0x.png"
+  ],
+  "secret": [
+    "epilogue/a/secret.png",
+    "resort/a/10-x.png",
+    "resort/a/10-y.png",
+    "resort/a/10-z.png",
+    "ridge/a/b-sec.png",
+    "ridge/a/b-secb.png"
+  ],
+  "secreto": [
+    "epilogue/a/secret.png",
+    "resort/a/10-x.png",
+    "resort/a/10-y.png",
+    "resort/a/10-z.png",
+    "ridge/a/b-sec.png",
+    "ridge/a/b-secb.png"
+  ],
+  "intro": [
+    "prologue/a/0.png",
+    "prologue/a/0b.png",
+    "prologue/a/1.png",
+    "prologue/a/2.png",
+    "summit/b/a-00-intro.png",
+    "farewell/a/intro-00-past.png"
+  ],
+  "golden": [
+    "farewell/a/end-golden.png"
+  ],
+  "dorada": [
+    "farewell/a/end-golden.png"
+  ]
+}

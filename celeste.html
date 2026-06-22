@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Celeste Rooms</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #03050a;
+            color: #ffffff;
+            user-select: none;
+        }
+        /* Crisp pixel rendering */
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        /* Custom scrollbar for results panel */
+        #results-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        #results-grid::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        #results-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+        }
+        #results-grid::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen relative flex items-center justify-center cursor-grab select-none overflow-hidden">
+
+    <!-- Contenedor del canvas para poder arrastrarlo y escalarlo sin recortar la pantalla externa -->
+    <div class="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <!-- Canvas para renderizar la habitación Celeste -->
+        <canvas id="bg-canvas" class="absolute left-0 top-0 origin-top-left transition-opacity duration-300 opacity-0 pointer-events-none"></canvas>
+    </div>
+
+    <!-- Contenedor del buscador (Flotante arriba) -->
+    <div id="search-container" class="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-40 flex flex-col gap-2">
+        <!-- Input de búsqueda -->
+        <div class="relative flex items-center bg-slate-950/85 backdrop-blur-md border border-white/10 hover:border-white/20 rounded-full shadow-2xl px-4 py-2.5 transition-all duration-300 focus-within:border-cyan-500/50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 mr-2 shrink-0 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text" id="search-input" placeholder="Busca por sala, capítulo o sección (ej: city, temple, a-00, Cara B)..." class="bg-transparent border-none outline-none text-slate-100 placeholder-slate-400/80 text-sm w-full font-light">
+            <!-- Botón limpiar -->
+            <button id="search-clear" class="hidden text-slate-400 hover:text-white p-1 ml-1 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Panel de Resultados (se muestra al escribir o tener foco) -->
+        <div id="search-results-panel" class="hidden bg-slate-950/90 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-[50vh] flex flex-col transition-all duration-300">
+            <!-- Header del panel -->
+            <div class="flex items-center justify-between px-4 py-2.5 bg-white/5 border-b border-white/5 text-xs text-slate-400 font-medium select-none">
+                <span id="results-count">Encuentra salas...</span>
+                <span>Usa <kbd class="px-1 py-0.5 bg-white/10 rounded font-mono text-[9px] border border-white/10">/</kbd> para buscar • <kbd class="px-1 py-0.5 bg-white/10 rounded font-mono text-[9px] border border-white/10">Esc</kbd> para cerrar</span>
+            </div>
+            <!-- Grid de miniaturas scrollable -->
+            <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 overflow-y-auto max-h-[45vh] scrollbar-thin scrollbar-thumb-white/10">
+                <!-- Tarjetas de resultados generadas dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay - Indicador de carga -->
+    <div id="loader" class="absolute flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300 z-10">
+        <div class="w-12 h-12 border-4 border-cyan-500/35 border-t-cyan-400 rounded-full animate-spin"></div>
+        <p class="mt-4 text-cyan-200/80 text-sm font-medium tracking-wide">Cargando habitación...</p>
+    </div>
+
+    <!-- UI Overlay - Información de la habitación -->
+    <div id="info-badge" class="absolute bottom-6 left-6 bg-slate-950/80 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-xl shadow-2xl transition-all duration-300 opacity-0 translate-y-2 flex flex-col gap-0.5 pointer-events-auto hover:bg-slate-900/90 hover:border-white/20 z-10">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span id="room-name" class="font-medium text-sm text-slate-100 tracking-wide">Habitación</span>
+        </div>
+        <span id="room-chapter" class="text-xs text-slate-400 font-light">Cargando...</span>
+    </div>
+
+    <!-- UI Overlay - Instrucciones en la esquina superior derecha -->
+    <div class="absolute top-6 right-6 bg-slate-950/60 backdrop-blur-md border border-white/5 px-3.5 py-1.5 rounded-full shadow-lg text-xs text-slate-300 font-light tracking-wide pointer-events-none hidden sm:block z-10">
+        Arrastra para mover • Rueda/Pinch para Zoom • Clic/Espacio/R para cambiar
+    </div>
+
+    <!-- Botón Volver en la esquina superior izquierda -->
+    <a href="index.html" class="absolute top-6 left-6 z-50 flex items-center gap-2 bg-slate-950/60 backdrop-blur-md border border-white/10 hover:border-white/20 text-slate-300 hover:text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all hover:scale-105 duration-200 z-10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Volver al Inicio
+    </a>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            const loader = document.getElementById('loader');
+            const infoBadge = document.getElementById('info-badge');
+            const roomNameEl = document.getElementById('room-name');
+            const roomChapterEl = document.getElementById('room-chapter');
+
+            // Elementos del buscador
+            const searchContainer = document.getElementById('search-container');
+            const searchInput = document.getElementById('search-input');
+            const searchClear = document.getElementById('search-clear');
+            const resultsPanel = document.getElementById('search-results-panel');
+            const resultsGrid = document.getElementById('results-grid');
+            const resultsCount = document.getElementById('results-count');
+
+            let roomsList = [];
+            let isLoading = false;
+            
+            // Variables de estado del visor declaradas explícitamente
+            let currentRoomPath = null;
+            let currentImg = null;
+            let currentK = 1;
+            let currentCropX = 0;
+            let currentCropY = 0;
+            let minScale = 1;
+            let S = 1;
+            let translateX = 0;
+            let translateY = 0;
+            let filteredRooms = [];
+            let searchPreloadTimeout = null;
+
+            // Cache de imágenes para precarga general y navegación instantánea
+            const imageCache = {}; // Maps roomPath -> { img: Image, loaded: Boolean }
+            let randomPreloadPaths = [];
+
+            const localJsonUrl = 'rooms.json';
+            const remoteJsonUrl = 'https://logise1.github.io/rooms.json';
+            const localJergaUrl = 'jerga.json';
+            const remoteJergaUrl = 'https://logise1.github.io/jerga.json';
+
+            let jargonMap = {}; // Maps roomPath -> Array of jargon tags (strings)
+
+            // Cargar lista de habitaciones y jerga en paralelo
+            const fetchRooms = fetch(localJsonUrl)
+                .catch(() => fetch(remoteJsonUrl))
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                });
+
+            const fetchJerga = fetch(localJergaUrl)
+                .catch(() => fetch(remoteJergaUrl))
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                })
+                .catch(() => ({})); // Fallback a un objeto vacío en caso de error
+
+            function sortCelesteRooms(rooms) {
+                const chapterOrder = [
+                    'prologue',
+                    'city',
+                    'site',
+                    'resort',
+                    'ridge',
+                    'temple',
+                    'reflection',
+                    'summit',
+                    'epilogue',
+                    'core',
+                    'farewell'
+                ];
+                
+                const sideOrder = ['a', 'b', 'c'];
+
+                return [...rooms].sort((a, b) => {
+                    const partsA = a.split('/');
+                    const partsB = b.split('/');
+                    
+                    const chapA = partsA[0] || '';
+                    const chapB = partsB[0] || '';
+                    
+                    // 1. Comparar capítulos por el orden oficial del juego
+                    const indexA = chapterOrder.indexOf(chapA.toLowerCase());
+                    const indexB = chapterOrder.indexOf(chapB.toLowerCase());
+                    
+                    const valA = indexA === -1 ? 999 : indexA;
+                    const valB = indexB === -1 ? 999 : indexB;
+                    
+                    if (valA !== valB) {
+                        return valA - valB;
+                    }
+                    
+                    // 2. Comparar caras (Sides) en orden: A, B, C
+                    const sideA = partsA[1] || '';
+                    const sideB = partsB[1] || '';
+                    const sIndexA = sideOrder.indexOf(sideA.toLowerCase());
+                    const sIndexB = sideOrder.indexOf(sideB.toLowerCase());
+                    const sValA = sIndexA === -1 ? 999 : sIndexA;
+                    const sValB = sIndexB === -1 ? 999 : sIndexB;
+                    
+                    if (sValA !== sValB) {
+                        return sValA - sValB;
+                    }
+                    
+                    // 3. Comparación inteligente del archivo (start primero, end al final, natural por el resto)
+                    const fileA = partsA[partsA.length - 1] || '';
+                    const fileB = partsB[partsB.length - 1] || '';
+                    
+                    const lowerA = fileA.toLowerCase();
+                    const lowerB = fileB.toLowerCase();
+                    
+                    const isStartA = lowerA.includes('start');
+                    const isStartB = lowerB.includes('start');
+                    const isEndA = lowerA.includes('end');
+                    const isEndB = lowerB.includes('end');
+                    
+                    if (isStartA && !isStartB) return -1;
+                    if (!isStartA && isStartB) return 1;
+                    if (isEndA && !isEndB) return 1;
+                    if (!isEndA && isEndB) return -1;
+                    
+                    return fileA.localeCompare(fileB, undefined, { numeric: true, sensitivity: 'base' });
+                });
+            }
+
+            Promise.all([fetchRooms, fetchJerga])
+                .then(([rooms, jergaData]) => {
+                    roomsList = sortCelesteRooms(rooms);
+                    
+                    // Invertir el mapeo de jerga para búsquedas eficientes
+                    if (jergaData) {
+                        Object.keys(jergaData).forEach(tag => {
+                            const paths = jergaData[tag];
+                            if (Array.isArray(paths)) {
+                                paths.forEach(p => {
+                                    if (!jargonMap[p]) {
+                                        jargonMap[p] = [];
+                                    }
+                                    jargonMap[p].push(tag);
+                                });
+                            }
+                        });
+                    }
+                    
+                    initViewer();
+                })
+                .catch(err => {
+                    console.error('Error al iniciar el visor con salas y jerga:', err);
+                    roomsList = sortCelesteRooms([
+                        "prologue/a/1.png", "city/a/1.png", "site/a/1.png", 
+                        "resort/a/00-a.png", "ridge/a/a-00.png", "temple/a/a-00.png", 
+                        "reflection/a/00.png", "summit/a/a-00.png", "farewell/a/a-00.png"
+                    ]);
+                    initViewer();
+                });
+
+            // Iniciar precarga de una habitación
+            function preloadRoom(roomPath) {
+                if (!roomPath || imageCache[roomPath]) return;
+                
+                const img = new Image();
+                const cacheItem = {
+                    img: img,
+                    loaded: false
+                };
+                imageCache[roomPath] = cacheItem;
+                
+                img.onload = () => {
+                    cacheItem.loaded = true;
+                };
+                img.onerror = () => {
+                    delete imageCache[roomPath];
+                };
+                img.src = `https://logise1.github.io/celesterooms/${roomPath}`;
+            }
+
+            // Rellenar las precargas aleatorias en segundo plano
+            function refillRandomPreloads() {
+                if (roomsList.length === 0) return;
+                
+                randomPreloadPaths = [];
+                
+                while (randomPreloadPaths.length < 3) {
+                    const path = roomsList[Math.floor(Math.random() * roomsList.length)];
+                    if (!randomPreloadPaths.includes(path) && path !== currentRoomPath) {
+                        randomPreloadPaths.push(path);
+                        preloadRoom(path);
+                    }
+                }
+            }
+
+            // Lanzar precargas de la ventana activa
+            function triggerPreloads() {
+                if (roomsList.length === 0 || !currentRoomPath) return;
+                
+                const currentSequence = (searchInput.value.trim() !== '' && filteredRooms.length > 0) ? filteredRooms : roomsList;
+                const currentIndex = currentSequence.indexOf(currentRoomPath);
+                if (currentIndex === -1) return;
+                
+                // 1. Precargar las siguientes 3 salas en orden secuencial
+                for (let i = 1; i <= 3; i++) {
+                    const idx = (currentIndex + i) % currentSequence.length;
+                    preloadRoom(currentSequence[idx]);
+                }
+                
+                // 2. Precargar las anteriores 3 salas en orden secuencial
+                for (let i = 1; i <= 3; i++) {
+                    const idx = (currentIndex - i + currentSequence.length) % currentSequence.length;
+                    preloadRoom(currentSequence[idx]);
+                }
+                
+                // 3. Precargar 3 salas aleatorias
+                refillRandomPreloads();
+            }
+
+            // Cargar y mostrar la siguiente habitación aleatoria
+            function loadNextRoom() {
+                if (isLoading || roomsList.length === 0) return;
+                
+                let targetPath = '';
+                if (randomPreloadPaths.length > 0) {
+                    const readyPath = randomPreloadPaths.find(path => imageCache[path] && imageCache[path].loaded);
+                    targetPath = readyPath || randomPreloadPaths[0];
+                } else {
+                    targetPath = roomsList[Math.floor(Math.random() * roomsList.length)];
+                }
+                
+                loadSelectedRoom(targetPath);
+            }
+
+            function initViewer() {
+                // Elegir la primera sala al azar al iniciar el visor
+                const initialRoom = roomsList[Math.floor(Math.random() * roomsList.length)];
+                loadSelectedRoom(initialRoom);
+            }
+
+            function setupAndDisplayRoom(img, roomPath) {
+                currentImg = img;
+                currentRoomPath = roomPath;
+                const W = img.naturalWidth;
+                const H = img.naturalHeight;
+
+                // 1. Dibujar la imagen completa en el canvas
+                canvas.width = W;
+                canvas.height = H;
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(img, 0, 0);
+
+                // 2. Elegir un recorte 16:9 inicial (pero el usuario podrá arrastrar/zoom para ver el resto)
+                const maxK = Math.floor(Math.min(W / 16, H / 9));
+                currentK = Math.max(1, maxK);
+                if (maxK > 20) {
+                    currentK = 20 + Math.floor(Math.random() * (maxK - 20 + 1));
+                }
+
+                const w = 16 * currentK;
+                const h = 9 * currentK;
+
+                const maxX = Math.max(0, W - w);
+                const maxY = Math.max(0, H - h);
+                currentCropX = Math.floor(Math.random() * (maxX + 1));
+                currentCropY = Math.floor(Math.random() * (maxY + 1));
+
+                // 3. Posicionar el canvas inicialmente para enfocar la sección elegida
+                resetPosition();
+
+                // 4. Formatear información para la UI
+                const parts = roomPath.split('/');
+                const chapterRaw = parts[0] || 'Desconocido';
+                const sideRaw = parts[1] || 'a';
+                const fileRaw = parts[parts.length - 1] || 'Room';
+                const roomCode = fileRaw.replace('.png', '').replace('.jpg', '');
+
+                const chapterNames = {
+                    'prologue': 'Prólogo',
+                    'city': 'Capítulo 1: Ciudad Abandonada',
+                    'site': 'Capítulo 2: Ruinas del Sitio',
+                    'resort': 'Capítulo 3: Hotel Celestial',
+                    'ridge': 'Capítulo 4: Acantilado Dorado',
+                    'temple': 'Capítulo 5: Templo del Espejo',
+                    'reflection': 'Capítulo 6: Reflexión',
+                    'summit': 'Capítulo 7: La Cumbre',
+                    'core': 'Capítulo 8: El Núcleo',
+                    'farewell': 'Capítulo 9: Adiós (Farewell)',
+                    'epilogue': 'Epílogo'
+                };
+
+                const sideNames = {
+                    'a': 'Cara A',
+                    'b': 'Cara B',
+                    'c': 'Cara C'
+                };
+
+                const chapterName = chapterNames[chapterRaw.toLowerCase()] || chapterRaw;
+                const sideName = sideNames[sideRaw.toLowerCase()] || `Sección ${sideRaw.toUpperCase()}`;
+
+                roomNameEl.textContent = `Sala: ${roomCode.toUpperCase()}`;
+                roomChapterEl.textContent = `${chapterName} • ${sideName}`;
+                
+                // Disparar las precargas de la ventana activa (secuenciales y aleatorias)
+                triggerPreloads();
+            }
+
+            function resetPosition() {
+                if (!currentImg) return;
+                const W = currentImg.naturalWidth;
+                const H = currentImg.naturalHeight;
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+
+                // Definir escala mínima para ver la habitación entera
+                minScale = Math.min(screenWidth / W, screenHeight / H) * 0.85;
+
+                // Calcular la escala para enfocar el recorte 16:9 inicial
+                const w = 16 * currentK;
+                const h = 9 * currentK;
+                const screenRatio = screenWidth / screenHeight;
+
+                if (screenRatio > 16/9) {
+                    S = screenWidth / w;
+                } else {
+                    S = screenHeight / h;
+                }
+
+                const dx = (screenWidth - w * S) / 2;
+                const dy = (screenHeight - h * S) / 2;
+
+                translateX = -currentCropX * S + dx;
+                translateY = -currentCropY * S + dy;
+
+                updateTransform();
+            }
+
+            // Actualizar transformación
+            function updateTransform() {
+                canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${S})`;
+            }
+
+            // --- Controles de Pan & Zoom ---
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+            let startTranslateX = 0;
+            let startTranslateY = 0;
+            
+            let dragDistance = 0;
+            let mouseDownTime = 0;
+
+            // Touch events variables
+            let touchStartDist = 0;
+            let touchStartScale = 1;
+            let touchStartCenter = { x: 0, y: 0 };
+            let isMultiTouch = false;
+
+            // Iniciar arrastre
+            function handleStart(clientX, clientY, isTouch, touchesCount) {
+                if (isLoading) return;
+                mouseDownTime = Date.now();
+                dragDistance = 0;
+
+                if (!isTouch || touchesCount === 1) {
+                    isDragging = true;
+                    isMultiTouch = false;
+                    startX = clientX;
+                    startY = clientY;
+                    startTranslateX = translateX;
+                    startTranslateY = translateY;
+                    document.body.classList.replace('cursor-grab', 'cursor-grabbing');
+                }
+            }
+
+            // Durante el arrastre
+            function handleMove(clientX, clientY) {
+                if (!isDragging) return;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+                dragDistance = Math.hypot(dx, dy);
+
+                translateX = startTranslateX + dx;
+                translateY = startTranslateY + dy;
+                updateTransform();
+            }
+
+            // Finalizar arrastre
+            function handleEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+                document.body.classList.replace('cursor-grabbing', 'cursor-grab');
+
+                // Si fue un clic simple (poco movimiento y rápido), cambiamos de sala
+                const clickDuration = Date.now() - mouseDownTime;
+                if (dragDistance < 6 && clickDuration < 250) {
+                    loadNextRoom();
+                }
+            }
+
+            // Mouse Events
+            document.addEventListener('mousedown', (e) => {
+                if (e.target.closest('a') || e.target.closest('#info-badge') || e.target.closest('#search-container')) return;
+                handleStart(e.clientX, e.clientY, false);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                handleMove(e.clientX, e.clientY);
+            });
+
+            document.addEventListener('mouseup', () => {
+                handleEnd();
+            });
+
+            // Touch Events (Mobile)
+            document.addEventListener('touchstart', (e) => {
+                if (e.target.closest('a') || e.target.closest('#info-badge') || e.target.closest('#search-container')) return;
+                
+                if (e.touches.length === 1) {
+                    handleStart(e.touches[0].clientX, e.touches[0].clientY, true, 1);
+                } else if (e.touches.length === 2) {
+                    // Iniciar pellizco para zoom
+                    isDragging = false;
+                    isMultiTouch = true;
+                    const p1 = e.touches[0];
+                    const p2 = e.touches[1];
+                    touchStartDist = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+                    touchStartScale = S;
+                    touchStartCenter = {
+                        x: (p1.clientX + p2.clientX) / 2,
+                        y: (p1.clientY + p2.clientY) / 2
+                    };
+                    // Registrar coordenadas del canvas bajo el centro del pellizco
+                    currentCropX = (touchStartCenter.x - translateX) / S;
+                    currentCropY = (touchStartCenter.y - translateY) / S;
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && isDragging) {
+                    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                } else if (e.touches.length === 2 && isMultiTouch) {
+                    const p1 = e.touches[0];
+                    const p2 = e.touches[1];
+                    const dist = Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY);
+                    const factor = dist / touchStartDist;
+                    
+                    const newS = touchStartScale * factor;
+                    S = Math.max(minScale, Math.min(newS, 40));
+                    
+                    const center = {
+                        x: (p1.clientX + p2.clientX) / 2,
+                        y: (p1.clientY + p2.clientY) / 2
+                    };
+                    
+                    translateX = center.x - currentCropX * S;
+                    translateY = center.y - currentCropY * S;
+                    updateTransform();
+                }
+            });
+
+            document.addEventListener('touchend', (e) => {
+                if (e.touches.length === 0) {
+                    if (isMultiTouch) {
+                        isMultiTouch = false;
+                    } else {
+                        handleEnd();
+                    }
+                }
+            });
+
+            // Wheel Event (Zoom)
+            document.addEventListener('wheel', (e) => {
+                if (isLoading || !currentImg || e.target.closest('#search-container')) return;
+                
+                const mx = e.clientX;
+                const my = e.clientY;
+                
+                // Posición actual de la coordenada del canvas bajo el mouse
+                const canvasX = (mx - translateX) / S;
+                const canvasY = (my - translateY) / S;
+                
+                const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+                const newS = S * zoomFactor;
+                
+                S = Math.max(minScale, Math.min(newS, 40));
+                
+                // Recalcular traslación para centrar el zoom en el puntero
+                translateX = mx - canvasX * S;
+                translateY = my - canvasY * S;
+                
+                updateTransform();
+            }, { passive: true });
+
+            // Window Resize
+            window.addEventListener('resize', () => {
+                resetPosition();
+            });
+
+            // --- Buscador (Normalizador de acentos para búsquedas precisas) ---
+            function cleanText(text) {
+                return text
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+            }
+
+            function performSearch() {
+                const query = searchInput.value.toLowerCase().trim();
+                
+                if (query.length > 0) {
+                    searchClear.classList.remove('hidden');
+                } else {
+                    searchClear.classList.add('hidden');
+                    renderDefaultRooms();
+                    return;
+                }
+                
+                const terms = cleanText(query).split(/\s+/).filter(Boolean);
+                const matches = roomsList.filter(roomPath => {
+                    const parts = roomPath.split('/');
+                    const chapterRaw = parts[0] || '';
+                    const sideRaw = parts[1] || '';
+                    const fileRaw = parts[parts.length - 1] || '';
+                    const roomCode = fileRaw.replace('.png', '').replace('.jpg', '').toLowerCase();
+                    
+                    const chapterNames = {
+                        'prologue': 'prologo prologue 0',
+                        'city': 'capitulo 1 ciudad abandonada city chapter 1 c1 1',
+                        'site': 'capitulo 2 ruinas del sitio site ruins chapter 2 c2 2',
+                        'resort': 'capitulo 3 hotel celestial resort chapter 3 celestial c3 3',
+                        'ridge': 'capitulo 4 acantilado dorado ridge chapter 4 golden c4 4',
+                        'temple': 'capitulo 5 templo del espejo temple mirror chapter 5 c5 5',
+                        'reflection': 'capitulo 6 reflexion reflection chapter 6 c6 6',
+                        'summit': 'capitulo 7 la cumbre summit chapter 7 c7 7',
+                        'core': 'capitulo 8 el nucleo core chapter 8 c8 8',
+                        'farewell': 'capitulo 9 adios farewell chapter 9 c9 9',
+                        'epilogue': 'epilogo epilogue'
+                    };
+                    
+                    const sideNames = {
+                        'a': 'cara a a-side lado a ladoa',
+                        'b': 'cara b b-side lado b ladob',
+                        'c': 'cara c c-side lado c ladoc'
+                    };
+                    
+                    const chapterText = chapterNames[chapterRaw.toLowerCase()] || chapterRaw.toLowerCase();
+                    const sideText = sideNames[sideRaw.toLowerCase()] || sideRaw.toLowerCase();
+                    
+                    // Obtener tags de jerga asociados a esta habitación
+                    const jargonTags = jargonMap[roomPath] ? jargonMap[roomPath].join(' ') : '';
+                    
+                    const searchString = cleanText(`${roomPath} ${chapterText} ${sideText} ${roomCode} ${jargonTags}`);
+                    return terms.every(term => searchString.includes(term));
+                });
+                
+                resultsCount.textContent = `Encontradas ${matches.length} salas:`;
+                displayGridItems(matches.slice(0, 24));
+            }
+
+            function displayGridItems(rooms) {
+                resultsGrid.innerHTML = '';
+                
+                if (rooms.length === 0) {
+                    resultsGrid.innerHTML = `
+                        <div class="col-span-full flex flex-col items-center justify-center p-8 text-slate-500 text-xs font-light">
+                            <span>No se encontraron salas que coincidan con la búsqueda.</span>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                rooms.forEach(roomPath => {
+                    const parts = roomPath.split('/');
+                    const chapterRaw = parts[0] || 'Desconocido';
+                    const sideRaw = parts[1] || 'a';
+                    const fileRaw = parts[parts.length - 1] || 'Room';
+                    const roomCode = fileRaw.replace('.png', '').replace('.jpg', '').toUpperCase();
+                    
+                    const chapterNamesShort = {
+                        'prologue': 'Prólogo',
+                        'city': 'C1: Ciudad',
+                        'site': 'C2: Ruinas',
+                        'resort': 'C3: Hotel',
+                        'ridge': 'C4: Acantilado',
+                        'temple': 'C5: Templo',
+                        'reflection': 'C6: Reflexión',
+                        'summit': 'C7: Cumbre',
+                        'core': 'C8: Núcleo',
+                        'farewell': 'C9: Adiós',
+                        'epilogue': 'Epílogo'
+                    };
+                    
+                    const chapterName = chapterNamesShort[chapterRaw.toLowerCase()] || chapterRaw;
+                    const sideName = sideRaw.toUpperCase();
+                    
+                    const card = document.createElement('div');
+                    card.className = 'relative overflow-hidden rounded-xl border border-white/10 hover:border-cyan-400 cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.98] shadow-md group bg-slate-900 select-none';
+                    card.innerHTML = `
+                        <!-- Spacer to force correct height in CSS grid row calculations -->
+                        <div style="aspect-ratio: 16/9; width: 100%;"></div>
+                        <img src="https://logise1.github.io/celesterooms/${roomPath}" class="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-85 transition-opacity pointer-events-none" style="image-rendering: pixelated;" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent pointer-events-none"></div>
+                        <div class="absolute bottom-2 left-2 right-2 flex flex-col pointer-events-none">
+                            <span class="text-[9px] text-cyan-300 font-bold uppercase tracking-wider">${sideName}-Side</span>
+                            <span class="text-xs text-white font-semibold truncate">${roomCode}</span>
+                            <span class="text-[9px] text-slate-400 truncate">${chapterName}</span>
+                        </div>
+                    `;
+                    
+                    // Precarga al pasar el mouse por encima o tocar en móvil (instantáneo al clicar)
+                    card.addEventListener('mouseenter', () => {
+                        preloadRoom(roomPath);
+                    });
+                    card.addEventListener('touchstart', () => {
+                        preloadRoom(roomPath);
+                    }, { passive: true });
+                    
+                    card.addEventListener('click', () => {
+                        loadSelectedRoom(roomPath);
+                        resultsPanel.classList.add('hidden');
+                        searchInput.blur();
+                    });
+                    
+                    resultsGrid.appendChild(card);
+                });
+
+                // Debounce precarga de todos los resultados mostrados para evitar sobrecarga de red al escribir
+                if (searchPreloadTimeout) {
+                    clearTimeout(searchPreloadTimeout);
+                }
+                searchPreloadTimeout = setTimeout(() => {
+                    rooms.forEach(roomPath => {
+                        preloadRoom(roomPath);
+                    });
+                }, 300);
+            }
+
+            function renderDefaultRooms() {
+                if (roomsList.length === 0) return;
+                
+                const featured = [];
+                const tempRooms = [...roomsList];
+                
+                for (let i = 0; i < 9 && tempRooms.length > 0; i++) {
+                    const randIdx = Math.floor(Math.random() * tempRooms.length);
+                    featured.push(tempRooms.splice(randIdx, 1)[0]);
+                }
+                
+                resultsCount.textContent = 'Salas sugeridas:';
+                displayGridItems(featured);
+            }
+
+            function loadSelectedRoom(roomPath) {
+                if (isLoading) return;
+
+                const cacheItem = imageCache[roomPath];
+                if (cacheItem && cacheItem.loaded) {
+                    setupAndDisplayRoom(cacheItem.img, roomPath);
+                    canvas.style.opacity = '1';
+                    infoBadge.style.opacity = '1';
+                    infoBadge.style.transform = 'translateY(0)';
+                    loader.style.opacity = '0';
+                    isLoading = false; // Reset state
+                    return;
+                }
+
+                // Carga normal con fundido y animación en caso de que no esté en caché aún
+                isLoading = true;
+                canvas.style.opacity = '0';
+                infoBadge.style.opacity = '0';
+                infoBadge.style.transform = 'translateY(8px)';
+                loader.style.opacity = '1';
+                
+                const imageUrl = `https://logise1.github.io/celesterooms/${roomPath}`;
+                let img;
+                if (cacheItem) {
+                    img = cacheItem.img;
+                } else {
+                    img = new Image();
+                    imageCache[roomPath] = { img: img, loaded: false };
+                }
+
+                const onLoadHandler = () => {
+                    imageCache[roomPath].loaded = true;
+                    setupAndDisplayRoom(img, roomPath);
+                    
+                    setTimeout(() => {
+                        loader.style.opacity = '0';
+                        canvas.style.opacity = '1';
+                        infoBadge.style.opacity = '1';
+                        infoBadge.style.transform = 'translateY(0)';
+                        isLoading = false;
+                    }, 250);
+                    
+                    img.removeEventListener('load', onLoadHandler);
+                    img.removeEventListener('error', onErrorHandler);
+                };
+
+                const onErrorHandler = () => {
+                    console.error('Error cargando sala seleccionada:', imageUrl);
+                    delete imageCache[roomPath];
+                    isLoading = false;
+                    loader.style.opacity = '0';
+                    
+                    img.removeEventListener('load', onLoadHandler);
+                    img.removeEventListener('error', onErrorHandler);
+                };
+
+                if (img.complete && img.naturalWidth !== 0) {
+                    onLoadHandler();
+                } else {
+                    img.addEventListener('load', onLoadHandler);
+                    img.addEventListener('error', onErrorHandler);
+                    if (!img.src) {
+                        img.src = imageUrl;
+                    }
+                }
+            }
+
+            // Eventos del buscador
+            searchInput.addEventListener('input', performSearch);
+            
+            searchInput.addEventListener('focus', () => {
+                resultsPanel.classList.remove('hidden');
+                if (!searchInput.value.trim()) {
+                    renderDefaultRooms();
+                }
+            });
+            
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                searchClear.classList.add('hidden');
+                filteredRooms = []; // Resetear secuencia
+                renderDefaultRooms();
+                searchInput.focus();
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!searchContainer.contains(e.target)) {
+                    resultsPanel.classList.add('hidden');
+                }
+            });
+
+            function navigateSequence(direction) {
+                if (isLoading || roomsList.length === 0 || !currentRoomPath) return;
+                
+                const currentSequence = (searchInput.value.trim() !== '' && filteredRooms.length > 0) ? filteredRooms : roomsList;
+                const currentIndex = currentSequence.indexOf(currentRoomPath);
+                
+                if (currentIndex === -1) {
+                    // Si no está en la secuencia actual, navegar usando el fallback de roomsList
+                    const idx = roomsList.indexOf(currentRoomPath);
+                    if (idx !== -1) {
+                        const nextIndex = (idx + direction + roomsList.length) % roomsList.length;
+                        loadSelectedRoom(roomsList[nextIndex]);
+                    }
+                    return;
+                }
+                
+                const nextIndex = (currentIndex + direction + currentSequence.length) % currentSequence.length;
+                loadSelectedRoom(currentSequence[nextIndex]);
+            }
+
+            // Keyboard Events
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    resultsPanel.classList.add('hidden');
+                    searchInput.blur();
+                }
+                if (e.key === '/' && document.activeElement !== searchInput) {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+                
+                // Evitar cambiar de sala si estamos escribiendo en el buscador
+                if (document.activeElement !== searchInput) {
+                    if (e.code === 'Space' || e.code === 'KeyR') {
+                        e.preventDefault();
+                        loadNextRoom();
+                    }
+                    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        navigateSequence(1);
+                    }
+                    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        navigateSequence(-1);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
