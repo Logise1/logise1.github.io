@@ -19,7 +19,6 @@
             background-color: #03050a; /* Fondo ultra oscuro de base */
             overflow-x: hidden; /* Evita que las animaciones generen scroll horizontal */
         }
-
         .stars-container {
             background-image: 
                 radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
@@ -33,12 +32,10 @@
             background-size: 300px 300px;
             animation: twinkle 6s ease-in-out infinite alternate;
         }
-
         @keyframes twinkle {
             0% { opacity: 0.6; }
             100% { opacity: 1; }
         }
-
         .aurora-container {
             position: absolute;
             inset: 0;
@@ -47,14 +44,12 @@
             mix-blend-mode: screen;
             pointer-events: none;
         }
-
         .aurora {
             position: absolute;
             filter: blur(100px);
             border-radius: 50%;
             animation: float 20s ease-in-out infinite alternate;
         }
-
         .aurora-green {
             background: radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(16,185,129,0) 70%);
             width: 80vw;
@@ -62,7 +57,6 @@
             top: -10%;
             left: -20%;
         }
-
         .aurora-teal {
             background: radial-gradient(circle, rgba(6,182,212,0.3) 0%, rgba(6,182,212,0) 70%);
             width: 90vw;
@@ -82,30 +76,25 @@
             animation-delay: -10s;
             animation-duration: 30s;
         }
-
         @keyframes float {
             0% { transform: translate(0, 0) scale(1) rotate(0deg); }
             33% { transform: translate(5%, 10%) scale(1.1) rotate(2deg); }
             66% { transform: translate(-5%, 5%) scale(0.95) rotate(-2deg); }
             100% { transform: translate(0, -5%) scale(1.05) rotate(1deg); }
         }
-
         @keyframes glow-animation {
             0% { box-shadow: 0 0 5px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(250, 204, 21, 0.1); }
             50% { box-shadow: 0 0 20px rgba(250, 204, 21, 0.8), inset 0 0 15px rgba(250, 204, 21, 0.2); }
             100% { box-shadow: 0 0 5px rgba(250, 204, 21, 0.4), inset 0 0 10px rgba(250, 204, 21, 0.1); }
         }
-
         .card-animate-glow {
             animation: glow-animation 2.5s infinite ease-in-out;
             border-color: rgba(250, 204, 21, 0.5) !important;
         }
-
         @keyframes card-shimmer-animation {
             0% { transform: translateX(-150%) skewX(-20deg); }
             100% { transform: translateX(250%) skewX(-20deg); }
         }
-
         .card-animate-shimmer::after {
             content: '';
             position: absolute;
@@ -141,7 +130,6 @@
     </style>
 </head>
 <body class="antialiased relative min-h-screen">
-
     <!-- Fondo Celeste Pixel-Perfect -->
     <div class="fixed inset-0 w-full h-full z-[-1] overflow-hidden bg-[#050B14]">
         <canvas id="bg-canvas" class="w-full h-full object-cover pointer-events-none opacity-0 transition-opacity duration-1000" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"></canvas>
@@ -151,7 +139,7 @@
 
     <!-- El padding inferior (pb-32) asegura que el contenido no quede oculto detrás de la pradera -->
     <div class="container mx-auto max-w-6xl px-4 sm:px-6 py-12 md:py-16 pb-32 mb-16 relative z-10 flex flex-col items-center">
-
+        
         <!-- Contenedor Responsivo para los 2 Anuncios -->
         <div class="w-full flex flex-col sm:flex-row justify-center items-center gap-6 mb-12">
             <!-- Anuncio 1 -->
@@ -167,7 +155,6 @@
                 </script>
                 <script type="text/javascript" src="https://www.highperformanceformat.com/917d4a415c71dfff37fb2b4273f47380/invoke.js"></script>
             </div>
-
             <!-- Anuncio 2 -->
             <div class="flex items-center justify-center bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg p-1 overflow-hidden w-full max-w-[468px] h-[68px]">
                 <script type="text/javascript">
@@ -228,7 +215,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Cargar y renderizar fondo de pantalla Celeste ---
+            // --- STREAMING_CHUNK:Fetching and drawing Celeste pixel-art background... ---
             const bgCanvas = document.getElementById('bg-canvas');
             if (bgCanvas) {
                 const ctx = bgCanvas.getContext('2d');
@@ -293,11 +280,12 @@
 
             const projectGrid = document.getElementById('project-grid');
 
+            // --- STREAMING_CHUNK:Rendering project list with object-contain to prevent image cropping... ---
             // Renderizar los proyectos
             const renderProjects = (projects) => {
                 projectGrid.innerHTML = ''; 
-                projects.forEach(project => {
 
+                projects.forEach(project => {
                     let cardEffectClass = '';
                     let utilityClass = ''; 
 
@@ -312,10 +300,14 @@
                         }
                     }
 
+                    // Se ha cambiado 'object-cover' a 'object-contain' en la etiqueta <img> para que muestre la imagen entera
+                    // También añadimos 'bg-slate-950/40' para que el fondo vacío tenga un tono estético integrado con la tarjeta
                     const projectCard = `
                         <a href="${project.link}" class="relative block rounded-2xl transform hover:-translate-y-3 transition-all duration-500 w-full max-w-sm premium-card group ${cardEffectClass} ${utilityClass}">
                             <div class="p-2">
-                                <img src="${project.image}" alt="${project.alt}" class="w-full h-52 object-cover rounded-xl opacity-90 group-hover:opacity-100 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0d1424/ffffff?text=Imagen+No+Disponible';">
+                                <div class="w-full h-52 flex items-center justify-center bg-slate-950/30 rounded-xl overflow-hidden">
+                                    <img src="${project.image}" alt="${project.alt}" class="max-w-full max-h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity duration-300" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0d1424/ffffff?text=Imagen+No+Disponible';">
+                                </div>
                                 
                                 <div class="p-4 pt-5 pb-3">
                                     <h4 class="text-lg font-semibold text-white truncate drop-shadow-sm">${project.alt || 'Proyecto'}</h4>
@@ -333,6 +325,7 @@
                 });
             };
 
+            // --- STREAMING_CHUNK:Requesting project data from GitHub API... ---
             // Fetch JSON
             fetch('https://logise1.github.io/projects.json')
                 .then(response => {
