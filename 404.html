@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #000000;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+  </style>
+</head>
+<body>
+
+  <img src="logise1.github.io/static/duck.png" alt="duck">
+
+  <script>
+    if (!window.location.pathname.endsWith('/404') && !window.location.pathname.endsWith('/404.html')) {
+      const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+      window.history.replaceState(null, '', basePath + '404');
+    }
+  </script>
+</body>
+</html>
