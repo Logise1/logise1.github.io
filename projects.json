@@ -1,5 +1,9 @@
 [
   {
+    "alt": "Geometry Dash",
+    "link": "/webgd"
+  },
+  {
     "alt": "How many people are doing ______ now?",
     "link": "/now"
   },
